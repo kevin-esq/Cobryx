@@ -1,0 +1,40 @@
+using Cobryx.Domain.Common;
+
+namespace Cobryx.Domain.Entities;
+
+public class Tenant : BaseEntity
+{
+    public string BusinessName { get; private set; }
+    public string? OwnerName { get; private set; }
+    public string? Phone { get; private set; }
+    public string? LogoUrl { get; private set; }
+    public string? PrimaryColor { get; private set; }
+    public string? SecondaryColor { get; private set; }
+    public string Currency { get; private set; }
+    public bool IsActive { get; private set; }
+
+    public Tenant(string businessName, string currency = "MXN")
+    {
+        if (string.IsNullOrWhiteSpace(businessName))
+            throw new ArgumentException("Business name cannot be empty.", nameof(businessName));
+
+        BusinessName = businessName;
+        Currency = currency;
+        IsActive = true;
+    }
+
+    public void UpdateBranding(string? logoUrl, string? primaryColor, string? secondaryColor)
+    {
+        LogoUrl = logoUrl;
+        PrimaryColor = primaryColor;
+        SecondaryColor = secondaryColor;
+        UpdateTimestamp();
+    }
+
+    public void UpdateContactInfo(string? ownerName, string? phone)
+    {
+        OwnerName = ownerName;
+        Phone = phone;
+        UpdateTimestamp();
+    }
+}
