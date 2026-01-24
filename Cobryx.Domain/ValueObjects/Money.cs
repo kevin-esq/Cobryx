@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.ValueObjects;
 
-public class Money : IEquatable<Money>
+public class Money : ValueObject
 {
     public decimal Amount { get; private set; }
     public string Currency { get; private set; }
@@ -33,13 +32,9 @@ public class Money : IEquatable<Money>
         return new Money(a.Amount - b.Amount, a.Currency);
     }
 
-    public bool Equals(Money? other)
+    protected override IEnumerable<object> GetEqualityComponents()
     {
-        if (other is null) return false;
-        return Amount == other.Amount && Currency == other.Currency;
+        yield return Amount;
+        yield return Currency;
     }
-
-    public override bool Equals(object? obj) => obj is Money other && Equals(other);
-
-    public override int GetHashCode() => HashCode.Combine(Amount, Currency);
 }

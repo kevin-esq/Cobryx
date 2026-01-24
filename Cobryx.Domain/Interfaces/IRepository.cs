@@ -6,7 +6,7 @@ using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.Interfaces;
 
-public interface IRepository<T> where T : BaseEntity
+public interface IRepository<T> where T : BaseEntity, IAggregateRoot
 {
     Task<T?> GetByIdAsync(Guid id);
     Task<IEnumerable<T>> GetAllAsync();

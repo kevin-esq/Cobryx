@@ -1,8 +1,9 @@
 using Cobryx.Domain.Common;
+using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Entities;
 
-public class Tenant : BaseEntity
+public class Tenant : BaseEntity, IAggregateRoot
 {
     public string BusinessName { get; private set; }
     public string? OwnerName { get; private set; }
@@ -12,6 +13,7 @@ public class Tenant : BaseEntity
     public string? SecondaryColor { get; private set; }
     public string Currency { get; private set; }
     public bool IsActive { get; private set; }
+    public BusinessSettings Settings { get; private set; }
 
     public Tenant(string businessName, string currency = "MXN")
     {
@@ -21,6 +23,7 @@ public class Tenant : BaseEntity
         BusinessName = businessName;
         Currency = currency;
         IsActive = true;
+        Settings = BusinessSettings.Default();
     }
 
     public void UpdateBranding(string? logoUrl, string? primaryColor, string? secondaryColor)
