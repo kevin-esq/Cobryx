@@ -1,0 +1,71 @@
+# =====================
+# .NET
+# =====================
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =====================
+# Logs
+# =====================
+*.log
+logs/
+
+# =====================
+# Visual Studio / VS Code
+# =====================
+.vs/
+.vscode/
+.idea/
+
+# =====================
+# Rider
+# =====================
+.idea/
+
+# =====================
+# OS
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Environment variables
+# =====================
+.env
+.env.*
+secrets.json
+appsettings.Development.json
+appsettings.Production.json
+
+# =====================
+# Docker
+# =====================
+docker-data/
+postgres_data/
+
+# =====================
+# Build artifacts
+# =====================
+publish/
+dist/
+
+# =====================
+# Coverage
+# =====================
+coverage/
+
+# =====================
+# Node (futuro frontend)
+# =====================
+node_modules/
+
+# =====================
+# Certificates
+# =====================
+*.pfx
+*.cer
+*.key

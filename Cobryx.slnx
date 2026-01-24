@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Cobryx.Api/Cobryx.Api.csproj" />
+  <Project Path="Cobryx.Application/Cobryx.Application.csproj" />
+  <Project Path="Cobryx.Domain/Cobryx.Domain.csproj" />
+  <Project Path="Cobryx.Infrastructure/Cobryx.Infrastructure.csproj" />
+</Solution>
