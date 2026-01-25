@@ -1,4 +1,4 @@
-using Cobryx.Domain.Entities;
+ using Cobryx.Domain.Entities;
 
 namespace Cobryx.Domain.Interfaces;
 
