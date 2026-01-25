@@ -7,12 +7,26 @@ public abstract class BaseEntity
 {
     public Guid Id { get; protected set; }
     public DateTime CreatedAt { get; private set; }
+    public Guid? CreatedBy { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+    public Guid? UpdatedBy { get; private set; }
 
     protected BaseEntity()
     {
         Id = Guid.NewGuid();
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public void SetCreatedBy(Guid userId)
+    {
+        if (CreatedBy.HasValue) return;
+        CreatedBy = userId;
+    }
+
+    public void SetUpdatedBy(Guid userId)
+    {
+        UpdatedBy = userId;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     private readonly List<IDomainEvent> _domainEvents = new();

@@ -3,7 +3,7 @@ using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.ValueObjects;
 
-public enum InterestType { Percentage, Fixed }
+public enum InterestType { Simple, Flat, Amortized }
 public enum PenaltyType { Daily, FixedOneTime }
 public enum PaymentPriority { InterestFirst, CapitalFirst, Proportional }
 
@@ -44,7 +44,7 @@ public class BusinessSettings : ValueObject
     public static BusinessSettings Default()
     {
         return new BusinessSettings(
-            InterestType.Percentage,
+            InterestType.Simple,
             10m, // 10% default
             PenaltyType.FixedOneTime,
             0m,

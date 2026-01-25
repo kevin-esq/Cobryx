@@ -1,3 +1,5 @@
+using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -7,7 +9,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // TODO: Future: Register DbContext, Repositories, External Services here
+        // Repositories
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICreditRepository, CreditRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+
         return services;
     }
 }
