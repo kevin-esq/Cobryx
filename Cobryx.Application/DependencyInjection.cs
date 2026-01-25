@@ -1,8 +1,9 @@
-using System.Reflection;
-using Cobryx.Application.Common.Behaviors;
+using Cobryx.Domain.DomainServices;
+using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Cobryx.Application;
 
@@ -14,9 +15,10 @@ public static class DependencyInjection
 
         // Register Concordia Core Services
         services.AddConcordiaCoreServices();
-        
-        // The Source Generator creates this method
         services.AddConcordiaHandlers();
+
+        // Domain Services
+        services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
 
         services.AddValidatorsFromAssembly(assembly);
 
