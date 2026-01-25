@@ -1,0 +1,77 @@
+using System.Linq;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Auth.Common;
+using Cobryx.Domain.Entities;
+using Cobryx.Domain.Interfaces;
+using Concordia;
+using Cobryx.Domain.Common;
+
+namespace Cobryx.Application.Auth.Commands.Register;
+
+public record RegisterCommand(
+    string BusinessName, 
+    string FullName, 
+    string Email, 
+    string Password) : IRequest<Result<AuthResult>>;
+
+public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResult>>
+{
+    private readonly ITenantRepository _tenantRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+
+    public RegisterHandler(
+        ITenantRepository tenantRepository,
+        IUserRepository userRepository,
+        IRoleRepository roleRepository,
+        IPasswordHasher passwordHasher,
+        IJwtTokenGenerator jwtTokenGenerator)
+    {
+        _tenantRepository = tenantRepository;
+        _userRepository = userRepository;
+        _roleRepository = roleRepository;
+        _passwordHasher = passwordHasher;
+        _jwtTokenGenerator = jwtTokenGenerator;
+    }
+
+    public async Task<Result<AuthResult>> Handle(RegisterCommand request, CancellationToken cancellationToken)
+    {
+        if (await _userRepository.ExistsByEmailAsync(request.Email))
+        {
+            return Result.Failure<AuthResult>("Email already registered.");
+        }
+
+        // 1. Create Tenant
+        var tenant = new Tenant(request.BusinessName);
+        await _tenantRepository.AddAsync(tenant);
+
+        // 2. Assign "Owner" Role (This assumes roles are seeded/exist)
+        var ownerRole = await _roleRepository.GetByNameAsync("Owner");
+        if (ownerRole == null)
+        {
+             return Result.Failure<AuthResult>("System roles not initialized.");
+        }
+
+        // 3. Create User
+        var user = new User(tenant.Id, request.FullName, request.Email, ownerRole.Id);
+        user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
+        
+        await _userRepository.AddAsync(user);
+
+        // 4. Generate Tokens
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), "auto-registration");
+        
+        await _userRepository.UpdateAsync(user);
+
+        return Result<AuthResult>.Success(new AuthResult(
+            accessToken,
+            refreshToken,
+            user.Id,
+            user.FullName,
+            ownerRole.Permissions.Select(p => p.Name)));
+    }
+}

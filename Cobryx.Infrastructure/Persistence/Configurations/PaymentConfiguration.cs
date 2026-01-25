@@ -8,6 +8,8 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 {
     public void Configure(EntityTypeBuilder<Payment> builder)
     {
+        builder.HasIndex(p => p.TenantId);
+        builder.HasIndex(p => p.CreditId);
         builder.OwnsOne(p => p.Amount, m =>
         {
             m.Property(x => x.Amount).HasPrecision(18, 2);

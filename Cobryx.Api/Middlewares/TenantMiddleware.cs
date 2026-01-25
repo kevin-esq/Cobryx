@@ -17,16 +17,41 @@ public class TenantMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // For development, we might allow no tenant, but for production it's mandatory
-        if (!context.Request.Headers.TryGetValue(TenantHeader, out var tenantIdStr))
+        string? tenantId = null;
+
+        // 1. If authenticated, get from claims (Most secure)
+        if (context.User.Identity?.IsAuthenticated == true)
         {
-            // We could return 400 Bad Request here for mandatory multi-tenancy
-            // For now, just log and continue (or uncomment below for strict)
-            // context.Response.StatusCode = 400;
-            // await context.Response.WriteAsync("Tenant-Id is required.");
-            // return;
-            
-            _logger.LogWarning("Request received without X-Tenant-Id header.");
+            tenantId = context.User.FindFirst("tenant_id")?.Value;
+        }
+
+        // 2. Fallback to header (For Login/Register)
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            context.Request.Headers.TryGetValue(TenantHeader, out var headerValue);
+            tenantId = headerValue;
+        }
+
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            // Allow public paths (Health, Auth) to proceed without tenant if needed
+            var path = context.Request.Path.Value?.ToLowerInvariant();
+            if (path != null && (path.Contains("/health") || path.Contains("/api/auth")))
+            {
+                await _next(context);
+                return;
+            }
+
+            _logger.LogWarning("Request blocked: Tenant context missing.");
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsync("Tenant-Id is required or could not be resolved from token.");
+            return;
+        }
+
+        // Cache it for the TenantProvider (Request-level cache)
+        if (Guid.TryParse(tenantId, out var id))
+        {
+            context.Items["Cache_TenantId"] = id;
         }
 
         await _next(context);
