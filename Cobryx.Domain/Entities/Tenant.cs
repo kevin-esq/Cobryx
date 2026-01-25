@@ -15,7 +15,12 @@ public class Tenant : BaseEntity, IAggregateRoot
     public bool IsActive { get; private set; }
     public BusinessSettings Settings { get; private set; }
 
-    private Tenant() { }
+    private Tenant() 
+    { 
+        BusinessName = null!;
+        Currency = null!;
+        Settings = null!;
+    }
 
     public Tenant(string businessName, string currency = "MXN")
     {

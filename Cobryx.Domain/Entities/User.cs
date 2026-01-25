@@ -12,11 +12,18 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public string PasswordHash { get; private set; }
     public Guid RoleId { get; private set; }
     public Role Role { get; private set; }
+    public bool IsActive { get; private set; }
 
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
-    private User() { }
+    private User() 
+    { 
+        FullName = null!;
+        Email = null!;
+        PasswordHash = null!;
+        Role = null!;
+    }
 
     public User(Guid tenantId, string fullName, string email, Guid roleId)
     {
@@ -29,6 +36,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         FullName = fullName;
         Email = email.ToLowerInvariant();
         RoleId = roleId;
+        PasswordHash = null!;
+        Role = null!;
+        IsActive = true;
     }
 
     public void SetPasswordHash(string passwordHash)

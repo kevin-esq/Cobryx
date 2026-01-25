@@ -20,6 +20,10 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     public DateTime StartDate { get; private set; }
     public int GraceDays { get; private set; } // <--- New: Advanced flexibility
     public CreditStatus Status { get; private set; }
+    
+    // Navigation (Pro-grade efficiency)
+    public virtual Customer Customer { get; private set; } = null!;
+    public virtual ICollection<Payment> Payments { get; private set; } = new List<Payment>();
 
     private readonly List<Installment> _installments = new();
     public IReadOnlyCollection<Installment> Installments => _installments.AsReadOnly();

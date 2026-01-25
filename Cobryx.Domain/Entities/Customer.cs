@@ -14,9 +14,16 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public int TrustScore { get; private set; } // 0-100
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
+    
+    // Navigation (Pro-grade efficiency)
+    public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
     // Private ctor for EF
-    private Customer() { }
+    private Customer() 
+    { 
+        FullName = null!;
+        Phone = null!;
+    }
 
     public Customer(Guid tenantId, string fullName, string phone, string? address, string? externalReference)
     {
@@ -35,14 +42,20 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateProfile(string fullName, string phone, string? address, string? city, string? photoUrl)
     {
+        UpdateDetails(fullName, phone, address, ExternalReference);
+        City = city;
+        PhotoUrl = photoUrl;
+    }
+
+    public void UpdateDetails(string fullName, string phone, string? address, string? externalReference)
+    {
         if (string.IsNullOrWhiteSpace(fullName)) throw new ArgumentException("FullName is required.", nameof(fullName));
         if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required.", nameof(phone));
 
         FullName = fullName;
         Phone = phone;
         Address = address;
-        City = city;
-        PhotoUrl = photoUrl;
+        ExternalReference = externalReference;
         UpdateTimestamp();
     }
 

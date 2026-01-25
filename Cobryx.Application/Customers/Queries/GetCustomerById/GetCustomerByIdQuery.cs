@@ -1,0 +1,48 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Customers.Common;
+using Cobryx.Domain.Common;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Enums;
+using Concordia;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cobryx.Application.Customers.Queries.GetCustomerById;
+
+public record GetCustomerByIdQuery(Guid Id) : IRequest<Result<CustomerDto>>;
+
+public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Result<CustomerDto>>
+{
+    private readonly ICustomerRepository _customerRepository;
+    private readonly ITenantProvider _tenantProvider;
+
+    public GetCustomerByIdHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
+    {
+        _customerRepository = customerRepository;
+        _tenantProvider = tenantProvider;
+    }
+
+    public async Task<Result<CustomerDto>> Handle(GetCustomerByIdQuery request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.GetTenantId();
+        if (!tenantId.HasValue) return Result.Failure<CustomerDto>("Tenant context missing.");
+
+        var customer = await _customerRepository.Query()
+            .AsNoTracking()
+            .Include(c => c.Credits)
+            .FirstOrDefaultAsync(c => c.Id == request.Id && c.TenantId == tenantId.Value, cancellationToken);
+
+        if (customer == null)
+        {
+            return Result.Failure<CustomerDto>("Customer not found.");
+        }
+
+        return Result.Success(new CustomerDto(
+            customer.Id,
+            customer.FullName,
+            customer.Phone,
+            customer.Address,
+            customer.ExternalReference,
+            customer.Credits.Count(c => c.Status == CreditStatus.Active),
+            customer.CreatedAt));
+    }
+}

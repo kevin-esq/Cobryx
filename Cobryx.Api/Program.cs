@@ -1,3 +1,6 @@
+using Serilog;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Cobryx.Application;
 using Cobryx.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
@@ -5,10 +8,25 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 📊 Configure Serilog (Structured Logging)
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "Cobryx.Api")
+    .WriteTo.Console()
+    .WriteTo.File("logs/cobryx-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+
+// 🏥 Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<Cobryx.Infrastructure.Persistence.CobryxDbContext>("Database");
 
 builder.Services
     .AddApplicationServices()
@@ -19,7 +37,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 5; // 5 attempts per minute
+        opt.PermitLimit = 5; 
         opt.QueueLimit = 0;
     });
 });
@@ -38,7 +56,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy.WithOrigins("https://app.cobryx.com.mx") // Restriction for production
+        policy.WithOrigins("https://app.cobryx.com.mx") 
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -46,13 +64,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 🚀 Production Hardening Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
 
@@ -70,10 +89,14 @@ app.UseAuthorization();
 app.UseHttpsRedirection();
 app.MapControllers();
 
-// Basic Health Check
-app.MapGet("/health", () => Results.Ok("Cobryx API is running"));
+// 🏥 Map Health Checks
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false // Liveness doesn't check deps
+});
 
-// Seed Data
+// 🏥 Seed Data
 using (var scope = app.Services.CreateScope())
 {
     var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();

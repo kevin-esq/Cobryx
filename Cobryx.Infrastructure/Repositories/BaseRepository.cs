@@ -18,7 +18,7 @@ public abstract class BaseRepository<T> : IRepository<T>
         _dbSet = dbContext.Set<T>();
     }
 
-    protected IQueryable<T> QueryAsNoTracking => _dbSet.AsNoTracking();
+    public virtual IQueryable<T> Query() => _dbSet;
 
     public virtual async Task<T?> GetByIdAsync(Guid id) => await _dbSet.FindAsync(id);
 
