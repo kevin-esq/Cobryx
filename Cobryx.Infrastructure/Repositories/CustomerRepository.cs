@@ -1,19 +1,21 @@
-using System.Linq.Expressions;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public class CustomerRepository : ICustomerRepository
+public class CustomerRepository : BaseRepository<Customer>, ICustomerRepository
 {
-    // These will be implemented properly with EF Core
-    public Task<Customer?> GetByIdAsync(Guid id) => Task.FromResult<Customer?>(null);
-    public Task<IEnumerable<Customer>> GetAllAsync() => Task.FromResult<IEnumerable<Customer>>(Enumerable.Empty<Customer>());
-    public Task<IEnumerable<Customer>> FindAsync(Expression<Func<Customer, bool>> predicate) => Task.FromResult<IEnumerable<Customer>>(Enumerable.Empty<Customer>());
-    public Task AddAsync(Customer entity) => Task.CompletedTask;
-    public Task UpdateAsync(Customer entity) => Task.CompletedTask;
-    public Task DeleteAsync(Guid id) => Task.CompletedTask;
+    public CustomerRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone) => Task.FromResult<Customer?>(null);
-    public Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId) => Task.FromResult<IEnumerable<Customer>>(Enumerable.Empty<Customer>());
+    public async Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone)
+    {
+        return await _dbSet.FirstOrDefaultAsync(c => c.Phone == phone); // TenantId handled by Global Filter
+    }
+
+    public async Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId)
+    {
+        return await _dbSet.ToListAsync();
+    }
 }

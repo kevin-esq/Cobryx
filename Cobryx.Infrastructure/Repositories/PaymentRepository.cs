@@ -1,18 +1,21 @@
-using System.Linq.Expressions;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public class PaymentRepository : IPaymentRepository
+public class PaymentRepository : BaseRepository<Payment>, IPaymentRepository
 {
-    public Task<Payment?> GetByIdAsync(Guid id) => Task.FromResult<Payment?>(null);
-    public Task<IEnumerable<Payment>> GetAllAsync() => Task.FromResult<IEnumerable<Payment>>(Enumerable.Empty<Payment>());
-    public Task<IEnumerable<Payment>> FindAsync(Expression<Func<Payment, bool>> predicate) => Task.FromResult<IEnumerable<Payment>>(Enumerable.Empty<Payment>());
-    public Task AddAsync(Payment entity) => Task.CompletedTask;
-    public Task UpdateAsync(Payment entity) => Task.CompletedTask;
-    public Task DeleteAsync(Guid id) => Task.CompletedTask;
+    public PaymentRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public Task<IEnumerable<Payment>> GetByCreditAsync(Guid creditId) => Task.FromResult<IEnumerable<Payment>>(Enumerable.Empty<Payment>());
-    public Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId) => Task.FromResult<IEnumerable<Payment>>(Enumerable.Empty<Payment>());
+    public async Task<IEnumerable<Payment>> GetByCreditAsync(Guid creditId)
+    {
+        return await _dbSet.Where(p => p.CreditId == creditId).ToListAsync();
+    }
+
+    public async Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId)
+    {
+        return await _dbSet.ToListAsync();
+    }
 }

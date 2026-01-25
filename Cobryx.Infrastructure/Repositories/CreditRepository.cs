@@ -1,18 +1,31 @@
-using System.Linq.Expressions;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public class CreditRepository : ICreditRepository
+public class CreditRepository : BaseRepository<Credit>, ICreditRepository
 {
-    public Task<Credit?> GetByIdAsync(Guid id) => Task.FromResult<Credit?>(null);
-    public Task<IEnumerable<Credit>> GetAllAsync() => Task.FromResult<IEnumerable<Credit>>(Enumerable.Empty<Credit>());
-    public Task<IEnumerable<Credit>> FindAsync(Expression<Func<Credit, bool>> predicate) => Task.FromResult<IEnumerable<Credit>>(Enumerable.Empty<Credit>());
-    public Task AddAsync(Credit entity) => Task.CompletedTask;
-    public Task UpdateAsync(Credit entity) => Task.CompletedTask;
-    public Task DeleteAsync(Guid id) => Task.CompletedTask;
+    public CreditRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public Task<IEnumerable<Credit>> GetByCustomerAsync(Guid customerId) => Task.FromResult<IEnumerable<Credit>>(Enumerable.Empty<Credit>());
-    public Task<IEnumerable<Credit>> GetByTenantAsync(Guid tenantId) => Task.FromResult<IEnumerable<Credit>>(Enumerable.Empty<Credit>());
+    public async Task<IEnumerable<Credit>> GetByCustomerAsync(Guid customerId)
+    {
+        return await _dbSet
+            .Where(c => c.CustomerId == customerId)
+            .Include(c => c.Installments)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Credit>> GetByTenantAsync(Guid tenantId)
+    {
+        return await _dbSet.ToListAsync(); // Filtered by Global Query Filter
+    }
+
+    public override async Task<Credit?> GetByIdAsync(Guid id)
+    {
+        return await _dbSet
+            .Include(c => (ICollection<Installment>)c.Installments) // Need to check cast if private
+            .FirstOrDefaultAsync(c => c.Id == id);
+    }
 }
