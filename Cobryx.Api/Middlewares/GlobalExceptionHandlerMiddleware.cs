@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.Json;
 using Cobryx.Domain.Common;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Api.Middlewares;
 
@@ -31,22 +31,28 @@ public class GlobalExceptionHandlerMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        _logger.LogError(exception, "An unexpected error occurred.");
+        _logger.LogError(exception, "Cobryx Critical Error: {Message}", exception.Message);
 
-        context.Response.ContentType = "application/json";
+        context.Response.ContentType = "application/problem+json";
         
-        var response = exception switch
+        var (status, title, type) = exception switch
         {
-            DomainException domainEx => new { error = domainEx.Message, type = "DomainError" },
-            _ => new { error = "An internal server error occurred.", type = "ServerError" }
+            DomainException => (HttpStatusCode.BadRequest, "Domain Constraint Violated", "https://cobryx.com.mx/errors/domain-error"),
+            DbUpdateConcurrencyException => (HttpStatusCode.Conflict, "Data Conflict Detected", "https://cobryx.com.mx/errors/concurrency-error"),
+            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.", "https://cobryx.com.mx/errors/internal-server-error")
         };
 
-        context.Response.StatusCode = exception switch
+        var problemDetails = new ProblemDetails
         {
-            DomainException => (int)HttpStatusCode.BadRequest,
-            _ => (int)HttpStatusCode.InternalServerError
+            Status = (int)status,
+            Title = title,
+            Type = type,
+            Detail = exception.Message,
+            Instance = context.Request.Path
         };
 
-        await JsonSerializer.SerializeAsync(context.Response.Body, response);
+        context.Response.StatusCode = (int)status;
+
+        await JsonSerializer.SerializeAsync(context.Response.Body, problemDetails);
     }
 }

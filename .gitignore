@@ -69,3 +69,23 @@ node_modules/
 *.pfx
 *.cer
 *.key
+
+# =====================
+# Entity Framework Core
+# =====================
+
+# EF temporary database files
+*.db
+*.db-shm
+*.db-wal
+
+# SQLite
+*.sqlite
+*.sqlite3
+
+# Tool-generated artifacts
+**/efbundle/
+
+# EF secrets / local configuration
+appsettings.Local.json
+appsettings.Secrets.json
