@@ -8,6 +8,7 @@ public class InstallmentConfiguration : IEntityTypeConfiguration<Installment>
 {
     public void Configure(EntityTypeBuilder<Installment> builder)
     {
+        builder.HasIndex(i => i.CreditId);
         builder.OwnsOne(i => i.TotalAmount, p =>
         {
             p.Property(m => m.Amount).HasPrecision(18, 2).HasColumnName("TotalAmount");

@@ -10,11 +10,13 @@ public class GlobalExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
+    private readonly IHostEnvironment _env;
 
-    public GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger)
+    public GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger, IHostEnvironment env)
     {
         _next = next;
         _logger = logger;
+        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -47,7 +49,7 @@ public class GlobalExceptionHandlerMiddleware
             Status = (int)status,
             Title = title,
             Type = type,
-            Detail = exception.Message,
+            Detail = _env.IsDevelopment() ? exception.Message : "An internal server error occurred. Please contact support.",
             Instance = context.Request.Path
         };
 

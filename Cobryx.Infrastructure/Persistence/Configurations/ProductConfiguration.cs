@@ -8,6 +8,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
+        builder.HasIndex(p => p.TenantId);
         builder.OwnsOne(p => p.BasePrice, m =>
         {
             m.Property(x => x.Amount).HasPrecision(18, 2).HasColumnName("BasePrice");

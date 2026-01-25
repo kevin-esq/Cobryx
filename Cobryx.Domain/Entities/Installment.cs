@@ -22,7 +22,17 @@ public class Installment : BaseEntity
     public Money TotalDue => (PrincipalPart + InterestPart + LateInterestAmount) - (PrincipalPaid + InterestPaid + LateInterestPaid);
 
 
-    private Installment() { }
+    private Installment() 
+    { 
+        TotalAmount = null!;
+        PrincipalPart = null!;
+        PrincipalPaid = null!;
+        InterestPart = null!;
+        InterestPaid = null!;
+        LateInterestAmount = null!;
+        LateInterestPaid = null!;
+        RemainingBalance = null!;
+    }
 
     public Installment(Guid creditId, int number, DateTime dueDate, Money principal, Money interest, Money balance)
     {

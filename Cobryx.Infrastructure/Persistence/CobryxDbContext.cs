@@ -23,6 +23,8 @@ public class CobryxDbContext : DbContext
     public DbSet<Credit> Credits => Set<Credit>();
     public DbSet<Installment> Installments => Set<Installment>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,6 +36,8 @@ public class CobryxDbContext : DbContext
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
+            // Skip owned types as they are part of their owner
+            if (entityType.IsOwned()) continue;
             // 1. Soft Delete Filter & Concurrency Token
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
             {

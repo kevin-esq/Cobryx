@@ -11,6 +11,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=YOUR_HOST;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true}
+      - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
     restart: always
 
 # Note: We are currently using Supabase, so a local postgres service is not strictly required
