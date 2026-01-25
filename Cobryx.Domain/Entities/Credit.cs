@@ -54,6 +54,31 @@ public class Credit : BaseEntity, IAggregateRoot
         Status = CreditStatus.Active;
     }
 
+    public void ApplyPayment(Money amount)
+    {
+        if (amount.Amount <= 0) return;
+        if (Status == CreditStatus.Paid) throw new InvalidOperationException("Credit is already fully paid.");
+
+        decimal remainingAmount = amount.Amount;
+
+        // Apply payment to installments in order
+        foreach (var installment in _installments.OrderBy(i => i.Number))
+        {
+            if (remainingAmount <= 0) break;
+            if (installment.Status == InstallmentStatus.Paid) continue;
+
+            remainingAmount = installment.ApplyPayment(remainingAmount);
+        }
+
+        // Check if fully paid
+        if (_installments.All(i => i.Status == InstallmentStatus.Paid))
+        {
+            Status = CreditStatus.Paid;
+        }
+
+        UpdateTimestamp();
+    }
+
     public void AddInstallments(IEnumerable<Installment> installments)
     {
         if (_installments.Any()) throw new InvalidOperationException("Installments already generated.");
