@@ -24,6 +24,26 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim("permissions", "customers:view"));
+    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim("permissions", "customers:create"));
+    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim("permissions", "credits:view"));
+    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim("permissions", "credits:create"));
+    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim("permissions", "payments:apply"));
+    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim("permissions", "tenant:manage"));
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCors", policy =>
+    {
+        policy.WithOrigins("https://app.cobryx.com.mx") // Restriction for production
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -34,6 +54,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRateLimiter();
+app.UseCors("DefaultCors");
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseMiddleware<Cobryx.Api.Middlewares.GlobalExceptionHandlerMiddleware>();
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();

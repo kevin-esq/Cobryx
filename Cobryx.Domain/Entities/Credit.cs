@@ -24,7 +24,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     private readonly List<Installment> _installments = new();
     public IReadOnlyCollection<Installment> Installments => _installments.AsReadOnly();
 
-    private Credit() { }
+    private Credit() { Principal = null!; }
 
     public Credit(
         Guid tenantId, 

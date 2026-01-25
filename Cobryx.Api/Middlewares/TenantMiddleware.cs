@@ -22,10 +22,21 @@ public class TenantMiddleware
         // 1. If authenticated, get from claims (Most secure)
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            tenantId = context.User.FindFirst("tenant_id")?.Value;
+            var claimTenantId = context.User.FindFirst("tenant_id")?.Value;
+            
+            // Security Hardening: If token has tenant, ignore any header.
+            // If header exists and differs from token, it might be an injection attempt.
+            if (context.Request.Headers.ContainsKey(TenantHeader) && 
+                context.Request.Headers[TenantHeader] != claimTenantId)
+            {
+                _logger.LogWarning("Security Alert: Tenant mismatch between Token ({TokenId}) and Header ({HeaderId}).", 
+                    claimTenantId, context.Request.Headers[TenantHeader]);
+            }
+            
+            tenantId = claimTenantId;
         }
 
-        // 2. Fallback to header (For Login/Register)
+        // 2. Fallback to header (Only for public/auth paths if allowed)
         if (string.IsNullOrEmpty(tenantId))
         {
             context.Request.Headers.TryGetValue(TenantHeader, out var headerValue);
