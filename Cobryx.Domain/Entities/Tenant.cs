@@ -15,6 +15,8 @@ public class Tenant : BaseEntity, IAggregateRoot
     public bool IsActive { get; private set; }
     public BusinessSettings Settings { get; private set; }
 
+    private Tenant() { }
+
     public Tenant(string businessName, string currency = "MXN")
     {
         if (string.IsNullOrWhiteSpace(businessName))
@@ -25,6 +27,7 @@ public class Tenant : BaseEntity, IAggregateRoot
         IsActive = true;
         Settings = BusinessSettings.Default();
     }
+
 
     public void UpdateBranding(string? logoUrl, string? primaryColor, string? secondaryColor)
     {
