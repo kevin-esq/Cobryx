@@ -1,6 +1,7 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Events;
 
 namespace Cobryx.Domain.Entities;
 
@@ -52,9 +53,11 @@ public class Credit : BaseEntity, IAggregateRoot
         
         StartDate = DateTime.UtcNow;
         Status = CreditStatus.Active;
+
+        AddDomainEvent(new CreditCreatedEvent(Id, TenantId, CustomerId, Principal, StartDate));
     }
 
-    public void ApplyPayment(Money amount)
+    public void ApplyPayment(Guid paymentId, Money amount)
     {
         if (amount.Amount <= 0) return;
         if (Status == CreditStatus.Paid) throw new InvalidOperationException("Credit is already fully paid.");
@@ -76,6 +79,7 @@ public class Credit : BaseEntity, IAggregateRoot
             Status = CreditStatus.Paid;
         }
 
+        AddDomainEvent(new PaymentAppliedEvent(Id, paymentId, amount, DateTime.UtcNow));
         UpdateTimestamp();
     }
 

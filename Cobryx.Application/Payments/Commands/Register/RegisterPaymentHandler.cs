@@ -27,10 +27,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
 
         var amount = new Money(request.Amount, request.Currency);
         
-        // Apply logic to domain (State change)
-        credit.ApplyPayment(amount);
-
-        // Record the payment entry
+        // Record the payment entry (Generate ID first)
         var payment = new Payment(
             request.TenantId,
             request.CreditId,
@@ -38,6 +35,9 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
             request.PaymentDate,
             request.Reference,
             request.Notes);
+
+        // Apply logic to domain (State change) - Passing the payment ID for event decoupling
+        credit.ApplyPayment(payment.Id, amount);
 
         await _paymentRepository.AddAsync(payment);
         await _creditRepository.UpdateAsync(credit);
