@@ -21,6 +21,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<Cobryx.Api.Middlewares.GlobalExceptionHandlerMiddleware>();
+app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
 app.UseHttpsRedirection();
 

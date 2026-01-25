@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
@@ -10,17 +11,28 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
 {
     private readonly ICreditRepository _creditRepository;
     private readonly IPaymentRepository _paymentRepository;
+    private readonly ITenantProvider _tenantProvider;
 
-    public RegisterPaymentHandler(ICreditRepository creditRepository, IPaymentRepository paymentRepository)
+    public RegisterPaymentHandler(
+        ICreditRepository creditRepository, 
+        IPaymentRepository paymentRepository,
+        ITenantProvider tenantProvider)
     {
         _creditRepository = creditRepository;
         _paymentRepository = paymentRepository;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(RegisterPaymentCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantProvider.GetTenantId();
+        if (!tenantId.HasValue)
+        {
+            return Result.Failure<Guid>("Tenant context is missing.");
+        }
+
         var credit = await _creditRepository.GetByIdAsync(request.CreditId);
-        if (credit == null || credit.TenantId != request.TenantId)
+        if (credit == null || credit.TenantId != tenantId.Value)
         {
             return Result.Failure<Guid>("Credit not found.");
         }
@@ -29,12 +41,13 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         
         // Record the payment entry (Generate ID first)
         var payment = new Payment(
-            request.TenantId,
+            tenantId.Value,
             request.CreditId,
             amount,
             request.PaymentDate,
             request.Reference,
             request.Notes);
+
 
         // Apply logic to domain (State change) - Passing the payment ID for event decoupling
         credit.ApplyPayment(payment.Id, amount);

@@ -10,6 +10,7 @@ public abstract class BaseEntity
     public Guid? CreatedBy { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
     public Guid? UpdatedBy { get; private set; }
+    public bool IsDeleted { get; private set; }
 
     protected BaseEntity()
     {
@@ -45,6 +46,12 @@ public abstract class BaseEntity
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();
+    }
+
+    public void Delete()
+    {
+        IsDeleted = true;
+        UpdateTimestamp();
     }
 
     public void UpdateTimestamp()

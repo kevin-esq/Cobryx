@@ -3,7 +3,7 @@ using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Entities;
 
-public class Product : BaseEntity, IAggregateRoot
+public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public string Name { get; private set; }
