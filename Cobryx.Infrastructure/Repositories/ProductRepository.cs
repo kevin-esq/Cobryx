@@ -1,18 +1,28 @@
-using System.Linq.Expressions;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public class ProductRepository : IProductRepository
+public class ProductRepository : BaseRepository<Product>, IProductRepository
 {
-    public Task<Product?> GetByIdAsync(Guid id) => Task.FromResult<Product?>(null);
-    public Task<IEnumerable<Product>> GetAllAsync() => Task.FromResult<IEnumerable<Product>>(Enumerable.Empty<Product>());
-    public Task<IEnumerable<Product>> FindAsync(Expression<Func<Product, bool>> predicate) => Task.FromResult<IEnumerable<Product>>(Enumerable.Empty<Product>());
-    public Task AddAsync(Product entity) => Task.CompletedTask;
-    public Task UpdateAsync(Product entity) => Task.CompletedTask;
-    public Task DeleteAsync(Guid id) => Task.CompletedTask;
+    public ProductRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public Task<IEnumerable<Product>> GetByTenantAsync(Guid tenantId) => Task.FromResult<IEnumerable<Product>>(Enumerable.Empty<Product>());
-    public Task<IEnumerable<Product>> SearchByNameAsync(Guid tenantId, string searchTerm) => Task.FromResult<IEnumerable<Product>>(Enumerable.Empty<Product>());
+    public async Task<IEnumerable<Product>> GetByTenantAsync(Guid tenantId)
+    {
+        return await _dbSet.ToListAsync();
+    }
+
+    public async Task<Product?> GetBySkuAsync(Guid tenantId, string sku)
+    {
+        return await _dbSet.FirstOrDefaultAsync(p => p.Sku == sku);
+    }
+
+    public async Task<IEnumerable<Product>> SearchByNameAsync(Guid tenantId, string searchTerm)
+    {
+        return await _dbSet
+            .Where(p => p.Name.Contains(searchTerm))
+            .ToListAsync();
+    }
 }

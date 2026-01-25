@@ -11,6 +11,7 @@ public abstract class BaseEntity
     public DateTime? UpdatedAt { get; private set; }
     public Guid? UpdatedBy { get; private set; }
     public bool IsDeleted { get; private set; }
+    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     protected BaseEntity()
     {

@@ -18,18 +18,26 @@ public class TenantProvider : ITenantProvider
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null) return null;
 
-        // Try to get from Header
+        // 1. Check Request-level Cache
+        if (httpContext.Items.TryGetValue("Cache_TenantId", out var cachedId))
+        {
+            return (Guid?)cachedId;
+        }
+
+        Guid? tenantId = null;
+
+        // 2. Try to get from Header
         if (httpContext.Request.Headers.TryGetValue(TenantHeader, out var tenantIdStr))
         {
-            if (Guid.TryParse(tenantIdStr, out var tenantId))
+            if (Guid.TryParse(tenantIdStr, out var id))
             {
-                return tenantId;
+                tenantId = id;
             }
         }
 
-        // Future: Try to get from Claims (JWT)
-        // var claim = httpContext.User.Claims.FirstOrDefault(c => c.Type == "tenant_id");
+        // 3. Cache for current request
+        httpContext.Items["Cache_TenantId"] = tenantId;
 
-        return null;
+        return tenantId;
     }
 }
