@@ -2,7 +2,7 @@ using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.Entities;
 
-public class Customer : BaseEntity, IAggregateRoot
+public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public string FullName { get; private set; }

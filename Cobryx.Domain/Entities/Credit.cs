@@ -5,7 +5,7 @@ using Cobryx.Domain.Events;
 
 namespace Cobryx.Domain.Entities;
 
-public class Credit : BaseEntity, IAggregateRoot
+public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public Guid CustomerId { get; private set; }

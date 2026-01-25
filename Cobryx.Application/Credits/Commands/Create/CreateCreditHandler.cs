@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
@@ -10,19 +11,30 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
 {
     private readonly ICreditRepository _creditRepository;
     private readonly IScheduleGenerator _scheduleGenerator;
+    private readonly ITenantProvider _tenantProvider;
 
-    public CreateCreditHandler(ICreditRepository creditRepository, IScheduleGenerator scheduleGenerator)
+    public CreateCreditHandler(
+        ICreditRepository creditRepository, 
+        IScheduleGenerator scheduleGenerator,
+        ITenantProvider tenantProvider)
     {
         _creditRepository = creditRepository;
         _scheduleGenerator = scheduleGenerator;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<Result<Guid>> Handle(CreateCreditCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantProvider.GetTenantId();
+        if (!tenantId.HasValue)
+        {
+            return Result.Failure<Guid>("Tenant context is missing.");
+        }
+
         var principal = new Money(request.Amount, request.Currency);
         
         var credit = new Credit(
-            request.TenantId,
+            tenantId.Value,
             request.CustomerId,
             principal,
             request.InterestRate,
@@ -31,6 +43,7 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
             request.InstallmentsCount,
             request.GraceDays,
             request.ProductId);
+
 
         // Generate installments
         var schedule = _scheduleGenerator.GenerateSchedule(credit);
