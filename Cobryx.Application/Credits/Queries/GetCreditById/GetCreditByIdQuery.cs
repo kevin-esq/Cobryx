@@ -40,7 +40,7 @@ public class GetCreditByIdHandler : IRequestHandler<GetCreditByIdQuery, Result<C
         var dto = new CreditDetailDto(
             credit.Id,
             credit.CustomerId,
-            credit.Customer.FullName,
+            $"{credit.Customer.FirstName} {credit.Customer.LastName}",
             credit.Principal.Amount,
             credit.Principal.Currency,
             credit.InterestRate,

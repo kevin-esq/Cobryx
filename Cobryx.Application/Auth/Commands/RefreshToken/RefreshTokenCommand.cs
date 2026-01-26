@@ -24,9 +24,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
 
     public async Task<Result<AuthResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        // 1. In a production app, we would validate the expired AccessToken to get the UserId
-        // For now, we search for the user that owns this RefreshToken
-        var users = await _userRepository.GetAllAsync(); // This is sub-optimal, but IUserRepository doesn't have SearchByToken yet
+        var users = await _userRepository.GetAllAsync(); 
         var user = users.FirstOrDefault(u => u.HasValidRefreshToken(request.RefreshToken));
 
         if (user == null)
@@ -36,20 +34,22 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
 
         var activeToken = user.RefreshTokens.First(x => x.Token == request.RefreshToken);
 
-        // 2. Rotate Token
         var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
         var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
-        activeToken.Revoke("unknown", newRefreshToken);
-        user.AddRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), "unknown");
+        activeToken.Revoke("system-rotation", newRefreshToken);
+        user.AddRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), "token-rotation");
 
         await _userRepository.UpdateAsync(user);
 
-        return Result<AuthResult>.Success(new AuthResult(
+        return Result.Success(new AuthResult(
             newAccessToken,
             newRefreshToken,
-            user.Id,
+            user.FirstName,
+            user.LastName,
             user.FullName,
-            user.Role.Permissions.Select(p => p.Name)));
+            user.Email,
+            user.Role?.Name ?? "User",
+            DateTime.UtcNow.AddMinutes(60)));
     }
 }

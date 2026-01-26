@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text.Json;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Entities;
+using Cobryx.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +38,32 @@ public class GlobalExceptionHandlerMiddleware
     {
         _logger.LogError(exception, "Cobryx Critical Error: {Message}", exception.Message);
 
+        // 🚀 Persist Error for Production Observability
+        try
+        {
+            var dbContext = context.RequestServices.GetRequiredService<CobryxDbContext>();
+            var tenantProvider = context.RequestServices.GetRequiredService<ITenantProvider>();
+            var userProvider = context.RequestServices.GetRequiredService<ICurrentUserProvider>();
+
+            var errorLog = new SystemErrorLog(
+                tenantProvider.GetTenantId() ?? Guid.Empty,
+                userProvider.GetUserId(),
+                exception.Message,
+                exception.StackTrace,
+                exception.Source,
+                context.Request.Path,
+                context.Request.Method,
+                context.Connection.RemoteIpAddress?.ToString());
+
+            dbContext.Set<SystemErrorLog>().Add(errorLog);
+            await dbContext.SaveChangesAsync();
+        }
+        catch (Exception panicEx)
+        {
+            // Fallback: If DB persistence fails, log to Serilog but don't crash the handler
+            _logger.LogCritical(panicEx, "FATAL: Could not persist SystemErrorLog to Database.");
+        }
+
         context.Response.ContentType = "application/problem+json";
         
         var (status, title, type) = exception switch
@@ -49,7 +78,7 @@ public class GlobalExceptionHandlerMiddleware
             Status = (int)status,
             Title = title,
             Type = type,
-            Detail = _env.IsDevelopment() ? exception.Message : "An internal server error occurred. Please contact support.",
+            Detail = _env.IsDevelopment() ? exception.Message : "An internal server error occurred. Reference: " + DateTime.UtcNow.Ticks,
             Instance = context.Request.Path
         };
 

@@ -35,13 +35,37 @@ public static class DependencyInjection
 
         // EF Core Database
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
+        {
+            KeepAlive = 30,
+            CommandTimeout = 300,
+            Pooling = true,
+            MinPoolSize = 0,
+            MaxPoolSize = 20
+        };
+
+        // Force IPv4 resolution for Docker compatibility
+        try
+        {
+            if (!string.IsNullOrEmpty(npgsqlBuilder.Host))
+            {
+                var ips = System.Net.Dns.GetHostAddresses(npgsqlBuilder.Host);
+                var ipv4 = ips.FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                if (ipv4 != null)
+                {
+                    npgsqlBuilder.Host = ipv4.ToString();
+                }
+            }
+        }
+        catch { }
+
         services.AddDbContext<CobryxDbContext>((sp, options) =>
         {
             options.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
                 sp.GetRequiredService<DispatchDomainEventsInterceptor>());
 
-            options.UseNpgsql(connectionString, npgsqlOptions =>
+            options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
             {
                 npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,
@@ -58,6 +82,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
 
         // Identity Services
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();

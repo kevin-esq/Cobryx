@@ -39,7 +39,8 @@ public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<Pag
         {
             var search = request.SearchTerm.ToLower();
             query = query.Where(c => 
-                c.FullName.ToLower().Contains(search) || 
+                c.FirstName.ToLower().Contains(search) || 
+                c.LastName.ToLower().Contains(search) ||
                 c.Phone.Contains(search));
         }
 
@@ -51,10 +52,12 @@ public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<Pag
             .Take(request.PageSize)
             .Select(c => new CustomerDto(
                 c.Id,
+                c.FirstName,
+                c.LastName,
                 c.FullName,
                 c.Phone,
                 c.Address,
-                c.ExternalReference,
+                c.Document,
                 c.Credits.Count(cr => cr.Status == CreditStatus.Active),
                 c.CreatedAt))
             .ToListAsync(cancellationToken);

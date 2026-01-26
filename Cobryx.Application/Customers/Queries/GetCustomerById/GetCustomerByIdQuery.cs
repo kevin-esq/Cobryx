@@ -38,10 +38,12 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
 
         return Result.Success(new CustomerDto(
             customer.Id,
+            customer.FirstName,
+            customer.LastName,
             customer.FullName,
             customer.Phone,
             customer.Address,
-            customer.ExternalReference,
+            customer.Document,
             customer.Credits.Count(c => c.Status == CreditStatus.Active),
             customer.CreatedAt));
     }

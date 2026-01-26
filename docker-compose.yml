@@ -10,8 +10,9 @@ services:
       - "5000:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=YOUR_HOST;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true}
+      - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=aws-0-us-west-2.pooler.supabase.com;Database=postgres;Username=postgres.wofxgtfarmbqhoqwqaqd;Password=YOUR_PASSWORD;SSL Mode=Require;Keepalive=30}
       - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
+      - DOTNET_SYSTEM_NET_DISABLEIPV6=true
     restart: always
 
 # Note: We are currently using Supabase, so a local postgres service is not strictly required

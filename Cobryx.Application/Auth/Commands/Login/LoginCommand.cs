@@ -42,11 +42,14 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         
         await _userRepository.UpdateAsync(user);
 
-        return Result<AuthResult>.Success(new AuthResult(
+        return Result.Success(new AuthResult(
             accessToken,
             refreshToken,
-            user.Id,
+            user.FirstName,
+            user.LastName,
             user.FullName,
-            user.Role.Permissions.Select(p => p.Name)));
+            user.Email,
+            user.Role?.Name ?? "User",
+            DateTime.UtcNow.AddMinutes(60)));
     }
 }

@@ -10,7 +10,8 @@ namespace Cobryx.Application.Auth.Commands.Register;
 
 public record RegisterCommand(
     string BusinessName, 
-    string FullName, 
+    string FirstName,
+    string LastName, 
     string Email, 
     string Password) : IRequest<Result<AuthResult>>;
 
@@ -47,7 +48,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
         var tenant = new Tenant(request.BusinessName);
         await _tenantRepository.AddAsync(tenant);
 
-        // 2. Assign "Owner" Role (This assumes roles are seeded/exist)
+        // 2. Assign "Owner" Role
         var ownerRole = await _roleRepository.GetByNameAsync("Owner");
         if (ownerRole == null)
         {
@@ -55,7 +56,7 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
         }
 
         // 3. Create User
-        var user = new User(tenant.Id, request.FullName, request.Email, ownerRole.Id);
+        var user = new User(tenant.Id, request.FirstName, request.LastName, request.Email, ownerRole.Id);
         user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
         
         await _userRepository.AddAsync(user);
@@ -67,11 +68,14 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
         
         await _userRepository.UpdateAsync(user);
 
-        return Result<AuthResult>.Success(new AuthResult(
+        return Result.Success(new AuthResult(
             accessToken,
             refreshToken,
-            user.Id,
+            user.FirstName,
+            user.LastName,
             user.FullName,
-            ownerRole.Permissions.Select(p => p.Name)));
+            user.Email,
+            ownerRole.Name,
+            DateTime.UtcNow.AddMinutes(60))); // Assuming 60 min expiry for now
     }
 }

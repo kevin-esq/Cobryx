@@ -1,16 +1,18 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.ValueObjects;
 using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Update;
 
 public record UpdateCustomerCommand(
     Guid Id,
-    string FullName,
+    string FirstName,
+    string LastName,
     string Phone,
-    string? Address = null,
-    string? ExternalReference = null) : IRequest<Result>;
+    Address? Address = null,
+    IdentityDocument? Document = null) : IRequest<Result>;
 
 public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Result>
 {
@@ -35,7 +37,6 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             return Result.Failure("Customer not found.");
         }
 
-        // Check if phone changed and is already taken by another customer in the same tenant
         if (customer.Phone != request.Phone)
         {
             var existing = await _customerRepository.GetByPhoneAsync(tenantId.Value, request.Phone);
@@ -45,7 +46,12 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             }
         }
 
-        customer.UpdateDetails(request.FullName, request.Phone, request.Address, request.ExternalReference);
+        customer.UpdateDetails(
+            request.FirstName, 
+            request.LastName, 
+            request.Phone, 
+            request.Address, 
+            request.Document);
 
         await _customerRepository.UpdateAsync(customer);
 

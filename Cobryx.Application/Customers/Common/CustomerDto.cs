@@ -1,10 +1,14 @@
+using Cobryx.Domain.ValueObjects;
+
 namespace Cobryx.Application.Customers.Common;
 
 public record CustomerDto(
     Guid Id,
+    string FirstName,
+    string LastName,
     string FullName,
     string Phone,
-    string? Address,
-    string? ExternalReference,
+    Address? Address,
+    IdentityDocument? Document,
     int ActiveCreditsCount,
     DateTime CreatedAt);

@@ -36,6 +36,8 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, Result<PaginatedLi
             .Take(request.PageSize)
             .Select(u => new UserDto(
                 u.Id,
+                u.FirstName,
+                u.LastName,
                 u.FullName,
                 u.Email,
                 u.Role?.Name ?? "User",

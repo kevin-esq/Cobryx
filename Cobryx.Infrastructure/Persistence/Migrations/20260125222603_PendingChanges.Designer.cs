@@ -3,6 +3,7 @@ using System;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125222603_PendingChanges")]
+    partial class PendingChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,11 +69,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("OldValues")
                         .HasColumnType("jsonb");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -144,11 +147,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
@@ -228,11 +231,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("PhotoUrl")
                         .HasColumnType("text");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -290,11 +293,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("integer");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -352,11 +355,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("Reference")
                         .HasColumnType("text");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -410,11 +413,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -477,11 +480,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Sku")
                         .HasMaxLength(50)
@@ -544,11 +547,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -599,11 +602,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -683,11 +686,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Source")
                         .HasColumnType("text");
@@ -765,11 +768,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("PrimaryColor")
                         .HasColumnType("text");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("SecondaryColor")
                         .HasColumnType("text");
@@ -834,11 +837,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
 
-                    b.Property<uint>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -1367,8 +1370,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                             b1.Property<string>("RevokedByIp")
                                 .HasColumnType("text");
 
-                            b1.Property<long>("RowVersion")
-                                .HasColumnType("bigint");
+                            b1.Property<byte[]>("RowVersion")
+                                .IsRequired()
+                                .HasColumnType("bytea");
 
                             b1.Property<string>("Tags")
                                 .HasColumnType("text");
