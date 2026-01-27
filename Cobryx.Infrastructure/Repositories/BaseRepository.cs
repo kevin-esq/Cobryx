@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public abstract class BaseRepository<T> : IRepository<T> 
+public abstract class BaseRepository<T> : IRepository<T>
     where T : BaseEntity, IAggregateRoot
 {
     protected readonly CobryxDbContext _dbContext;
@@ -18,13 +18,13 @@ public abstract class BaseRepository<T> : IRepository<T>
         _dbSet = dbContext.Set<T>();
     }
 
-    protected IQueryable<T> QueryAsNoTracking => _dbSet.AsNoTracking();
+    public virtual IQueryable<T> Query() => _dbSet;
 
     public virtual async Task<T?> GetByIdAsync(Guid id) => await _dbSet.FindAsync(id);
 
     public virtual async Task<IEnumerable<T>> GetAllAsync() => await _dbSet.ToListAsync();
 
-    public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate) => 
+    public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate) =>
         await _dbSet.Where(predicate).ToListAsync();
 
     public virtual async Task AddAsync(T entity)
@@ -35,7 +35,6 @@ public abstract class BaseRepository<T> : IRepository<T>
 
     public virtual async Task UpdateAsync(T entity)
     {
-        _dbContext.Entry(entity).State = EntityState.Modified;
         await _dbContext.SaveChangesAsync();
     }
 

@@ -6,17 +6,19 @@ namespace Cobryx.Domain.Common;
 public abstract class BaseEntity
 {
     public Guid Id { get; protected set; }
-    public DateTime CreatedAt { get; private set; }
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public Guid? CreatedBy { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
     public Guid? UpdatedBy { get; private set; }
     public bool IsDeleted { get; private set; }
-    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
+    public uint RowVersion { get; private set; }
+
+    public string? Tags { get; private set; }
+    public string? MetadataJson { get; private set; }
+    public string? InternalNotes { get; private set; }
 
     protected BaseEntity()
     {
-        Id = Guid.NewGuid();
-        CreatedAt = DateTime.UtcNow;
     }
 
     public void SetCreatedBy(Guid userId)
@@ -29,6 +31,32 @@ public abstract class BaseEntity
     {
         UpdatedBy = userId;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Delete()
+    {
+        IsDeleted = true;
+        UpdateTimestamp();
+    }
+
+    public void UpdateTimestamp() => UpdatedAt = DateTime.UtcNow;
+
+    public void AddMetadata(string key, string value)
+    {
+        MetadataJson = string.IsNullOrEmpty(MetadataJson) ? $"{key}={value}" : $"{MetadataJson};{key}={value}";
+        UpdateTimestamp();
+    }
+
+    public void SetTags(string tags)
+    {
+        Tags = tags;
+        UpdateTimestamp();
+    }
+
+    public void SetInternalNotes(string notes)
+    {
+        InternalNotes = notes;
+        UpdateTimestamp();
     }
 
     private readonly List<IDomainEvent> _domainEvents = new();
@@ -47,16 +75,5 @@ public abstract class BaseEntity
     public void ClearDomainEvents()
     {
         _domainEvents.Clear();
-    }
-
-    public void Delete()
-    {
-        IsDeleted = true;
-        UpdateTimestamp();
-    }
-
-    public void UpdateTimestamp()
-    {
-        UpdatedAt = DateTime.UtcNow;
     }
 }

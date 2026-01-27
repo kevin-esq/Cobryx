@@ -1,48 +1,24 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Cobryx.Domain.Common;
 
-public abstract class ValueObject : IEquatable<ValueObject>
+public abstract record ValueObject
 {
-    protected abstract IEnumerable<object> GetEqualityComponents();
+    protected abstract IEnumerable<object?> GetEqualityComponents();
 
-    public override bool Equals(object? obj)
+    public virtual bool Equals(ValueObject? other)
     {
-        if (obj == null || obj.GetType() != GetType())
+        if (other == null || other.GetType() != GetType())
             return false;
 
-        var other = (ValueObject)obj;
-
         return GetEqualityComponents().SequenceEqual(other.GetEqualityComponents());
-    }
-
-    public bool Equals(ValueObject? other)
-    {
-        return Equals((object?)other);
     }
 
     public override int GetHashCode()
     {
         return GetEqualityComponents()
-            .Select(x => x != null ? x.GetHashCode() : 0)
+            .Select(x => x?.GetHashCode() ?? 0)
             .Aggregate((x, y) => x ^ y);
-    }
-
-    public static bool operator ==(ValueObject? left, ValueObject? right)
-    {
-        if (ReferenceEquals(left, null) && ReferenceEquals(right, null))
-            return true;
-
-        if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
-            return false;
-
-        return left.Equals(right);
-    }
-
-    public static bool operator !=(ValueObject? left, ValueObject? right)
-    {
-        return !(left == right);
     }
 }

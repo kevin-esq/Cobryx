@@ -52,7 +52,6 @@ public class Installment : BaseEntity
 
     public decimal ApplyPayment(decimal amount)
     {
-        // B. Robustness: Force rounding to 2 decimals to match currency standards (ISO 20022 compatible)
         decimal remaining = Math.Round(amount, 2);
 
         // 1. Pay Late Interest First (Mora)
@@ -103,7 +102,6 @@ public class Installment : BaseEntity
     public void ApplyLateInterest(Money amount)
     {
         LateInterestAmount = amount;
-        // C. Consistency: TotalAmount should always reflect the current components
         TotalAmount = PrincipalPart + InterestPart + LateInterestAmount;
         UpdateStatus();
         UpdateTimestamp();
@@ -120,7 +118,6 @@ public class Installment : BaseEntity
 
     public void MarkAsOverdue(DateTime businessDate)
     {
-        // A. Multi-tz/Audit Fix: Use passed businessDate instead of DateTime.UtcNow
         if ((Status == InstallmentStatus.Pending || Status == InstallmentStatus.Partial) && businessDate > DueDate)
         {
             Status = InstallmentStatus.Overdue;

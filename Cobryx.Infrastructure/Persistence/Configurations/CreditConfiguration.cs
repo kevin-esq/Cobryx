@@ -10,6 +10,9 @@ public class CreditConfiguration : IEntityTypeConfiguration<Credit>
     {
         builder.HasIndex(c => c.TenantId);
         builder.HasIndex(c => c.CustomerId);
+        builder.HasIndex(c => c.Status);
+        builder.HasIndex(c => c.StartDate);
+        builder.HasIndex(c => new { c.TenantId, c.Status });
         builder.OwnsOne(c => c.Principal, m =>
         {
             m.Property(m => m.Amount).HasPrecision(18, 2);

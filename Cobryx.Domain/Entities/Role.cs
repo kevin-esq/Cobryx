@@ -11,7 +11,11 @@ public class Role : BaseEntity, IAggregateRoot
     private readonly List<Permission> _permissions = new();
     public IReadOnlyCollection<Permission> Permissions => _permissions.AsReadOnly();
 
-    private Role() { }
+    private Role() 
+    { 
+        Name = null!;
+        Description = null!;
+    }
 
     public Role(string name, string description, bool isSystemRole = false)
     {

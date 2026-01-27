@@ -1,3 +1,6 @@
+using Serilog;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Cobryx.Application;
 using Cobryx.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
@@ -5,10 +8,55 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "Cobryx.Api")
+    .WriteTo.Console()
+    .WriteTo.File("logs/cobryx-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Swagger Configuration with JWT Support
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Cobryx API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"{token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 builder.Services.AddControllers();
+
+// Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<Cobryx.Infrastructure.Persistence.CobryxDbContext>("Database");
 
 builder.Services
     .AddApplicationServices()
@@ -19,7 +67,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 5; // 5 attempts per minute
+        opt.PermitLimit = 5;
         opt.QueueLimit = 0;
     });
 });
@@ -38,7 +86,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy.WithOrigins("https://app.cobryx.com.mx") // Restriction for production
+        policy.WithOrigins("https://app.cobryx.com.mx")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -46,13 +94,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
 
@@ -62,22 +110,40 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<Cobryx.Api.Middlewares.GlobalExceptionHandlerMiddleware>();
-app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseHttpsRedirection();
-app.MapControllers();
+app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
-// Basic Health Check
-app.MapGet("/health", () => Results.Ok("Cobryx API is running"));
-
-// Seed Data
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsDevelopment())
 {
-    var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
-    await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo);
+    app.UseHttpsRedirection();
 }
 
+app.MapControllers();
+
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Seed Data
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo);
+        Log.Information("Database seeding completed successfully");
+    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "Failed to seed database.");
+}
+
+Log.Information("Starting web host...");
 app.Run();
+Log.Information("Web host stopped");

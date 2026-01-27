@@ -10,13 +10,12 @@ public class PasswordHasher : IPasswordHasher
 
     public string HashPassword(string password)
     {
-        // Re-using User as TUser for the internal hasher
         return _hasher.HashPassword(default!, password);
     }
 
     public bool VerifyPassword(string password, string passwordHash)
     {
         var result = _hasher.VerifyHashedPassword(default!, passwordHash, password);
-        return result == PasswordVerificationResult.Success;
+        return result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded;
     }
 }

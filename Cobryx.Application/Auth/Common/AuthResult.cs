@@ -1,8 +1,11 @@
 namespace Cobryx.Application.Auth.Common;
 
 public record AuthResult(
-    string AccessToken,
+    string Token,
     string RefreshToken,
-    Guid UserId,
+    string FirstName,
+    string LastName,
     string FullName,
-    IEnumerable<string> Permissions);
+    string Email,
+    string Role,
+    DateTime Expires);

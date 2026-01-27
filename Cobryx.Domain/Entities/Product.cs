@@ -19,7 +19,11 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
     
     public bool IsActive { get; private set; }
 
-    private Product() { }
+    private Product() 
+    { 
+        Name = null!;
+        BasePrice = null!;
+    }
 
     public Product(Guid tenantId, string name, Money basePrice, bool isService = false, bool isLoanProduct = false)
     {

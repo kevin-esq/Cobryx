@@ -1,51 +1,24 @@
 using System.Collections.Generic;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Enums;
 
 namespace Cobryx.Domain.ValueObjects;
 
-public enum InterestType { Simple, Flat, Amortized }
-public enum PenaltyType { Daily, FixedOneTime }
-public enum PaymentPriority { InterestFirst, CapitalFirst, Proportional }
-
-public class BusinessSettings : ValueObject
+public record BusinessSettings(
+    InterestType InterestType,
+    decimal DefaultInterestValue,
+    PenaltyType PenaltyType,
+    decimal PenaltyValue,
+    bool AllowPartialPayments,
+    PaymentPriority PaymentPriority,
+    int GraceDays,
+    decimal MinimumPaymentAmount) : ValueObject
 {
-    public InterestType InterestType { get; private set; }
-    public decimal DefaultInterestValue { get; private set; }
-    public PenaltyType PenaltyType { get; private set; }
-    public decimal PenaltyValue { get; private set; }
-    public bool AllowPartialPayments { get; private set; }
-    public PaymentPriority PaymentPriority { get; private set; }
-    public int GraceDays { get; private set; }
-    public decimal MinimumPaymentAmount { get; private set; }
-
-    // Private constructor for EF Core or deserialization
-    private BusinessSettings() { }
-
-    public BusinessSettings(
-        InterestType interestType,
-        decimal defaultInterestValue,
-        PenaltyType penaltyType,
-        decimal penaltyValue,
-        bool allowPartialPayments,
-        PaymentPriority paymentPriority,
-        int graceDays,
-        decimal minimumPaymentAmount)
-    {
-        InterestType = interestType;
-        DefaultInterestValue = defaultInterestValue;
-        PenaltyType = penaltyType;
-        PenaltyValue = penaltyValue;
-        AllowPartialPayments = allowPartialPayments;
-        PaymentPriority = paymentPriority;
-        GraceDays = graceDays;
-        MinimumPaymentAmount = minimumPaymentAmount;
-    }
-
     public static BusinessSettings Default()
     {
         return new BusinessSettings(
             InterestType.Simple,
-            10m, // 10% default
+            10m,
             PenaltyType.FixedOneTime,
             0m,
             true,
@@ -55,7 +28,7 @@ public class BusinessSettings : ValueObject
         );
     }
 
-    protected override IEnumerable<object> GetEqualityComponents()
+    protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return InterestType;
         yield return DefaultInterestValue;

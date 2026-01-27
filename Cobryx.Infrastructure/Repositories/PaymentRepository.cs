@@ -16,6 +16,6 @@ public class PaymentRepository : BaseRepository<Payment>, IPaymentRepository
 
     public async Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId)
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.ToListAsync(); // Query filter handles tenantId
     }
 }

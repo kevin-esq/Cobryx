@@ -12,7 +12,10 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
     public string? Reference { get; private set; } // Physical receipt #, bank ref, etc.
     public string? Notes { get; private set; }
 
-    private Payment() { }
+    private Payment() 
+    { 
+        Amount = null!;
+    }
 
     public Payment(Guid tenantId, Guid creditId, Money amount, DateTime paymentDate, string? reference = null, string? notes = null)
     {

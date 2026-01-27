@@ -18,7 +18,6 @@ public class TenantProvider : ITenantProvider
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null) return null;
 
-        // 1. Check Request-level Cache
         if (httpContext.Items.TryGetValue("Cache_TenantId", out var cachedId))
         {
             return (Guid?)cachedId;
@@ -26,7 +25,6 @@ public class TenantProvider : ITenantProvider
 
         Guid? tenantId = null;
 
-        // 2. Try to get from Header
         if (httpContext.Request.Headers.TryGetValue(TenantHeader, out var tenantIdStr))
         {
             if (Guid.TryParse(tenantIdStr, out var id))
@@ -35,9 +33,17 @@ public class TenantProvider : ITenantProvider
             }
         }
 
-        // 3. Cache for current request
         httpContext.Items["Cache_TenantId"] = tenantId;
 
         return tenantId;
+    }
+
+    public void SetTenantId(Guid tenantId)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            httpContext.Items["Cache_TenantId"] = tenantId;
+        }
     }
 }

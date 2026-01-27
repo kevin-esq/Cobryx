@@ -16,6 +16,8 @@ public class CobryxDbContext : DbContext
         _tenantProvider = tenantProvider;
     }
 
+    public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Customer> Customers => Set<Customer>();
@@ -26,48 +28,49 @@ public class CobryxDbContext : DbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CobryxDbContext).Assembly);
 
-        // Global Query Filters (Multi-tenancy & Soft Delete)
-        var currentTenantId = _tenantProvider.GetTenantId();
-
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            // Skip owned types as they are part of their owner
             if (entityType.IsOwned()) continue;
-            // 1. Soft Delete Filter & Concurrency Token
+
+            var parameter = Expression.Parameter(entityType.ClrType, "e");
+            Expression? filterExpr = null;
+
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
             {
-                var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var filter = Expression.Lambda(
-                    Expression.Equal(
-                        Expression.Property(parameter, nameof(BaseEntity.IsDeleted)),
-                        Expression.Constant(false)),
-                    parameter);
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+                var isDeletedProperty = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
+                var notDeletedExpr = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+                filterExpr = notDeletedExpr;
 
-                // Configure RowVersion as concurrency token
                 modelBuilder.Entity(entityType.ClrType)
-                    .Property<byte[]>(nameof(BaseEntity.RowVersion))
+                    .Property<uint>(nameof(BaseEntity.RowVersion))
                     .IsRowVersion();
             }
 
-            // 2. Multi-tenancy Filter
-            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType) && entityType.ClrType != typeof(User))
             {
-                var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var filter = Expression.Lambda(
-                    Expression.Equal(
-                        Expression.Property(parameter, nameof(ITenantEntity.TenantId)),
-                        Expression.Constant(currentTenantId ?? Guid.Empty)),
-                    parameter);
+                var tenantIdProperty = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
 
-                // Note: TenantId might need careful handling for null providers during migrations.
-                // In a real pro app, we use a more robust way to combine filters.
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+                var tenantFilterExpr = Expression.Equal(
+                    tenantIdProperty,
+                    Expression.Property(Expression.Constant(this), nameof(CurrentTenantId))
+                );
+
+                filterExpr = filterExpr == null
+                    ? tenantFilterExpr
+                    : Expression.AndAlso(filterExpr, tenantFilterExpr);
+            }
+
+            if (filterExpr != null)
+            {
+                var lambda = Expression.Lambda(filterExpr, parameter);
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
             }
         }
 

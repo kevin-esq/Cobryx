@@ -7,28 +7,43 @@ namespace Cobryx.Domain.Entities;
 public class User : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
-    public string FullName { get; private set; }
+    public string FirstName { get; private set; }
+    public string LastName { get; private set; }
+    public string FullName => $"{FirstName} {LastName}";
     public string Email { get; private set; }
     public string PasswordHash { get; private set; }
     public Guid RoleId { get; private set; }
     public Role Role { get; private set; }
+    public bool IsActive { get; private set; }
 
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
-    private User() { }
+    private User() 
+    { 
+        FirstName = null!;
+        LastName = null!;
+        Email = null!;
+        PasswordHash = null!;
+        Role = null!;
+    }
 
-    public User(Guid tenantId, string fullName, string email, Guid roleId)
+    public User(Guid tenantId, string firstName, string lastName, string email, Guid roleId)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        if (string.IsNullOrWhiteSpace(fullName)) throw new ArgumentException("FullName is required.", nameof(fullName));
+        if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("FirstName is required.", nameof(firstName));
+        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("LastName is required.", nameof(lastName));
         if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Email is required.", nameof(email));
         if (roleId == Guid.Empty) throw new ArgumentException("RoleId is required.", nameof(roleId));
 
         TenantId = tenantId;
-        FullName = fullName;
+        FirstName = firstName;
+        LastName = lastName;
         Email = email.ToLowerInvariant();
         RoleId = roleId;
+        PasswordHash = null!;
+        Role = null!;
+        IsActive = true;
     }
 
     public void SetPasswordHash(string passwordHash)

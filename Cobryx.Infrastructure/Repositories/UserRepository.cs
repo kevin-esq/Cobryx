@@ -13,6 +13,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     {
         var emailLower = email.ToLowerInvariant();
         return await _dbSet
+            .IgnoreQueryFilters()
             .Include(u => u.Role)
                 .ThenInclude(r => r.Permissions)
             .Include(u => u.RefreshTokens)
@@ -23,5 +24,14 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     {
         var emailLower = email.ToLowerInvariant();
         return await _dbSet.AnyAsync(u => u.Email == emailLower);
+    }
+
+    public async Task<User?> GetByRefreshTokenAsync(string refreshToken)
+    {
+        return await _dbSet
+            .Include(u => u.Role)
+                .ThenInclude(r => r.Permissions)
+            .Include(u => u.RefreshTokens)
+            .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
     }
 }
