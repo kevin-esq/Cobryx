@@ -22,14 +22,14 @@ public class TenantMiddleware
         if (context.User.Identity?.IsAuthenticated == true)
         {
             var claimTenantId = context.User.FindFirst("tenant_id")?.Value;
-            
-            if (context.Request.Headers.ContainsKey(TenantHeader) && 
+
+            if (context.Request.Headers.ContainsKey(TenantHeader) &&
                 context.Request.Headers[TenantHeader] != claimTenantId)
             {
-                _logger.LogWarning("Security Alert: Tenant mismatch (Token: {TokenId}, Header: {HeaderId})", 
+                _logger.LogWarning("Security Alert: Tenant mismatch (Token: {TokenId}, Header: {HeaderId})",
                     claimTenantId, context.Request.Headers[TenantHeader]);
             }
-            
+
             tenantId = claimTenantId;
         }
 
@@ -48,13 +48,12 @@ public class TenantMiddleware
                 return;
             }
 
-            _logger.LogWarning("Request blocked: Tenant context missing.");
+            _logger.LogWarning("Request blocked: Tenant context missing for path {Path}", context.Request.Path);
             context.Response.StatusCode = 400;
             await context.Response.WriteAsync("Tenant-Id is required.");
             return;
         }
 
-        // Cache it for the TenantProvider (Request-level cache)
         if (Guid.TryParse(tenantId, out var id))
         {
             context.Items["Cache_TenantId"] = id;

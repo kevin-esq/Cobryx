@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 using System.Text;
 
 namespace Cobryx.Infrastructure;
@@ -28,7 +29,7 @@ public static class DependencyInjection
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
 
-        // Pipeline Behaviors (Registered here to bypass Application's source generator)
+        // Pipeline Behaviors
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
@@ -44,7 +45,7 @@ public static class DependencyInjection
             MaxPoolSize = 20
         };
 
-        // Force IPv4 resolution for Docker compatibility
+        // IPv4 resolution for Docker compatibility
         try
         {
             if (!string.IsNullOrEmpty(npgsqlBuilder.Host))

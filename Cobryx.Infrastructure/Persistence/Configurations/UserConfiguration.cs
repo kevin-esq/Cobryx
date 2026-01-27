@@ -27,6 +27,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             rt.WithOwner().HasForeignKey("UserId");
             rt.HasKey(x => x.Id);
             rt.Property(x => x.Token).IsRequired().HasMaxLength(200);
+            rt.Property(x => x.RowVersion).IsRowVersion();
         });
     }
 }

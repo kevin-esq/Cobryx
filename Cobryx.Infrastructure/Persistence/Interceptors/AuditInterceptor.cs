@@ -46,7 +46,6 @@ public class AuditInterceptor : SaveChangesInterceptor
             if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                 continue;
 
-            // 1. System Metadata (CreatedBy/UpdatedBy)
             if (entry.State == EntityState.Added)
             {
                 if (userId.HasValue) entry.Entity.SetCreatedBy(userId.Value);
@@ -54,10 +53,8 @@ public class AuditInterceptor : SaveChangesInterceptor
             else if (entry.State == EntityState.Modified || entry.HasChangedOwnedEntities())
             {
                 if (userId.HasValue) entry.Entity.SetUpdatedBy(userId.Value);
-                else entry.Entity.UpdateTimestamp();
             }
 
-            // 2. Audit Log Detection
             if (tenantId.HasValue && entry.Entity is not AuditLog && entry.Entity is not SystemErrorLog)
             {
                 var auditEntry = new AuditEntry(entry)
@@ -71,7 +68,6 @@ public class AuditInterceptor : SaveChangesInterceptor
             }
         }
 
-        // Save audit entries
         foreach (var auditEntry in auditEntries)
         {
             context.Set<AuditLog>().Add(auditEntry.ToAuditLog());
@@ -138,8 +134,8 @@ public class AuditEntry
 public static class Extensions
 {
     public static bool HasChangedOwnedEntities(this Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry) =>
-        entry.References.Any(r => 
-            r.TargetEntry != null && 
-            r.TargetEntry.Metadata.IsOwned() && 
+        entry.References.Any(r =>
+            r.TargetEntry != null &&
+            r.TargetEntry.Metadata.IsOwned() &&
             (r.TargetEntry.State == EntityState.Added || r.TargetEntry.State == EntityState.Modified));
 }

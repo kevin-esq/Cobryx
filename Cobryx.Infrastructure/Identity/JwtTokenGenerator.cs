@@ -18,11 +18,14 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(User user, Role? roleOverride = null)
     {
         var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var effectiveRole = roleOverride ?? user.Role;
+        var roleName = effectiveRole?.Name ?? "User";
 
         var claims = new List<Claim>
         {
@@ -35,13 +38,13 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(JwtRegisteredClaimNames.Nbf, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new("tenant_name", user.FullName),
             new("tenant_id", user.TenantId.ToString()),
-            new(ClaimTypes.Role, user.Role?.Name ?? "User")
+            new(ClaimTypes.Role, roleName)
         };
 
         // Add granular permissions from RBAC if available
-        if (user.Role?.Permissions != null)
+        if (effectiveRole?.Permissions != null)
         {
-            foreach (var permission in user.Role.Permissions)
+            foreach (var permission in effectiveRole.Permissions)
             {
                 claims.Add(new Claim("permissions", permission.Name));
             }

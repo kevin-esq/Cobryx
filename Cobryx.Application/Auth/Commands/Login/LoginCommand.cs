@@ -1,9 +1,9 @@
-using System.Linq;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
+using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
@@ -13,43 +13,43 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IAuthService _authService;
+    private readonly ITenantProvider _tenantProvider;
+    private readonly ILogger<LoginHandler> _logger;
 
     public LoginHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IAuthService authService,
+        ITenantProvider tenantProvider,
+        ILogger<LoginHandler> logger)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _authService = authService;
+        _tenantProvider = tenantProvider;
+        _logger = logger;
     }
 
     public async Task<Result<AuthResult>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Login attempt for email: {Email}", request.Email);
+
         var user = await _userRepository.GetByEmailAsync(request.Email);
-        
+
         if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
+            _logger.LogWarning("Authentication failed for email: {Email}", request.Email);
             return Result.Failure<AuthResult>("Invalid credentials.");
         }
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        var authResult = _authService.GenerateAuthResponse(user);
 
-        // 7 days expiry for refresh token
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), "unknown"); 
-        
+        // Set tenant context for the current request
+        _tenantProvider.SetTenantId(user.TenantId);
+
         await _userRepository.UpdateAsync(user);
 
-        return Result.Success(new AuthResult(
-            accessToken,
-            refreshToken,
-            user.FirstName,
-            user.LastName,
-            user.FullName,
-            user.Email,
-            user.Role?.Name ?? "User",
-            DateTime.UtcNow.AddMinutes(60)));
+        return Result.Success(authResult);
     }
 }

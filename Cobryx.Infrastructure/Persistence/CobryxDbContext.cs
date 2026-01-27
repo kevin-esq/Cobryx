@@ -16,6 +16,8 @@ public class CobryxDbContext : DbContext
         _tenantProvider = tenantProvider;
     }
 
+    public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Customer> Customers => Set<Customer>();
@@ -33,8 +35,6 @@ public class CobryxDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CobryxDbContext).Assembly);
 
-        var currentTenantId = _tenantProvider.GetTenantId();
-
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (entityType.IsOwned()) continue;
@@ -42,12 +42,10 @@ public class CobryxDbContext : DbContext
             var parameter = Expression.Parameter(entityType.ClrType, "e");
             Expression? filterExpr = null;
 
-            // 1. Soft Delete Filter
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
             {
                 var isDeletedProperty = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
                 var notDeletedExpr = Expression.Equal(isDeletedProperty, Expression.Constant(false));
-                
                 filterExpr = notDeletedExpr;
 
                 modelBuilder.Entity(entityType.ClrType)
@@ -55,14 +53,17 @@ public class CobryxDbContext : DbContext
                     .IsRowVersion();
             }
 
-            // 2. Multi-tenancy Filter
-            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType) && entityType.ClrType != typeof(User))
             {
                 var tenantIdProperty = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
-                var tenantFilterExpr = Expression.Equal(tenantIdProperty, Expression.Constant(currentTenantId ?? Guid.Empty));
 
-                filterExpr = filterExpr == null 
-                    ? tenantFilterExpr 
+                var tenantFilterExpr = Expression.Equal(
+                    tenantIdProperty,
+                    Expression.Property(Expression.Constant(this), nameof(CurrentTenantId))
+                );
+
+                filterExpr = filterExpr == null
+                    ? tenantFilterExpr
                     : Expression.AndAlso(filterExpr, tenantFilterExpr);
             }
 

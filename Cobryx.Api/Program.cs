@@ -8,7 +8,7 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog (Structured Logging)
+// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -19,24 +19,23 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
-// Configuración de Swagger para permitir Autenticación (JWT)
+
+// Swagger Configuration with JWT Support
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Cobryx API", Version = "v1" });
 
-    // Definir el esquema de seguridad
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization encabezado usando el esquema Bearer",
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"{token}\"",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
 
-    // Hacer que Swagger use el token en las peticiones
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
@@ -46,12 +45,9 @@ builder.Services.AddSwaggerGen(c =>
                 {
                     Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
                     Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                }
             },
-            new List<string>()
+            Array.Empty<string>()
         }
     });
 });
@@ -71,7 +67,7 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 5; 
+        opt.PermitLimit = 5;
         opt.QueueLimit = 0;
     });
 });
@@ -90,7 +86,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy.WithOrigins("https://app.cobryx.com.mx") 
+        policy.WithOrigins("https://app.cobryx.com.mx")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -98,7 +94,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Production Hardening Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -115,23 +110,23 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<Cobryx.Api.Middlewares.GlobalExceptionHandlerMiddleware>();
-app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
 app.MapControllers();
 
-// Map Health Checks
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
-    Predicate = _ => false // Liveness doesn't check deps
+    Predicate = _ => false
 });
 
 // Seed Data
@@ -146,9 +141,8 @@ try
 }
 catch (Exception ex)
 {
-    Log.Error(ex, "Failed to seed database. Application will continue but roles may not be initialized.");
+    Log.Error(ex, "Failed to seed database.");
 }
-
 
 Log.Information("Starting web host...");
 app.Run();

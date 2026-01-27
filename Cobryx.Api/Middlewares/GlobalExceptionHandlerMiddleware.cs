@@ -38,12 +38,13 @@ public class GlobalExceptionHandlerMiddleware
     {
         _logger.LogError(exception, "Cobryx Critical Error: {Message}", exception.Message);
 
-        // 🚀 Persist Error for Production Observability
+        // Persist error for observability
         try
         {
-            var dbContext = context.RequestServices.GetRequiredService<CobryxDbContext>();
-            var tenantProvider = context.RequestServices.GetRequiredService<ITenantProvider>();
-            var userProvider = context.RequestServices.GetRequiredService<ICurrentUserProvider>();
+            using var scope = context.RequestServices.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
+            var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
+            var userProvider = scope.ServiceProvider.GetRequiredService<ICurrentUserProvider>();
 
             var errorLog = new SystemErrorLog(
                 tenantProvider.GetTenantId() ?? Guid.Empty,
@@ -65,7 +66,7 @@ public class GlobalExceptionHandlerMiddleware
         }
 
         context.Response.ContentType = "application/problem+json";
-        
+
         var (status, title, type) = exception switch
         {
             DomainException => (HttpStatusCode.BadRequest, "Domain Constraint Violated", "https://cobryx.com.mx/errors/domain-error"),

@@ -1,5 +1,7 @@
 using Cobryx.Domain.DomainServices;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Auth.Services;
 using Concordia;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,7 @@ public static class DependencyInjection
 
         // Domain Services
         services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
+        services.AddScoped<IAuthService, AuthService>();
 
         services.AddValidatorsFromAssembly(assembly);
 

@@ -12,44 +12,29 @@ public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRe
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<AuthResult>>
 {
     private readonly IUserRepository _userRepository;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IAuthService _authService;
 
     public RefreshTokenHandler(
         IUserRepository userRepository,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IAuthService authService)
     {
         _userRepository = userRepository;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _authService = authService;
     }
 
     public async Task<Result<AuthResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var users = await _userRepository.GetAllAsync(); 
-        var user = users.FirstOrDefault(u => u.HasValidRefreshToken(request.RefreshToken));
+        var user = await _userRepository.GetByRefreshTokenAsync(request.RefreshToken);
 
-        if (user == null)
+        if (user == null || !user.HasValidRefreshToken(request.RefreshToken))
         {
             return Result.Failure<AuthResult>("Invalid or active refresh token not found.");
         }
 
-        var activeToken = user.RefreshTokens.First(x => x.Token == request.RefreshToken);
-
-        var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
-
-        activeToken.Revoke("system-rotation", newRefreshToken);
-        user.AddRefreshToken(newRefreshToken, DateTime.UtcNow.AddDays(7), "token-rotation");
+        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken);
 
         await _userRepository.UpdateAsync(user);
 
-        return Result.Success(new AuthResult(
-            newAccessToken,
-            newRefreshToken,
-            user.FirstName,
-            user.LastName,
-            user.FullName,
-            user.Email,
-            user.Role?.Name ?? "User",
-            DateTime.UtcNow.AddMinutes(60)));
+        return Result.Success(authResult);
     }
 }

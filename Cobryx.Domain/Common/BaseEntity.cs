@@ -13,24 +13,18 @@ public abstract class BaseEntity
     public bool IsDeleted { get; private set; }
     public uint RowVersion { get; private set; }
 
-    // Production Metadata Enrichment
-    public string? Tags { get; private set; } // Comma-separated or structured
-    public string? MetadataJson { get; private set; } // Flex-storage for production integrations
-    public string? InternalNotes { get; private set; } // System-level documentation
+    public string? Tags { get; private set; }
+    public string? MetadataJson { get; private set; }
+    public string? InternalNotes { get; private set; }
 
     protected BaseEntity()
     {
-        Id = Guid.NewGuid();
-        // CreatedAt is now initialized directly on the property
     }
 
     public void SetCreatedBy(Guid userId)
     {
         if (CreatedBy.HasValue) return;
         CreatedBy = userId;
-        // CreatedAt is already set by property initializer, no need to set here unless it's meant to be updated on first set.
-        // Based on the snippet, it seems the intent was to set it here, but the property initializer makes it redundant.
-        // Keeping the original logic for CreatedAt to be set only once.
     }
 
     public void SetUpdatedBy(Guid userId)
@@ -49,7 +43,6 @@ public abstract class BaseEntity
 
     public void AddMetadata(string key, string value)
     {
-        // Simple logic for metadata enrichment (could be JSON)
         MetadataJson = string.IsNullOrEmpty(MetadataJson) ? $"{key}={value}" : $"{MetadataJson};{key}={value}";
         UpdateTimestamp();
     }

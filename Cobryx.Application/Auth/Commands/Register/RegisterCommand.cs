@@ -1,4 +1,3 @@
-using System.Linq;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Entities;
@@ -9,10 +8,10 @@ using Cobryx.Domain.Common;
 namespace Cobryx.Application.Auth.Commands.Register;
 
 public record RegisterCommand(
-    string BusinessName, 
+    string BusinessName,
     string FirstName,
-    string LastName, 
-    string Email, 
+    string LastName,
+    string Email,
     string Password) : IRequest<Result<AuthResult>>;
 
 public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResult>>
@@ -21,20 +20,20 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IAuthService _authService;
 
     public RegisterHandler(
         ITenantRepository tenantRepository,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IAuthService authService)
     {
         _tenantRepository = tenantRepository;
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _authService = authService;
     }
 
     public async Task<Result<AuthResult>> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -44,38 +43,22 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
             return Result.Failure<AuthResult>("Email already registered.");
         }
 
-        // 1. Create Tenant
         var tenant = new Tenant(request.BusinessName);
         await _tenantRepository.AddAsync(tenant);
 
-        // 2. Assign "Owner" Role
         var ownerRole = await _roleRepository.GetByNameAsync("Owner");
         if (ownerRole == null)
         {
-             return Result.Failure<AuthResult>("System roles not initialized.");
+            return Result.Failure<AuthResult>("System roles not initialized.");
         }
 
-        // 3. Create User
         var user = new User(tenant.Id, request.FirstName, request.LastName, request.Email, ownerRole.Id);
         user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
-        
+
+        var authResult = _authService.GenerateAuthResponse(user, ownerRole);
+
         await _userRepository.AddAsync(user);
 
-        // 4. Generate Tokens
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), "auto-registration");
-        
-        await _userRepository.UpdateAsync(user);
-
-        return Result.Success(new AuthResult(
-            accessToken,
-            refreshToken,
-            user.FirstName,
-            user.LastName,
-            user.FullName,
-            user.Email,
-            ownerRole.Name,
-            DateTime.UtcNow.AddMinutes(60))); // Assuming 60 min expiry for now
+        return Result.Success(authResult);
     }
 }
