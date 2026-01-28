@@ -15,12 +15,21 @@ services:
       - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
       - Storage__AzureBlob__ConnectionString=${COBRYX_STORAGE_CONNECTION_STRING:-UseDevelopmentStorage=true}
       - Security__ClamAV__Host=clamav
+      - Caching__Redis__ConnectionString=redis:6379
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
     depends_on:
       - clamav
+      - redis
     restart: always
 
   clamav:
     image: clamav/clamav:latest
     container_name: cobryx-clamav
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: cobryx-redis
+    ports:
+      - 6379:6379
     restart: always

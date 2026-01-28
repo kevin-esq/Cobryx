@@ -89,6 +89,24 @@ public class CobryxDbContext : DbContext
             }
         }
 
+        modelBuilder.Entity<Customer>()
+            .HasIndex(c => new { c.TenantId, c.CreatedAt })
+            .IsDescending(false, true);
+
+        modelBuilder.Entity<Credit>()
+            .HasIndex(c => new { c.TenantId, c.CreatedAt })
+            .IsDescending(false, true);
+
+        modelBuilder.Entity<Payment>()
+            .HasIndex(p => new { p.TenantId, p.CreatedAt })
+            .IsDescending(false, true);
+
+        modelBuilder.Entity<Invoice>()
+            .HasIndex(i => new { i.TenantId, i.Status });
+
+        modelBuilder.Entity<SupportTicket>()
+            .HasIndex(s => new { s.TenantId, s.Status });
+
         base.OnModelCreating(modelBuilder);
     }
 }
