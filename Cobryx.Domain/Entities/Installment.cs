@@ -54,7 +54,6 @@ public class Installment : BaseEntity
     {
         decimal remaining = Math.Round(amount, 2);
 
-        // Pay Late Interest First
         decimal lateDue = Math.Max(0, LateInterestAmount.Amount - LateInterestPaid.Amount);
         if (lateDue > 0 && remaining > 0)
         {
@@ -63,7 +62,6 @@ public class Installment : BaseEntity
             remaining -= toPay;
         }
 
-        // 2. Pay Ordinary Interest Second
         decimal interestDue = Math.Max(0, InterestPart.Amount - InterestPaid.Amount);
         if (interestDue > 0 && remaining > 0)
         {
@@ -72,7 +70,6 @@ public class Installment : BaseEntity
             remaining -= toPay;
         }
 
-        // 3. Pay Principal Last
         decimal principalDue = Math.Max(0, PrincipalPart.Amount - PrincipalPaid.Amount);
         if (principalDue > 0 && remaining > 0)
         {

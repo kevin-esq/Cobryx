@@ -67,7 +67,6 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 
         decimal remainingAmount = amount.Amount;
 
-        // Apply payment to installments in order
         foreach (var installment in _installments.OrderBy(i => i.Number))
         {
             if (remainingAmount <= 0) break;
@@ -76,7 +75,6 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
             remainingAmount = installment.ApplyPayment(remainingAmount);
         }
 
-        // Check if fully paid
         if (_installments.All(i => i.Status == InstallmentStatus.Paid))
         {
             Status = CreditStatus.Paid;

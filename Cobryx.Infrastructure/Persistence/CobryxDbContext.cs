@@ -25,12 +25,17 @@ public class CobryxDbContext : DbContext
     public DbSet<Credit> Credits => Set<Credit>();
     public DbSet<Installment> Installments => Set<Installment>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<LoginSession> LoginSessions => Set<LoginSession>();
+    public DbSet<TaxConfiguration> TaxConfigurations => Set<TaxConfiguration>();
+    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
