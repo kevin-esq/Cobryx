@@ -8,19 +8,16 @@ namespace Cobryx.Api.Controllers;
 [Authorize(Policy = "CanManageTenant")]
 [ApiController]
 [Route("api/users")]
-public class UsersController : ControllerBase
+public class UsersController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public UsersController(ISender sender)
+    public UsersController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _sender.Send(new GetUsersQuery(page, pageSize));
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetUsersQuery(page, pageSize));
+        return HandleResult(result, "Users retrieved successfully");
     }
 }

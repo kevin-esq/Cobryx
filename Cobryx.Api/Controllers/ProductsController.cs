@@ -8,19 +8,16 @@ namespace Cobryx.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/products")]
-public class ProductsController : ControllerBase
+public class ProductsController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public ProductsController(ISender sender)
+    public ProductsController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _sender.Send(new GetProductsQuery(page, pageSize));
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetProductsQuery(page, pageSize));
+        return HandleResult(result, "Products retrieved successfully");
     }
 }

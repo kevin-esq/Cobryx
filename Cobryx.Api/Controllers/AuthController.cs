@@ -8,33 +8,30 @@ namespace Cobryx.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public AuthController(ISender sender)
+    public AuthController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Registration successful");
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : Unauthorized(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Login successful");
     }
 
     [HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken(RefreshTokenCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Token refreshed successfully");
     }
 }

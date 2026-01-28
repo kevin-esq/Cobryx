@@ -10,35 +10,32 @@ namespace Cobryx.Api.Controllers;
 [Authorize(Policy = "CanCreateCredits")]
 [ApiController]
 [Route("api/credits")]
-public class CreditsController : ControllerBase
+public class CreditsController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public CreditsController(ISender sender)
+    public CreditsController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(CreateCreditCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Credit created successfully");
     }
 
     [HttpGet]
     [Authorize(Policy = "CanViewCredits")]
     public async Task<IActionResult> GetAll([FromQuery] Guid? customerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _sender.Send(new GetCreditsQuery(customerId, page, pageSize));
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetCreditsQuery(customerId, page, pageSize));
+        return HandleResult(result, "Credits retrieved successfully");
     }
 
     [HttpGet("{id}")]
     [Authorize(Policy = "CanViewCredits")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var result = await _sender.Send(new GetCreditByIdQuery(id));
-        return result.IsSuccess ? Ok(result.Value) : NotFound(result.Error);
+        var result = await Sender.Send(new GetCreditByIdQuery(id));
+        return HandleResult(result, "Credit retrieved successfully");
     }
 }
