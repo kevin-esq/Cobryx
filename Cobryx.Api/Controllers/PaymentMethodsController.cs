@@ -10,33 +10,30 @@ namespace Cobryx.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/financial/payment-methods")]
-public class PaymentMethodsController : ControllerBase
+public class PaymentMethodsController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public PaymentMethodsController(ISender sender)
+    public PaymentMethodsController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetPaymentMethods()
     {
-        var result = await _sender.Send(new GetPaymentMethodsQuery());
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetPaymentMethodsQuery());
+        return HandleResult(result, "Payment methods retrieved successfully");
     }
 
     [HttpPost]
     public async Task<IActionResult> CreatePaymentMethod(CreatePaymentMethodCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Payment method created successfully");
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePaymentMethod(Guid id)
     {
-        var result = await _sender.Send(new DeletePaymentMethodCommand(id));
-        return result.IsSuccess ? Ok() : BadRequest(result.Error);
+        var result = await Sender.Send(new DeletePaymentMethodCommand(id));
+        return HandleResult(result, "Payment method deleted successfully");
     }
 }

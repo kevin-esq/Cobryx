@@ -9,26 +9,23 @@ namespace Cobryx.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/financial/invoices")]
-public class InvoicesController : ControllerBase
+public class InvoicesController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public InvoicesController(ISender sender)
+    public InvoicesController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetInvoices()
     {
-        var result = await _sender.Send(new GetInvoicesQuery());
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetInvoicesQuery());
+        return HandleResult(result, "Invoices retrieved successfully");
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateInvoice(CreateInvoiceCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Invoice created successfully");
     }
 }

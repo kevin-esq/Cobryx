@@ -10,33 +10,30 @@ namespace Cobryx.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/financial/taxes")]
-public class TaxesController : ControllerBase
+public class TaxesController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public TaxesController(ISender sender)
+    public TaxesController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetTaxes()
     {
-        var result = await _sender.Send(new GetTaxConfigurationsQuery());
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(new GetTaxConfigurationsQuery());
+        return HandleResult(result, "Tax configurations retrieved successfully");
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateTax(CreateTaxConfigurationCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Tax configuration created successfully");
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTax(Guid id)
     {
-        var result = await _sender.Send(new DeleteTaxConfigurationCommand(id));
-        return result.IsSuccess ? Ok() : BadRequest(result.Error);
+        var result = await Sender.Send(new DeleteTaxConfigurationCommand(id));
+        return HandleResult(result, "Tax configuration deleted successfully");
     }
 }

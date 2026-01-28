@@ -8,19 +8,16 @@ namespace Cobryx.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/financial/payments")]
-public class PaymentsController : ControllerBase
+public class PaymentsController : CobryxBaseController
 {
-    private readonly ISender _sender;
-
-    public PaymentsController(ISender sender)
+    public PaymentsController(ISender sender) : base(sender)
     {
-        _sender = sender;
     }
 
     [HttpPost]
     public async Task<IActionResult> ProcessPayment(ProcessPaymentCommand command)
     {
-        var result = await _sender.Send(command);
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Payment processed successfully");
     }
 }
