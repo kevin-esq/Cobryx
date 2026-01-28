@@ -3,7 +3,6 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
-using Cobryx.Application.Common.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Login;

@@ -19,10 +19,10 @@ public abstract class CobryxBaseController : ControllerBase
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponse<T>.SuccessResponse(result.Value, successMessage));
+            return Ok(ApiResponse<T>.SuccessResponse(result.Value!, successMessage));
         }
 
-        return BadRequest(ApiResponse<T>.FailureResponse(result.Error, null, HttpContext.TraceIdentifier));
+        return BadRequest(ApiResponse<T>.FailureResponse(result.Error ?? "An error occurred", null, HttpContext.TraceIdentifier));
     }
 
     protected IActionResult HandleResult(Result result, string successMessage = "Operation completed successfully")
@@ -32,7 +32,7 @@ public abstract class CobryxBaseController : ControllerBase
             return Ok(ApiResponse.SuccessResponse(successMessage));
         }
 
-        return BadRequest(ApiResponse.FailureResponse(result.Error, null, HttpContext.TraceIdentifier));
+        return BadRequest(ApiResponse.FailureResponse(result.Error ?? "An error occurred", null, HttpContext.TraceIdentifier));
     }
 
     protected IActionResult Success<T>(T data, string message = "Success")
