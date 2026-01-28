@@ -7,7 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
-public record LoginCommand(string Email, string Password) : IRequest<Result<AuthResult>>;
+public record LoginCommand(string Email, string Password) : IRequest<Result<AuthResult>>
+{
+    public string IpAddress { get; init; } = "0.0.0.0";
+    public string? DeviceFingerprint { get; init; }
+}
 
 public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 {
@@ -43,9 +47,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             return Result.Failure<AuthResult>("Invalid credentials.");
         }
 
-        var authResult = _authService.GenerateAuthResponse(user);
+        var authResult = _authService.GenerateAuthResponse(user, request.IpAddress, request.DeviceFingerprint);
 
-        // Set tenant context for the current request
         _tenantProvider.SetTenantId(user.TenantId);
 
         await _userRepository.UpdateAsync(user);

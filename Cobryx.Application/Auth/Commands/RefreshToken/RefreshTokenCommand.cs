@@ -7,7 +7,11 @@ using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 
-public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRequest<Result<AuthResult>>;
+public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRequest<Result<AuthResult>>
+{
+    public string IpAddress { get; init; } = "0.0.0.0";
+    public string? DeviceFingerprint { get; init; }
+}
 
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<AuthResult>>
 {
@@ -31,7 +35,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
             return Result.Failure<AuthResult>("Invalid or active refresh token not found.");
         }
 
-        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken);
+        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, request.IpAddress, request.DeviceFingerprint);
 
         await _userRepository.UpdateAsync(user);
 

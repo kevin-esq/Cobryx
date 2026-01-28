@@ -12,7 +12,10 @@ public record RegisterCommand(
     string FirstName,
     string LastName,
     string Email,
-    string Password) : IRequest<Result<AuthResult>>;
+    string Password) : IRequest<Result<AuthResult>>
+{
+    public string IpAddress { get; init; } = "0.0.0.0";
+}
 
 public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResult>>
 {
@@ -54,8 +57,9 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
 
         var user = new User(tenant.Id, request.FirstName, request.LastName, request.Email, ownerRole.Id);
         user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
+        user.CreateProfile();
 
-        var authResult = _authService.GenerateAuthResponse(user, ownerRole);
+        var authResult = _authService.GenerateAuthResponse(user, request.IpAddress, "Web-Registration", ownerRole);
 
         await _userRepository.AddAsync(user);
 

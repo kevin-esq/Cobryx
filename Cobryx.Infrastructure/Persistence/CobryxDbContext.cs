@@ -29,6 +29,8 @@ public class CobryxDbContext : DbContext
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+    public DbSet<LoginSession> LoginSessions => Set<LoginSession>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -13,18 +13,23 @@ public class AuthService : IAuthService
         _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public AuthResult GenerateAuthResponse(User user, Role? roleOverride = null)
+    public AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, Role? roleOverride = null)
     {
+        user.CreateProfile();
+
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, roleOverride);
         var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), "login");
+        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), ipAddress);
+        user.AddSession(ipAddress, deviceFingerprint);
 
         return CreateAuthResult(user, accessToken, refreshToken, roleOverride);
     }
 
-    public AuthResult RefreshAuthResponse(User user, string oldRefreshToken)
+    public AuthResult RefreshAuthResponse(User user, string oldRefreshToken, string ipAddress, string? deviceFingerprint)
     {
+        user.CreateProfile();
+
         var activeToken = user.RefreshTokens.FirstOrDefault(x => x.Token == oldRefreshToken);
 
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
@@ -32,10 +37,11 @@ public class AuthService : IAuthService
 
         if (activeToken != null)
         {
-            activeToken.Revoke("refresh", refreshToken);
+            activeToken.Revoke(ipAddress, refreshToken);
         }
 
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), "refresh");
+        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), ipAddress);
+        user.AddSession(ipAddress, deviceFingerprint);
 
         return CreateAuthResult(user, accessToken, refreshToken);
     }

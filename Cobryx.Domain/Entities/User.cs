@@ -16,6 +16,10 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public Role Role { get; private set; }
     public bool IsActive { get; private set; }
 
+    public virtual UserProfile? Profile { get; private set; }
+    private readonly List<LoginSession> _sessions = new();
+    public IReadOnlyCollection<LoginSession> Sessions => _sessions.AsReadOnly();
+
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
@@ -64,6 +68,18 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     {
         var refreshToken = new RefreshToken(token, expires, createdByIp, Id);
         _refreshTokens.Add(refreshToken);
+    }
+
+    public void AddSession(string ipAddress, string? deviceFingerprint)
+    {
+        var session = new LoginSession(TenantId, Id, ipAddress, deviceFingerprint);
+        _sessions.Add(session);
+    }
+
+    public void CreateProfile(string? phoneNumber = null, string? avatarUrl = null)
+    {
+        if (Profile != null) return;
+        Profile = new UserProfile(Id, phoneNumber, avatarUrl);
     }
 
     public void RemoveOldRefreshTokens(int ttlDays)

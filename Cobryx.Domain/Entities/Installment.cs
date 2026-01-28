@@ -54,7 +54,7 @@ public class Installment : BaseEntity
     {
         decimal remaining = Math.Round(amount, 2);
 
-        // 1. Pay Late Interest First (Mora)
+        // Pay Late Interest First
         decimal lateDue = Math.Max(0, LateInterestAmount.Amount - LateInterestPaid.Amount);
         if (lateDue > 0 && remaining > 0)
         {
