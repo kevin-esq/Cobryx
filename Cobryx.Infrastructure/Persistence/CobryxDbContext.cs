@@ -31,6 +31,8 @@ public class CobryxDbContext : DbContext
     public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<LoginSession> LoginSessions => Set<LoginSession>();
+    public DbSet<TaxConfiguration> TaxConfigurations => Set<TaxConfiguration>();
+    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
