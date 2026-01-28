@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Serilog.Context;
 
 namespace Cobryx.Api.Middlewares;
 
@@ -17,18 +18,56 @@ public class TenantMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // For development, we might allow no tenant, but for production it's mandatory
-        if (!context.Request.Headers.TryGetValue(TenantHeader, out var tenantIdStr))
+        string? tenantId = null;
+
+        if (context.User.Identity?.IsAuthenticated == true)
         {
-            // We could return 400 Bad Request here for mandatory multi-tenancy
-            // For now, just log and continue (or uncomment below for strict)
-            // context.Response.StatusCode = 400;
-            // await context.Response.WriteAsync("Tenant-Id is required.");
-            // return;
-            
-            _logger.LogWarning("Request received without X-Tenant-Id header.");
+            var claimTenantId = context.User.FindFirst("tenant_id")?.Value;
+
+            if (context.Request.Headers.ContainsKey(TenantHeader) &&
+                context.Request.Headers[TenantHeader] != claimTenantId)
+            {
+                _logger.LogWarning("Security Alert: Tenant mismatch (Token: {TokenId}, Header: {HeaderId})",
+                    claimTenantId, context.Request.Headers[TenantHeader]);
+            }
+
+            tenantId = claimTenantId;
         }
 
-        await _next(context);
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            context.Request.Headers.TryGetValue(TenantHeader, out var headerValue);
+            tenantId = headerValue;
+        }
+
+        if (string.IsNullOrEmpty(tenantId))
+        {
+            var path = context.Request.Path.Value?.ToLowerInvariant();
+            if (path != null && (path.Contains("/health") || path.Contains("/api/auth")))
+            {
+                await _next(context);
+                return;
+            }
+
+            _logger.LogWarning("Request blocked: Tenant context missing for path {Path}", context.Request.Path);
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsync("Tenant-Id is required.");
+            return;
+        }
+
+        if (Guid.TryParse(tenantId, out var id))
+        {
+            context.Items["Cache_TenantId"] = id;
+        }
+
+        var userId = context.User.FindFirst("sub")?.Value;
+        var correlationId = context.TraceIdentifier;
+
+        using (LogContext.PushProperty("TenantId", tenantId))
+        using (LogContext.PushProperty("UserId", userId))
+        using (LogContext.PushProperty("CorrelationId", correlationId))
+        {
+            await _next(context);
+        }
     }
 }

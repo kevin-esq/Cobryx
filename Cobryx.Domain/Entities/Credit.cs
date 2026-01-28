@@ -9,32 +9,35 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public Guid CustomerId { get; private set; }
-    public Guid? ProductId { get; private set; } // Null if it's a direct cash loan
-    
+    public Guid? ProductId { get; private set; }
+
     public Money Principal { get; private set; }
     public decimal InterestRate { get; private set; }
     public InterestType InterestType { get; private set; }
     public PaymentFrequency Frequency { get; private set; }
     public int InstallmentsCount { get; private set; }
-    
+
     public DateTime StartDate { get; private set; }
-    public int GraceDays { get; private set; } // <--- New: Advanced flexibility
+    public int GraceDays { get; private set; }
     public CreditStatus Status { get; private set; }
+
+    public virtual Customer Customer { get; private set; } = null!;
+    public virtual ICollection<Payment> Payments { get; private set; } = new List<Payment>();
 
     private readonly List<Installment> _installments = new();
     public IReadOnlyCollection<Installment> Installments => _installments.AsReadOnly();
 
-    private Credit() { }
+    private Credit() { Principal = null!; }
 
     public Credit(
-        Guid tenantId, 
-        Guid customerId, 
-        Money principal, 
-        decimal interestRate, 
-        InterestType interestType, 
-        PaymentFrequency frequency, 
+        Guid tenantId,
+        Guid customerId,
+        Money principal,
+        decimal interestRate,
+        InterestType interestType,
+        PaymentFrequency frequency,
         int installmentsCount,
-        int graceDays = 0, // <--- New parameter
+        int graceDays = 0,
         Guid? productId = null)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
@@ -50,7 +53,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
         InstallmentsCount = installmentsCount;
         GraceDays = graceDays;
         ProductId = productId;
-        
+
         StartDate = DateTime.UtcNow;
         Status = CreditStatus.Active;
 
@@ -64,7 +67,6 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 
         decimal remainingAmount = amount.Amount;
 
-        // Apply payment to installments in order
         foreach (var installment in _installments.OrderBy(i => i.Number))
         {
             if (remainingAmount <= 0) break;
@@ -73,7 +75,6 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
             remainingAmount = installment.ApplyPayment(remainingAmount);
         }
 
-        // Check if fully paid
         if (_installments.All(i => i.Status == InstallmentStatus.Paid))
         {
             Status = CreditStatus.Paid;

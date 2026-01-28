@@ -7,18 +7,29 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5000:80"
+      - 5000:80
+      # Health checks available at http://localhost:5000/health
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=YOUR_HOST;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true}
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=aws-0-us-west-2.pooler.supabase.com;Database=postgres;Username=postgres.wofxgtfarmbqhoqwqaqd;Password=YOUR_PASSWORD;SSL Mode=Require;Keepalive=30}
+      - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
+      - Storage__AzureBlob__ConnectionString=${COBRYX_STORAGE_CONNECTION_STRING:-UseDevelopmentStorage=true}
+      - Security__ClamAV__Host=clamav
+      - Caching__Redis__ConnectionString=redis:6379
+      - DOTNET_SYSTEM_NET_DISABLEIPV6=true
+    depends_on:
+      - clamav
+      - redis
     restart: always
 
-# Note: We are currently using Supabase, so a local postgres service is not strictly required
-# but added as a template for local-only development.
-#  db:
-#    image: postgres:15
-#    environment:
-#      - POSTGRES_DB=cobryx
-#      - POSTGRES_PASSWORD=password
-#    ports:
-#      - "5432:5432"
+  clamav:
+    image: clamav/clamav:latest
+    container_name: cobryx-clamav
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: cobryx-redis
+    ports:
+      - 6379:6379
+    restart: always

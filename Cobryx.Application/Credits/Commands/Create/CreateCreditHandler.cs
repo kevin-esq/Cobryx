@@ -14,7 +14,7 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
     private readonly ITenantProvider _tenantProvider;
 
     public CreateCreditHandler(
-        ICreditRepository creditRepository, 
+        ICreditRepository creditRepository,
         IScheduleGenerator scheduleGenerator,
         ITenantProvider tenantProvider)
     {
@@ -32,7 +32,7 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
         }
 
         var principal = new Money(request.Amount, request.Currency);
-        
+
         var credit = new Credit(
             tenantId.Value,
             request.CustomerId,

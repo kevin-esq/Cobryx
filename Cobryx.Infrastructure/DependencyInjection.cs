@@ -9,6 +9,11 @@ using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
+using System.Text;
+using Cobryx.Infrastructure.Caching;
 
 namespace Cobryx.Infrastructure;
 
@@ -20,39 +25,108 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddScoped<IHttpContextService, Services.HttpContextService>();
 
-        // Interceptors
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379";
+            options.InstanceName = "Cobryx_";
+        });
+
+        var defaultTTL = int.Parse(configuration["Caching:DefaultTTL"] ?? "300");
+        services.AddSingleton<ICacheService>(sp =>
+            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), defaultTTL));
+
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
 
-        // Pipeline Behaviors (Registered here to bypass Application's source generator)
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
 
-        // EF Core Database
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
+        {
+            KeepAlive = 30,
+            CommandTimeout = 300,
+            Pooling = true,
+            MinPoolSize = 10,
+            MaxPoolSize = 100
+        };
+
+        try
+        {
+            if (!string.IsNullOrEmpty(npgsqlBuilder.Host))
+            {
+                var ips = System.Net.Dns.GetHostAddresses(npgsqlBuilder.Host);
+                var ipv4 = ips.FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                if (ipv4 != null)
+                {
+                    npgsqlBuilder.Host = ipv4.ToString();
+                }
+            }
+        }
+        catch { }
+
         services.AddDbContext<CobryxDbContext>((sp, options) =>
         {
             options.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
                 sp.GetRequiredService<DispatchDomainEventsInterceptor>());
 
-            options.UseNpgsql(connectionString, npgsqlOptions =>
+            options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
             {
                 npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorCodesToAdd: null);
+
+                npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
         });
 
-        // Repositories
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICreditRepository, CreditRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
+        services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
+        services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<Cobryx.Domain.Services.PaymentService>();
+        services.AddScoped<Cobryx.Domain.Services.UsageService>();
+        services.AddScoped<Cobryx.Domain.Services.DocumentService>();
+        services.AddScoped<IDocumentStorage, Services.FileStorage.AzureStorageProvider>();
+        services.AddScoped<IVirusScanner, Services.Security.ClamAvScanner>();
+
+        services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
+        services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
+        services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
+
+        var jwtSettings = configuration.GetSection("JwtSettings");
+        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings["Issuer"],
+                ValidAudience = jwtSettings["Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+            };
+        });
 
         return services;
     }

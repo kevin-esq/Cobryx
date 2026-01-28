@@ -1,30 +1,52 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Enums;
 
 namespace Cobryx.Domain.Entities;
 
 public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 {
-    public Guid CreditId { get; private set; }
     public Guid TenantId { get; private set; }
+    public Guid CustomerId { get; private set; }
+    public Guid PaymentMethodId { get; private set; }
     public Money Amount { get; private set; }
     public DateTime PaymentDate { get; private set; }
-    public string? Reference { get; private set; } // Physical receipt #, bank ref, etc.
+    public string? Reference { get; private set; }
     public string? Notes { get; private set; }
+    public PaymentStatus Status { get; private set; }
 
-    private Payment() { }
+    private readonly List<PaymentAllocation> _allocations = new();
+    public IReadOnlyCollection<PaymentAllocation> Allocations => _allocations.AsReadOnly();
 
-    public Payment(Guid tenantId, Guid creditId, Money amount, DateTime paymentDate, string? reference = null, string? notes = null)
+    public virtual PaymentMethod PaymentMethod { get; private set; } = null!;
+    public virtual Customer Customer { get; private set; } = null!;
+
+    private Payment()
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
-        if (creditId == Guid.Empty) throw new ArgumentException("CreditId is required.");
-        if (amount.Amount <= 0) throw new ArgumentException("Payment amount must be positive.");
+        Amount = null!;
+    }
 
+    public Payment(Guid tenantId, Guid customerId, Guid paymentMethodId, Money amount, DateTime paymentDate, string? reference = null, string? notes = null)
+    {
         TenantId = tenantId;
-        CreditId = creditId;
+        CustomerId = customerId;
+        PaymentMethodId = paymentMethodId;
         Amount = amount;
         PaymentDate = paymentDate;
         Reference = reference;
         Notes = notes;
+        Status = PaymentStatus.Completed;
+    }
+
+    public void AddAllocation(Guid invoiceId, Money amount)
+    {
+        if (amount.Amount <= 0) throw new ArgumentException("Allocation amount must be positive.");
+        _allocations.Add(new PaymentAllocation(Id, invoiceId, amount));
+    }
+
+    public void Cancel()
+    {
+        Status = PaymentStatus.Cancelled;
+        UpdateTimestamp();
     }
 }

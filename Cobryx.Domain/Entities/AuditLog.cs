@@ -14,7 +14,12 @@ public class AuditLog : BaseEntity, ITenantEntity
     public string? IpAddress { get; private set; }
     public string? UserAgent { get; private set; }
 
-    private AuditLog() { }
+    private AuditLog()
+    {
+        EntityName = null!;
+        EntityId = null!;
+        Action = null!;
+    }
 
     public AuditLog(
         Guid tenantId,
@@ -29,7 +34,7 @@ public class AuditLog : BaseEntity, ITenantEntity
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
         if (string.IsNullOrWhiteSpace(entityName)) throw new ArgumentException("EntityName is required.");
-        
+
         TenantId = tenantId;
         UserId = userId;
         EntityName = entityName;

@@ -14,7 +14,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
     private readonly ITenantProvider _tenantProvider;
 
     public RegisterPaymentHandler(
-        ICreditRepository creditRepository, 
+        ICreditRepository creditRepository,
         IPaymentRepository paymentRepository,
         ITenantProvider tenantProvider)
     {
@@ -38,18 +38,17 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         }
 
         var amount = new Money(request.Amount, request.Currency);
-        
-        // Record the payment entry (Generate ID first)
+
         var payment = new Payment(
             tenantId.Value,
-            request.CreditId,
+            credit.CustomerId,
+            request.PaymentMethodId,
             amount,
             request.PaymentDate,
             request.Reference,
             request.Notes);
 
 
-        // Apply logic to domain (State change) - Passing the payment ID for event decoupling
         credit.ApplyPayment(payment.Id, amount);
 
         await _paymentRepository.AddAsync(payment);

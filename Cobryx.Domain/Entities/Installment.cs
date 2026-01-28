@@ -22,7 +22,17 @@ public class Installment : BaseEntity
     public Money TotalDue => (PrincipalPart + InterestPart + LateInterestAmount) - (PrincipalPaid + InterestPaid + LateInterestPaid);
 
 
-    private Installment() { }
+    private Installment()
+    {
+        TotalAmount = null!;
+        PrincipalPart = null!;
+        PrincipalPaid = null!;
+        InterestPart = null!;
+        InterestPaid = null!;
+        LateInterestAmount = null!;
+        LateInterestPaid = null!;
+        RemainingBalance = null!;
+    }
 
     public Installment(Guid creditId, int number, DateTime dueDate, Money principal, Money interest, Money balance)
     {
@@ -42,10 +52,8 @@ public class Installment : BaseEntity
 
     public decimal ApplyPayment(decimal amount)
     {
-        // B. Robustness: Force rounding to 2 decimals to match currency standards (ISO 20022 compatible)
         decimal remaining = Math.Round(amount, 2);
 
-        // 1. Pay Late Interest First (Mora)
         decimal lateDue = Math.Max(0, LateInterestAmount.Amount - LateInterestPaid.Amount);
         if (lateDue > 0 && remaining > 0)
         {
@@ -54,7 +62,6 @@ public class Installment : BaseEntity
             remaining -= toPay;
         }
 
-        // 2. Pay Ordinary Interest Second
         decimal interestDue = Math.Max(0, InterestPart.Amount - InterestPaid.Amount);
         if (interestDue > 0 && remaining > 0)
         {
@@ -63,7 +70,6 @@ public class Installment : BaseEntity
             remaining -= toPay;
         }
 
-        // 3. Pay Principal Last
         decimal principalDue = Math.Max(0, PrincipalPart.Amount - PrincipalPaid.Amount);
         if (principalDue > 0 && remaining > 0)
         {
@@ -74,7 +80,7 @@ public class Installment : BaseEntity
 
         UpdateStatus();
         UpdateTimestamp();
-        
+
         return remaining;
     }
 
@@ -93,7 +99,6 @@ public class Installment : BaseEntity
     public void ApplyLateInterest(Money amount)
     {
         LateInterestAmount = amount;
-        // C. Consistency: TotalAmount should always reflect the current components
         TotalAmount = PrincipalPart + InterestPart + LateInterestAmount;
         UpdateStatus();
         UpdateTimestamp();
@@ -110,7 +115,6 @@ public class Installment : BaseEntity
 
     public void MarkAsOverdue(DateTime businessDate)
     {
-        // A. Multi-tz/Audit Fix: Use passed businessDate instead of DateTime.UtcNow
         if ((Status == InstallmentStatus.Pending || Status == InstallmentStatus.Partial) && businessDate > DueDate)
         {
             Status = InstallmentStatus.Overdue;

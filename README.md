@@ -8,75 +8,107 @@ Focus: **Robust Backend, Clean Architecture, Scalability**.
 
 ---
 
-## Architecture
+## 🏗 Architecture
 
 **Clean Architecture + DDD light + Simple CQRS**
 
-```
+```text
 API
- ├── Controllers        → Orchestrate requests ONLY
+ ├── Controllers        → Standardized Envelope Responses (ApiResponse<T>)
 Application
- ├── UseCases           → Application rules
+ ├── UseCases           → Application rules (MediatR Handlers)
 Domain
  ├── Entities           → Pure business rules (User, Tenant, Credit, Payment...)
 Infrastructure
- ├── Persistence        → EF Core
+ ├── Persistence        → EF Core + Npgsql
+ ├── Caching            → Redis (Distributed Cache)
+ ├── Security           → JWT, Claims, ClamAV (Anti-virus)
 ```
 
-### Principles
+### Key Technical Features
 
-- **SOLID**, **Clean Code**, **Multi-tenancy**.
+- **Standardized API Responses**: All endpoints return a consistent `ApiResponse<T>` envelope.
+- **Global Error Handling**: Centralized `IExceptionHandler` returning `ProblemDetails` like structures within the envelope.
+- **Multi-tenancy**: Global query filters and middleware for data isolation.
+- **Performance**:
+    - **Redis Caching**: Distributed caching for high-traffic endpoints.
+    - **Composite Indexes**: Optimized database queries.
+    - **Connection Pooling**: Tuned Npgsql configuration.
+- **Security**:
+    - Automatic IP & Device Fingerprinting.
+    - ClamAV integration for file uploads.
+    - Role-based Access Control (RBAC).
 
 ---
 
-## Technology Stack
+## 🛠 Technology Stack
 
 - **.NET 8**
-- **PostgreSQL**
-- **Docker**
+- **PostgreSQL** (Supabase)
+- **Redis** (StackExchange.Redis)
+- **Docker & Docker Compose**
 - **ASP.NET Identity** (JWT)
+- **Serilog** (Structured Logging)
 
 ---
 
-## Development Roadmap
+## 🚀 Development Roadmap Status
 
-### Phase 1: Foundation
+### Phase 1: Foundation (✅ Completed)
+- [x] **Base Repository**: Solution structure, Layers.
+- [x] **Base Domain**: Tenant, User, ValueObjects.
+- [x] **Architecture**: Dependency Injection, MediatR.
 
-- [ ] **Task 1: Base Repository**
-  - .NET Solution, Layers, .gitignore.
-- [ ] **Task 2: Base Domain**
-  - Tenant, User, ValueObjects (Money).
-- [ ] **Task 3: Architecture**
-  - Dependency Injection, conventions.
+### Phase 2: Business Core (✅ Completed)
+- [x] **Customers**: CRUD, Search, Sorting.
+- [x] **Credits**: Interest logic, Amortization schedules.
+- [x] **Payments**: Partial payments, logic for capital/interest allocation.
+- [x] **Invoices**: Tax calculation, generation.
 
-### Phase 2: Business Core
+### Phase 3: Real Multi-tenancy (✅ Completed)
+- [x] **Tenant Isolation**: Middleware, Global Query Filters.
+- [x] **Branding**: Business configuration.
 
-- [ ] **Task 4: Customers**
-  - Customer Entity, CRUD.
-- [ ] **Task 5: Credits**
-  - Interest logic, payment schedule.
-- [ ] **Task 6: Payments**
-  - Partial payments, capital/interest priority.
+### Phase 4: Infrastructure (✅ Completed)
+- [x] **Database**: PostgreSQL Migrations.
+- [x] **Docker**: Dockerfile, docker-compose.
+- [x] **Caching**: Redis implementation.
 
-### Phase 3: Real Multi-tenancy
+### Phase 5: Production & Security (✅ Completed)
+- [x] **Security**: JWT, Roles, IP Detection.
+- [x] **Observability**: Serilog, HealthChecks (API, DB, Redis, ClamAV).
+- [x] **Standardization**: Uniform API Responses.
 
-- [ ] **Task 7: Tenant Isolation**
-  - Global TenantId, Middleware.
-- [ ] **Task 8: Branding**
-  - Business visual configuration.
+---
 
-### Phase 4: Infrastructure
+## 💻 How to Run
 
-- [ ] **Task 9: Database**
-  - PostgreSQL, Migrations.
-- [ ] **Task 10: Docker**
-  - Dockerfile, docker-compose.
+1. **Prerequisites**: Docker Desktop, .NET 8 SDK.
+2. **Start Infrastructure**:
+   ```bash
+   docker-compose up -d
+   ```
+3. **Run API**:
+   ```bash
+   dotnet watch run --project Cobryx.Api
+   ```
+4. **Access Swagger**: `http://localhost:5142/swagger`
 
-### Phase 5: Production
+---
 
-- [ ] **Task 11: Security** (JWT, Roles)
-- [ ] **Task 12: Observability** (Logs)
+## 📡 API Response Standard
 
-### Phase 6: Quality
+Every response follows this structure:
 
-- [ ] **Task 13: Tests**
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": {
+    "id": "...",
+    "name": "..."
+  },
+  "errors": null,
+  "traceId": "00-123456789..."
+}
+```
