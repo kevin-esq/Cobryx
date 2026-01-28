@@ -7,23 +7,22 @@ using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 
-public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRequest<Result<AuthResult>>
-{
-    public string IpAddress { get; init; } = "0.0.0.0";
-    public string? DeviceFingerprint { get; init; }
-}
+public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRequest<Result<AuthResult>>;
 
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<AuthResult>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IAuthService _authService;
+    private readonly IHttpContextService _httpContextService;
 
     public RefreshTokenHandler(
         IUserRepository userRepository,
-        IAuthService authService)
+        IAuthService authService,
+        IHttpContextService httpContextService)
     {
         _userRepository = userRepository;
         _authService = authService;
+        _httpContextService = httpContextService;
     }
 
     public async Task<Result<AuthResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
@@ -35,7 +34,9 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
             return Result.Failure<AuthResult>("Invalid or active refresh token not found.");
         }
 
-        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, request.IpAddress, request.DeviceFingerprint);
+        var ipAddress = _httpContextService.GetIpAddress();
+        var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
+        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, ipAddress, deviceFingerprint);
 
         await _userRepository.UpdateAsync(user);
 

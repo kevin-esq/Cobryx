@@ -12,10 +12,7 @@ public record RegisterCommand(
     string FirstName,
     string LastName,
     string Email,
-    string Password) : IRequest<Result<AuthResult>>
-{
-    public string IpAddress { get; init; } = "0.0.0.0";
-}
+    string Password) : IRequest<Result<AuthResult>>;
 
 public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResult>>
 {
@@ -24,19 +21,22 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
     private readonly IRoleRepository _roleRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthService _authService;
+    private readonly IHttpContextService _httpContextService;
 
     public RegisterHandler(
         ITenantRepository tenantRepository,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IPasswordHasher passwordHasher,
-        IAuthService authService)
+        IAuthService authService,
+        IHttpContextService httpContextService)
     {
         _tenantRepository = tenantRepository;
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _passwordHasher = passwordHasher;
         _authService = authService;
+        _httpContextService = httpContextService;
     }
 
     public async Task<Result<AuthResult>> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -59,7 +59,9 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result<AuthResul
         user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
         user.CreateProfile();
 
-        var authResult = _authService.GenerateAuthResponse(user, request.IpAddress, "Web-Registration", ownerRole);
+        var ipAddress = _httpContextService.GetIpAddress();
+        var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
+        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, ownerRole);
 
         await _userRepository.AddAsync(user);
 

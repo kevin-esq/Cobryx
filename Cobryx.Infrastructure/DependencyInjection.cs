@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddScoped<IHttpContextService, Services.HttpContextService>();
 
         services.AddStackExchangeRedisCache(options =>
         {
@@ -79,6 +80,8 @@ public static class DependencyInjection
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorCodesToAdd: null);
+
+                npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
         });
 
