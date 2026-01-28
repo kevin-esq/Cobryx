@@ -9,7 +9,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public Guid CustomerId { get; private set; }
-    public Guid? ProductId { get; private set; } // Null if it's a direct cash loan
+    public Guid? ProductId { get; private set; }
     
     public Money Principal { get; private set; }
     public decimal InterestRate { get; private set; }
@@ -18,10 +18,9 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     public int InstallmentsCount { get; private set; }
     
     public DateTime StartDate { get; private set; }
-    public int GraceDays { get; private set; } // <--- New: Advanced flexibility
+    public int GraceDays { get; private set; }
     public CreditStatus Status { get; private set; }
     
-    // Navigation (Pro-grade efficiency)
     public virtual Customer Customer { get; private set; } = null!;
     public virtual ICollection<Payment> Payments { get; private set; } = new List<Payment>();
 
@@ -38,7 +37,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
         InterestType interestType, 
         PaymentFrequency frequency, 
         int installmentsCount,
-        int graceDays = 0, // <--- New parameter
+        int graceDays = 0,
         Guid? productId = null)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");

@@ -17,7 +17,6 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
     
-    // Navigation (Pro-grade efficiency)
     public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
     // Private ctor for EF
