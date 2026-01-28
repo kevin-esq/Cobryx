@@ -8,7 +8,6 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -20,8 +19,6 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddEndpointsApiExplorer();
-
-// Swagger Configuration with JWT Support
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Cobryx API", Version = "v1" });
@@ -54,7 +51,6 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddControllers();
 
-// Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<Cobryx.Infrastructure.Persistence.CobryxDbContext>("Database");
 
@@ -129,7 +125,6 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
     Predicate = _ => false
 });
 
-// Seed Data
 try
 {
     using (var scope = app.Services.CreateScope())

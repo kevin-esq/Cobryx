@@ -43,7 +43,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Policy = "CanCreateCustomers")] // Or a specific CanUpdate policy if defined
+    [Authorize(Policy = "CanCreateCustomers")]
     public async Task<IActionResult> Update(Guid id, UpdateCustomerCommand command)
     {
         if (id != command.Id) return BadRequest("Mismatched ID");
@@ -52,7 +52,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Policy = "CanCreateCustomers")] // Or a specific CanDelete policy
+    [Authorize(Policy = "CanCreateCustomers")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _sender.Send(new Cobryx.Application.Customers.Commands.Delete.DeleteCustomerCommand(id));
