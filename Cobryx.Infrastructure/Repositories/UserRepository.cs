@@ -34,4 +34,12 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
     }
+
+    public async Task<IEnumerable<User>> GetByTenantAsync(Guid tenantId)
+    {
+        return await _dbSet
+            .Include(u => u.Role)
+            .Where(u => u.TenantId == tenantId)
+            .ToListAsync();
+    }
 }

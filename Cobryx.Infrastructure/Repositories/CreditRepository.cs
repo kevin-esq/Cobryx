@@ -19,13 +19,13 @@ public class CreditRepository : BaseRepository<Credit>, ICreditRepository
 
     public async Task<IEnumerable<Credit>> GetByTenantAsync(Guid tenantId)
     {
-        return await _dbSet.ToListAsync(); // Filtered by Global Query Filter
+        return await _dbSet.ToListAsync();
     }
 
     public override async Task<Credit?> GetByIdAsync(Guid id)
     {
         return await _dbSet
-            .Include(c => (ICollection<Installment>)c.Installments) // Need to check cast if private
+            .Include(c => c.Installments)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 }

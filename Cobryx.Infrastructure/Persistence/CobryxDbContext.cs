@@ -44,6 +44,7 @@ public class CobryxDbContext : DbContext
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<CustomerSuggestion> CustomerSuggestions => Set<CustomerSuggestion>();
     public DbSet<ReleaseNote> ReleaseNotes => Set<ReleaseNote>();
+    public DbSet<DocumentMetadata> Documents => Set<DocumentMetadata>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -12,5 +12,14 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=aws-0-us-west-2.pooler.supabase.com;Database=postgres;Username=postgres.wofxgtfarmbqhoqwqaqd;Password=YOUR_PASSWORD;SSL Mode=Require;Keepalive=30}
       - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
+      - Storage__AzureBlob__ConnectionString=${COBRYX_STORAGE_CONNECTION_STRING:-UseDevelopmentStorage=true}
+      - Security__ClamAV__Host=clamav
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
+    depends_on:
+      - clamav
+    restart: always
+
+  clamav:
+    image: clamav/clamav:latest
+    container_name: cobryx-clamav
     restart: always

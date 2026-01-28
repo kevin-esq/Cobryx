@@ -11,14 +11,12 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.HasIndex(c => c.TenantId);
         builder.HasIndex(c => c.Phone);
         
-        // 🚀 Professional Indexing for Searches
         builder.HasIndex(c => new { c.LastName, c.FirstName });
 
         builder.Property(c => c.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(c => c.LastName).IsRequired().HasMaxLength(100);
         builder.Property(c => c.Phone).IsRequired().HasMaxLength(20);
 
-        // 🏠 Structured Address (2FN/3FN Optimization as Owned Types)
         builder.OwnsOne(c => c.Address, a =>
         {
             a.Property(p => p.Street).HasMaxLength(200);

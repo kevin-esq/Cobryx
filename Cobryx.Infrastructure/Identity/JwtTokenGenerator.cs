@@ -41,7 +41,6 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(ClaimTypes.Role, roleName)
         };
 
-        // Add granular permissions from RBAC if available
         if (effectiveRole?.Permissions != null)
         {
             foreach (var permission in effectiveRole.Permissions)

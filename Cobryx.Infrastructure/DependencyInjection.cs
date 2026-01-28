@@ -25,16 +25,13 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
 
-        // Interceptors
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
 
-        // Pipeline Behaviors
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
 
-        // EF Core Database
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
         {
@@ -45,7 +42,6 @@ public static class DependencyInjection
             MaxPoolSize = 20
         };
 
-        // IPv4 resolution for Docker compatibility
         try
         {
             if (!string.IsNullOrEmpty(npgsqlBuilder.Host))
@@ -75,7 +71,6 @@ public static class DependencyInjection
             });
         });
 
-        // Repositories
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICreditRepository, CreditRepository>();
@@ -89,13 +84,14 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
+        services.AddScoped<Cobryx.Domain.Services.DocumentService>();
+        services.AddScoped<IDocumentStorage, Services.FileStorage.AzureStorageProvider>();
+        services.AddScoped<IVirusScanner, Services.Security.ClamAvScanner>();
 
-        // Identity Services
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
         services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
 
-        // Authentication
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
 
