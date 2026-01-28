@@ -3,6 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Cobryx.Application;
 using Cobryx.Infrastructure;
+using Cobryx.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
@@ -51,8 +52,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddControllers();
 
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<Cobryx.Infrastructure.Persistence.CobryxDbContext>("Database");
+builder.Services.AddCobryxHealthChecks(builder.Configuration);
 
 builder.Services
     .AddApplicationServices()

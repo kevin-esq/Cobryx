@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Serilog.Context;
 
 namespace Cobryx.Api.Middlewares;
 
@@ -59,6 +60,14 @@ public class TenantMiddleware
             context.Items["Cache_TenantId"] = id;
         }
 
-        await _next(context);
+        var userId = context.User.FindFirst("sub")?.Value;
+        var correlationId = context.TraceIdentifier;
+
+        using (LogContext.PushProperty("TenantId", tenantId))
+        using (LogContext.PushProperty("UserId", userId))
+        using (LogContext.PushProperty("CorrelationId", correlationId))
+        {
+            await _next(context);
+        }
     }
 }

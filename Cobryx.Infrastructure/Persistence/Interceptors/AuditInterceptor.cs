@@ -6,6 +6,7 @@ using Cobryx.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.Persistence.Interceptors;
 
@@ -13,11 +14,13 @@ public class AuditInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUserProvider _currentUserProvider;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantProvider tenantProvider)
+    public AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantProvider tenantProvider, IHttpContextAccessor httpContextAccessor)
     {
         _currentUserProvider = currentUserProvider;
         _tenantProvider = tenantProvider;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -57,12 +60,18 @@ public class AuditInterceptor : SaveChangesInterceptor
 
             if (tenantId.HasValue && entry.Entity is not AuditLog && entry.Entity is not SystemErrorLog)
             {
+                var httpContext = _httpContextAccessor.HttpContext;
+                var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString();
+                var userAgent = httpContext?.Request.Headers["User-Agent"].ToString();
+
                 var auditEntry = new AuditEntry(entry)
                 {
                     TenantId = tenantId.Value,
                     UserId = userId,
                     EntityName = entry.Entity.GetType().Name,
-                    Action = entry.State.ToString()
+                    Action = entry.State.ToString(),
+                    IpAddress = ipAddress,
+                    UserAgent = userAgent
                 };
                 auditEntries.Add(auditEntry);
             }
@@ -87,6 +96,8 @@ public class AuditEntry
     public Guid? UserId { get; set; }
     public string EntityName { get; set; } = null!;
     public string Action { get; set; } = null!;
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
     public Dictionary<string, object?> OldValues { get; } = new();
     public Dictionary<string, object?> NewValues { get; } = new();
 
@@ -126,7 +137,9 @@ public class AuditEntry
             entityId,
             Action,
             OldValues.Count == 0 ? null : JsonSerializer.Serialize(OldValues),
-            NewValues.Count == 0 ? null : JsonSerializer.Serialize(NewValues)
+            NewValues.Count == 0 ? null : JsonSerializer.Serialize(NewValues),
+            IpAddress,
+            UserAgent
         );
     }
 }
