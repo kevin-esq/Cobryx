@@ -11,7 +11,8 @@ public abstract class BaseEntity
     public DateTime? UpdatedAt { get; private set; }
     public Guid? UpdatedBy { get; private set; }
     public bool IsDeleted { get; private set; }
-    public uint RowVersion { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
+    public uint Version { get; private set; }
 
     public string? Tags { get; private set; }
     public string? MetadataJson { get; private set; }
@@ -36,6 +37,7 @@ public abstract class BaseEntity
     public void Delete()
     {
         IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
         UpdateTimestamp();
     }
 
