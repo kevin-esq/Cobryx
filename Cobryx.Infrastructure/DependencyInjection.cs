@@ -86,10 +86,12 @@ public static class DependencyInjection
         services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
         // Identity Services
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
+        services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
 
         // Authentication
         var jwtSettings = configuration.GetSection("JwtSettings");
