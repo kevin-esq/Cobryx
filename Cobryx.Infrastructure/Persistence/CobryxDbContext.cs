@@ -37,6 +37,13 @@ public class CobryxDbContext : DbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
+    public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
+    public DbSet<BillingAlert> BillingAlerts => Set<BillingAlert>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
+    public DbSet<CustomerSuggestion> CustomerSuggestions => Set<CustomerSuggestion>();
+    public DbSet<ReleaseNote> ReleaseNotes => Set<ReleaseNote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
