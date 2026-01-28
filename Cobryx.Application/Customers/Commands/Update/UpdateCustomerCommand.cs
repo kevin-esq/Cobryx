@@ -47,10 +47,10 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
         }
 
         customer.UpdateDetails(
-            request.FirstName, 
-            request.LastName, 
-            request.Phone, 
-            request.Address, 
+            request.FirstName,
+            request.LastName,
+            request.Phone,
+            request.Address,
             request.Document);
 
         await _customerRepository.UpdateAsync(customer);

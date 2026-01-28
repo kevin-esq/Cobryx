@@ -16,12 +16,12 @@ public class DocumentService
     }
 
     public async Task<DocumentMetadata> ProcessUploadAsync(
-        Guid tenantId, 
-        Guid entityId, 
-        string entityType, 
-        Stream fileStream, 
-        string fileName, 
-        string contentType, 
+        Guid tenantId,
+        Guid entityId,
+        string entityType,
+        Stream fileStream,
+        string fileName,
+        string contentType,
         Guid uploadedBy)
     {
         if (fileStream.Length > MaxFileSize)
@@ -38,13 +38,13 @@ public class DocumentService
         var blobPath = await _storage.UploadAsync(fileStream, fileName, contentType);
 
         return new DocumentMetadata(
-            tenantId, 
-            entityId, 
-            entityType, 
-            fileName, 
-            blobPath, 
-            fileStream.Length, 
-            contentType, 
+            tenantId,
+            entityId,
+            entityType,
+            fileName,
+            blobPath,
+            fileStream.Length,
+            contentType,
             uploadedBy);
     }
 }

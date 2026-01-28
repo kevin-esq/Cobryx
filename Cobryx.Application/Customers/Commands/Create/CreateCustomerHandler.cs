@@ -21,7 +21,7 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
     public async Task<Result<Guid>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
-        
+
         // Check if phone already exists in this tenant
         var existing = await _customerRepository.GetByPhoneAsync(tenantId, request.Phone);
         if (existing != null)
@@ -39,7 +39,7 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
         );
 
         await _customerRepository.AddAsync(customer);
-        
+
         return Result.Success(customer.Id);
     }
 }

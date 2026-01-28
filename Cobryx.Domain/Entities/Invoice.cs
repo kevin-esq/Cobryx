@@ -27,7 +27,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
     public virtual Customer Customer { get; private set; } = null!;
     public virtual Installment? Installment { get; private set; }
 
-    private Invoice() 
+    private Invoice()
     {
         InvoiceNumber = null!;
         Subtotal = null!;

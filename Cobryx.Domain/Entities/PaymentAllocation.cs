@@ -9,8 +9,8 @@ public class PaymentAllocation : BaseEntity
     public Guid InvoiceId { get; private set; }
     public Money Amount { get; private set; }
 
-    private PaymentAllocation() 
-    { 
+    private PaymentAllocation()
+    {
         Amount = null!;
     }
 

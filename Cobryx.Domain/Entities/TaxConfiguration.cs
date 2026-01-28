@@ -11,7 +11,7 @@ public class TaxConfiguration : BaseEntity, IAggregateRoot, ITenantEntity
     public bool IsActive { get; private set; }
     public bool IsDefault { get; private set; }
 
-    private TaxConfiguration() 
+    private TaxConfiguration()
     {
         Name = null!;
     }

@@ -23,8 +23,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
-    private User() 
-    { 
+    private User()
+    {
         FirstName = null!;
         LastName = null!;
         Email = null!;
@@ -52,9 +52,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void SetPasswordHash(string passwordHash)
     {
-        if (string.IsNullOrWhiteSpace(passwordHash)) 
+        if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("Password hash cannot be empty.");
-            
+
         PasswordHash = passwordHash;
     }
 
@@ -84,8 +84,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void RemoveOldRefreshTokens(int ttlDays)
     {
-        _refreshTokens.RemoveAll(x => 
-            !x.IsActive && 
+        _refreshTokens.RemoveAll(x =>
+            !x.IsActive &&
             x.Created.AddDays(ttlDays) <= DateTime.UtcNow);
     }
 

@@ -16,7 +16,7 @@ public class InvoiceItem : BaseEntity
     public Money TaxAmount { get; private set; } = null!;
     public Money Total { get; private set; } = null!;
 
-    private InvoiceItem() 
+    private InvoiceItem()
     {
         Description = null!;
     }
@@ -36,7 +36,7 @@ public class InvoiceItem : BaseEntity
     private void Calculate(string currency)
     {
         var (subtotal, taxAmount, total) = Services.TaxCalculator.Calculate(Quantity, UnitPrice, TaxRate, IsTaxInclusive);
-        
+
         Subtotal = new Money(subtotal, currency);
         TaxAmount = new Money(taxAmount, currency);
         Total = new Money(total, currency);

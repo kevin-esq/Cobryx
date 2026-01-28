@@ -16,12 +16,12 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public int TrustScore { get; private set; } // 0-100
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
-    
+
     public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
     // Private ctor for EF
-    private Customer() 
-    { 
+    private Customer()
+    {
         FirstName = null!;
         LastName = null!;
         Phone = null!;

@@ -56,7 +56,7 @@ public class GetCreditsHandler : IRequestHandler<GetCreditsQuery, Result<Paginat
                 c.Status,
                 c.StartDate,
                 c.Installments.Sum(i => i.PrincipalPaid.Amount + i.InterestPaid.Amount + i.LateInterestPaid.Amount),
-                c.Installments.Sum(i => i.PrincipalPart.Amount + i.InterestPart.Amount + i.LateInterestAmount.Amount) - 
+                c.Installments.Sum(i => i.PrincipalPart.Amount + i.InterestPart.Amount + i.LateInterestAmount.Amount) -
                 c.Installments.Sum(i => i.PrincipalPaid.Amount + i.InterestPaid.Amount + i.LateInterestPaid.Amount)
             ))
             .ToListAsync(cancellationToken);

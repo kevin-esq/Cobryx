@@ -12,8 +12,8 @@ public class SubscriptionPlan : BaseEntity, IAggregateRoot
     public int MaxUsers { get; private set; }
     public bool IsActive { get; private set; }
 
-    private SubscriptionPlan() 
-    { 
+    private SubscriptionPlan()
+    {
         Name = null!;
         Description = null!;
         Price = null!;

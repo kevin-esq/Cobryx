@@ -16,11 +16,11 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
     // Loan-specific configuration (overrides Tenant settings if present)
     public decimal? DefaultInterestRate { get; private set; }
     public int? MaxInstallments { get; private set; }
-    
+
     public bool IsActive { get; private set; }
 
-    private Product() 
-    { 
+    private Product()
+    {
         Name = null!;
         BasePrice = null!;
     }

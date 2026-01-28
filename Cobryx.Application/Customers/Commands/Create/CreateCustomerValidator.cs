@@ -19,7 +19,7 @@ public class CreateCustomerValidator : AbstractValidator<CreateCustomerCommand>
             .NotEmpty()
             .Matches(@"^\+?[1-9]\d{1,14}$") // Basic E.164-ish regex
             .WithMessage("Invalid phone format.");
-        
+
         RuleFor(x => x.Address!)
             .SetValidator(new AddressValidator())
             .When(x => x.Address != null);

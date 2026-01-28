@@ -25,7 +25,7 @@ public class RedisCacheService : ICacheService
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         var data = await _cache.GetStringAsync(key, cancellationToken);
-        
+
         if (string.IsNullOrEmpty(data))
             return default;
 

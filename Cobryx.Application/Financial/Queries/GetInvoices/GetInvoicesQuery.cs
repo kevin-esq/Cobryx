@@ -37,7 +37,7 @@ public class GetInvoicesHandler : IRequestHandler<GetInvoicesQuery, Result<IRead
         if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<InvoiceDto>>("Tenant context missing.");
 
         var invoices = await _invoiceRepository.GetAllAsync();
-        
+
         var dtos = invoices
             .Where(i => i.TenantId == tenantId.Value)
             .Select(i => new InvoiceDto(

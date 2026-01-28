@@ -11,8 +11,8 @@ public class Permission : BaseEntity, IAggregateRoot
     private readonly List<Role> _roles = new();
     public IReadOnlyCollection<Role> Roles => _roles.AsReadOnly();
 
-    private Permission() 
-    { 
+    private Permission()
+    {
         Name = null!;
         Description = null!;
     }

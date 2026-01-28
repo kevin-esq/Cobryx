@@ -10,17 +10,17 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     public Guid TenantId { get; private set; }
     public Guid CustomerId { get; private set; }
     public Guid? ProductId { get; private set; }
-    
+
     public Money Principal { get; private set; }
     public decimal InterestRate { get; private set; }
     public InterestType InterestType { get; private set; }
     public PaymentFrequency Frequency { get; private set; }
     public int InstallmentsCount { get; private set; }
-    
+
     public DateTime StartDate { get; private set; }
     public int GraceDays { get; private set; }
     public CreditStatus Status { get; private set; }
-    
+
     public virtual Customer Customer { get; private set; } = null!;
     public virtual ICollection<Payment> Payments { get; private set; } = new List<Payment>();
 
@@ -30,12 +30,12 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     private Credit() { Principal = null!; }
 
     public Credit(
-        Guid tenantId, 
-        Guid customerId, 
-        Money principal, 
-        decimal interestRate, 
-        InterestType interestType, 
-        PaymentFrequency frequency, 
+        Guid tenantId,
+        Guid customerId,
+        Money principal,
+        decimal interestRate,
+        InterestType interestType,
+        PaymentFrequency frequency,
         int installmentsCount,
         int graceDays = 0,
         Guid? productId = null)
@@ -53,7 +53,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
         InstallmentsCount = installmentsCount;
         GraceDays = graceDays;
         ProductId = productId;
-        
+
         StartDate = DateTime.UtcNow;
         Status = CreditStatus.Active;
 

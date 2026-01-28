@@ -15,7 +15,7 @@ public class AzureStorageProvider : IDocumentStorage
 
     public AzureStorageProvider(IConfiguration configuration, ILogger<AzureStorageProvider> logger)
     {
-        var connectionString = configuration["Storage:AzureBlob:ConnectionString"] 
+        var connectionString = configuration["Storage:AzureBlob:ConnectionString"]
             ?? throw new InvalidOperationException("Azure Storage ConnectionString is missing.");
         _containerName = configuration["Storage:AzureBlob:ContainerName"] ?? "documents";
         _serviceClient = new BlobServiceClient(connectionString);
@@ -31,7 +31,7 @@ public class AzureStorageProvider : IDocumentStorage
         var blobClient = containerClient.GetBlobClient(blobPath);
 
         await blobClient.UploadAsync(file, new BlobHttpHeaders { ContentType = contentType });
-        
+
         _logger.LogInformation("Uploaded file {FileName} to Azure Blob Storage at {BlobPath}", fileName, blobPath);
         return blobPath;
     }

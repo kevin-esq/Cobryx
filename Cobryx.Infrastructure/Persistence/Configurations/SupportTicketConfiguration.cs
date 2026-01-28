@@ -15,7 +15,7 @@ public class SupportTicketConfiguration : IEntityTypeConfiguration<SupportTicket
         builder.Property(x => x.Title).IsRequired().HasMaxLength(200);
         builder.Property(x => x.Description).IsRequired();
         builder.Property(x => x.Category).HasMaxLength(50);
-        
+
         // InternalNotes can be long
     }
 }

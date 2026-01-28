@@ -15,8 +15,8 @@ public class Coupon : BaseEntity, IAggregateRoot, ITenantEntity
     public int TimesRedeemed { get; private set; }
     public bool IsActive { get; private set; }
 
-    private Coupon() 
-    { 
+    private Coupon()
+    {
         Code = null!;
     }
 

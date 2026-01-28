@@ -14,7 +14,7 @@ public class LoginSession : BaseEntity, ITenantEntity
     // Navigation
     public virtual User User { get; private set; } = null!;
 
-    private LoginSession() 
+    private LoginSession()
     {
         IpAddress = null!;
     }

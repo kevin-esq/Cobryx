@@ -11,8 +11,8 @@ public class BillingAlert : BaseEntity, ITenantEntity
     public DateTime SentAt { get; private set; }
     public bool IsAcknowledged { get; private set; }
 
-    private BillingAlert() 
-    { 
+    private BillingAlert()
+    {
         Message = null!;
     }
 

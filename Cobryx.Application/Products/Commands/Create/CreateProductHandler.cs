@@ -38,7 +38,7 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
         }
 
         await _productRepository.AddAsync(product);
-        
+
         return Result.Success(product.Id);
     }
 }

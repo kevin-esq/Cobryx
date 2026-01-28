@@ -15,8 +15,8 @@ public class SystemErrorLog : BaseEntity, ITenantEntity
     public bool IsResolved { get; private set; }
     public string? ResolutionNotes { get; private set; }
 
-    private SystemErrorLog() 
-    { 
+    private SystemErrorLog()
+    {
         Message = null!;
     }
 

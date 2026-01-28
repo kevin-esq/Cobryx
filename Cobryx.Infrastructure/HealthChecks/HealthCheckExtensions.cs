@@ -10,12 +10,12 @@ public static class HealthCheckExtensions
 {
     public static IServiceCollection AddCobryxHealthChecks(this IServiceCollection services, IConfiguration configuration)
     {
-        var dbConnectionString = configuration.GetConnectionString("DefaultConnection") 
+        var dbConnectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        var azureConnectionString = configuration["Storage:AzureBlob:ConnectionString"] 
+        var azureConnectionString = configuration["Storage:AzureBlob:ConnectionString"]
             ?? throw new InvalidOperationException("Azure Storage ConnectionString is missing.");
-        
+
         var containerName = configuration["Storage:AzureBlob:ContainerName"] ?? "documents";
 
         var clamAvHost = configuration["Security:ClamAV:Host"] ?? "localhost";
@@ -24,8 +24,8 @@ public static class HealthCheckExtensions
         services.AddHealthChecks()
             .AddNpgSql(dbConnectionString, name: "Database")
             .AddAzureBlobStorage(
-                azureConnectionString, 
-                containerName: containerName, 
+                azureConnectionString,
+                containerName: containerName,
                 name: "AzureBlobStorage")
             .AddAsyncCheck("ClamAV", async () =>
             {

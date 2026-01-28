@@ -10,7 +10,7 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
         builder.HasIndex(c => c.TenantId);
         builder.HasIndex(c => c.Phone);
-        
+
         builder.HasIndex(c => new { c.LastName, c.FirstName });
 
         builder.Property(c => c.FirstName).IsRequired().HasMaxLength(100);

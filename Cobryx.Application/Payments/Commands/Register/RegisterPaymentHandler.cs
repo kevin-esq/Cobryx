@@ -14,7 +14,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
     private readonly ITenantProvider _tenantProvider;
 
     public RegisterPaymentHandler(
-        ICreditRepository creditRepository, 
+        ICreditRepository creditRepository,
         IPaymentRepository paymentRepository,
         ITenantProvider tenantProvider)
     {
@@ -38,7 +38,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         }
 
         var amount = new Money(request.Amount, request.Currency);
-        
+
         var payment = new Payment(
             tenantId.Value,
             credit.CustomerId,

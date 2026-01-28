@@ -9,9 +9,9 @@ public record Money : ValueObject
     public decimal Amount { get; init; }
     public string Currency { get; init; }
 
-    private Money() 
-    { 
-        Currency = null!; 
+    private Money()
+    {
+        Currency = null!;
     }
 
     public Money(decimal amount, string currency)

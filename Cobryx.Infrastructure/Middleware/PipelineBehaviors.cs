@@ -24,7 +24,7 @@ public static class PipelineBehaviors
         {
             var requestName = typeof(TRequest).Name;
             var tenantId = _tenantProvider.GetTenantId();
-            
+
             _logger.LogInformation("Cobryx Request: {Name} {@TenantId} {@Request}", requestName, tenantId, request);
 
             var stopwatch = Stopwatch.StartNew();

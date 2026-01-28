@@ -33,6 +33,12 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             tt.Property(m => m.Currency).HasColumnName("TotalCurrency").HasMaxLength(10);
         });
 
+        builder.OwnsOne(i => i.TotalPaid, tp =>
+        {
+            tp.Property(m => m.Amount).HasColumnName("TotalPaidAmount").HasPrecision(18, 2);
+            tp.Property(m => m.Currency).HasColumnName("TotalPaidCurrency").HasMaxLength(10);
+        });
+
         builder.HasMany(i => i.Items)
             .WithOne()
             .HasForeignKey(ii => ii.InvoiceId)

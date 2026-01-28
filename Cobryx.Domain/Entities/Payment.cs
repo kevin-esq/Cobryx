@@ -21,8 +21,8 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
     public virtual PaymentMethod PaymentMethod { get; private set; } = null!;
     public virtual Customer Customer { get; private set; } = null!;
 
-    private Payment() 
-    { 
+    private Payment()
+    {
         Amount = null!;
     }
 

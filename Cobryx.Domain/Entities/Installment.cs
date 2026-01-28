@@ -22,8 +22,8 @@ public class Installment : BaseEntity
     public Money TotalDue => (PrincipalPart + InterestPart + LateInterestAmount) - (PrincipalPaid + InterestPaid + LateInterestPaid);
 
 
-    private Installment() 
-    { 
+    private Installment()
+    {
         TotalAmount = null!;
         PrincipalPart = null!;
         PrincipalPaid = null!;
@@ -80,7 +80,7 @@ public class Installment : BaseEntity
 
         UpdateStatus();
         UpdateTimestamp();
-        
+
         return remaining;
     }
 

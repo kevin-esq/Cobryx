@@ -11,7 +11,7 @@ public class ScheduleGenerator : IScheduleGenerator
     {
         var installments = new List<Installment>();
         decimal principal = credit.Principal.Amount;
-        
+
         // 1. Adjust rate based on frequency (Professional Standard)
         decimal periodicRate = GetPeriodicRate(credit.InterestRate / 100, credit.Frequency);
         int n = credit.InstallmentsCount;
@@ -32,9 +32,9 @@ public class ScheduleGenerator : IScheduleGenerator
                     remainingPrincipal -= principalPart;
 
                     installments.Add(new Installment(
-                        credit.Id, 
-                        j, 
-                        currentDate, 
+                        credit.Id,
+                        j,
+                        currentDate,
                         new Money(principalPart, credit.Principal.Currency),
                         new Money(0, credit.Principal.Currency),
                         new Money(Math.Max(0, remainingPrincipal), credit.Principal.Currency)));
@@ -46,7 +46,7 @@ public class ScheduleGenerator : IScheduleGenerator
                 decimal onePlusI_n = DecimalPower(1 + periodicRate, n);
                 decimal numerator = principal * (periodicRate * onePlusI_n);
                 decimal denominator = onePlusI_n - 1;
-                
+
                 decimal fixedPayment = Math.Round(numerator / denominator, 2);
                 decimal remainingPrincipal = principal;
                 DateTime currentDate = credit.StartDate;
@@ -59,9 +59,9 @@ public class ScheduleGenerator : IScheduleGenerator
                     remainingPrincipal -= principalPart;
 
                     installments.Add(new Installment(
-                        credit.Id, 
-                        j, 
-                        currentDate, 
+                        credit.Id,
+                        j,
+                        currentDate,
                         new Money(principalPart, credit.Principal.Currency),
                         new Money(interestPart, credit.Principal.Currency),
                         new Money(Math.Max(0, remainingPrincipal), credit.Principal.Currency)));
@@ -71,8 +71,8 @@ public class ScheduleGenerator : IScheduleGenerator
         else
         {
             // Simple or Flat logic (Already adjusted to periodic)
-            decimal totalInterest = credit.InterestType == InterestType.Simple 
-                ? Math.Round(principal * periodicRate * n, 2) 
+            decimal totalInterest = credit.InterestType == InterestType.Simple
+                ? Math.Round(principal * periodicRate * n, 2)
                 : Math.Round(credit.InterestRate, 2); // Flat is a fixed total amount
 
             decimal totalDebt = principal + totalInterest;
@@ -86,7 +86,7 @@ public class ScheduleGenerator : IScheduleGenerator
             for (int j = 1; j <= n; j++)
             {
                 currentDate = GetNextDueDate(currentDate, credit.Frequency);
-                
+
                 // Adjustment for the last installment to avoid cent drifts
                 if (j == n)
                 {

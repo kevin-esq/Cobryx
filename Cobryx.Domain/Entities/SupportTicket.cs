@@ -15,8 +15,8 @@ public class SupportTicket : BaseEntity, ITenantEntity
     public SupportTicketPriority Priority { get; private set; }
     public string? Category { get; private set; } // "Bug", "Feature", "Inquiry"
 
-    private SupportTicket() 
-    { 
+    private SupportTicket()
+    {
         Title = null!;
         Description = null!;
     }
@@ -41,10 +41,10 @@ public class SupportTicket : BaseEntity, ITenantEntity
     public void UpdateStatus(SupportTicketStatus status, string? notes = null)
     {
         Status = status;
-        if (notes != null) 
+        if (notes != null)
         {
-            var updatedNotes = string.IsNullOrEmpty(InternalNotes) 
-                ? $"[{DateTime.UtcNow}] {notes}" 
+            var updatedNotes = string.IsNullOrEmpty(InternalNotes)
+                ? $"[{DateTime.UtcNow}] {notes}"
                 : $"{InternalNotes}\n[{DateTime.UtcNow}] {notes}";
             SetInternalNotes(updatedNotes);
         }

@@ -38,8 +38,8 @@ public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<Pag
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var search = request.SearchTerm.ToLower();
-            query = query.Where(c => 
-                c.FirstName.ToLower().Contains(search) || 
+            query = query.Where(c =>
+                c.FirstName.ToLower().Contains(search) ||
                 c.LastName.ToLower().Contains(search) ||
                 c.Phone.Contains(search));
         }

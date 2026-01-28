@@ -13,8 +13,8 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
     public string MimeType { get; private set; }
     public Guid UploadedBy { get; private set; }
 
-    private DocumentMetadata() 
-    { 
+    private DocumentMetadata()
+    {
         EntityType = null!;
         FileName = null!;
         BlobPath = null!;
@@ -22,13 +22,13 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
     }
 
     public DocumentMetadata(
-        Guid tenantId, 
-        Guid entityId, 
-        string entityType, 
-        string fileName, 
-        string blobPath, 
-        long fileSize, 
-        string mimeType, 
+        Guid tenantId,
+        Guid entityId,
+        string entityType,
+        string fileName,
+        string blobPath,
+        long fileSize,
+        string mimeType,
         Guid uploadedBy)
     {
         TenantId = tenantId;

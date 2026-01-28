@@ -10,8 +10,8 @@ public class ReleaseNote : BaseEntity
     public DateTime ReleaseDate { get; private set; }
     public bool IsPublished { get; private set; }
 
-    private ReleaseNote() 
-    { 
+    private ReleaseNote()
+    {
         ReleaseVersion = null!;
         Title = null!;
         Content = null!;

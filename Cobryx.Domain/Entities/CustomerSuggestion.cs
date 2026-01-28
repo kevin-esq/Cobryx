@@ -11,8 +11,8 @@ public class CustomerSuggestion : BaseEntity, ITenantEntity
     public string? Status { get; private set; }
     public int Votes { get; private set; }
 
-    private CustomerSuggestion() 
-    { 
+    private CustomerSuggestion()
+    {
         Title = null!;
         Description = null!;
     }
