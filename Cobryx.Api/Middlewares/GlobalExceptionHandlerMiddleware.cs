@@ -38,7 +38,6 @@ public class GlobalExceptionHandlerMiddleware
     {
         _logger.LogError(exception, "Cobryx Critical Error: {Message}", exception.Message);
 
-        // Persist error for observability
         try
         {
             using var scope = context.RequestServices.CreateScope();
@@ -61,7 +60,6 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (Exception panicEx)
         {
-            // Fallback: If DB persistence fails, log to Serilog but don't crash the handler
             _logger.LogCritical(panicEx, "FATAL: Could not persist SystemErrorLog to Database.");
         }
 

@@ -25,9 +25,7 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, Result<PaginatedLi
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<PaginatedList<UserDto>>("Tenant context missing.");
 
-        // NOTE: In a real app, IUserRepository should have a GetByTenantAsync
-        var allUsers = await _userRepository.GetAllAsync();
-        var users = allUsers.Where(u => u.TenantId == tenantId.Value);
+        var users = await _userRepository.GetByTenantAsync(tenantId.Value);
 
         var totalCount = users.Count();
         var items = users
