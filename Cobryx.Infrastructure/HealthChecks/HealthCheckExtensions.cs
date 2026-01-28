@@ -39,7 +39,10 @@ public static class HealthCheckExtensions
                 {
                     return HealthCheckResult.Unhealthy($"ClamAV Unreachable: {ex.Message}");
                 }
-            });
+            })
+            .AddRedis(
+                configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379",
+                name: "Redis");
 
         return services;
     }

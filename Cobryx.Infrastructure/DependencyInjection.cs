@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Cobryx.Infrastructure.Caching;
 
 namespace Cobryx.Infrastructure;
 
@@ -24,6 +25,16 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
+
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379";
+            options.InstanceName = "Cobryx_";
+        });
+
+        var defaultTTL = int.Parse(configuration["Caching:DefaultTTL"] ?? "300");
+        services.AddSingleton<ICacheService>(sp =>
+            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), defaultTTL));
 
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<DispatchDomainEventsInterceptor>();
@@ -38,8 +49,8 @@ public static class DependencyInjection
             KeepAlive = 30,
             CommandTimeout = 300,
             Pooling = true,
-            MinPoolSize = 0,
-            MaxPoolSize = 20
+            MinPoolSize = 10,
+            MaxPoolSize = 100
         };
 
         try
