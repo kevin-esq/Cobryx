@@ -87,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<Cobryx.Domain.Services.PaymentService>();
 
         // Identity Services
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
