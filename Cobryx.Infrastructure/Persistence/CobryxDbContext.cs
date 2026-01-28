@@ -49,7 +49,7 @@ public class CobryxDbContext : DbContext
                 filterExpr = notDeletedExpr;
 
                 modelBuilder.Entity(entityType.ClrType)
-                    .Property<uint>(nameof(BaseEntity.RowVersion))
+                    .Property<uint>(nameof(BaseEntity.Version))
                     .IsRowVersion();
             }
 
