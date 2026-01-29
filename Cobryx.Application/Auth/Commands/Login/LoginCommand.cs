@@ -56,6 +56,12 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             return Result.Failure<AuthResult>("Invalid credentials.");
         }
 
+        if (user.IsMfaEnabled)
+        {
+            _logger.LogInformation("MFA required for user: {Email}", user.Email);
+            return Result.Success(_authService.GenerateMfaPartialResponse(user));
+        }
+
         var ipAddress = _httpContextService.GetIpAddress();
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);

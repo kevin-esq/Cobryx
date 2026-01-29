@@ -46,6 +46,8 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<CustomerSuggestion> CustomerSuggestions => Set<CustomerSuggestion>();
     public DbSet<ReleaseNote> ReleaseNotes => Set<ReleaseNote>();
     public DbSet<DocumentMetadata> Documents => Set<DocumentMetadata>();
+    public DbSet<MfaDevice> MfaDevices => Set<MfaDevice>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
