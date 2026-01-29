@@ -17,33 +17,48 @@ public class AuthService : IAuthService
     {
         user.CreateProfile();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, roleOverride);
-        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        var session = user.AddSession(ipAddress, deviceFingerprint);
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id, roleOverride);
+        var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();
+        var refreshToken = user.AddRefreshToken(refreshTokenValue, DateTime.UtcNow.AddDays(7), ipAddress, session.Id);
 
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), ipAddress);
-        user.AddSession(ipAddress, deviceFingerprint);
-
-        return CreateAuthResult(user, accessToken, refreshToken, roleOverride);
+        return CreateAuthResult(user, accessToken, refreshTokenValue, session.Id, roleOverride);
     }
 
     public AuthResult RefreshAuthResponse(User user, string oldRefreshToken, string ipAddress, string? deviceFingerprint)
     {
         user.CreateProfile();
 
-        var activeToken = user.RefreshTokens.FirstOrDefault(x => x.Token == oldRefreshToken);
+        var token = user.RefreshTokens.FirstOrDefault(x => x.Token == oldRefreshToken);
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
-        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
-
-        if (activeToken != null)
+        if (token == null)
         {
-            activeToken.Revoke(ipAddress, refreshToken);
+            throw new Exception("Invalid refresh token.");
         }
 
-        user.AddRefreshToken(refreshToken, DateTime.UtcNow.AddDays(7), ipAddress);
-        user.AddSession(ipAddress, deviceFingerprint);
+        if (token.IsRevoked)
+        {
+            // Detection of token reuse!
+            user.InvalidateTokenChain(oldRefreshToken, ipAddress);
+            throw new Exception("Compromised refresh token used. Session invalidated.");
+        }
 
-        return CreateAuthResult(user, accessToken, refreshToken);
+        var session = user.Sessions.FirstOrDefault(s => s.Id == token.SessionId);
+        if (session == null || session.IsRevoked)
+        {
+            throw new Exception("Session is revoked or missing.");
+        }
+
+
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id);
+        var newRefreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();
+
+        token.Revoke(ipAddress, newRefreshTokenValue);
+        user.AddRefreshToken(newRefreshTokenValue, DateTime.UtcNow.AddDays(7), ipAddress, session.Id);
+
+        session.UpdateActivity();
+
+        return CreateAuthResult(user, accessToken, newRefreshTokenValue, session.Id);
     }
     public AuthResult GenerateMfaPartialResponse(User user)
     {
@@ -63,7 +78,7 @@ public class AuthService : IAuthService
         );
     }
 
-    private AuthResult CreateAuthResult(User user, string accessToken, string refreshToken, Role? roleOverride = null)
+    private AuthResult CreateAuthResult(User user, string accessToken, string refreshToken, Guid sessionId, Role? roleOverride = null)
     {
         return new AuthResult(
             accessToken,
@@ -73,7 +88,8 @@ public class AuthService : IAuthService
             user.FullName,
             user.Email,
             roleOverride?.Name ?? user.Role?.Name ?? "User",
-            DateTime.UtcNow.AddMinutes(60)
+            DateTime.UtcNow.AddMinutes(60),
+            sessionId
         );
     }
 }

@@ -4,7 +4,7 @@ namespace Cobryx.Application.Common.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateAccessToken(User user, Role? roleOverride = null);
+    string GenerateAccessToken(User user, Guid sessionId, Role? roleOverride = null);
     string GenerateRefreshToken();
     string GenerateMfaToken(User user);
     Guid? ValidateMfaToken(string token);

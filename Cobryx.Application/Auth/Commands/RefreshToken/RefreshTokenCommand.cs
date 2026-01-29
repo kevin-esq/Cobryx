@@ -29,17 +29,27 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
     {
         var user = await _userRepository.GetByRefreshTokenAsync(request.RefreshToken);
 
-        if (user == null || !user.HasValidRefreshToken(request.RefreshToken))
+        if (user == null)
         {
-            return Result.Failure<AuthResult>("Invalid or active refresh token not found.");
+            return Result.Failure<AuthResult>("Invalid refresh token.");
         }
 
-        var ipAddress = _httpContextService.GetIpAddress();
-        var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-        var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, ipAddress, deviceFingerprint);
+        try
+        {
+            var ipAddress = _httpContextService.GetIpAddress();
+            var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
+            var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, ipAddress, deviceFingerprint);
 
-        await _userRepository.UpdateAsync(user);
+            await _userRepository.UpdateAsync(user);
 
-        return Result.Success(authResult);
+            return Result.Success(authResult);
+        }
+        catch (Exception ex)
+        {
+            // Persistence of the revocation is important for security
+            try { await _userRepository.UpdateAsync(user); } catch { /* Ignore persistence failure during error */ }
+
+            return Result.Failure<AuthResult>(ex.Message);
+        }
     }
 }
