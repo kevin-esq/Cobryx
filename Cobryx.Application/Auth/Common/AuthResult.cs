@@ -9,5 +9,6 @@ public record AuthResult(
     string? Email,
     string? Role,
     DateTime? Expires,
+    Guid? SessionId = null,
     bool RequiresMfa = false,
     string? MfaToken = null);

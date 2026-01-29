@@ -12,6 +12,7 @@ public class RefreshToken : BaseEntity
     public string? RevokedByIp { get; private set; }
     public string? ReplacedByToken { get; private set; }
     public Guid UserId { get; private set; }
+    public Guid SessionId { get; private set; }
 
     public bool IsExpired => DateTime.UtcNow >= Expires;
     public bool IsRevoked => Revoked != null;
@@ -23,13 +24,14 @@ public class RefreshToken : BaseEntity
         CreatedByIp = null!;
     }
 
-    public RefreshToken(string token, DateTime expires, string createdByIp, Guid userId)
+    public RefreshToken(string token, DateTime expires, string createdByIp, Guid userId, Guid sessionId)
     {
         Token = token;
         Expires = expires;
         Created = DateTime.UtcNow;
         CreatedByIp = createdByIp;
         UserId = userId;
+        SessionId = sessionId;
     }
 
     public void Revoke(string ipAddress, string? replacedByToken = null)

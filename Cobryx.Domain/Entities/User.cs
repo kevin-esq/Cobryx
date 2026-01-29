@@ -89,18 +89,41 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         RoleId = roleId;
     }
 
-    public void AddRefreshToken(string token, DateTime expires, string createdByIp)
+    public RefreshToken AddRefreshToken(string token, DateTime expires, string createdByIp, Guid sessionId)
     {
-        var refreshToken = new RefreshToken(token, expires, createdByIp, Id);
+        var refreshToken = new RefreshToken(token, expires, createdByIp, Id, sessionId);
         _refreshTokens.Add(refreshToken);
+        return refreshToken;
     }
 
-    public void AddSession(string ipAddress, string? deviceFingerprint)
+    public LoginSession AddSession(string ipAddress, string? deviceFingerprint)
     {
         var session = new LoginSession(TenantId, Id, ipAddress, deviceFingerprint);
         _sessions.Add(session);
+        return session;
     }
 
+    public void RevokeSession(Guid sessionId)
+    {
+        var session = _sessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session != null)
+        {
+            session.Revoke();
+
+            foreach (var token in _refreshTokens.Where(t => t.SessionId == sessionId && t.IsActive))
+            {
+                token.Revoke("Session Revocation");
+            }
+        }
+    }
+    public void InvalidateTokenChain(string tokenValue, string ipAddress)
+    {
+        var token = _refreshTokens.FirstOrDefault(t => t.Token == tokenValue);
+        if (token == null) return;
+
+        // If the token is already revoked, it might be a reuse attack.
+        RevokeSession(token.SessionId);
+    }
     public void AddMfaDevice(MfaDevice device)
     {
         if (device == null) throw new ArgumentNullException(nameof(device));

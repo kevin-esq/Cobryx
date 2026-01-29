@@ -18,7 +18,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(User user, Role? roleOverride = null)
+    public string GenerateAccessToken(User user, Guid sessionId, Role? roleOverride = null)
     {
         var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -38,6 +38,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(JwtRegisteredClaimNames.Nbf, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new("tenant_name", user.FullName),
             new("tenant_id", user.TenantId.ToString()),
+            new("sid", sessionId.ToString()),
             new(ClaimTypes.Role, roleName)
         };
 
