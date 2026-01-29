@@ -130,8 +130,26 @@ public static class DependencyInjection
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtSettings["Issuer"],
                 ValidAudience = jwtSettings["Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ClockSkew = TimeSpan.Zero
             };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    context.Token = context.Request.Cookies["X-Access-Token"];
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        services.Configure<Microsoft.AspNetCore.Builder.CookiePolicyOptions>(options =>
+        {
+            options.CheckConsentNeeded = context => false;
+            options.MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
+            options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+            options.Secure = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
         });
 
         return services;
