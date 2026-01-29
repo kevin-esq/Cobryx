@@ -114,6 +114,10 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
         services.AddScoped<IMfaService, MfaService>();
         services.AddScoped<IFido2Service, Fido2Service>();
+        services.AddScoped<ISecurityAuditService, SecurityAuditService>();
+        services.AddScoped<IAuthAttemptService, AuthAttemptService>();
+
+        services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
 
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");

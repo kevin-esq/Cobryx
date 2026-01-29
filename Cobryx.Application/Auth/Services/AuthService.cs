@@ -7,10 +7,12 @@ namespace Cobryx.Application.Auth.Services;
 public class AuthService : IAuthService
 {
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly ISecurityAuditService _auditService;
 
-    public AuthService(IJwtTokenGenerator jwtTokenGenerator)
+    public AuthService(IJwtTokenGenerator jwtTokenGenerator, ISecurityAuditService auditService)
     {
         _jwtTokenGenerator = jwtTokenGenerator;
+        _auditService = auditService;
     }
 
     public AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, Role? roleOverride = null)
@@ -38,7 +40,7 @@ public class AuthService : IAuthService
 
         if (token.IsRevoked)
         {
-            // Detection of token reuse!
+            _auditService.LogSecurityAlert("RefreshTokenReuse", user.Id.ToString(), ipAddress, "A revoked refresh token was reused. Potential theft attempt.");
             user.InvalidateTokenChain(oldRefreshToken, ipAddress);
             throw new Exception("Compromised refresh token used. Session invalidated.");
         }

@@ -21,6 +21,8 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
     private readonly IAuthService _authService;
     private readonly IHttpContextService _httpContextService;
     private readonly ILogger<CompleteFido2AssertionHandler> _logger;
+    private readonly ISecurityAuditService _auditService;
+    private readonly IAuthAttemptService _attemptService;
 
     public CompleteFido2AssertionHandler(
         IFido2Service fido2Service,
@@ -28,7 +30,9 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         IJwtTokenGenerator jwtTokenGenerator,
         IAuthService authService,
         IHttpContextService httpContextService,
-        ILogger<CompleteFido2AssertionHandler> logger)
+        ILogger<CompleteFido2AssertionHandler> logger,
+        ISecurityAuditService auditService,
+        IAuthAttemptService attemptService)
     {
         _fido2Service = fido2Service;
         _userRepository = userRepository;
@@ -36,6 +40,8 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         _authService = authService;
         _httpContextService = httpContextService;
         _logger = logger;
+        _auditService = auditService;
+        _attemptService = attemptService;
     }
 
     public async Task<Result<AuthResult>> Handle(CompleteFido2AssertionCommand request, CancellationToken cancellationToken)
@@ -48,10 +54,18 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
 
         _logger.LogInformation("Completing FIDO2 assertion for user: {Email}", user.Email);
 
-        bool isValid = await _fido2Service.CompleteAssertionAsync(user, request.Response, request.Options, cancellationToken);
-        if (!isValid) return Result.Failure<AuthResult>("Invalid passkey assertion.");
-
         var ipAddress = _httpContextService.GetIpAddress();
+        bool isValid = await _fido2Service.CompleteAssertionAsync(user, request.Response, request.Options, cancellationToken);
+
+        if (!isValid)
+        {
+            _auditService.LogFailure("VerifyFido2", user.Id.ToString(), ipAddress, "Invalid passkey assertion");
+            await _attemptService.IncrementAttemptsAsync(ipAddress);
+            return Result.Failure<AuthResult>("Invalid passkey assertion.");
+        }
+
+        await _attemptService.ResetAttemptsAsync(ipAddress);
+        _auditService.LogSuccess("VerifyFido2", user.Id.ToString(), ipAddress);
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);
 
