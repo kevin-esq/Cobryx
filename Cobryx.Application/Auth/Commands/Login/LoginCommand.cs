@@ -40,7 +40,17 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 
         var user = await _userRepository.GetByEmailAsync(request.Email);
 
-        if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        bool isValid = false;
+        if (user != null)
+        {
+            isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
+        }
+        else
+        {
+            _passwordHasher.VerifyPassword(request.Password, "v1.4.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
+        }
+
+        if (!isValid || user == null)
         {
             _logger.LogWarning("Authentication failed for email: {Email}", request.Email);
             return Result.Failure<AuthResult>("Invalid credentials.");

@@ -91,6 +91,11 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public bool HasValidRefreshToken(string token)
     {
-        return _refreshTokens.Any(x => x.Token == token && x.IsActive);
+        var tokenBytes = System.Text.Encoding.UTF8.GetBytes(token);
+        return _refreshTokens.Any(x =>
+            System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                System.Text.Encoding.UTF8.GetBytes(x.Token),
+                tokenBytes)
+            && x.IsActive);
     }
 }

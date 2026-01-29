@@ -103,6 +103,18 @@ app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
+    await next();
+});
+
+app.UseCookiePolicy();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
