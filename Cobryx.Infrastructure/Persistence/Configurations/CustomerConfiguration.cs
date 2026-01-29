@@ -27,12 +27,12 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             a.Property(p => p.State).HasMaxLength(100);
         });
 
-        // 💳 Identity Document Segregation
+        // Identity Document Segregation
         builder.OwnsOne(c => c.Document, d =>
         {
             d.Property(p => p.Type).HasMaxLength(20);
             d.Property(p => p.Value).HasMaxLength(50);
-            d.HasIndex(p => p.Value); // Searchable document number
+            d.HasIndex(p => p.Value);
         });
     }
 }

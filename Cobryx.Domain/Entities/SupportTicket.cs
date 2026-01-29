@@ -8,7 +8,7 @@ public enum SupportTicketPriority { Low, Medium, High, Critical }
 public class SupportTicket : BaseEntity, ITenantEntity
 {
     public Guid TenantId { get; private set; }
-    public Guid UserId { get; private set; } // reporter
+    public Guid UserId { get; private set; }
     public string Title { get; private set; }
     public string Description { get; private set; }
     public SupportTicketStatus Status { get; private set; }

@@ -16,7 +16,7 @@ public class DomainEventService : IDomainEventService
     public Task Publish(IDomainEvent domainEvent)
     {
         _logger.LogInformation("Publishing domain event: {Event}", domainEvent.GetType().Name);
-        // Here we could plug MediatR or a message bus
+
         return Task.CompletedTask;
     }
 }

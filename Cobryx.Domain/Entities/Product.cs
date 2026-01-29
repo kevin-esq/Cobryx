@@ -10,10 +10,10 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
     public string? Description { get; private set; }
     public Money BasePrice { get; private set; }
     public string? Sku { get; private set; }
-    public bool IsService { get; private set; } // True for "Cash Loans" or "Services"
-    public bool IsLoanProduct { get; private set; } // If true, this product behaves as a template for a loan
+    public bool IsService { get; private set; }
+    public bool IsLoanProduct { get; private set; }
 
-    // Loan-specific configuration (overrides Tenant settings if present)
+
     public decimal? DefaultInterestRate { get; private set; }
     public int? MaxInstallments { get; private set; }
 
@@ -29,7 +29,7 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
-        // BasePrice can be 0 if the loan amount is variable
+
 
         TenantId = tenantId;
         Name = name;

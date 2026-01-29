@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>Cobryx-Api-Secrets-5d1f1f1f-4f4f-4f4f-bfbf-1f1f1f1f1f1f</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -19,7 +19,7 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
-    // Private ctor for EF
+
     private Customer()
     {
         FirstName = null!;

@@ -9,8 +9,8 @@ public class AuditLog : BaseEntity, ITenantEntity
     public string EntityName { get; private set; }
     public string EntityId { get; private set; }
     public string Action { get; private set; } // "Create", "Update", "Delete"
-    public string? OldValues { get; private set; } // JSON Snapshot
-    public string? NewValues { get; private set; } // JSON Snapshot
+    public string? OldValues { get; private set; }
+    public string? NewValues { get; private set; }
     public string? IpAddress { get; private set; }
     public string? UserAgent { get; private set; }
 

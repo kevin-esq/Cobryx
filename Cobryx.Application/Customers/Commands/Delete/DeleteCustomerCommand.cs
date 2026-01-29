@@ -30,7 +30,7 @@ public class DeleteCustomerHandler : IRequestHandler<DeleteCustomerCommand, Resu
             return Result.Failure("Customer not found.");
         }
 
-        // Note: Soft delete is handled by BaseRepository/DbContext query filters if configured
+
         await _customerRepository.DeleteAsync(customer.Id);
 
         return Result.Success();

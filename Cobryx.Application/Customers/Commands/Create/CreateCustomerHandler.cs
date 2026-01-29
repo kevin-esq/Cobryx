@@ -22,7 +22,6 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
     {
         var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
 
-        // Check if phone already exists in this tenant
         var existing = await _customerRepository.GetByPhoneAsync(tenantId, request.Phone);
         if (existing != null)
         {

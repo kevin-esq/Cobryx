@@ -29,7 +29,7 @@ public class DbInitializer
         {
             if (await roleRepository.GetByNameAsync(role.Name) == null)
             {
-                // Map default permissions
+
                 if (role.Name == "Owner")
                     foreach (var p in permissions) role.AddPermission(p);
 

@@ -30,12 +30,12 @@ public abstract class BaseRepository<T> : IRepository<T>
     public virtual async Task AddAsync(T entity)
     {
         await _dbSet.AddAsync(entity);
-        await _dbContext.SaveChangesAsync();
     }
 
     public virtual async Task UpdateAsync(T entity)
     {
-        await _dbContext.SaveChangesAsync();
+        _dbSet.Update(entity);
+        await Task.CompletedTask;
     }
 
     public virtual async Task DeleteAsync(Guid id)
@@ -44,7 +44,6 @@ public abstract class BaseRepository<T> : IRepository<T>
         if (entity != null)
         {
             _dbSet.Remove(entity);
-            await _dbContext.SaveChangesAsync();
         }
     }
 }

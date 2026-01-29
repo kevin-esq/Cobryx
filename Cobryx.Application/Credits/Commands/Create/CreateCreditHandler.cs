@@ -45,7 +45,6 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
             request.ProductId);
 
 
-        // Generate installments
         var schedule = _scheduleGenerator.GenerateSchedule(credit);
         credit.AddInstallments(schedule);
 

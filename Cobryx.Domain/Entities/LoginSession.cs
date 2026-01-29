@@ -11,7 +11,7 @@ public class LoginSession : BaseEntity, ITenantEntity
     public DateTime LastActiveAt { get; private set; }
     public bool IsRevoked { get; private set; }
 
-    // Navigation
+
     public virtual User User { get; private set; } = null!;
 
     private LoginSession()

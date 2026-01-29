@@ -17,7 +17,7 @@ public class CreateCustomerValidator : AbstractValidator<CreateCustomerCommand>
             .MaximumLength(100).WithMessage("Last name must not exceed 100 characters.");
         RuleFor(x => x.Phone)
             .NotEmpty()
-            .Matches(@"^\+?[1-9]\d{1,14}$") // Basic E.164-ish regex
+            .Matches(@"^\+?[1-9]\d{1,14}$")
             .WithMessage("Invalid phone format.");
 
         RuleFor(x => x.Address!)

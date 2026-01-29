@@ -1,12 +1,13 @@
 using System.Linq.Expressions;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Persistence;
 
-public class CobryxDbContext : DbContext
+public class CobryxDbContext : DbContext, IUnitOfWork
 {
     private readonly ITenantProvider _tenantProvider;
 

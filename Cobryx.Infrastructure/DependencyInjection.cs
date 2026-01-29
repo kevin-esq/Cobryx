@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.UnitOfWork<,>));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
@@ -66,7 +67,10 @@ public static class DependencyInjection
                 }
             }
         }
-        catch { }
+        catch
+        {
+            // Optimistic DNS resolution; ignore failures and fallback to original host
+        }
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>
         {
