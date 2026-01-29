@@ -14,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using Cobryx.Infrastructure.Caching;
+using Cobryx.Infrastructure.Security;
 
 namespace Cobryx.Infrastructure;
 
@@ -111,6 +112,8 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
         services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
+        services.AddScoped<IMfaService, MfaService>();
+        services.AddScoped<IFido2Service, Fido2Service>();
 
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");

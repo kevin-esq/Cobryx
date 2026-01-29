@@ -45,6 +45,23 @@ public class AuthService : IAuthService
 
         return CreateAuthResult(user, accessToken, refreshToken);
     }
+    public AuthResult GenerateMfaPartialResponse(User user)
+    {
+        var mfaToken = _jwtTokenGenerator.GenerateMfaToken(user);
+
+        return new AuthResult(
+            Token: null,
+            RefreshToken: null,
+            FirstName: user.FirstName,
+            LastName: user.LastName,
+            FullName: user.FullName,
+            Email: user.Email,
+            Role: null,
+            Expires: null,
+            RequiresMfa: true,
+            MfaToken: mfaToken
+        );
+    }
 
     private AuthResult CreateAuthResult(User user, string accessToken, string refreshToken, Role? roleOverride = null)
     {

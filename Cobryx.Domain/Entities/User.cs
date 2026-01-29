@@ -15,6 +15,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public Guid RoleId { get; private set; }
     public Role Role { get; private set; }
     public bool IsActive { get; private set; }
+    public bool IsMfaEnabled { get; private set; }
+    public DateTime? MfaEnabledAt { get; private set; }
 
     public virtual UserProfile? Profile { get; private set; }
     private readonly List<LoginSession> _sessions = new();
@@ -22,6 +24,12 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     private readonly List<RefreshToken> _refreshTokens = new();
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
+
+    private readonly List<MfaDevice> _mfaDevices = new();
+    public IReadOnlyCollection<MfaDevice> MfaDevices => _mfaDevices.AsReadOnly();
+
+    private readonly List<RecoveryCode> _recoveryCodes = new();
+    public IReadOnlyCollection<RecoveryCode> RecoveryCodes => _recoveryCodes.AsReadOnly();
 
     private User()
     {
@@ -48,6 +56,23 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         PasswordHash = null!;
         Role = null!;
         IsActive = true;
+        IsMfaEnabled = false;
+    }
+
+    public void EnableMfa()
+    {
+        IsMfaEnabled = true;
+        MfaEnabledAt = DateTime.UtcNow;
+        UpdateTimestamp();
+    }
+
+    public void DisableMfa()
+    {
+        IsMfaEnabled = false;
+        MfaEnabledAt = null;
+        _mfaDevices.Clear();
+        _recoveryCodes.Clear();
+        UpdateTimestamp();
     }
 
     public void SetPasswordHash(string passwordHash)
@@ -76,6 +101,20 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         _sessions.Add(session);
     }
 
+    public void AddMfaDevice(MfaDevice device)
+    {
+        if (device == null) throw new ArgumentNullException(nameof(device));
+        _mfaDevices.Add(device);
+        UpdateTimestamp();
+    }
+
+    public void AddRecoveryCode(RecoveryCode code)
+    {
+        if (code == null) throw new ArgumentNullException(nameof(code));
+        _recoveryCodes.Add(code);
+        UpdateTimestamp();
+    }
+
     public void CreateProfile(string? phoneNumber = null, string? avatarUrl = null)
     {
         if (Profile != null) return;
@@ -86,7 +125,7 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     {
         _refreshTokens.RemoveAll(x =>
             !x.IsActive &&
-            x.Created.AddDays(ttlDays) <= DateTime.UtcNow);
+            x.CreatedAt.AddDays(ttlDays) <= DateTime.UtcNow);
     }
 
     public bool HasValidRefreshToken(string token)
