@@ -89,6 +89,8 @@ public static class DependencyInjection
             });
         });
 
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CobryxDbContext>());
+
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICreditRepository, CreditRepository>();

@@ -17,6 +17,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .Include(u => u.Role)
                 .ThenInclude(r => r.Permissions)
             .Include(u => u.RefreshTokens)
+            .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.Email == emailLower);
     }
 
@@ -32,6 +33,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .Include(u => u.Role)
                 .ThenInclude(r => r.Permissions)
             .Include(u => u.RefreshTokens)
+            .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken));
     }
 
