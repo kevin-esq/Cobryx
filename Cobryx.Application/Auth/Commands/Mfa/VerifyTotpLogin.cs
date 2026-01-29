@@ -18,6 +18,8 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
     private readonly IHttpContextService _httpContextService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<VerifyTotpLoginHandler> _logger;
+    private readonly ISecurityAuditService _auditService;
+    private readonly IAuthAttemptService _attemptService;
 
     public VerifyTotpLoginHandler(
         IMfaService mfaService,
@@ -26,7 +28,9 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         IAuthService authService,
         IHttpContextService httpContextService,
         IPasswordHasher passwordHasher,
-        ILogger<VerifyTotpLoginHandler> logger)
+        ILogger<VerifyTotpLoginHandler> logger,
+        ISecurityAuditService auditService,
+        IAuthAttemptService attemptService)
     {
         _mfaService = mfaService;
         _userRepository = userRepository;
@@ -35,6 +39,8 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         _httpContextService = httpContextService;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _auditService = auditService;
+        _attemptService = attemptService;
     }
 
     public async Task<Result<AuthResult>> Handle(VerifyTotpLoginCommand request, CancellationToken cancellationToken)
@@ -61,9 +67,17 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
             }
         }
 
-        if (!isValid) return Result.Failure<AuthResult>("Invalid verification code.");
-
         var ipAddress = _httpContextService.GetIpAddress();
+
+        if (!isValid)
+        {
+            _auditService.LogFailure("VerifyTotp", user.Id.ToString(), ipAddress, "Invalid code");
+            await _attemptService.IncrementAttemptsAsync(ipAddress);
+            return Result.Failure<AuthResult>("Invalid verification code.");
+        }
+
+        await _attemptService.ResetAttemptsAsync(ipAddress);
+        _auditService.LogSuccess("VerifyTotp", user.Id.ToString(), ipAddress);
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);
 

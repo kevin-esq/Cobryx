@@ -21,6 +21,7 @@ public class AuthController : CobryxBaseController
         return HandleResult(result, "Registration successful");
     }
 
+    [Cobryx.Api.Infrastructure.ValidateCaptcha]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginCommand command)
     {

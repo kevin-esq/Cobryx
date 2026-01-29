@@ -100,6 +100,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<Cobryx.Infrastructure.Middleware.DynamicRateLimitingMiddleware>();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
 
