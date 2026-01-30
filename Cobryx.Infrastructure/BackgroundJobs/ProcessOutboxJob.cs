@@ -67,7 +67,7 @@ public class ProcessOutboxJob : BackgroundService
                 {
                     var notificationType = typeof(Cobryx.Application.Common.Events.DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
                     var notification = Activator.CreateInstance(notificationType, domainEvent);
-                    
+
                     if (notification != null)
                     {
                         await sender.Send(notification, stoppingToken);

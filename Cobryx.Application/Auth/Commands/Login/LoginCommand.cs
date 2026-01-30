@@ -44,20 +44,20 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
     {
         var startTime = DateTime.UtcNow;
         var ipAddress = _httpContextService.GetIpAddress();
-        
+
         try
         {
             // 1. Initial Rate Limiting (IP & Account)
             var ipAttempts = await _attemptService.GetAttemptCountAsync(ipAddress);
             var userAttempts = await _attemptService.GetUserAttemptCountAsync(request.Email);
-            
+
             var maxAttempts = Math.Max(ipAttempts, userAttempts);
             if (maxAttempts >= 5)
             {
                 // Exponential Backoff: 2^(attempts-5) * 5 seconds
                 var backoffSeconds = Math.Min(3600, Math.Pow(2, maxAttempts - 5) * 5);
                 _logger.LogWarning("Account/IP locked out: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
-                
+
                 await EnsureUniformTiming(startTime, 500);
                 return Result.Failure<AuthResult>("Invalid credentials."); // Uniform generic message
             }
@@ -72,7 +72,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             if (user != null && user.IsActive && user.IsEmailVerified)
             {
                 isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
-                
+
                 // 4. Automatic Re-hashing (Enterprise Standard)
                 // Check if hash uses old parameters (e.g., iterations < 10)
                 if (isValid && IsHashOutdated(user.PasswordHash))
@@ -90,7 +90,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             {
                 _auditService.LogFailure("Login", user?.Id.ToString(), ipAddress, "Invalid credentials or account state");
                 await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
-                
+
                 await EnsureUniformTiming(startTime, 500);
                 return Result.Failure<AuthResult>("Invalid credentials.");
             }
@@ -145,7 +145,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
     {
         var parts = passwordHash.Split('.');
         if (parts.Length < 2) return true;
-        
+
         // v1.10.65536.4... -> parts[1] is iterations
         if (int.TryParse(parts[1], out int iterations) && iterations < 10)
         {

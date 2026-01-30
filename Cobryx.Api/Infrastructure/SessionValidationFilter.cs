@@ -24,7 +24,7 @@ public class SessionValidationFilter : IAsyncActionFilter
         if (userId.HasValue && sessionId.HasValue)
         {
             var user = await _userRepository.GetByIdAsync(userId.Value);
-            
+
             if (user == null || !user.IsActive)
             {
                 context.Result = new UnauthorizedObjectResult(new { success = false, message = "User account is disabled or missing." });
@@ -32,7 +32,7 @@ public class SessionValidationFilter : IAsyncActionFilter
             }
 
             var session = user.Sessions.FirstOrDefault(s => s.Id == sessionId.Value);
-            
+
             if (session == null || session.IsRevoked)
             {
                 context.Result = new UnauthorizedObjectResult(new { success = false, message = "Session has been revoked. Please log in again." });

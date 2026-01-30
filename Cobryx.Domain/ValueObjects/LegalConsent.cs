@@ -12,8 +12,8 @@ public record LegalConsent : ValueObject
     public string IpAddress { get; }
     public string UserAgent { get; }
 
-    private LegalConsent() 
-    { 
+    private LegalConsent()
+    {
         Version = null!;
         IpAddress = null!;
         UserAgent = null!;

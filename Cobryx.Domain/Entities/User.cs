@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Events;
 
 namespace Cobryx.Domain.Entities;
 
@@ -76,7 +77,7 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
             MarketingConsent = marketingConsent
         };
 
-        user.AddDomainEvent(new Events.UserRegisteredEvent(user.Id, user.TenantId, user.Email!, user.FirstName));
+        user.AddDomainEvent(new UserRegisteredEvent(user.Id, user.TenantId, user.Email!, user.FirstName));
 
         return user;
     }
@@ -213,9 +214,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         // Use IP segment to be resilient to minor ISP changes
         var ipParts = ipAddress.Split('.');
         var ipSegment = ipParts.Length >= 2 ? $"{ipParts[0]}.{ipParts[1]}" : ipAddress;
-        
-        var isKnown = _sessions.Any(s => 
-            s.UserAgent == userAgent && 
+
+        var isKnown = _sessions.Any(s =>
+            s.UserAgent == userAgent &&
             s.IpAddress.StartsWith(ipSegment) &&
             !s.IsRevoked);
 

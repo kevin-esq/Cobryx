@@ -33,7 +33,7 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
     {
         var startTime = DateTime.UtcNow;
         var user = await _userRepository.GetByEmailAsync(request.Email);
-        
+
         if (user != null)
         {
             // Invalidate old reset tokens
