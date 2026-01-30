@@ -67,7 +67,8 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         await _attemptService.ResetAttemptsAsync(ipAddress);
         _auditService.LogSuccess("VerifyFido2", user.Id.ToString(), ipAddress);
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);
+        var userAgent = _httpContextService.GetUserAgent();
+        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
 
         await _userRepository.UpdateAsync(user);
 

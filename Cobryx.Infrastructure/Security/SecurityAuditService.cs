@@ -15,25 +15,26 @@ public class SecurityAuditService : ISecurityAuditService
 
     public void LogSuccess(string eventName, string? userId, string ipAddress, object? metadata = null)
     {
-        _logger.LogInformation("SECURITY_SUCCESS | Event: {EventName} | User: {UserId} | IP: {IpAddress} | Metadata: {@Metadata}",
-            eventName, userId ?? "Anonymous", ipAddress, metadata);
+        // CEF:Version|Device Vendor|Device Product|Device Version|Device Event Class ID|Name|Severity|[Extension]
+        var cef = $"CEF:0|Cobryx|Cobryx.Api|1.0|AUTH_SUCCESS|{eventName}|1|src={ipAddress} suser={userId ?? "Anonymous"} msg=Authentication successful";
+        _logger.LogInformation(cef);
     }
 
     public void LogFailure(string eventName, string? userId, string ipAddress, string reason, object? metadata = null)
     {
-        _logger.LogWarning("SECURITY_FAILURE | Event: {EventName} | User: {UserId} | IP: {IpAddress} | Reason: {Reason} | Metadata: {@Metadata}",
-            eventName, userId ?? "Anonymous", ipAddress, reason, metadata);
+        var cef = $"CEF:0|Cobryx|Cobryx.Api|1.0|AUTH_FAILURE|{eventName}|5|src={ipAddress} suser={userId ?? "Anonymous"} msg={reason}";
+        _logger.LogWarning(cef);
     }
 
     public void LogCritical(string eventName, string? userId, string ipAddress, string reason, object? metadata = null)
     {
-        _logger.LogCritical("SECURITY_CRITICAL | Event: {EventName} | User: {UserId} | IP: {IpAddress} | Reason: {Reason} | Metadata: {@Metadata}",
-            eventName, userId ?? "Anonymous", ipAddress, reason, metadata);
+        var cef = $"CEF:0|Cobryx|Cobryx.Api|1.0|SECURITY_CRITICAL|{eventName}|10|src={ipAddress} suser={userId ?? "Anonymous"} msg={reason}";
+        _logger.LogCritical(cef);
     }
 
     public void LogSecurityAlert(string eventName, string? userId, string ipAddress, string description, object? metadata = null)
     {
-        _logger.LogError("SECURITY_ALERT | Event: {EventName} | User: {UserId} | IP: {IpAddress} | Description: {Description} | Metadata: {@Metadata}",
-            eventName, userId ?? "Anonymous", ipAddress, description, metadata);
+        var cef = $"CEF:0|Cobryx|Cobryx.Api|1.0|SECURITY_ALERT|{eventName}|8|src={ipAddress} suser={userId ?? "Anonymous"} msg={description}";
+        _logger.LogError(cef);
     }
 }

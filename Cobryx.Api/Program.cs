@@ -50,7 +50,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<Cobryx.Api.Infrastructure.SessionValidationFilter>();
+});
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
 

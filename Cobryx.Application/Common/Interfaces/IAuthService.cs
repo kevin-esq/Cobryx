@@ -5,7 +5,7 @@ namespace Cobryx.Application.Common.Interfaces;
 
 public interface IAuthService
 {
-    AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, Role? roleOverride = null);
+    AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, string? userAgent, Role? roleOverride = null);
     AuthResult RefreshAuthResponse(User user, string oldRefreshToken, string ipAddress, string? deviceFingerprint);
     AuthResult GenerateMfaPartialResponse(User user);
 }

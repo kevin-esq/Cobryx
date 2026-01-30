@@ -1,5 +1,3 @@
-version: "3.4"
-
 services:
   cobryx-api:
     image: ${DOCKER_REGISTRY-}cobryxapi
@@ -17,6 +15,14 @@ services:
       - Security__ClamAV__Host=clamav
       - Caching__Redis__ConnectionString=redis:6379
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
+      # OAuth
+      - OAuth__Google__ClientId=${COBRYX_OAUTH_GOOGLE_CLIENTID}
+      # Email
+      - Email__SmtpHost=${COBRYX_EMAIL_SMTP_HOST:-localhost}
+      - Email__SmtpPort=${COBRYX_EMAIL_SMTP_PORT:-25}
+      - Email__SmtpUsername=${COBRYX_EMAIL_SMTP_USERNAME}
+      - Email__SmtpPassword=${COBRYX_EMAIL_SMTP_PASSWORD}
+      - Email__FromAddress=${COBRYX_EMAIL_FROM_ADDRESS:-noreply@cobryx.com}
     depends_on:
       - clamav
       - redis
@@ -25,6 +31,7 @@ services:
   clamav:
     image: clamav/clamav:latest
     container_name: cobryx-clamav
+    platform: linux/amd64
     restart: always
 
   redis:

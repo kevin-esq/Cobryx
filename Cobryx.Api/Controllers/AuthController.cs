@@ -1,8 +1,12 @@
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
+using Cobryx.Application.Auth.Commands.Core;
 using Cobryx.Application.Auth.Commands.RefreshToken;
+using Cobryx.Application.Auth.Commands.Sessions;
+using Cobryx.Application.Auth.Common;
 using Concordia;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Cobryx.Api.Controllers;
 
@@ -14,14 +18,17 @@ public class AuthController : CobryxBaseController
     {
     }
 
+    [Cobryx.Api.Infrastructure.ValidateCaptcha]
+    [EnableRateLimiting("auth")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Registration successful");
+        return HandleResult(result, "Registration successful. Please verify your email.");
     }
 
     [Cobryx.Api.Infrastructure.ValidateCaptcha]
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginCommand command)
     {
@@ -34,5 +41,75 @@ public class AuthController : CobryxBaseController
     {
         var result = await Sender.Send(command);
         return HandleResult(result, "Token refreshed successfully");
+    }
+
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(VerifyEmailCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Email verified successfully");
+    }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification(ResendVerificationCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Verification email sent (if account exists)");
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Password reset email sent (if account exists)");
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Password reset successfully");
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Password changed successfully");
+    }
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var result = await Sender.Send(new LogoutCommand());
+        return HandleResult(result, "Logged out successfully");
+    }
+
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll()
+    {
+        var result = await Sender.Send(new LogoutAllCommand());
+        return HandleResult(result, "All sessions revoked successfully");
+    }
+
+    [HttpGet("sessions")]
+    public async Task<IActionResult> GetSessions()
+    {
+        var result = await Sender.Send(new GetSessionsQuery());
+        return HandleResult(result);
+    }
+
+    [HttpDelete("sessions/{id}")]
+    public async Task<IActionResult> RevokeSession(Guid id)
+    {
+        var result = await Sender.Send(new RevokeSessionCommand(id));
+        return HandleResult(result, "Session revoked successfully");
+    }
+
+    [HttpPost("external-login")]
+    public async Task<IActionResult> ExternalLogin(ExternalLoginCommand command)
+    {
+        var result = await Sender.Send(command);
+        return HandleResult(result, "Login successful");
     }
 }

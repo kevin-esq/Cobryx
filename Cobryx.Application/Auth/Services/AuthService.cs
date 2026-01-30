@@ -15,11 +15,14 @@ public class AuthService : IAuthService
         _auditService = auditService;
     }
 
-    public AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, Role? roleOverride = null)
+    public AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, string? userAgent, Role? roleOverride = null)
     {
         user.CreateProfile();
 
-        var session = user.AddSession(ipAddress, deviceFingerprint);
+        // Check for new device BEFORE creating the session to ensure we have history to compare
+        user.DetectAndAlertNewDevice(ipAddress, userAgent);
+
+        var session = user.AddSession(ipAddress, deviceFingerprint, userAgent);
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id, roleOverride);
         var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();
         var refreshToken = user.AddRefreshToken(refreshTokenValue, DateTime.UtcNow.AddDays(7), ipAddress, session.Id);
@@ -29,34 +32,40 @@ public class AuthService : IAuthService
 
     public AuthResult RefreshAuthResponse(User user, string oldRefreshToken, string ipAddress, string? deviceFingerprint)
     {
-        user.CreateProfile();
-
         var token = user.RefreshTokens.FirstOrDefault(x => x.Token == oldRefreshToken);
 
         if (token == null)
         {
-            throw new Exception("Invalid refresh token.");
+            _auditService.LogSecurityAlert("InvalidRefreshToken", user.Id.ToString(), ipAddress, "Attempted to refresh with a non-existent token.");
+            throw new Exception("Invalid session.");
         }
 
         if (token.IsRevoked)
         {
-            _auditService.LogSecurityAlert("RefreshTokenReuse", user.Id.ToString(), ipAddress, "A revoked refresh token was reused. Potential theft attempt.");
+            // FRAUD DETECTION: A revoked token was used. Revoke the entire session (Token Family).
+            _auditService.LogSecurityAlert("RefreshTokenReuse", user.Id.ToString(), ipAddress, $"Revoked token used: {oldRefreshToken}. Critical: Invalidate session family.");
             user.InvalidateTokenChain(oldRefreshToken, ipAddress);
-            throw new Exception("Compromised refresh token used. Session invalidated.");
+            throw new Exception("Compromised session. Please re-authenticate.");
+        }
+
+        if (token.IsExpired)
+        {
+            throw new Exception("Session expired.");
         }
 
         var session = user.Sessions.FirstOrDefault(s => s.Id == token.SessionId);
         if (session == null || session.IsRevoked)
         {
-            throw new Exception("Session is revoked or missing.");
+            throw new Exception("Session revoked.");
         }
 
-
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id);
+        // 1. Refresh Token Rotation (RTR)
         var newRefreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();
-
         token.Revoke(ipAddress, newRefreshTokenValue);
         user.AddRefreshToken(newRefreshTokenValue, DateTime.UtcNow.AddDays(7), ipAddress, session.Id);
+
+        // 2. Issue new Access Token
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id);
 
         session.UpdateActivity();
 

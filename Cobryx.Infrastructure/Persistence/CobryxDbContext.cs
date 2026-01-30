@@ -19,6 +19,47 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
     public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
 
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var domainEvents = ChangeTracker.Entries<BaseEntity>()
+            .Select(x => x.Entity)
+            .SelectMany(x =>
+            {
+                var events = x.DomainEvents.ToList();
+                x.ClearDomainEvents();
+                return events;
+            })
+            .ToList();
+
+        var outboxMessages = domainEvents.Select(domainEvent =>
+        {
+            return new OutboxMessage(
+                domainEvent.GetType().Name,
+                System.Text.Json.JsonSerializer.Serialize(domainEvent, domainEvent.GetType()));
+        }).ToList();
+
+        this.Set<OutboxMessage>().AddRange(outboxMessages);
+
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            if (entry.State == EntityState.Modified && entry.Entity.Version == 0)
+            {
+                var dbValues = await entry.GetDatabaseValuesAsync(cancellationToken);
+                if (dbValues == null)
+                {
+                    entry.State = EntityState.Added;
+                }
+            }
+
+            if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.IncrementVersion();
+            }
+        }
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Customer> Customers => Set<Customer>();
@@ -48,6 +89,8 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<DocumentMetadata> Documents => Set<DocumentMetadata>();
     public DbSet<MfaDevice> MfaDevices => Set<MfaDevice>();
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
+    public DbSet<UserSecurityToken> SecurityTokens => Set<UserSecurityToken>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,8 +98,6 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (entityType.IsOwned()) continue;
-
             var parameter = Expression.Parameter(entityType.ClrType, "e");
             Expression? filterExpr = null;
 
@@ -66,9 +107,20 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                 var notDeletedExpr = Expression.Equal(isDeletedProperty, Expression.Constant(false));
                 filterExpr = notDeletedExpr;
 
-                modelBuilder.Entity(entityType.ClrType)
-                    .Property<uint>(nameof(BaseEntity.Version))
-                    .IsRowVersion();
+                if (entityType.IsOwned())
+                {
+                    var versionProp = entityType.FindProperty(nameof(BaseEntity.Version));
+                    if (versionProp != null)
+                    {
+                        versionProp.IsConcurrencyToken = true;
+                    }
+                }
+                else
+                {
+                    modelBuilder.Entity(entityType.ClrType)
+                        .Property<long>(nameof(BaseEntity.Version))
+                        .IsConcurrencyToken();
+                }
             }
 
             if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType) && entityType.ClrType != typeof(User))
@@ -85,7 +137,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                     : Expression.AndAlso(filterExpr, tenantFilterExpr);
             }
 
-            if (filterExpr != null)
+            if (filterExpr != null && !entityType.IsOwned())
             {
                 var lambda = Expression.Lambda(filterExpr, parameter);
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);

@@ -12,6 +12,9 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? PrimaryColor { get; private set; }
     public string? SecondaryColor { get; private set; }
     public string Currency { get; private set; }
+    public TaxId? TaxId { get; private set; }
+    public string? Industry { get; private set; }
+    public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
     public BusinessSettings Settings { get; private set; }
 
@@ -31,6 +34,15 @@ public class Tenant : BaseEntity, IAggregateRoot
         Currency = currency;
         IsActive = true;
         Settings = BusinessSettings.Default();
+    }
+
+    public static Tenant CreateForRegistration(string businessName, string? taxIdCode, string? industry, string? address)
+    {
+        var tenant = new Tenant(businessName);
+        if (!string.IsNullOrEmpty(taxIdCode)) tenant.TaxId = new TaxId(taxIdCode);
+        tenant.Industry = industry;
+        tenant.BusinessAddress = address;
+        return tenant;
     }
 
 

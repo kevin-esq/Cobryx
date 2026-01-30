@@ -3,6 +3,7 @@ using Cobryx.Infrastructure.Persistence.Interceptors;
 using Cobryx.Infrastructure.Repositories;
 using Cobryx.Infrastructure.MultiTenancy;
 using Cobryx.Infrastructure.Middleware;
+using Cobryx.Infrastructure.Services;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Application.Common.Interfaces;
 using Concordia;
@@ -26,6 +27,9 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddHostedService<BackgroundJobs.ProcessOutboxJob>();
+        services.AddTransient<IEmailService, SmtpEmailService>();
+        services.AddTransient<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IHttpContextService, Services.HttpContextService>();
 
         services.AddStackExchangeRedisCache(options =>
