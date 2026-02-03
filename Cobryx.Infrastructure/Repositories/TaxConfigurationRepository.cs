@@ -11,17 +11,17 @@ public class TaxConfigurationRepository : BaseRepository<TaxConfiguration>, ITax
     {
     }
 
-    public async Task<TaxConfiguration?> GetDefaultAsync(Guid tenantId)
+    public async Task<TaxConfiguration?> GetDefaultAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.TaxConfigurations
-            .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.IsDefault && t.IsActive);
+            .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.IsDefault && t.IsActive, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<TaxConfiguration>> GetAllActiveAsync(Guid tenantId)
+    public async Task<IReadOnlyList<TaxConfiguration>> GetAllActiveAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.TaxConfigurations
             .Where(t => t.TenantId == tenantId && t.IsActive)
             .OrderBy(t => t.Name)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 }

@@ -31,7 +31,6 @@ public class PasswordHasher : IPasswordHasher
 
         var hash = argon2.GetBytes(HashSize);
 
-        // Format: version.iterations.memory.parallelism.salt.hash
         return $"v1.{Iterations}.{MemorySize}.{DegreeOfParallelism}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
@@ -63,6 +62,22 @@ public class PasswordHasher : IPasswordHasher
         catch
         {
             return false;
+        }
+    }
+
+    public bool IsHashOutdated(string passwordHash)
+    {
+        try
+        {
+            var parts = passwordHash.Split('.');
+            if (parts.Length != 6 || parts[0] != "v1") return true;
+
+            var iterations = int.Parse(parts[1]);
+            return iterations < Iterations;
+        }
+        catch
+        {
+            return true;
         }
     }
 }

@@ -4,12 +4,19 @@ using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cobryx.Infrastructure.Persistence;
 
 public class CobryxDbContext : DbContext, IUnitOfWork
 {
     private readonly ITenantProvider _tenantProvider;
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+        WriteIndented = false
+    };
 
     public CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider)
         : base(options)
@@ -20,6 +27,14 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ProcessDomainEvents();
+        UpdateAuditFields();
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ProcessDomainEvents()
     {
         var domainEvents = ChangeTracker.Entries<BaseEntity>()
             .Select(x => x.Entity)
@@ -32,32 +47,23 @@ public class CobryxDbContext : DbContext, IUnitOfWork
             .ToList();
 
         var outboxMessages = domainEvents.Select(domainEvent =>
-        {
-            return new OutboxMessage(
+            new OutboxMessage(
                 domainEvent.GetType().Name,
-                System.Text.Json.JsonSerializer.Serialize(domainEvent, domainEvent.GetType()));
-        }).ToList();
+                JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), _jsonSerializerOptions)))
+            .ToList();
 
         this.Set<OutboxMessage>().AddRange(outboxMessages);
+    }
 
+    private void UpdateAuditFields()
+    {
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
-            if (entry.State == EntityState.Modified && entry.Entity.Version == 0)
-            {
-                var dbValues = await entry.GetDatabaseValuesAsync(cancellationToken);
-                if (dbValues == null)
-                {
-                    entry.State = EntityState.Added;
-                }
-            }
-
             if (entry.State == EntityState.Modified)
             {
                 entry.Entity.IncrementVersion();
             }
         }
-
-        return await base.SaveChangesAsync(cancellationToken);
     }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();

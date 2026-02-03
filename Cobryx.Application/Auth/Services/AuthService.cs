@@ -19,7 +19,6 @@ public class AuthService : IAuthService
     {
         user.CreateProfile();
 
-        // Check for new device BEFORE creating the session to ensure we have history to compare
         user.DetectAndAlertNewDevice(ipAddress, userAgent);
 
         var session = user.AddSession(ipAddress, deviceFingerprint, userAgent);
@@ -42,7 +41,6 @@ public class AuthService : IAuthService
 
         if (token.IsRevoked)
         {
-            // FRAUD DETECTION: A revoked token was used. Revoke the entire session (Token Family).
             _auditService.LogSecurityAlert("RefreshTokenReuse", user.Id.ToString(), ipAddress, $"Revoked token used: {oldRefreshToken}. Critical: Invalidate session family.");
             user.InvalidateTokenChain(oldRefreshToken, ipAddress);
             throw new Exception("Compromised session. Please re-authenticate.");
@@ -59,12 +57,10 @@ public class AuthService : IAuthService
             throw new Exception("Session revoked.");
         }
 
-        // 1. Refresh Token Rotation (RTR)
         var newRefreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();
         token.Revoke(ipAddress, newRefreshTokenValue);
         user.AddRefreshToken(newRefreshTokenValue, DateTime.UtcNow.AddDays(7), ipAddress, session.Id);
 
-        // 2. Issue new Access Token
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, session.Id);
 
         session.UpdateActivity();

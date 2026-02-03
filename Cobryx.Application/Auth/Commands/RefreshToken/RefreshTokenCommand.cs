@@ -46,8 +46,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
         }
         catch (Exception ex)
         {
-            // Persistence of the revocation is important for security
-            try { await _userRepository.UpdateAsync(user); } catch { /* Ignore persistence failure during error */ }
+            try { await _userRepository.UpdateAsync(user); } catch { }
 
             return Result.Failure<AuthResult>(ex.Message);
         }

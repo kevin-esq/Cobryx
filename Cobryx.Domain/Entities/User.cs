@@ -127,7 +127,6 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public LoginSession AddSession(string ipAddress, string? deviceFingerprint, string? userAgent = null)
     {
-        // 1. Deduplication: Reuse existing session if fingerprint matches and not revoked
         if (!string.IsNullOrEmpty(deviceFingerprint))
         {
             var existingSession = _sessions.FirstOrDefault(s => s.DeviceFingerprint == deviceFingerprint && !s.IsRevoked);
@@ -138,11 +137,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
             }
         }
 
-        // 2. Limit Enforcement: Max 10 active sessions. Revoke oldest if limit exceeded.
         var activeSessions = _sessions.Where(s => !s.IsRevoked).OrderBy(s => s.LastActiveAt).ToList();
         if (activeSessions.Count >= 10)
         {
-            // Revoke the oldest one
             var oldest = activeSessions.First();
             oldest.Revoke();
         }
@@ -170,7 +167,6 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         var token = _refreshTokens.FirstOrDefault(t => t.Token == tokenValue);
         if (token == null) return;
 
-        // If the token is already revoked, it might be a reuse attack.
         RevokeSession(token.SessionId);
     }
     public void AddMfaDevice(MfaDevice device)
@@ -211,7 +207,6 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     {
         if (string.IsNullOrEmpty(userAgent)) return false;
 
-        // Use IP segment to be resilient to minor ISP changes
         var ipParts = ipAddress.Split('.');
         var ipSegment = ipParts.Length >= 2 ? $"{ipParts[0]}.{ipParts[1]}" : ipAddress;
 
@@ -222,7 +217,7 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
         if (!isKnown)
         {
-            AddDomainEvent(new NewDeviceLoginEvent(this, ipAddress, userAgent));
+            AddDomainEvent(new NewDeviceLoginEvent(Id, Email.Value, ipAddress, userAgent));
             return true;
         }
 

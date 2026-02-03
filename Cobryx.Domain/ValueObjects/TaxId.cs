@@ -7,9 +7,6 @@ namespace Cobryx.Domain.ValueObjects;
 
 public record TaxId : ValueObject
 {
-    // Mexican RFC Regex: 
-    // Persona Física: 4 letters + 6 digits + 3 alphanumeric
-    // Persona Moral: 3 letters + 6 digits + 3 alphanumeric
     private static readonly Regex RfcRegex = new(
         @"^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{2}[0-9A]$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);

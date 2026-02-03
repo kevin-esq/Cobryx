@@ -76,21 +76,17 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result>
 
     public async Task<Result> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
-        // 1. Idempotency & Existence Check
-        if (await _userRepository.ExistsByEmailAsync(request.Email))
+        if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
         {
             return Result.Failure("Email already registered.");
         }
 
-        // 2. Resolve default role
-        var ownerRole = await _roleRepository.GetByNameAsync("Owner");
+        var ownerRole = await _roleRepository.GetByNameAsync("Owner", cancellationToken);
         if (ownerRole == null) return Result.Failure("System roles not initialized.");
 
-        // 3. Create Tenant (Enriched)
         var tenant = Tenant.CreateForRegistration(request.BusinessName, request.TaxId, request.Industry, request.BusinessAddress);
-        await _tenantRepository.AddAsync(tenant);
+        await _tenantRepository.AddAsync(tenant, cancellationToken);
 
-        // 4. Create User with Legal Traceability
         var consent = new Cobryx.Domain.ValueObjects.LegalConsent(
             true,
             request.TermsVersion ?? "v1.0",
@@ -109,13 +105,11 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, Result>
         user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
         user.CreateProfile();
 
-        // 5. Setup Verification (State tracking)
         var tokenValue = Guid.NewGuid().ToString("N");
-        user.AddSecurityToken(tokenValue, Cobryx.Domain.Enums.SecurityTokenType.EmailVerification, 24 * 60);
+        user.AddSecurityToken(tokenValue, SecurityTokenType.EmailVerification, 24 * 60);
 
-        await _userRepository.AddAsync(user);
+        await _userRepository.AddAsync(user, cancellationToken);
 
-        // 6. Atomical Commit (Domain Events will be captured in the Outbox here)
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

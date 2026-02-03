@@ -4,10 +4,12 @@ using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 
-// --- Forgot Password ---
+
 public record ForgotPasswordCommand(string Email) : IRequest<Result>;
 
 public class ForgotPasswordValidator : AbstractValidator<ForgotPasswordCommand>
@@ -22,54 +24,63 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly AppOptions _appOptions;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ForgotPasswordHandler(IUserRepository userRepository, IEmailService emailService)
+    public ForgotPasswordHandler(IUserRepository userRepository, IEmailService emailService, IOptions<AppOptions> appOptions, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _emailService = emailService;
+        _appOptions = appOptions.Value;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
         var startTime = DateTime.UtcNow;
-        var user = await _userRepository.GetByEmailAsync(request.Email);
+        var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
 
         if (user != null)
         {
-            // Invalidate old reset tokens
             foreach (var oldToken in user.SecurityTokens.Where(t => t.Type == SecurityTokenType.PasswordReset && t.IsActive))
             {
                 oldToken.Revoke();
             }
 
-            // Generate new token
             var tokenValue = Guid.NewGuid().ToString("N");
-            user.AddSecurityToken(tokenValue, SecurityTokenType.PasswordReset, 60); // 1 hour expiry
+            user.AddSecurityToken(tokenValue, SecurityTokenType.PasswordReset, 60);
 
-            await _userRepository.UpdateAsync(user);
+            await _userRepository.UpdateAsync(user, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Send Email
-            await _emailService.SendEmailAsync(user.Email, "Restablecer contraseña Cobryx",
-                $"Para restablecer tu contraseña, haz clic aquí: https://app.cobryx.com/reset-password?token={tokenValue}", cancellationToken);
+            await _emailService.SendEmailAsync(
+                user.Email,
+                "Restablecer contraseña Cobryx",
+                $"Para restablecer tu contraseña, haz clic aquí: {_appOptions.AppUrl}/reset-password?token={tokenValue}",
+                cancellationToken);
         }
         else
         {
-            // Dummy work to simulate DB update and email dispatch timing
-            await Task.Delay(new Random().Next(50, 150));
+            await Task.Delay(Random.Shared.Next(50, 150), cancellationToken);
         }
 
-        // 1. Random Jitter to prevent timing attacks
-        var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
-        var targetDelay = 300 + new Random().Next(100, 300); // Target ~400-600ms
-        var remaining = targetDelay - (int)elapsed;
-        if (remaining > 0) await Task.Delay(remaining);
-
-        // 2. Uniform Response: Always success
+        await EnsureUniformTiming(startTime, 500, cancellationToken);
         return Result.Success();
+    }
+
+    private static async Task EnsureUniformTiming(DateTime startTime, int targetMs, CancellationToken ct)
+    {
+        var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
+        var remaining = targetMs - elapsed;
+        if (remaining > 0)
+        {
+            await Task.Delay((int)remaining, ct);
+        }
+        await Task.Delay(Random.Shared.Next(10, 50), ct);
     }
 }
 
-// --- Reset Password ---
+
 public record ResetPasswordCommand(string Token, string NewPassword) : IRequest<Result>;
 
 public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>
@@ -85,16 +96,18 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, Result
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ResetPasswordHandler(IUserRepository userRepository, IPasswordHasher passwordHasher)
+    public ResetPasswordHandler(IUserRepository userRepository, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.PasswordReset);
+        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.PasswordReset, cancellationToken);
         if (user == null)
         {
             return Result.Failure("Invalid or expired token.");
@@ -102,29 +115,24 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, Result
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.Token == request.Token && t.Type == SecurityTokenType.PasswordReset);
 
-        if (token == null || !token.IsActive)
+        if (token is not { IsActive: true })
         {
             return Result.Failure("Invalid or expired token.");
         }
 
-        // Reset Password
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));
-
-        // Use token
         token.Use();
 
-        // Revoke all other sessions for security
-        // Ideally we would identify the current session, but since we are resetting via email token,
-        // we might just want to revoke ALL sessions to force re-login everywhere.
         user.Sessions.Where(s => !s.IsRevoked).ToList().ForEach(s => s.Revoke());
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
     }
 }
 
-// --- Change Password ---
+
 public record ChangePasswordCommand(string CurrentPassword, string NewPassword) : IRequest<Result>;
 
 public class ChangePasswordValidator : AbstractValidator<ChangePasswordCommand>
@@ -147,15 +155,18 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ICurrentUserProvider _currentUserProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ChangePasswordHandler(
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        ICurrentUserProvider currentUserProvider)
+        ICurrentUserProvider currentUserProvider,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _currentUserProvider = currentUserProvider;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -163,22 +174,20 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
         var userId = _currentUserProvider.GetUserId();
         if (!userId.HasValue) return Result.Failure("User not authenticated.");
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure("User not found.");
 
-        // Verify Current Password (Re-authentication)
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
             return Result.Failure("Invalid current password.");
         }
 
-        // Set New Password
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));
 
-        // Revoke all other sessions for security
         user.Sessions.Where(s => !s.IsRevoked).ToList().ForEach(s => s.Revoke());
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
     }

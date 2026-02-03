@@ -1,4 +1,6 @@
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
 using Cobryx.Infrastructure.Persistence.Interceptors;
 using Cobryx.Infrastructure.Repositories;
 using Cobryx.Infrastructure.MultiTenancy;
@@ -23,6 +25,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<Cobryx.Application.Common.Configuration.AppOptions>(configuration.GetSection("App"));
+        services.Configure<EmailSettings>(configuration.GetSection("Email"));
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
@@ -74,7 +78,6 @@ public static class DependencyInjection
         }
         catch
         {
-            // Optimistic DNS resolution; ignore failures and fallback to original host
         }
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>

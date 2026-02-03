@@ -5,14 +5,16 @@ namespace Cobryx.Domain.Events;
 
 public class NewDeviceLoginEvent : IDomainEvent
 {
-    public User User { get; }
+    public Guid UserId { get; }
+    public string Email { get; }
     public string IpAddress { get; }
     public string UserAgent { get; }
     public DateTime OccurredOn { get; }
 
-    public NewDeviceLoginEvent(User user, string ipAddress, string userAgent)
+    public NewDeviceLoginEvent(Guid userId, string email, string ipAddress, string userAgent)
     {
-        User = user;
+        UserId = userId;
+        Email = email;
         IpAddress = ipAddress;
         UserAgent = userAgent;
         OccurredOn = DateTime.UtcNow;

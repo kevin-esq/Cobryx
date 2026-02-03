@@ -20,12 +20,12 @@ public class NewDeviceLoginEventHandler : INotificationHandler<DomainEventNotifi
     public async Task Handle(DomainEventNotification<NewDeviceLoginEvent> notification, CancellationToken cancellationToken)
     {
         var domainEvent = notification.DomainEvent;
-        _logger.LogInformation("Security alert: New device login for user {Email}", domainEvent.User.Email);
+        _logger.LogInformation("Security alert: New device login for user {Email}", domainEvent.Email);
 
         await _emailService.SendEmailAsync(
-            domainEvent.User.Email.Value,
+            domainEvent.Email,
             "Alerta de seguridad: Nuevo inicio de sesión",
-            $"Hola {domainEvent.User.FirstName}, se detectó un inicio de sesión desde un nuevo dispositivo o ubicación: \n\n" +
+            $"Se detectó un inicio de sesión desde un nuevo dispositivo o ubicación: \n\n" +
             $"IP: {domainEvent.IpAddress}\n" +
             $"Navegador/Dispositivo: {domainEvent.UserAgent}\n\n" +
             "Si no fuiste tú, por favor cambia tu contraseña inmediatamente.",

@@ -16,7 +16,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
     private readonly IUserRepository _userRepository;
     private readonly IExternalAuthService _externalAuthService;
     private readonly IAuthService _authService;
-    private readonly ITenantRepository _tenantRepository; // To create tenant if new user
+    private readonly ITenantRepository _tenantRepository;
     private readonly IHttpContextService _httpContextService;
 
     public ExternalLoginHandler(
@@ -35,7 +35,6 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
 
     public async Task<Result<AuthResult>> Handle(ExternalLoginCommand request, CancellationToken cancellationToken)
     {
-        // 1. Verify Token with Provider
         var externalUserResult = await _externalAuthService.VerifyTokenAsync(request.Provider, request.IdToken, cancellationToken);
         if (!externalUserResult.IsSuccess)
         {
@@ -48,27 +47,10 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
             return Result.Failure<AuthResult>("Failed to retrieve user information from external provider.");
         }
 
-        // 2. Check if user exists
         var user = await _userRepository.GetByEmailAsync(externalUser.Email);
 
         if (user == null)
         {
-            // 3. Register if not exists (Auto-Registration)
-            var tenant = new Tenant(externalUser.FirstName + "'s Tenant");
-            await _tenantRepository.AddAsync(tenant); // Assuming basic add
-
-            // Default Role: Admin of their own tenant
-            // Need to get Role ID query or constant. For simplicity assuming we have a way or existing constants.
-            // Using a placeholder or assuming RoleId is fetched elsewhere. 
-            // In a real app we'd fetch the default "Admin" role for the new tenant.
-
-            // Simplified: User creation requires RoleId. 
-            // We will fetch the first available role or a default one.
-            // This part might fail if no roles exist in DB.
-
-            // For now, return failure if we cant auto-register without complex setup.
-            // Or better: Use a hardcoded GUID or a service to get default role.
-
             return Result.Failure<AuthResult>("User does not exist. Please register first.");
         }
 
@@ -82,14 +64,12 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
             return Result.Failure<AuthResult>("Please verify your email.");
         }
 
-        // 4. Generate Auth Response
         var ipAddress = _httpContextService.GetIpAddress() ?? "0.0.0.0";
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var userAgent = _httpContextService.GetUserAgent();
 
         var authResponse = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
 
-        // Persist changes (Session & Refresh Token)
         await _userRepository.UpdateAsync(user);
 
         return Result.Success(authResponse);

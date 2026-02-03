@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
+using Cobryx.Application.Common.Configuration;
+using Microsoft.Extensions.Options;
 using Cobryx.Domain.Entities;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +16,14 @@ public class GlobalExceptionHandlerMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
     private readonly IHostEnvironment _env;
+    private readonly AppOptions _appOptions;
 
-    public GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger, IHostEnvironment env)
+    public GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlerMiddleware> logger, IHostEnvironment env, IOptions<AppOptions> appOptions)
     {
         _next = next;
         _logger = logger;
         _env = env;
+        _appOptions = appOptions.Value;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -56,7 +60,7 @@ public class GlobalExceptionHandlerMiddleware
                 context.Connection.RemoteIpAddress?.ToString());
 
             dbContext.Set<SystemErrorLog>().Add(errorLog);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(context.RequestAborted);
         }
         catch (Exception panicEx)
         {
@@ -67,9 +71,9 @@ public class GlobalExceptionHandlerMiddleware
 
         var (status, title, type) = exception switch
         {
-            DomainException => (HttpStatusCode.BadRequest, "Domain Constraint Violated", "https://cobryx.com.mx/errors/domain-error"),
-            DbUpdateConcurrencyException => (HttpStatusCode.Conflict, "Data Conflict Detected", "https://cobryx.com.mx/errors/concurrency-error"),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.", "https://cobryx.com.mx/errors/internal-server-error")
+            DomainException => (HttpStatusCode.BadRequest, "Domain Constraint Violated", $"{_appOptions.BaseUrl}/errors/domain-error"),
+            DbUpdateConcurrencyException => (HttpStatusCode.Conflict, "Data Conflict Detected", $"{_appOptions.BaseUrl}/errors/concurrency-error"),
+            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.", $"{_appOptions.BaseUrl}/errors/internal-server-error")
         };
 
         var problemDetails = new ProblemDetails
@@ -83,6 +87,6 @@ public class GlobalExceptionHandlerMiddleware
 
         context.Response.StatusCode = (int)status;
 
-        await JsonSerializer.SerializeAsync(context.Response.Body, problemDetails);
+        await JsonSerializer.SerializeAsync(context.Response.Body, problemDetails, cancellationToken: context.RequestAborted);
     }
 }

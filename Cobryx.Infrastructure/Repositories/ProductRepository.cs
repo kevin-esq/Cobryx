@@ -9,20 +9,20 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
 {
     public ProductRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public async Task<IEnumerable<Product>> GetByTenantAsync(Guid tenantId)
+    public async Task<IEnumerable<Product>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.ToListAsync(cancellationToken);
     }
 
-    public async Task<Product?> GetBySkuAsync(Guid tenantId, string sku)
+    public async Task<Product?> GetBySkuAsync(Guid tenantId, string sku, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.FirstOrDefaultAsync(p => p.Sku == sku);
+        return await _dbSet.FirstOrDefaultAsync(p => p.Sku == sku, cancellationToken);
     }
 
-    public async Task<IEnumerable<Product>> SearchByNameAsync(Guid tenantId, string searchTerm)
+    public async Task<IEnumerable<Product>> SearchByNameAsync(Guid tenantId, string searchTerm, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Where(p => p.Name.Contains(searchTerm))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 }

@@ -17,7 +17,6 @@ public class ValidateCaptchaAttribute : Attribute, IAsyncActionFilter
         var env = context.HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>();
         if (env.IsDevelopment())
         {
-            // In development, we skip but also allow a mock token to be used for testing the full request flow
             string? token = context.HttpContext.Request.Headers[CaptchaHeaderName];
             if (token == "MOCK_CAPTCHA_TOKEN")
             {

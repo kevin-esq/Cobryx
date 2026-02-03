@@ -22,7 +22,7 @@ services:
       - Email__SmtpPort=${COBRYX_EMAIL_SMTP_PORT:-25}
       - Email__SmtpUsername=${COBRYX_EMAIL_SMTP_USERNAME}
       - Email__SmtpPassword=${COBRYX_EMAIL_SMTP_PASSWORD}
-      - Email__FromAddress=${COBRYX_EMAIL_FROM_ADDRESS:-noreply@cobryx.com}
+      - Email__FromAddress=${COBRYX_EMAIL_FROM_ADDRESS:-[EMAIL_ADDRESS]}
     depends_on:
       - clamav
       - redis

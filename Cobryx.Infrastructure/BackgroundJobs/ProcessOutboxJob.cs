@@ -48,7 +48,7 @@ public class ProcessOutboxJob : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var messages = await dbContext.OutboxMessages
             .Where(m => m.ProcessedAt == null)
@@ -66,11 +66,11 @@ public class ProcessOutboxJob : BackgroundService
                 if (domainEvent != null)
                 {
                     var notificationType = typeof(Cobryx.Application.Common.Events.DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
-                    var notification = Activator.CreateInstance(notificationType, domainEvent);
+                    var notification = Activator.CreateInstance(notificationType, domainEvent) as INotification;
 
                     if (notification != null)
                     {
-                        await sender.Send(notification, stoppingToken);
+                        await mediator.Publish(notification, stoppingToken);
                     }
                 }
 
@@ -88,8 +88,15 @@ public class ProcessOutboxJob : BackgroundService
 
     private IDomainEvent? DeserializeDomainEvent(OutboxMessage message)
     {
-        var type = Type.GetType($"Cobryx.Domain.Events.{message.Type}, Cobryx.Domain");
-        if (type == null) return null;
+        var type = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a => a.GetTypes())
+            .FirstOrDefault(t => t.Name == message.Type && typeof(IDomainEvent).IsAssignableFrom(t));
+
+        if (type == null)
+        {
+            _logger.LogWarning("Unknown domain event type: {Type}", message.Type);
+            return null;
+        }
 
         return JsonSerializer.Deserialize(message.Content, type) as IDomainEvent;
     }

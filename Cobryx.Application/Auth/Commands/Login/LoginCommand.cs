@@ -47,43 +47,34 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 
         try
         {
-            // 1. Initial Rate Limiting (IP & Account)
             var ipAttempts = await _attemptService.GetAttemptCountAsync(ipAddress);
             var userAttempts = await _attemptService.GetUserAttemptCountAsync(request.Email);
-
             var maxAttempts = Math.Max(ipAttempts, userAttempts);
+
             if (maxAttempts >= 5)
             {
-                // Exponential Backoff: 2^(attempts-5) * 5 seconds
                 var backoffSeconds = Math.Min(3600, Math.Pow(2, maxAttempts - 5) * 5);
-                _logger.LogWarning("Account/IP locked out: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
+                _logger.LogWarning("Login lockout: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
 
-                await EnsureUniformTiming(startTime, 500);
-                return Result.Failure<AuthResult>("Invalid credentials."); // Uniform generic message
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
+                return Result.Failure<AuthResult>("Invalid credentials.");
             }
 
-            // 2. User Lookup
-            var user = await _userRepository.GetByEmailAsync(request.Email);
-
-            // 3. Password Verification (Always runs to prevent timing attacks)
+            var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
             bool isValid = false;
             bool needsRehash = false;
 
-            if (user != null && user.IsActive && user.IsEmailVerified)
+            if (user is { IsActive: true, IsEmailVerified: true })
             {
                 isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
-
-                // 4. Automatic Re-hashing (Enterprise Standard)
-                // Check if hash uses old parameters (e.g., iterations < 10)
-                if (isValid && IsHashOutdated(user.PasswordHash))
+                if (isValid)
                 {
-                    needsRehash = true;
+                    needsRehash = _passwordHasher.IsHashOutdated(user.PasswordHash);
                 }
             }
             else
             {
-                // Dummy verification to consume constant-ish time
-                _passwordHasher.VerifyPassword(request.Password, "v1.4.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
+                _passwordHasher.VerifyPassword(request.Password, "v1.10.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
             }
 
             if (!isValid || user == null)
@@ -91,24 +82,23 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 _auditService.LogFailure("Login", user?.Id.ToString(), ipAddress, "Invalid credentials or account state");
                 await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
 
-                await EnsureUniformTiming(startTime, 500);
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
                 return Result.Failure<AuthResult>("Invalid credentials.");
             }
 
-            // 5. Successful Login
             await _attemptService.ResetAttemptsAsync(ipAddress, request.Email);
             _auditService.LogSuccess("Login", user.Id.ToString(), ipAddress);
 
             if (needsRehash)
             {
-                _logger.LogInformation("Upgrading password hash for user: {Email}", user.Email);
+                _logger.LogInformation("Promoting password hash for {Email}", user.Email);
                 user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
                 await _userRepository.UpdateAsync(user);
             }
 
             if (user.IsMfaEnabled)
             {
-                await EnsureUniformTiming(startTime, 500);
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
                 return Result.Success(_authService.GenerateMfaPartialResponse(user));
             }
 
@@ -118,39 +108,25 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 
             _tenantProvider.SetTenantId(user.TenantId);
 
-            await EnsureUniformTiming(startTime, 500);
+            await EnsureUniformTiming(startTime, 500, cancellationToken);
             return Result.Success(authResult);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during login for {Email}", request.Email);
-            await EnsureUniformTiming(startTime, 500);
-            return Result.Failure<AuthResult>("Invalid credentials."); // Always uniform
+            _logger.LogError(ex, "Login processing failed for {Email}", request.Email);
+            await EnsureUniformTiming(startTime, 500, cancellationToken);
+            return Result.Failure<AuthResult>("Invalid credentials.");
         }
     }
 
-    private async Task EnsureUniformTiming(DateTime startTime, int targetMs)
+    private static async Task EnsureUniformTiming(DateTime startTime, int targetMs, CancellationToken ct)
     {
         var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
         var remaining = targetMs - elapsed;
         if (remaining > 0)
         {
-            await Task.Delay((int)remaining);
+            await Task.Delay((int)remaining, ct);
         }
-        // Add a small random jitter to prevent perfect profiling
-        await Task.Delay(new Random().Next(10, 50));
-    }
-
-    private bool IsHashOutdated(string passwordHash)
-    {
-        var parts = passwordHash.Split('.');
-        if (parts.Length < 2) return true;
-
-        // v1.10.65536.4... -> parts[1] is iterations
-        if (int.TryParse(parts[1], out int iterations) && iterations < 10)
-        {
-            return true;
-        }
-        return false;
+        await Task.Delay(Random.Shared.Next(10, 50), ct);
     }
 }

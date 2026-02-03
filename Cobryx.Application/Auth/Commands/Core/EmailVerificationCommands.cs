@@ -4,29 +4,28 @@ using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 
-// --- Verify Email ---
+
 public record VerifyEmailCommand(string Token) : IRequest<Result>;
 
 public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public VerifyEmailHandler(IUserRepository userRepository)
+    public VerifyEmailHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(VerifyEmailCommand request, CancellationToken cancellationToken)
     {
-        // TODO: We need a method to find user by token. For now, this is inefficient but works.
-        // Ideally: Add GetByToken to IUserRepository or use a direct query.
-        // Assuming we have to query all or filter. 
-        // OPTIMIZATION: Created a method in repo to find by security token.
-
-        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.EmailVerification);
+        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.EmailVerification, cancellationToken);
 
         if (user == null)
         {
@@ -35,7 +34,7 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.Token == request.Token && t.Type == SecurityTokenType.EmailVerification);
 
-        if (token == null || !token.IsActive)
+        if (token is not { IsActive: true })
         {
             return Result.Failure("Invalid or expired token.");
         }
@@ -43,47 +42,55 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
         token.Use();
         user.VerifyEmail();
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
     }
 }
 
-// --- Resend Verification ---
+
 public record ResendVerificationCommand(string Email) : IRequest<Result>;
 
 public class ResendVerificationHandler : IRequestHandler<ResendVerificationCommand, Result>
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly AppOptions _appOptions;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ResendVerificationHandler(IUserRepository userRepository, IEmailService emailService)
+    public ResendVerificationHandler(IUserRepository userRepository, IEmailService emailService, IOptions<AppOptions> appOptions, IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _emailService = emailService;
+        _appOptions = appOptions.Value;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result> Handle(ResendVerificationCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByEmailAsync(request.Email);
-        if (user == null) return Result.Success(); // Silent success to prevent enumeration
+        var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
+        if (user == null || user.IsEmailVerified)
+        {
+            return Result.Success();
+        }
 
-        if (user.IsEmailVerified) return Result.Success();
-
-        // Expire old tokens
         foreach (var oldToken in user.SecurityTokens.Where(t => t.Type == SecurityTokenType.EmailVerification && t.IsActive))
         {
             oldToken.Revoke();
         }
 
-        var tokenValue = Guid.NewGuid().ToString("N"); // Simple opaque token
-        user.AddSecurityToken(tokenValue, SecurityTokenType.EmailVerification, 24 * 60); // 24 hours
+        var tokenValue = Guid.NewGuid().ToString("N");
+        user.AddSecurityToken(tokenValue, SecurityTokenType.EmailVerification, 24 * 60);
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Send Email
-        await _emailService.SendEmailAsync(user.Email, "Verifica tu cuenta Cobryx",
-            $"Por favor verifica tu cuenta haciendo clic aquí: https://app.cobryx.com/verify?token={tokenValue}", cancellationToken);
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "Verifica tu cuenta Cobryx",
+            $"Por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
+            cancellationToken);
 
         return Result.Success();
     }

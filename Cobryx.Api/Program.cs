@@ -6,6 +6,9 @@ using Cobryx.Infrastructure;
 using Cobryx.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,7 +91,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy.WithOrigins("https://app.cobryx.com.mx")
+        var appOptions = builder.Configuration.GetSection("App").Get<Cobryx.Application.Common.Configuration.AppOptions>() ?? new Cobryx.Application.Common.Configuration.AppOptions();
+        policy.WithOrigins(appOptions.AppUrl)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
