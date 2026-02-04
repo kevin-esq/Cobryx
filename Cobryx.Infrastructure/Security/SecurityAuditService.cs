@@ -15,7 +15,6 @@ public class SecurityAuditService : ISecurityAuditService
 
     public void LogSuccess(string eventName, string? userId, string ipAddress, object? metadata = null)
     {
-        // CEF:Version|Device Vendor|Device Product|Device Version|Device Event Class ID|Name|Severity|[Extension]
         var cef = $"CEF:0|Cobryx|Cobryx.Api|1.0|AUTH_SUCCESS|{eventName}|1|src={ipAddress} suser={userId ?? "Anonymous"} msg=Authentication successful";
         _logger.LogInformation(cef);
     }

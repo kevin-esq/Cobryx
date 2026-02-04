@@ -21,15 +21,16 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public bool IsMfaEnabled { get; private set; }
     public DateTime? MfaEnabledAt { get; private set; }
     public bool IsEmailVerified { get; private set; }
+    public bool IsLocked { get; private set; }
+    public bool RequiresOnboarding { get; private set; }
     public LegalConsent? LegalConsent { get; private set; }
     public bool MarketingConsent { get; private set; }
+    public DateTime? LastVerificationSentAt { get; private set; }
+    public int VerificationResendCount { get; private set; }
 
     public virtual UserProfile? Profile { get; private set; }
     private readonly List<LoginSession> _sessions = new();
     public IReadOnlyCollection<LoginSession> Sessions => _sessions.AsReadOnly();
-
-    private readonly List<RefreshToken> _refreshTokens = new();
-    public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens.AsReadOnly();
 
     private readonly List<MfaDevice> _mfaDevices = new();
     public IReadOnlyCollection<MfaDevice> MfaDevices => _mfaDevices.AsReadOnly();
@@ -67,6 +68,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         IsActive = true;
         IsMfaEnabled = false;
         IsEmailVerified = false;
+        IsLocked = false;
+        RequiresOnboarding = true;
     }
 
     public static User Register(Guid tenantId, string firstName, string lastName, string email, Guid roleId, LegalConsent consent, bool marketingConsent)
@@ -98,9 +101,29 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
+    public void CompleteOnboarding()
+    {
+        RequiresOnboarding = false;
+        UpdateTimestamp();
+    }
+
     public void VerifyEmail()
     {
         IsEmailVerified = true;
+        VerificationResendCount = 0;
+        UpdateTimestamp();
+    }
+
+    public void UpdateVerificationResend()
+    {
+        LastVerificationSentAt = DateTime.UtcNow;
+        VerificationResendCount++;
+        UpdateTimestamp();
+    }
+
+    public void ResetVerificationResendCount()
+    {
+        VerificationResendCount = 0;
         UpdateTimestamp();
     }
 
@@ -118,14 +141,7 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         RoleId = roleId;
     }
 
-    public RefreshToken AddRefreshToken(string token, DateTime expires, string createdByIp, Guid sessionId)
-    {
-        var refreshToken = new RefreshToken(token, expires, createdByIp, Id, sessionId);
-        _refreshTokens.Add(refreshToken);
-        return refreshToken;
-    }
-
-    public LoginSession AddSession(string ipAddress, string? deviceFingerprint, string? userAgent = null)
+    public LoginSession AddSession(string ipAddress, string? deviceFingerprint, string? userAgent = null, string? deviceName = null)
     {
         if (!string.IsNullOrEmpty(deviceFingerprint))
         {
@@ -140,11 +156,11 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         var activeSessions = _sessions.Where(s => !s.IsRevoked).OrderBy(s => s.LastActiveAt).ToList();
         if (activeSessions.Count >= 10)
         {
-            var oldest = activeSessions.First();
-            oldest.Revoke();
+            var oldest = activeSessions.FirstOrDefault();
+            if (oldest != null) oldest.Revoke();
         }
 
-        var session = new LoginSession(TenantId, Id, ipAddress, deviceFingerprint, userAgent);
+        var session = new LoginSession(TenantId, Id, ipAddress, deviceFingerprint, userAgent, deviceName);
         _sessions.Add(session);
         return session;
     }
@@ -155,20 +171,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         if (session != null)
         {
             session.Revoke();
-
-            foreach (var token in _refreshTokens.Where(t => t.SessionId == sessionId && t.IsActive))
-            {
-                token.Revoke("Session Revocation");
-            }
         }
     }
-    public void InvalidateTokenChain(string tokenValue, string ipAddress)
-    {
-        var token = _refreshTokens.FirstOrDefault(t => t.Token == tokenValue);
-        if (token == null) return;
 
-        RevokeSession(token.SessionId);
-    }
     public void AddMfaDevice(MfaDevice device)
     {
         if (device == null) throw new ArgumentNullException(nameof(device));
@@ -183,9 +188,9 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public UserSecurityToken AddSecurityToken(string token, SecurityTokenType type, int expiryMinutes)
+    public UserSecurityToken AddSecurityToken(string tokenHash, SecurityTokenType type, int expiryMinutes)
     {
-        var securityToken = new UserSecurityToken(Id, token, type, expiryMinutes);
+        var securityToken = new UserSecurityToken(Id, tokenHash, type, expiryMinutes);
         _securityTokens.Add(securityToken);
         return securityToken;
     }
@@ -194,13 +199,6 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     {
         if (Profile != null) return;
         Profile = new UserProfile(Id, phoneNumber, avatarUrl);
-    }
-
-    public void RemoveOldRefreshTokens(int ttlDays)
-    {
-        _refreshTokens.RemoveAll(x =>
-            !x.IsActive &&
-            x.CreatedAt.AddDays(ttlDays) <= DateTime.UtcNow);
     }
 
     public bool DetectAndAlertNewDevice(string ipAddress, string? userAgent)
@@ -222,15 +220,5 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         }
 
         return false;
-    }
-
-    public bool HasValidRefreshToken(string token)
-    {
-        var tokenBytes = System.Text.Encoding.UTF8.GetBytes(token);
-        return _refreshTokens.Any(x =>
-            System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-                System.Text.Encoding.UTF8.GetBytes(x.Token),
-                tokenBytes)
-            && x.IsActive);
     }
 }

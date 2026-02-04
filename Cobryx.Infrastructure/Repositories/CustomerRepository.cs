@@ -11,7 +11,7 @@ public class CustomerRepository : BaseRepository<Customer>, ICustomerRepository
 
     public async Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.FirstOrDefaultAsync(c => c.Phone == phone, cancellationToken); // TenantId handled by Global Filter
+        return await _dbSet.FirstOrDefaultAsync(c => c.Phone == phone, cancellationToken);
     }
 
     public async Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)

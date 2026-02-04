@@ -31,13 +31,5 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithMany()
             .HasForeignKey(u => u.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.OwnsMany(u => u.RefreshTokens, rt =>
-        {
-            rt.ToTable("RefreshTokens");
-            rt.WithOwner().HasForeignKey("UserId");
-            rt.HasKey(x => x.Id);
-            rt.Property(x => x.Token).IsRequired().HasMaxLength(200);
-        });
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cobryx.Api.Controllers;
 
 [ApiController]
+[Produces("application/json")]
 public abstract class CobryxBaseController : ControllerBase
 {
     protected readonly ISender Sender;

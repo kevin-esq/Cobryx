@@ -1,4 +1,5 @@
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,6 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return await _dbSet
             .Include(u => u.Role)
                 .ThenInclude(r => r.Permissions)
-            .Include(u => u.RefreshTokens)
             .Include(u => u.Profile)
             .Include(u => u.Sessions)
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
@@ -26,36 +26,25 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .IgnoreQueryFilters()
             .Include(u => u.Role)
                 .ThenInclude(r => r.Permissions)
-            .Include(u => u.RefreshTokens)
             .Include(u => u.Profile)
             .Include(u => u.Sessions)
-            .FirstOrDefaultAsync(u => u.Email == emailLower, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email == (EmailAddress)emailLower, cancellationToken);
     }
 
     public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var emailLower = email.ToLowerInvariant();
-        return await _dbSet.AnyAsync(u => u.Email == emailLower, cancellationToken);
+        return await _dbSet.AnyAsync(u => u.Email == (EmailAddress)emailLower, cancellationToken);
     }
 
-    public async Task<User?> GetByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
-    {
-        return await _dbSet
-            .Include(u => u.Role)
-                .ThenInclude(r => r.Permissions)
-            .Include(u => u.RefreshTokens)
-            .Include(u => u.Profile)
-            .Include(u => u.Sessions)
-            .FirstOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == refreshToken), cancellationToken);
-    }
-
-    public async Task<User?> GetBySecurityTokenAsync(string token, Domain.Enums.SecurityTokenType type, CancellationToken cancellationToken = default)
+    public async Task<User?> GetBySecurityTokenHashAsync(string tokenHash, Domain.Enums.SecurityTokenType type, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(u => u.SecurityTokens)
             .Include(u => u.Role)
+            .Include(u => u.Profile)
             .Include(u => u.Sessions)
-            .FirstOrDefaultAsync(u => u.SecurityTokens.Any(t => t.Token == token && t.Type == type), cancellationToken);
+            .FirstOrDefaultAsync(u => u.SecurityTokens.Any(t => t.TokenHash == tokenHash && t.Type == type), cancellationToken);
     }
 
     public async Task<IEnumerable<User>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)

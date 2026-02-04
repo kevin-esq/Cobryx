@@ -68,7 +68,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var userAgent = _httpContextService.GetUserAgent();
 
-        var authResponse = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
+        var authResponse = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, null);
 
         await _userRepository.UpdateAsync(user);
 

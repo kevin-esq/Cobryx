@@ -28,9 +28,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        ProcessDomainEvents();
         UpdateAuditFields();
-
         return await base.SaveChangesAsync(cancellationToken);
     }
 
@@ -59,9 +57,21 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     {
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
         {
-            if (entry.State == EntityState.Modified)
+            if (entry.State == EntityState.Added)
             {
                 entry.Entity.IncrementVersion();
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                if (entry.Entity.Version == 0)
+                {
+                    entry.State = EntityState.Added;
+                    entry.Entity.IncrementVersion();
+                }
+                else
+                {
+                    entry.Entity.IncrementVersion();
+                }
             }
         }
     }
@@ -127,20 +137,6 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                         .Property<long>(nameof(BaseEntity.Version))
                         .IsConcurrencyToken();
                 }
-            }
-
-            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType) && entityType.ClrType != typeof(User))
-            {
-                var tenantIdProperty = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
-
-                var tenantFilterExpr = Expression.Equal(
-                    tenantIdProperty,
-                    Expression.Property(Expression.Constant(this), nameof(CurrentTenantId))
-                );
-
-                filterExpr = filterExpr == null
-                    ? tenantFilterExpr
-                    : Expression.AndAlso(filterExpr, tenantFilterExpr);
             }
 
             if (filterExpr != null && !entityType.IsOwned())

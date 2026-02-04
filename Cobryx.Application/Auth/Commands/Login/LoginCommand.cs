@@ -1,13 +1,15 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
-public record LoginCommand(string Email, string Password, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
+public record LoginCommand(string Email, string Password, string? DeviceName = null, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
 
 public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 {
@@ -19,6 +21,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
     private readonly IHttpContextService _httpContextService;
     private readonly ISecurityAuditService _auditService;
     private readonly IAuthAttemptService _attemptService;
+    private readonly CobryxMetrics _metrics;
 
     public LoginHandler(
         IUserRepository userRepository,
@@ -28,7 +31,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         ILogger<LoginHandler> logger,
         IHttpContextService httpContextService,
         ISecurityAuditService auditService,
-        IAuthAttemptService attemptService)
+        IAuthAttemptService attemptService,
+        CobryxMetrics metrics)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -38,6 +42,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         _httpContextService = httpContextService;
         _auditService = auditService;
         _attemptService = attemptService;
+        _metrics = metrics;
     }
 
     public async Task<Result<AuthResult>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -64,11 +69,17 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             bool isValid = false;
             bool needsRehash = false;
 
-            if (user is { IsActive: true, IsEmailVerified: true })
+            if (user is { IsActive: true, IsLocked: false })
             {
                 isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
                 if (isValid)
                 {
+                    if (!user.IsEmailVerified)
+                    {
+                        _auditService.LogFailure("Login", user.Id.ToString(), ipAddress, "Email not verified");
+                        await EnsureUniformTiming(startTime, 500, cancellationToken);
+                        throw new EmailUnverifiedException();
+                    }
                     needsRehash = _passwordHasher.IsHashOutdated(user.PasswordHash);
                 }
             }
@@ -104,12 +115,18 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 
             var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
             var userAgent = _httpContextService.GetUserAgent();
-            var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
+            var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, request.DeviceName);
 
             _tenantProvider.SetTenantId(user.TenantId);
 
             await EnsureUniformTiming(startTime, 500, cancellationToken);
+            _metrics.LoginSuccesses.Add(1);
+
             return Result.Success(authResult);
+        }
+        catch (EmailUnverifiedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

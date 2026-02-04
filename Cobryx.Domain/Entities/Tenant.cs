@@ -1,5 +1,6 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Enums;
 
 namespace Cobryx.Domain.Entities;
 
@@ -16,6 +17,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? Industry { get; private set; }
     public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
+    public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public BusinessSettings Settings { get; private set; }
 
     private Tenant()
@@ -33,6 +35,7 @@ public class Tenant : BaseEntity, IAggregateRoot
         BusinessName = businessName;
         Currency = currency;
         IsActive = true;
+        OnboardingStatus = TenantOnboardingStatus.Pending;
         Settings = BusinessSettings.Default();
     }
 
@@ -58,6 +61,16 @@ public class Tenant : BaseEntity, IAggregateRoot
     {
         OwnerName = ownerName;
         Phone = phone;
+        UpdateTimestamp();
+    }
+
+    public void UpdateOnboardingInfo(string taxIdCode, string industry, string address, string? phone = null)
+    {
+        TaxId = new TaxId(taxIdCode);
+        Industry = industry;
+        BusinessAddress = address;
+        if (!string.IsNullOrEmpty(phone)) Phone = phone;
+        OnboardingStatus = TenantOnboardingStatus.Completed;
         UpdateTimestamp();
     }
 }

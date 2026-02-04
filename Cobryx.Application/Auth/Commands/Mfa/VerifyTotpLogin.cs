@@ -80,7 +80,7 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         _auditService.LogSuccess("VerifyTotp", user.Id.ToString(), ipAddress);
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var userAgent = _httpContextService.GetUserAgent();
-        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
+        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, null);
 
         await _userRepository.UpdateAsync(user);
 

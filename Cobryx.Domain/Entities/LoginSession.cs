@@ -9,6 +9,7 @@ public class LoginSession : BaseEntity, ITenantEntity
     public string IpAddress { get; private set; }
     public string? DeviceFingerprint { get; private set; }
     public string? UserAgent { get; private set; }
+    public string? DeviceName { get; private set; }
     public DateTime LastActiveAt { get; private set; }
     public bool IsRevoked { get; private set; }
 
@@ -20,13 +21,14 @@ public class LoginSession : BaseEntity, ITenantEntity
         IpAddress = null!;
     }
 
-    public LoginSession(Guid tenantId, Guid userId, string ipAddress, string? deviceFingerprint, string? userAgent = null)
+    public LoginSession(Guid tenantId, Guid userId, string ipAddress, string? deviceFingerprint, string? userAgent = null, string? deviceName = null)
     {
         TenantId = tenantId;
         UserId = userId;
         IpAddress = ipAddress;
         DeviceFingerprint = deviceFingerprint;
         UserAgent = userAgent;
+        DeviceName = deviceName;
         LastActiveAt = DateTime.UtcNow;
         IsRevoked = false;
     }

@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddTransient<IEmailService, SmtpEmailService>();
         services.AddTransient<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IHttpContextService, Services.HttpContextService>();
+        services.AddScoped<ICookieService, CookieService>();
 
         services.AddStackExchangeRedisCache(options =>
         {
@@ -105,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
@@ -152,7 +154,11 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    context.Token = context.Request.Cookies["X-Access-Token"];
+                    var token = context.Request.Cookies["X-Access-Token"];
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        context.Token = token;
+                    }
                     return Task.CompletedTask;
                 }
             };

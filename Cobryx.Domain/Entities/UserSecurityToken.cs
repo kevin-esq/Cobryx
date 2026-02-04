@@ -6,7 +6,7 @@ namespace Cobryx.Domain.Entities;
 public class UserSecurityToken : BaseEntity
 {
     public Guid UserId { get; private set; }
-    public string Token { get; private set; }
+    public string TokenHash { get; private set; }
     public SecurityTokenType Type { get; private set; }
     public DateTime ExpiresAt { get; private set; }
     public DateTime? UsedAt { get; private set; }
@@ -19,13 +19,13 @@ public class UserSecurityToken : BaseEntity
 
     private UserSecurityToken()
     {
-        Token = null!;
+        TokenHash = null!;
     }
 
-    public UserSecurityToken(Guid userId, string token, SecurityTokenType type, int expiryMinutes)
+    public UserSecurityToken(Guid userId, string tokenHash, SecurityTokenType type, int expiryMinutes)
     {
         UserId = userId;
-        Token = token;
+        TokenHash = tokenHash;
         Type = type;
         ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
         IsRevoked = false;

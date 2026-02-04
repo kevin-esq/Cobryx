@@ -30,14 +30,16 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.GivenName, user.FirstName),
-            new(JwtRegisteredClaimNames.FamilyName, user.LastName),
+            new(JwtRegisteredClaimNames.Email, user.Email?.Value ?? string.Empty),
+            new(JwtRegisteredClaimNames.GivenName, user.FirstName ?? string.Empty),
+            new(JwtRegisteredClaimNames.FamilyName, user.LastName ?? string.Empty),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new(JwtRegisteredClaimNames.Nbf, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            new("tenant_name", user.FullName),
+            new("tenant_name", user.FullName ?? string.Empty),
             new("tenant_id", user.TenantId.ToString()),
+            new("requires_onboarding", user.RequiresOnboarding.ToString().ToLower()),
+            new("email_verified", user.IsEmailVerified.ToString().ToLower()),
             new("sid", sessionId.ToString()),
             new(ClaimTypes.Role, roleName)
         };
@@ -46,15 +48,21 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         {
             foreach (var permission in effectiveRole.Permissions)
             {
-                claims.Add(new Claim("permissions", permission.Name));
+                if (permission != null && !string.IsNullOrEmpty(permission.Name))
+                {
+                    claims.Add(new Claim("permissions", permission.Name));
+                }
             }
         }
+
+        var expiryStr = _configuration["JwtSettings:ExpiryMinutes"] ?? "60";
+        if (!double.TryParse(expiryStr, out var expiryMinutes)) expiryMinutes = 60;
 
         var token = new JwtSecurityToken(
             issuer: _configuration["JwtSettings:Issuer"],
             audience: _configuration["JwtSettings:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:ExpiryMinutes"] ?? "15")),
+            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -112,11 +120,13 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             }, out SecurityToken validatedToken);
 
             var jwtToken = (JwtSecurityToken)validatedToken;
-            var purpose = jwtToken.Claims.First(x => x.Type == "purpose").Value;
+            var purpose = jwtToken.Claims.FirstOrDefault(x => x.Type == "purpose")?.Value;
             if (purpose != "mfa_verification") return null;
 
-            var userId = jwtToken.Claims.First(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
-            return Guid.Parse(userId);
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return null;
+
+            return userId;
         }
         catch
         {

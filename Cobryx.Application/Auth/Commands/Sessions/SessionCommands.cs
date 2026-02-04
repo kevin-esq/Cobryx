@@ -5,7 +5,7 @@ using Concordia;
 
 namespace Cobryx.Application.Auth.Commands.Sessions;
 
-public record SessionResponse(Guid Id, string IpAddress, string? DeviceFingerprint, DateTime LastActiveAt, bool IsCurrent);
+public record SessionResponse(Guid Id, string IpAddress, string? DeviceFingerprint, string? DeviceName, DateTime LastActiveAt, bool IsCurrent);
 
 public record GetSessionsQuery : IRequest<Result<List<SessionResponse>>>;
 
@@ -38,7 +38,7 @@ public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<
         var sessions = user.Sessions
             .Where(s => !s.IsRevoked)
             .OrderByDescending(s => s.LastActiveAt)
-            .Select(s => new SessionResponse(s.Id, s.IpAddress, s.DeviceFingerprint, s.LastActiveAt, s.Id == currentSessionId))
+            .Select(s => new SessionResponse(s.Id, s.IpAddress, s.DeviceFingerprint, s.DeviceName, s.LastActiveAt, s.Id == currentSessionId))
             .ToList();
 
         return Result.Success(sessions);

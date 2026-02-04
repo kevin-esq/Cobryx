@@ -51,6 +51,17 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+
+    var appXmlFile = "Cobryx.Application.xml";
+    var appXmlPath = Path.Combine(AppContext.BaseDirectory, appXmlFile);
+    if (File.Exists(appXmlPath))
+    {
+        c.IncludeXmlComments(appXmlPath);
+    }
 });
 
 builder.Services.AddControllers(options =>
@@ -85,6 +96,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim("permissions", "credits:create"));
     options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim("permissions", "payments:apply"));
     options.AddPolicy("CanManageTenant", policy => policy.RequireClaim("permissions", "tenant:manage"));
+    options.AddPolicy("EmailVerified", policy => policy.RequireClaim("email_verified", "true"));
+    options.AddPolicy("AccountVerified", policy =>
+        policy.RequireClaim("email_verified", "true")
+              .RequireClaim("requires_onboarding", "false"));
 });
 
 builder.Services.AddCors(options =>
@@ -107,6 +122,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<Cobryx.Infrastructure.Middleware.RequestLogContextMiddleware>();
 app.UseMiddleware<Cobryx.Infrastructure.Middleware.DynamicRateLimitingMiddleware>();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
@@ -153,7 +169,8 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
-        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo);
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
         Log.Information("Database seeding completed successfully");
     }
 }
@@ -165,3 +182,5 @@ catch (Exception ex)
 Log.Information("Starting web host...");
 app.Run();
 Log.Information("Web host stopped");
+
+public partial class Program { }

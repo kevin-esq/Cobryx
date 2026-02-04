@@ -3,4 +3,5 @@
   <Project Path="Cobryx.Application/Cobryx.Application.csproj" />
   <Project Path="Cobryx.Domain/Cobryx.Domain.csproj" />
   <Project Path="Cobryx.Infrastructure/Cobryx.Infrastructure.csproj" />
+  <Project Path="Cobryx.IntegrationTests/Cobryx.IntegrationTests.csproj" />
 </Solution>

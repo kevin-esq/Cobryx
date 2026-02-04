@@ -30,7 +30,10 @@ public class HttpContextService : IHttpContextService
     public string GetUserAgent()
     {
         var context = _httpContextAccessor.HttpContext;
-        return context?.Request.Headers["User-Agent"].ToString() ?? "Unknown";
+        if (context == null) return "Unknown";
+
+        var userAgent = context.Request.Headers["User-Agent"].ToString();
+        return string.IsNullOrWhiteSpace(userAgent) ? "Unknown" : userAgent;
     }
 
     public string GetDeviceFingerprint()

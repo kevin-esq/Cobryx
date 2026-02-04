@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -25,9 +26,9 @@ public class SessionValidationFilter : IAsyncActionFilter
         {
             var user = await _userRepository.GetByIdAsync(userId.Value);
 
-            if (user == null || !user.IsActive)
+            if (user == null || !user.IsActive || user.IsLocked)
             {
-                context.Result = new UnauthorizedObjectResult(new { success = false, message = "User account is disabled or missing." });
+                context.Result = new UnauthorizedObjectResult(ApiResponse.FailureResponse("Account is locked, disabled or missing."));
                 return;
             }
 
@@ -35,8 +36,25 @@ public class SessionValidationFilter : IAsyncActionFilter
 
             if (session == null || session.IsRevoked)
             {
-                context.Result = new UnauthorizedObjectResult(new { success = false, message = "Session has been revoked. Please log in again." });
+                context.Result = new UnauthorizedObjectResult(ApiResponse.FailureResponse("Session has been revoked. Please log in again."));
                 return;
+            }
+
+            var skipCheck = context.ActionDescriptor.EndpointMetadata.Any(em => em is SkipOnboardingCheckAttribute);
+
+            if (!skipCheck)
+            {
+                if (!user.IsEmailVerified)
+                {
+                    context.Result = new ObjectResult(ApiResponse.FailureResponse("Email verification is required.")) { StatusCode = 403 };
+                    return;
+                }
+
+                if (user.RequiresOnboarding)
+                {
+                    context.Result = new ObjectResult(ApiResponse.FailureResponse("Business onboarding is required.")) { StatusCode = 403 };
+                    return;
+                }
             }
         }
 

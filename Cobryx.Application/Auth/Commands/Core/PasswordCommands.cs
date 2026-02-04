@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
@@ -6,6 +7,7 @@ using Concordia;
 using FluentValidation;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Observability;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 
@@ -26,13 +28,15 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
     private readonly IEmailService _emailService;
     private readonly AppOptions _appOptions;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly CobryxMetrics _metrics;
 
-    public ForgotPasswordHandler(IUserRepository userRepository, IEmailService emailService, IOptions<AppOptions> appOptions, IUnitOfWork unitOfWork)
+    public ForgotPasswordHandler(IUserRepository userRepository, IEmailService emailService, IOptions<AppOptions> appOptions, IUnitOfWork unitOfWork, CobryxMetrics metrics)
     {
         _userRepository = userRepository;
         _emailService = emailService;
         _appOptions = appOptions.Value;
         _unitOfWork = unitOfWork;
+        _metrics = metrics;
     }
 
     public async Task<Result> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
@@ -48,7 +52,8 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
             }
 
             var tokenValue = Guid.NewGuid().ToString("N");
-            user.AddSecurityToken(tokenValue, SecurityTokenType.PasswordReset, 60);
+            var tokenHash = TokenHasher.ComputeHash(tokenValue);
+            user.AddSecurityToken(tokenHash, SecurityTokenType.PasswordReset, 60);
 
             await _userRepository.UpdateAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -58,6 +63,8 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
                 "Restablecer contraseña Cobryx",
                 $"Para restablecer tu contraseña, haz clic aquí: {_appOptions.AppUrl}/reset-password?token={tokenValue}",
                 cancellationToken);
+
+            _metrics.PasswordResets.Add(1);
         }
         else
         {
@@ -107,13 +114,14 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, Result
 
     public async Task<Result> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.PasswordReset, cancellationToken);
+        var tokenHash = TokenHasher.ComputeHash(request.Token);
+        var user = await _userRepository.GetBySecurityTokenHashAsync(tokenHash, SecurityTokenType.PasswordReset, cancellationToken);
         if (user == null)
         {
             return Result.Failure("Invalid or expired token.");
         }
 
-        var token = user.SecurityTokens.FirstOrDefault(t => t.Token == request.Token && t.Type == SecurityTokenType.PasswordReset);
+        var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.PasswordReset);
 
         if (token is not { IsActive: true })
         {

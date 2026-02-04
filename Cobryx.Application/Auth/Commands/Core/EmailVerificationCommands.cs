@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
@@ -25,14 +26,15 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 
     public async Task<Result> Handle(VerifyEmailCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetBySecurityTokenAsync(request.Token, SecurityTokenType.EmailVerification, cancellationToken);
+        var tokenHash = TokenHasher.ComputeHash(request.Token);
+        var user = await _userRepository.GetBySecurityTokenHashAsync(tokenHash, SecurityTokenType.EmailVerification, cancellationToken);
 
         if (user == null)
         {
             return Result.Failure("Invalid or expired token.");
         }
 
-        var token = user.SecurityTokens.FirstOrDefault(t => t.Token == request.Token && t.Type == SecurityTokenType.EmailVerification);
+        var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.EmailVerification);
 
         if (token is not { IsActive: true })
         {
@@ -50,7 +52,15 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 }
 
 
-public record ResendVerificationCommand(string Email) : IRequest<Result>;
+public record ResendVerificationCommand(string Email, string? CaptchaToken = null) : IRequest<Result>;
+
+public class ResendVerificationValidator : AbstractValidator<ResendVerificationCommand>
+{
+    public ResendVerificationValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+    }
+}
 
 public class ResendVerificationHandler : IRequestHandler<ResendVerificationCommand, Result>
 {
@@ -70,18 +80,43 @@ public class ResendVerificationHandler : IRequestHandler<ResendVerificationComma
     public async Task<Result> Handle(ResendVerificationCommand request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-        if (user == null || user.IsEmailVerified)
+
+        if (user == null || user.IsEmailVerified || !user.IsActive)
         {
             return Result.Success();
         }
 
-        foreach (var oldToken in user.SecurityTokens.Where(t => t.Type == SecurityTokenType.EmailVerification && t.IsActive))
+        var now = DateTime.UtcNow;
+
+        if (user.LastVerificationSentAt.HasValue && user.LastVerificationSentAt.Value.Date < now.Date)
+        {
+            user.ResetVerificationResendCount();
+        }
+
+        if (user.LastVerificationSentAt.HasValue && (now - user.LastVerificationSentAt.Value).TotalMinutes < 2)
+        {
+            throw new TooManyRequestsException("Please wait at least 2 minutes before requesting another verification link.");
+        }
+
+        if (user.VerificationResendCount >= 5)
+        {
+            throw new TooManyRequestsException("You have reached the maximum number of verification attempts for today. Please try again tomorrow.");
+        }
+
+        var activeTokens = user.SecurityTokens
+            .Where(t => t.Type == SecurityTokenType.EmailVerification && t.IsActive)
+            .ToList();
+
+        foreach (var oldToken in activeTokens)
         {
             oldToken.Revoke();
         }
 
         var tokenValue = Guid.NewGuid().ToString("N");
-        user.AddSecurityToken(tokenValue, SecurityTokenType.EmailVerification, 24 * 60);
+        var tokenHash = TokenHasher.ComputeHash(tokenValue);
+        user.AddSecurityToken(tokenHash, SecurityTokenType.EmailVerification, 24 * 60);
+
+        user.UpdateVerificationResend();
 
         await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -89,7 +124,7 @@ public class ResendVerificationHandler : IRequestHandler<ResendVerificationComma
         await _emailService.SendEmailAsync(
             user.Email,
             "Verifica tu cuenta Cobryx",
-            $"Por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
+            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
             cancellationToken);
 
         return Result.Success();

@@ -4,50 +4,72 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
+using Cobryx.Application.Common.Observability;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 
-public record RefreshTokenCommand(string AccessToken, string RefreshToken) : IRequest<Result<AuthResult>>;
+public record RefreshTokenCommand() : IRequest<Result<AuthResult>>;
 
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<AuthResult>>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IAuthService _authService;
     private readonly IHttpContextService _httpContextService;
+    private readonly ICookieService _cookieService;
+    private readonly CobryxMetrics _metrics;
 
     public RefreshTokenHandler(
         IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IAuthService authService,
-        IHttpContextService httpContextService)
+        IHttpContextService httpContextService,
+        ICookieService cookieService,
+        CobryxMetrics metrics)
     {
         _userRepository = userRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _authService = authService;
         _httpContextService = httpContextService;
+        _cookieService = cookieService;
+        _metrics = metrics;
     }
 
     public async Task<Result<AuthResult>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userRepository.GetByRefreshTokenAsync(request.RefreshToken);
+        var refreshTokenValue = _cookieService.GetRefreshTokenFromCookie();
+
+        if (string.IsNullOrEmpty(refreshTokenValue))
+        {
+            return Result.Failure<AuthResult>("Refresh token cookie missing.");
+        }
+
+        var token = await _refreshTokenRepository.GetByTokenValueAsync(refreshTokenValue, cancellationToken);
+
+        if (token == null)
+        {
+            return Result.Failure<AuthResult>("Invalid refresh token.");
+        }
+
+        var user = await _userRepository.GetByIdAsync(token.UserId, cancellationToken);
 
         if (user == null)
         {
-            return Result.Failure<AuthResult>("Invalid refresh token.");
+            return Result.Failure<AuthResult>("User not found.");
         }
 
         try
         {
             var ipAddress = _httpContextService.GetIpAddress();
             var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-            var authResult = _authService.RefreshAuthResponse(user, request.RefreshToken, ipAddress, deviceFingerprint);
+            var authResult = await _authService.RefreshAuthResponse(user, token, ipAddress, deviceFingerprint, cancellationToken);
 
-            await _userRepository.UpdateAsync(user);
+            _metrics.TokenRefreshes.Add(1);
 
             return Result.Success(authResult);
         }
         catch (Exception ex)
         {
-            try { await _userRepository.UpdateAsync(user); } catch { }
-
             return Result.Failure<AuthResult>(ex.Message);
         }
     }

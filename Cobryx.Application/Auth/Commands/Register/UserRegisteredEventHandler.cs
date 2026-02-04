@@ -43,20 +43,5 @@ public class UserRegisteredEventHandler : INotificationHandler<DomainEventNotifi
             _logger.LogWarning("User {UserId} not found when handling registration event.", domainEvent.UserId);
             return;
         }
-
-        if (!user.IsEmailVerified)
-        {
-            var token = user.SecurityTokens
-                .FirstOrDefault(t => t.Type == SecurityTokenType.EmailVerification && t.IsActive);
-
-            if (token != null)
-            {
-                await _emailService.SendEmailAsync(
-                    user.Email.Value,
-                    "Verifica tu cuenta Cobryx",
-                    $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={token.Token}",
-                    cancellationToken);
-            }
-        }
     }
 }

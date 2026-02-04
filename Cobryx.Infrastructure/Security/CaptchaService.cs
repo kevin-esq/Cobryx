@@ -14,7 +14,7 @@ public class TurnstileCaptchaService : ICaptchaService
     public TurnstileCaptchaService(HttpClient httpClient, IConfiguration configuration, ILogger<TurnstileCaptchaService> logger)
     {
         _httpClient = httpClient;
-        _secretKey = configuration["Security:Captcha:SecretKey"] ?? "1x0000000000000000000000000000000AA"; // Default testing key
+        _secretKey = configuration["Security:Captcha:SecretKey"] ?? "1x0000000000000000000000000000000AA";
         _logger = logger;
     }
 

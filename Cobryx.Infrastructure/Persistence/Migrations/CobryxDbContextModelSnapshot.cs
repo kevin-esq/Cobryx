@@ -773,6 +773,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("DeviceName")
+                        .HasColumnType("text");
+
                     b.Property<string>("InternalNotes")
                         .HasColumnType("text");
 
@@ -1348,6 +1351,88 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("RecoveryCodes");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreatedByIp")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Expires")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("Revoked")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.ReleaseNote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1801,6 +1886,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("MetadataJson")
                         .HasColumnType("text");
 
+                    b.Property<int>("OnboardingStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("OwnerName")
                         .HasColumnType("text");
 
@@ -1997,6 +2085,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsMfaEnabled")
                         .HasColumnType("boolean");
 
@@ -2004,6 +2095,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LastVerificationSentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("MarketingConsent")
                         .HasColumnType("boolean");
@@ -2017,6 +2111,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("RequiresOnboarding")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
@@ -2032,6 +2129,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("VerificationResendCount")
+                        .HasColumnType("integer");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
@@ -2146,7 +2246,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("Tags")
                         .HasColumnType("text");
 
-                    b.Property<string>("Token")
+                    b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -2172,7 +2272,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Token")
+                    b.HasIndex("TokenHash")
                         .IsUnique();
 
                     b.HasIndex("UserId");
@@ -2978,83 +3078,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.OwnsMany("Cobryx.Domain.Entities.RefreshToken", "RefreshTokens", b1 =>
-                        {
-                            b1.Property<Guid>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uuid");
-
-                            b1.Property<DateTime>("Created")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<DateTime>("CreatedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<Guid?>("CreatedBy")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("CreatedByIp")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.Property<DateTime?>("DeletedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<DateTime>("Expires")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<string>("InternalNotes")
-                                .HasColumnType("text");
-
-                            b1.Property<bool>("IsDeleted")
-                                .HasColumnType("boolean");
-
-                            b1.Property<string>("MetadataJson")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("ReplacedByToken")
-                                .HasColumnType("text");
-
-                            b1.Property<DateTime?>("Revoked")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<string>("RevokedByIp")
-                                .HasColumnType("text");
-
-                            b1.Property<Guid>("SessionId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("Tags")
-                                .HasColumnType("text");
-
-                            b1.Property<string>("Token")
-                                .IsRequired()
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)");
-
-                            b1.Property<DateTime?>("UpdatedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<Guid?>("UpdatedBy")
-                                .HasColumnType("uuid");
-
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<long>("Version")
-                                .IsConcurrencyToken()
-                                .HasColumnType("bigint");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("UserId");
-
-                            b1.ToTable("RefreshTokens", (string)null);
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserId");
-                        });
-
                     b.OwnsOne("Cobryx.Domain.ValueObjects.LegalConsent", "LegalConsent", b1 =>
                         {
                             b1.Property<Guid>("UserId")
@@ -3084,8 +3107,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("LegalConsent");
-
-                    b.Navigation("RefreshTokens");
 
                     b.Navigation("Role");
                 });
