@@ -14,3 +14,4 @@ public enum MetricType { Invoices, Users, Storage }
 public enum BillingAlertType { LimitReached, RenewalNear, PaymentFailed }
 public enum DiscountType { Flat, Percentage }
 public enum CancellationReason { Price, MissingFeatures, Bugs, BetterAlternative, Other }
+public enum SecurityTokenType { EmailVerification, PasswordReset }

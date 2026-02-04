@@ -4,12 +4,19 @@ using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cobryx.Infrastructure.Persistence;
 
 public class CobryxDbContext : DbContext, IUnitOfWork
 {
     private readonly ITenantProvider _tenantProvider;
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+        WriteIndented = false
+    };
 
     public CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider)
         : base(options)
@@ -18,6 +25,56 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     }
 
     public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        UpdateAuditFields();
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ProcessDomainEvents()
+    {
+        var domainEvents = ChangeTracker.Entries<BaseEntity>()
+            .Select(x => x.Entity)
+            .SelectMany(x =>
+            {
+                var events = x.DomainEvents.ToList();
+                x.ClearDomainEvents();
+                return events;
+            })
+            .ToList();
+
+        var outboxMessages = domainEvents.Select(domainEvent =>
+            new OutboxMessage(
+                domainEvent.GetType().Name,
+                JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), _jsonSerializerOptions)))
+            .ToList();
+
+        this.Set<OutboxMessage>().AddRange(outboxMessages);
+    }
+
+    private void UpdateAuditFields()
+    {
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.IncrementVersion();
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                if (entry.Entity.Version == 0)
+                {
+                    entry.State = EntityState.Added;
+                    entry.Entity.IncrementVersion();
+                }
+                else
+                {
+                    entry.Entity.IncrementVersion();
+                }
+            }
+        }
+    }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
@@ -46,6 +103,10 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<CustomerSuggestion> CustomerSuggestions => Set<CustomerSuggestion>();
     public DbSet<ReleaseNote> ReleaseNotes => Set<ReleaseNote>();
     public DbSet<DocumentMetadata> Documents => Set<DocumentMetadata>();
+    public DbSet<MfaDevice> MfaDevices => Set<MfaDevice>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
+    public DbSet<UserSecurityToken> SecurityTokens => Set<UserSecurityToken>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,8 +114,6 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (entityType.IsOwned()) continue;
-
             var parameter = Expression.Parameter(entityType.ClrType, "e");
             Expression? filterExpr = null;
 
@@ -64,26 +123,23 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                 var notDeletedExpr = Expression.Equal(isDeletedProperty, Expression.Constant(false));
                 filterExpr = notDeletedExpr;
 
-                modelBuilder.Entity(entityType.ClrType)
-                    .Property<uint>(nameof(BaseEntity.Version))
-                    .IsRowVersion();
+                if (entityType.IsOwned())
+                {
+                    var versionProp = entityType.FindProperty(nameof(BaseEntity.Version));
+                    if (versionProp != null)
+                    {
+                        versionProp.IsConcurrencyToken = true;
+                    }
+                }
+                else
+                {
+                    modelBuilder.Entity(entityType.ClrType)
+                        .Property<long>(nameof(BaseEntity.Version))
+                        .IsConcurrencyToken();
+                }
             }
 
-            if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType) && entityType.ClrType != typeof(User))
-            {
-                var tenantIdProperty = Expression.Property(parameter, nameof(ITenantEntity.TenantId));
-
-                var tenantFilterExpr = Expression.Equal(
-                    tenantIdProperty,
-                    Expression.Property(Expression.Constant(this), nameof(CurrentTenantId))
-                );
-
-                filterExpr = filterExpr == null
-                    ? tenantFilterExpr
-                    : Expression.AndAlso(filterExpr, tenantFilterExpr);
-            }
-
-            if (filterExpr != null)
+            if (filterExpr != null && !entityType.IsOwned())
             {
                 var lambda = Expression.Lambda(filterExpr, parameter);
                 modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);

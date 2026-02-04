@@ -9,13 +9,13 @@ public class PaymentRepository : BaseRepository<Payment>, IPaymentRepository
 {
     public PaymentRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public async Task<IEnumerable<Payment>> GetByCustomerAsync(Guid customerId)
+    public async Task<IEnumerable<Payment>> GetByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.Where(p => p.CustomerId == customerId).ToListAsync();
+        return await _dbSet.Where(p => p.CustomerId == customerId).ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId)
+    public async Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.ToListAsync(cancellationToken);
     }
 }

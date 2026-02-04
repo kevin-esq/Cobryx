@@ -36,6 +36,8 @@ Infrastructure
     - **Connection Pooling**: Tuned Npgsql configuration.
 - **Security**:
     - Automatic IP & Device Fingerprinting.
+    - **HttpOnly Cookies**: Secure refresh token storage.
+    - **Session Management**: Full control over active sessions (Revoke, Logout All).
     - ClamAV integration for file uploads.
     - Role-based Access Control (RBAC).
 
@@ -79,6 +81,12 @@ Infrastructure
 - [x] **Observability**: Serilog, HealthChecks (API, DB, Redis, ClamAV).
 - [x] **Standardization**: Uniform API Responses.
 
+### Phase 6: Enterprise Hardening (✅ Completed)
+- [x] **Advanced Auth**: HttpOnly Cookies, Token Revocation, Session Families.
+- [x] **Security**: Token Reuse Detection, Account Lockout, Device Fingerprinting.
+- [x] **Testing**: Comprehensive Integration Tests (Auth, Cookies, persistence).
+- [x] **Code Quality**: "Nuclear" cleanup of debug artifacts and comments.
+
 ---
 
 ## 💻 How to Run
@@ -92,7 +100,11 @@ Infrastructure
    ```bash
    dotnet watch run --project Cobryx.Api
    ```
-4. **Access Swagger**: `http://localhost:5142/swagger`
+4. **Run Tests**:
+   ```bash
+   dotnet test Cobryx.IntegrationTests
+   ```
+5. **Access Swagger**: `http://localhost:5142/swagger`
 
 ---
 

@@ -8,7 +8,7 @@ public class AuditLog : BaseEntity, ITenantEntity
     public Guid? UserId { get; private set; }
     public string EntityName { get; private set; }
     public string EntityId { get; private set; }
-    public string Action { get; private set; } // "Create", "Update", "Delete"
+    public string Action { get; private set; }
     public string? OldValues { get; private set; }
     public string? NewValues { get; private set; }
     public string? IpAddress { get; private set; }

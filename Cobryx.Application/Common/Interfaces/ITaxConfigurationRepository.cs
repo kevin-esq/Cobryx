@@ -5,6 +5,6 @@ namespace Cobryx.Application.Common.Interfaces;
 
 public interface ITaxConfigurationRepository : IRepository<TaxConfiguration>
 {
-    Task<TaxConfiguration?> GetDefaultAsync(Guid tenantId);
-    Task<IReadOnlyList<TaxConfiguration>> GetAllActiveAsync(Guid tenantId);
+    Task<TaxConfiguration?> GetDefaultAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TaxConfiguration>> GetAllActiveAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }
