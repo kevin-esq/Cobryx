@@ -79,7 +79,8 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         await _attemptService.ResetAttemptsAsync(ipAddress);
         _auditService.LogSuccess("VerifyTotp", user.Id.ToString(), ipAddress);
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);
+        var userAgent = _httpContextService.GetUserAgent();
+        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, null);
 
         await _userRepository.UpdateAsync(user);
 

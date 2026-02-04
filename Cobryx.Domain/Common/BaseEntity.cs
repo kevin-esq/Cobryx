@@ -12,7 +12,7 @@ public abstract class BaseEntity
     public Guid? UpdatedBy { get; private set; }
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
-    public uint Version { get; private set; }
+    public long Version { get; private set; }
 
     public string? Tags { get; private set; }
     public string? MetadataJson { get; private set; }
@@ -20,6 +20,7 @@ public abstract class BaseEntity
 
     protected BaseEntity()
     {
+        Id = Guid.NewGuid();
     }
 
     public void SetCreatedBy(Guid userId)
@@ -42,6 +43,8 @@ public abstract class BaseEntity
     }
 
     public void UpdateTimestamp() => UpdatedAt = DateTime.UtcNow;
+
+    public void IncrementVersion() => Version++;
 
     public void AddMetadata(string key, string value)
     {

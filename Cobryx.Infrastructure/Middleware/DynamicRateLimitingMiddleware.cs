@@ -35,7 +35,6 @@ public class DynamicRateLimitingMiddleware
                 {
                     _logger.LogWarning("Rate limiting active for {IP}. Attempts: {Attempts}. Delaying for {Delay}s", ipAddress, attempts, delaySeconds);
 
-                    // Enforce exponential backoff delay based on previous failure count.
                     var lastAttemptKey = $"last_auth_attempt_{ipAddress}";
                     var lastAttemptStr = await _cache.GetStringAsync(lastAttemptKey);
 

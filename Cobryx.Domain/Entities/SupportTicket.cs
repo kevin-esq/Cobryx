@@ -13,7 +13,7 @@ public class SupportTicket : BaseEntity, ITenantEntity
     public string Description { get; private set; }
     public SupportTicketStatus Status { get; private set; }
     public SupportTicketPriority Priority { get; private set; }
-    public string? Category { get; private set; } // "Bug", "Feature", "Inquiry"
+    public string? Category { get; private set; }
 
     private SupportTicket()
     {

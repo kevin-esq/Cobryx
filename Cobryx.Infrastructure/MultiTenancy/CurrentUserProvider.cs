@@ -24,4 +24,16 @@ public class CurrentUserProvider : ICurrentUserProvider
 
         return null;
     }
+
+    public Guid? GetSessionId()
+    {
+        var sessionIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sid");
+
+        if (Guid.TryParse(sessionIdStr, out var sessionId))
+        {
+            return sessionId;
+        }
+
+        return null;
+    }
 }

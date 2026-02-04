@@ -13,7 +13,7 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public Address? Address { get; private set; }
     public IdentityDocument? Document { get; private set; }
     public string? Notes { get; private set; }
-    public int TrustScore { get; private set; } // 0-100
+    public int TrustScore { get; private set; }
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
 

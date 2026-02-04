@@ -1,8 +1,11 @@
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
 using Cobryx.Infrastructure.Persistence.Interceptors;
 using Cobryx.Infrastructure.Repositories;
 using Cobryx.Infrastructure.MultiTenancy;
 using Cobryx.Infrastructure.Middleware;
+using Cobryx.Infrastructure.Services;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Application.Common.Interfaces;
 using Concordia;
@@ -22,11 +25,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<Cobryx.Application.Common.Configuration.AppOptions>(configuration.GetSection("App"));
+        services.Configure<EmailSettings>(configuration.GetSection("Email"));
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddHostedService<BackgroundJobs.ProcessOutboxJob>();
+        services.AddTransient<IEmailService, SmtpEmailService>();
+        services.AddTransient<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IHttpContextService, Services.HttpContextService>();
+        services.AddScoped<ICookieService, CookieService>();
 
         services.AddStackExchangeRedisCache(options =>
         {
@@ -70,7 +79,6 @@ public static class DependencyInjection
         }
         catch
         {
-            // Optimistic DNS resolution; ignore failures and fallback to original host
         }
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>
@@ -98,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
@@ -145,7 +154,11 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    context.Token = context.Request.Cookies["X-Access-Token"];
+                    var token = context.Request.Cookies["X-Access-Token"];
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        context.Token = token;
+                    }
                     return Task.CompletedTask;
                 }
             };

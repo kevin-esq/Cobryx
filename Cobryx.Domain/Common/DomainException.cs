@@ -8,3 +8,17 @@ public class DomainException : Exception
     {
     }
 }
+
+public class TooManyRequestsException : Exception
+{
+    public TooManyRequestsException(string message = "Too many requests. Please try again later.") : base(message)
+    {
+    }
+}
+
+public class EmailUnverifiedException : Exception
+{
+    public EmailUnverifiedException(string message = "Email not verified") : base(message)
+    {
+    }
+}

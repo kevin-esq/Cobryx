@@ -5,6 +5,6 @@ namespace Cobryx.Application.Common.Interfaces;
 
 public interface IInvoiceRepository : IRepository<Invoice>
 {
-    Task<Invoice?> GetByNumberAsync(Guid tenantId, string invoiceNumber);
-    Task<IReadOnlyList<Invoice>> GetByCustomerAsync(Guid tenantId, Guid customerId);
+    Task<Invoice?> GetByNumberAsync(Guid tenantId, string invoiceNumber, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Invoice>> GetByCustomerAsync(Guid tenantId, Guid customerId, CancellationToken cancellationToken = default);
 }

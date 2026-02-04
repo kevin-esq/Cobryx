@@ -1,13 +1,15 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
-public record LoginCommand(string Email, string Password) : IRequest<Result<AuthResult>>;
+public record LoginCommand(string Email, string Password, string? DeviceName = null, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
 
 public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 {
@@ -19,6 +21,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
     private readonly IHttpContextService _httpContextService;
     private readonly ISecurityAuditService _auditService;
     private readonly IAuthAttemptService _attemptService;
+    private readonly CobryxMetrics _metrics;
 
     public LoginHandler(
         IUserRepository userRepository,
@@ -28,7 +31,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         ILogger<LoginHandler> logger,
         IHttpContextService httpContextService,
         ISecurityAuditService auditService,
-        IAuthAttemptService attemptService)
+        IAuthAttemptService attemptService,
+        CobryxMetrics metrics)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -38,50 +42,108 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         _httpContextService = httpContextService;
         _auditService = auditService;
         _attemptService = attemptService;
+        _metrics = metrics;
     }
 
     public async Task<Result<AuthResult>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Login attempt for email: {Email}", request.Email);
-
-        var user = await _userRepository.GetByEmailAsync(request.Email);
-
-        bool isValid = false;
-        if (user != null)
-        {
-            isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
-        }
-        else
-        {
-            _passwordHasher.VerifyPassword(request.Password, "v1.4.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
-        }
-
+        var startTime = DateTime.UtcNow;
         var ipAddress = _httpContextService.GetIpAddress();
 
-        if (!isValid || user == null)
+        try
         {
-            _logger.LogWarning("Authentication failed for email: {Email}", request.Email);
-            _auditService.LogFailure("Login", user?.Id.ToString(), ipAddress, "Invalid credentials");
-            await _attemptService.IncrementAttemptsAsync(ipAddress);
+            var ipAttempts = await _attemptService.GetAttemptCountAsync(ipAddress);
+            var userAttempts = await _attemptService.GetUserAttemptCountAsync(request.Email);
+            var maxAttempts = Math.Max(ipAttempts, userAttempts);
+
+            if (maxAttempts >= 5)
+            {
+                var backoffSeconds = Math.Min(3600, Math.Pow(2, maxAttempts - 5) * 5);
+                _logger.LogWarning("Login lockout: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
+
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
+                return Result.Failure<AuthResult>("Invalid credentials.");
+            }
+
+            var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
+            bool isValid = false;
+            bool needsRehash = false;
+
+            if (user is { IsActive: true, IsLocked: false })
+            {
+                isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
+                if (isValid)
+                {
+                    if (!user.IsEmailVerified)
+                    {
+                        _auditService.LogFailure("Login", user.Id.ToString(), ipAddress, "Email not verified");
+                        await EnsureUniformTiming(startTime, 500, cancellationToken);
+                        throw new EmailUnverifiedException();
+                    }
+                    needsRehash = _passwordHasher.IsHashOutdated(user.PasswordHash);
+                }
+            }
+            else
+            {
+                _passwordHasher.VerifyPassword(request.Password, "v1.10.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
+            }
+
+            if (!isValid || user == null)
+            {
+                _auditService.LogFailure("Login", user?.Id.ToString(), ipAddress, "Invalid credentials or account state");
+                await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
+
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
+                return Result.Failure<AuthResult>("Invalid credentials.");
+            }
+
+            await _attemptService.ResetAttemptsAsync(ipAddress, request.Email);
+            _auditService.LogSuccess("Login", user.Id.ToString(), ipAddress);
+
+            if (needsRehash)
+            {
+                _logger.LogInformation("Promoting password hash for {Email}", user.Email);
+                user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
+                await _userRepository.UpdateAsync(user);
+            }
+
+            if (user.IsMfaEnabled)
+            {
+                await EnsureUniformTiming(startTime, 500, cancellationToken);
+                return Result.Success(_authService.GenerateMfaPartialResponse(user));
+            }
+
+            var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
+            var userAgent = _httpContextService.GetUserAgent();
+            var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, request.DeviceName);
+
+            _tenantProvider.SetTenantId(user.TenantId);
+
+            await EnsureUniformTiming(startTime, 500, cancellationToken);
+            _metrics.LoginSuccesses.Add(1);
+
+            return Result.Success(authResult);
+        }
+        catch (EmailUnverifiedException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Login processing failed for {Email}", request.Email);
+            await EnsureUniformTiming(startTime, 500, cancellationToken);
             return Result.Failure<AuthResult>("Invalid credentials.");
         }
+    }
 
-        await _attemptService.ResetAttemptsAsync(ipAddress);
-        _auditService.LogSuccess("Login", user.Id.ToString(), ipAddress);
-
-        if (user.IsMfaEnabled)
+    private static async Task EnsureUniformTiming(DateTime startTime, int targetMs, CancellationToken ct)
+    {
+        var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
+        var remaining = targetMs - elapsed;
+        if (remaining > 0)
         {
-            _logger.LogInformation("MFA required for user: {Email}", user.Email);
-            return Result.Success(_authService.GenerateMfaPartialResponse(user));
+            await Task.Delay((int)remaining, ct);
         }
-
-        var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-        var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint);
-
-        _tenantProvider.SetTenantId(user.TenantId);
-
-        await _userRepository.UpdateAsync(user);
-
-        return Result.Success(authResult);
+        await Task.Delay(Random.Shared.Next(10, 50), ct);
     }
 }

@@ -1,5 +1,6 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Enums;
 
 namespace Cobryx.Domain.Entities;
 
@@ -12,7 +13,11 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? PrimaryColor { get; private set; }
     public string? SecondaryColor { get; private set; }
     public string Currency { get; private set; }
+    public TaxId? TaxId { get; private set; }
+    public string? Industry { get; private set; }
+    public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
+    public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public BusinessSettings Settings { get; private set; }
 
     private Tenant()
@@ -30,7 +35,17 @@ public class Tenant : BaseEntity, IAggregateRoot
         BusinessName = businessName;
         Currency = currency;
         IsActive = true;
+        OnboardingStatus = TenantOnboardingStatus.Pending;
         Settings = BusinessSettings.Default();
+    }
+
+    public static Tenant CreateForRegistration(string businessName, string? taxIdCode, string? industry, string? address)
+    {
+        var tenant = new Tenant(businessName);
+        if (!string.IsNullOrEmpty(taxIdCode)) tenant.TaxId = new TaxId(taxIdCode);
+        tenant.Industry = industry;
+        tenant.BusinessAddress = address;
+        return tenant;
     }
 
 
@@ -46,6 +61,16 @@ public class Tenant : BaseEntity, IAggregateRoot
     {
         OwnerName = ownerName;
         Phone = phone;
+        UpdateTimestamp();
+    }
+
+    public void UpdateOnboardingInfo(string taxIdCode, string industry, string address, string? phone = null)
+    {
+        TaxId = new TaxId(taxIdCode);
+        Industry = industry;
+        BusinessAddress = address;
+        if (!string.IsNullOrEmpty(phone)) Phone = phone;
+        OnboardingStatus = TenantOnboardingStatus.Completed;
         UpdateTimestamp();
     }
 }

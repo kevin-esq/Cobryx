@@ -5,7 +5,7 @@ using Concordia;
 
 namespace Cobryx.Application.Auth.Commands.Sessions;
 
-public record SessionResponse(Guid Id, string IpAddress, string? DeviceFingerprint, DateTime LastActiveAt, bool IsCurrent);
+public record SessionResponse(Guid Id, string IpAddress, string? DeviceFingerprint, string? DeviceName, DateTime LastActiveAt, bool IsCurrent);
 
 public record GetSessionsQuery : IRequest<Result<List<SessionResponse>>>;
 
@@ -33,12 +33,12 @@ public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<
         var user = await _userRepository.GetByIdAsync(userId.Value);
         if (user == null) return Result.Failure<List<SessionResponse>>("User not found.");
 
-        // TODO: Include SessionId in claims to identify the "current" session reliably.
+        var currentSessionId = _currentUserProvider.GetSessionId();
 
         var sessions = user.Sessions
             .Where(s => !s.IsRevoked)
             .OrderByDescending(s => s.LastActiveAt)
-            .Select(s => new SessionResponse(s.Id, s.IpAddress, s.DeviceFingerprint, s.LastActiveAt, false))
+            .Select(s => new SessionResponse(s.Id, s.IpAddress, s.DeviceFingerprint, s.DeviceName, s.LastActiveAt, s.Id == currentSessionId))
             .ToList();
 
         return Result.Success(sessions);
@@ -70,5 +70,67 @@ public class RevokeSessionHandler : IRequestHandler<RevokeSessionCommand, Result
         await _userRepository.UpdateAsync(user);
 
         return Result.Success(true);
+    }
+}
+
+public record LogoutCommand() : IRequest<Result>;
+
+public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ICurrentUserProvider _currentUserProvider;
+
+    public LogoutHandler(IUserRepository userRepository, ICurrentUserProvider currentUserProvider)
+    {
+        _userRepository = userRepository;
+        _currentUserProvider = currentUserProvider;
+    }
+
+    public async Task<Result> Handle(LogoutCommand request, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserProvider.GetUserId();
+        var sessionId = _currentUserProvider.GetSessionId();
+
+        if (userId == null || sessionId == null) return Result.Failure("User not authenticated or session missing.");
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return Result.Failure("User not found.");
+
+        user.RevokeSession(sessionId.Value);
+        await _userRepository.UpdateAsync(user);
+
+        return Result.Success();
+    }
+}
+
+public record LogoutAllCommand() : IRequest<Result>;
+
+public class LogoutAllHandler : IRequestHandler<LogoutAllCommand, Result>
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ICurrentUserProvider _currentUserProvider;
+
+    public LogoutAllHandler(IUserRepository userRepository, ICurrentUserProvider currentUserProvider)
+    {
+        _userRepository = userRepository;
+        _currentUserProvider = currentUserProvider;
+    }
+
+    public async Task<Result> Handle(LogoutAllCommand request, CancellationToken cancellationToken)
+    {
+        var userId = _currentUserProvider.GetUserId();
+        if (userId == null) return Result.Failure("User not authenticated.");
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return Result.Failure("User not found.");
+
+        foreach (var session in user.Sessions.Where(s => !s.IsRevoked))
+        {
+            session.Revoke();
+        }
+
+        await _userRepository.UpdateAsync(user);
+
+        return Result.Success();
     }
 }

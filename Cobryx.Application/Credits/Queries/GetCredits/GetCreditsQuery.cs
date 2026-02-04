@@ -48,7 +48,7 @@ public class GetCreditsHandler : IRequestHandler<GetCreditsQuery, Result<Paginat
             .Select(c => new CreditDto(
                 c.Id,
                 c.CustomerId,
-                $"{c.Customer.FirstName} {c.Customer.LastName}", // Concatenate at DB level
+                $"{c.Customer.FirstName} {c.Customer.LastName}",
                 c.Principal.Amount,
                 c.Principal.Currency,
                 c.InterestRate,

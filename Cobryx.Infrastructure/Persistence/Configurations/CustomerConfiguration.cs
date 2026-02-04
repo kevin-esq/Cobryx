@@ -27,7 +27,6 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             a.Property(p => p.State).HasMaxLength(100);
         });
 
-        // Identity Document Segregation
         builder.OwnsOne(c => c.Document, d =>
         {
             d.Property(p => p.Type).HasMaxLength(20);
