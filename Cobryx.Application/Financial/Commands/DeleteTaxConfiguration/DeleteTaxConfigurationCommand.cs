@@ -23,14 +23,14 @@ public class DeleteTaxConfigurationHandler : IRequestHandler<DeleteTaxConfigurat
     public async Task<Result> Handle(DeleteTaxConfigurationCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure("TENANT.CONTEXT_MISSING");
 
         var tax = await _taxRepository.GetByIdAsync(request.Id);
         if (tax == null || tax.TenantId != tenantId.Value)
-            return Result.Failure("Tax configuration not found.");
+            return Result.Failure("TAX.NOT_FOUND");
 
         if (tax.IsDefault)
-            return Result.Failure("Cannot delete the default tax configuration.");
+            return Result.Failure("TAX.DELETE_DEFAULT_FORBIDDEN");
 
         tax.Delete();
         await _taxRepository.UpdateAsync(tax);

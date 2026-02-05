@@ -108,19 +108,64 @@ Infrastructure
 
 ---
 
-## 📡 API Response Standard
+## 📡 API Response Contract
 
-Every response follows this structure:
+Cobryx follows a strict, unified response contract to ensure stability and predictability for clients.
+
+### 1. ApiSuccessResponse
+
+Returned for successful operations (`200 OK`, `201 Created`).
 
 ```json
 {
   "success": true,
-  "message": "Operation completed successfully",
-  "data": {
-    "id": "...",
-    "name": "..."
-  },
-  "errors": null,
-  "traceId": "00-123456789..."
+  "message": null,
+  "data": { ... },
+  "outcomeCode": "AUTH.LOGIN.COMPLETED",
+  "traceId": "00-12345..."
 }
 ```
+
+*   **`outcomeCode`**: A stable, machine-readable code indicating the business state (e.g., `MFA_REQUIRED`, `SEARCH.COMPLETED`).
+*   **Zero-Text Policy**: Success responses do not return human-readable messages. The `message` field is typically `null`. The frontend determines the UI feedback based on the `outcomeCode`.
+
+### 2. ApiErrorResponse
+
+Returned for failed operations (`4xx`, `5xx`). Note: Specific error details are **stable codes**, not human-readable text.
+
+```json
+{
+  "success": false,
+  "message": "Validation Failed",
+  "errorCode": "VALIDATION.FAILED",
+  "numericCode": 1001,
+  "errors": {
+    "Email": [
+      {
+        "errorCode": "VALIDATION.AUTH.EMAIL.INVALID",
+        "params": { "Email": "invalid-value" }
+      }
+    ],
+    "Password": [
+      { "errorCode": "VALIDATION.AUTH.PASSWORD.TOO_SHORT", "params": { "MinLength": 12 } }
+    ]
+  },
+  "traceId": "00-12345..."
+}
+```
+
+*   **`errorCode`**: A top-level programmatic code for the overall error.
+*   **`numericCode`**: A unique integer for specialized client-side mapping.
+*   **`errors`**: A dictionary where keys are field names and values are arrays of structured error objects.
+    *   **`errorCode`**: Stable, programmatic validation code (e.g., `VALIDATION.CUSTOMER.PHONE.INVALID`).
+    *   **`params`**: Contextual values (e.g., minimum length, current input) for frontend i18n interpolation.
+
+> [!IMPORTANT]
+> The backend **does not** return human-readable error messages for specific validation rules or business failures. The frontend is exclusively responsible for translating error codes using its i18n system.
+
+---
+
+## 🛡 Error vs Outcome Contract
+
+*   **Errors**: Represent a failure in the business or domain logic. They always result in a **non-2xx** status code.
+*   **Outcomes**: Represent a successful request that resulted in a specific, expected business state. They always result in a **2xx** status code.

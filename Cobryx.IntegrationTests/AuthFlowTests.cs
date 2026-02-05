@@ -71,24 +71,24 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         );
         var signupResp = await _client.PostAsJsonAsync("/api/auth/signup", command);
         signupResp.StatusCode.Should().Be(HttpStatusCode.Created);
-        var signupResult = await signupResp.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        signupResult!.Code.Should().Be(AuthOutcomes.SignupVerificationRequired);
+        var signupResult = await signupResp.Content.ReadFromJsonAsync<ApiSuccessResponse<Guid>>();
+        signupResult!.OutcomeCode.Should().Be(AuthOutcomes.SignupVerificationRequired);
 
         var token = _emailService.GetLastToken(_email);
         token.Should().NotBeNull();
 
         var verifyResp = await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token));
         verifyResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var verifyResult = await verifyResp.Content.ReadFromJsonAsync<ApiResponse>();
-        verifyResult!.Code.Should().Be(AuthOutcomes.VerificationEmailVerified);
+        var verifyResult = await verifyResp.Content.ReadFromJsonAsync<ApiSuccessResponse>();
+        verifyResult!.OutcomeCode.Should().Be(AuthOutcomes.EmailVerified);
 
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(_email, DefaultPassword));
         loginResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
         loginResult!.Data!.Token.Should().NotBeNull();
         loginResult.Data.RequiresOnboarding.Should().BeTrue();
-        loginResult.Code.Should().Be(AuthOutcomes.LoginSuccess);
+        loginResult.OutcomeCode.Should().Be(AuthOutcomes.LoginCompleted);
 
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult.Data.Token);
 
@@ -116,8 +116,8 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("title").Should().NotBeNull();
-        root.GetProperty("code").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
+        root.GetProperty("message").Should().NotBeNull();
+        root.GetProperty("errorCode").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
 
         var json = await loginResp.Content.ReadAsStringAsync();
         using var doc = System.Text.Json.JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("code").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
+        doc.RootElement.GetProperty("errorCode").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token!));
 
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
 
         var loginCookies = loginResp.Headers.GetValues("Set-Cookie").ToList();
         var code1 = loginCookies.First(c => c.Contains("refreshToken=")).Split(';')[0];
@@ -187,7 +187,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token!));
 
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(_email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
 
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult!.Data!.Token);
 
@@ -202,7 +202,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var token = _emailService.GetLastToken(_email);
         await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token!));
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(_email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult!.Data!.Token);
 
         await _client.PostAsJsonAsync("/api/auth/onboard", new OnboardBusinessCommand("XAXX010101000", "Software", "Tech St 123"));
@@ -218,7 +218,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var token = _emailService.GetLastToken(_email);
         await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token!));
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(_email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult!.Data!.Token);
 
         await _client.PostAsync("/api/auth/logout", null);
@@ -232,8 +232,8 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
     {
         var resendResp = await _client.PostAsJsonAsync("/api/auth/resend-verification", new ResendVerificationCommand("nonexistent@example.com", "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await resendResp.Content.ReadFromJsonAsync<ApiResponse>();
-        result!.Code.Should().Be(AuthOutcomes.VerificationEmailSent);
+        var result = await resendResp.Content.ReadFromJsonAsync<ApiSuccessResponse>();
+        result!.OutcomeCode.Should().Be(AuthOutcomes.VerificationEmailSent);
     }
 
     [Fact]
@@ -246,8 +246,8 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
 
         var resendResp = await _client.PostAsJsonAsync("/api/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await resendResp.Content.ReadFromJsonAsync<ApiResponse>();
-        result!.Code.Should().Be(AuthOutcomes.VerificationEmailSent);
+        var result = await resendResp.Content.ReadFromJsonAsync<ApiSuccessResponse>();
+        result!.OutcomeCode.Should().Be(AuthOutcomes.VerificationEmailSent);
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
 
         var json = await resp.Content.ReadAsStringAsync();
         using var doc = System.Text.Json.JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("code").GetString().Should().Be("SYSTEM.TOO_MANY_REQUESTS");
+        doc.RootElement.GetProperty("errorCode").GetString().Should().Be("SYSTEM.TOO_MANY_REQUESTS");
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         token2.Should().NotBe(token1);
 
         var verifyResp = await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token1!));
-        verifyResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        verifyResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         var verifyResp2 = await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token2!));
         verifyResp2.StatusCode.Should().Be(HttpStatusCode.OK);

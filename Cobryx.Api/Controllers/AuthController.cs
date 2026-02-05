@@ -40,7 +40,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> SignUp(SignUpCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleCreatedResult("/api/auth/login", result, "Account created successfully. Please verify your email.", AuthOutcomes.SignupVerificationRequired);
+        return HandleCreatedResult("/api/auth/login", result, AuthOutcomes.SignupVerificationRequired);
     }
 
     /// <summary>
@@ -56,7 +56,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> Onboard(OnboardBusinessCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result, "Business onboarding completed successfully.");
+        return HandleResult(result);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> VerifyEmail(VerifyEmailCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result, "Email verified successfully.", AuthOutcomes.VerificationEmailVerified);
+        return HandleResult(result, AuthOutcomes.EmailVerified);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> ResendVerification(ResendVerificationCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result, "If an account exists with this email, a verification link has been sent.", AuthOutcomes.VerificationEmailSent);
+        return HandleResult(result, AuthOutcomes.VerificationEmailSent);
     }
 
     /// <summary>
@@ -115,8 +115,8 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        string? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginSuccess;
-        return HandleResult(result, "Login successful", code);
+        string? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginCompleted;
+        return HandleResult(result, code);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        return HandleResult(result, "Token refreshed successfully");
+        return HandleResult(result);
     }
 
     /// <summary>

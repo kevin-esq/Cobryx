@@ -4,6 +4,7 @@ using Cobryx.Application.Financial.Queries.GetTaxConfigurations;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -20,20 +21,20 @@ public class TaxesController : CobryxBaseController
     public async Task<IActionResult> GetTaxes()
     {
         var result = await Sender.Send(new GetTaxConfigurationsQuery());
-        return HandleResult(result, "Tax configurations retrieved successfully");
+        return HandleResult(result, FinancialOutcomes.Taxes.SearchCompleted);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateTax(CreateTaxConfigurationCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Tax configuration created successfully");
+        return HandleResult(result, FinancialOutcomes.Taxes.Created);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTax(Guid id)
     {
         var result = await Sender.Send(new DeleteTaxConfigurationCommand(id));
-        return HandleResult(result, "Tax configuration deleted successfully");
+        return HandleResult(result, FinancialOutcomes.Taxes.Deleted);
     }
 }

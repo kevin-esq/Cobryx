@@ -1,4 +1,6 @@
-using Cobryx.Api.Errors;
+using Cobryx.Api.Errors.Mappers;
+using Cobryx.Api.Errors.Definitions;
+using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -38,7 +40,13 @@ public class GlobalExceptionHandler : IExceptionHandler
             errorCode = "VALIDATION.FAILED";
             var errors = validationEx.Errors
                 .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => new
+                    {
+                        errorCode = e.ErrorCode,
+                        @params = e.FormattedMessagePlaceholderValues
+                    }).ToArray());
 
             metadata = new Dictionary<string, object> { { "errors", errors } };
         }
@@ -59,29 +67,30 @@ public class GlobalExceptionHandler : IExceptionHandler
         }
 
         httpContext.Response.StatusCode = statusCode;
-        httpContext.Response.ContentType = "application/problem+json";
+        httpContext.Response.ContentType = "application/json";
 
-        var problemDetails = new ProblemDetails
+        string message;
+        if (statusCode == StatusCodes.Status500InternalServerError)
         {
-            Status = statusCode,
-            Title = title,
-            Detail = statusCode == 500 ? "An unexpected error occurred." : targetException.Message,
-            Instance = httpContext.Request.Path
-        };
-
-        problemDetails.Extensions["code"] = errorCode;
-        problemDetails.Extensions["numericCode"] = numericCode;
-        problemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
-
-        if (metadata != null && metadata.Count > 0)
+            message = "An unexpected error occurred.";
+        }
+        else if (targetException is FluentValidation.ValidationException)
         {
-            foreach (var item in metadata)
-            {
-                problemDetails.Extensions[item.Key] = item.Value;
-            }
+            message = "Validation Failed";
+        }
+        else
+        {
+            message = targetException.Message;
         }
 
-        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        var response = ApiResponseFactory.Error(
+            message: message,
+            errorCode: errorCode,
+            numericCode: numericCode,
+            errors: metadata?.GetValueOrDefault("errors"),
+            traceId: httpContext.TraceIdentifier);
+
+        await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
         return true;
     }
 }

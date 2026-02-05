@@ -57,7 +57,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var token = _emailService.GetLastToken(email);
         await _client.PostAsJsonAsync("/api/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
         loginResult.Should().NotBeNull();
         loginResult!.Data.Should().NotBeNull();
 
@@ -86,7 +86,8 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("code").GetString().Should().Be("AUTH.ACCOUNT_LOCKED");
+        root.GetProperty("message").Should().NotBeNull();
+        root.GetProperty("errorCode").GetString().Should().Be("AUTH.ACCOUNT_LOCKED");
         root.GetProperty("numericCode").GetInt32().Should().Be(1102);
     }
 
@@ -112,7 +113,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("code").GetString().Should().Be("AUTH.NOT_AUTHENTICATED");
-        root.GetProperty("detail").GetString().Should().Contain("Session has been revoked");
+        root.GetProperty("errorCode").GetString().Should().Be("AUTH.NOT_AUTHENTICATED");
+        root.GetProperty("message").GetString().Should().Contain("Session has been revoked");
     }
 }

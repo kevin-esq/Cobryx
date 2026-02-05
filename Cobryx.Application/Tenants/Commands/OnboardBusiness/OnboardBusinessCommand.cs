@@ -7,6 +7,7 @@ using Cobryx.Domain.Exceptions.Users;
 using Cobryx.Domain.Exceptions.Common;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 
 namespace Cobryx.Application.Tenants.Commands.OnboardBusiness;
 
@@ -21,13 +22,17 @@ public class OnboardBusinessValidator : AbstractValidator<OnboardBusinessCommand
     public OnboardBusinessValidator()
     {
         RuleFor(x => x.TaxId)
-            .NotEmpty()
-            .MaximumLength(13)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.TaxId.Required)
+            .MaximumLength(13).WithErrorCode(TenantValidationErrors.TaxId.TooLong)
             .Matches(@"^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{2}[0-9A]$")
-            .WithMessage("Invalid Tax ID (RFC) format.");
+            .WithErrorCode(TenantValidationErrors.TaxId.Invalid);
 
-        RuleFor(x => x.Industry).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.BusinessAddress).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Industry)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.Industry.Required)
+            .MaximumLength(100).WithErrorCode(TenantValidationErrors.Industry.TooLong);
+        RuleFor(x => x.BusinessAddress)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.BusinessAddress.Required)
+            .MaximumLength(500).WithErrorCode(TenantValidationErrors.BusinessAddress.TooLong);
     }
 }
 

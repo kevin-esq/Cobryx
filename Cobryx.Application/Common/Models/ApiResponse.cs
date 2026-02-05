@@ -6,131 +6,135 @@ namespace Cobryx.Application.Common.Models;
 /// <summary>
 /// Base model for all API responses.
 /// </summary>
-public class ApiResponse<T>
+public abstract class ApiResponse
 {
     /// <summary>
     /// Indicates if the request was successful.
     /// </summary>
-    public virtual bool Success { get; set; }
+    [JsonPropertyName("success")]
+    public bool Success { get; protected set; }
 
     /// <summary>
     /// Response message.
     /// </summary>
-    public string Message { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Main response data.
-    /// </summary>
-    public T? Data { get; set; }
-
-    /// <summary>
-    /// List of errors if the request failed.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IEnumerable<string>? Errors { get; set; }
+    [JsonPropertyName("message")]
+    public string? Message { get; set; }
 
     /// <summary>
     /// Correlation ID for tracing requests.
     /// </summary>
     /// <example>00-123456789-abcd</example>
+    [JsonPropertyName("traceId")]
     public string? TraceId { get; set; }
+}
+
+/// <summary>
+/// Specialized response for successful requests (non-generic for easy attribute usage).
+/// </summary>
+public class ApiSuccessResponse : ApiResponse
+{
+    public ApiSuccessResponse() => Success = true;
+
+    /// <summary>
+    /// Main response data.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public object? Data { get; set; }
 
     /// <summary>
     /// Semantic outcome code for successful responses.
     /// </summary>
     /// <example>AUTH.SIGNUP.VERIFICATION_REQUIRED</example>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Code { get; set; }
-
-    public static ApiResponse<T> SuccessResponse(T data, string message = "Success", string? code = null)
-    {
-        return new ApiSuccessResponse<T>
-        {
-            Message = message,
-            Data = data,
-            Code = code
-        };
-    }
-
-    public static ApiResponse<T> FailureResponse(string message, IEnumerable<string>? errors = null, string? traceId = null)
-    {
-        return new ApiErrorResponse<T>
-        {
-            Message = message,
-            Errors = errors,
-            TraceId = traceId
-        };
-    }
+    [JsonPropertyName("outcomeCode")]
+    public string? OutcomeCode { get; set; }
 }
 
 /// <summary>
-/// Specialized response for successful requests.
+/// Specialized response for successful requests (generic for typesafety).
 /// </summary>
-public class ApiSuccessResponse<T> : ApiResponse<T>
+public class ApiSuccessResponse<T> : ApiResponse
 {
+    public ApiSuccessResponse() => Success = true;
+
     /// <summary>
-    /// Always true for successful responses.
+    /// Main response data.
     /// </summary>
-    /// <example>true</example>
-    [DefaultValue(true)]
-    public override bool Success { get; set; } = true;
+    [JsonPropertyName("data")]
+    public T? Data { get; set; }
+
+    /// <summary>
+    /// Semantic outcome code for successful responses.
+    /// </summary>
+    /// <example>AUTH.SIGNUP.VERIFICATION_REQUIRED</example>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("outcomeCode")]
+    public string? OutcomeCode { get; set; }
 }
 
 /// <summary>
 /// Specialized response for failed requests.
 /// </summary>
-public class ApiErrorResponse<T> : ApiResponse<T>
+public class ApiErrorResponse : ApiResponse
 {
+    public ApiErrorResponse() => Success = false;
+
     /// <summary>
-    /// Always false for error responses.
+    /// Programmatic error code (string-based).
     /// </summary>
-    /// <example>false</example>
-    [DefaultValue(false)]
-    public override bool Success { get; set; } = false;
+    /// <example>AUTH.INVALID_CREDENTIALS</example>
+    [JsonPropertyName("errorCode")]
+    public string? ErrorCode { get; set; }
+
+    /// <summary>
+    /// Programmatic numeric error code.
+    /// </summary>
+    /// <example>1101</example>
+    [JsonPropertyName("numericCode")]
+    public int? NumericCode { get; set; }
+
+    /// <summary>
+    /// Detailed list of errors (e.g., validation errors).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("errors")]
+    public object? Errors { get; set; }
 }
 
 /// <summary>
-/// Non-generic version of the API response.
+/// Static helpers for response creation.
 /// </summary>
-public class ApiResponse : ApiResponse<object>
+public static class ApiResponseFactory
 {
-    public static ApiResponse SuccessResponse(string message = "Success", string? code = null)
+    public static ApiSuccessResponse<T> Success<T>(T data, string? outcomeCode = null, string? message = null)
     {
-        return new ApiSuccessResponse
+        return new ApiSuccessResponse<T>
         {
+            Data = data,
             Message = message,
-            Data = null,
-            Code = code
+            OutcomeCode = outcomeCode
         };
     }
 
-    public static new ApiResponse FailureResponse(string message, IEnumerable<string>? errors = null, string? traceId = null)
+    public static ApiSuccessResponse<object?> Success(string? outcomeCode = null, string? message = null)
+    {
+        return new ApiSuccessResponse<object?>
+        {
+            Data = null,
+            Message = message,
+            OutcomeCode = outcomeCode
+        };
+    }
+
+    public static ApiErrorResponse Error(string message, string? errorCode = null, int? numericCode = null, object? errors = null, string? traceId = null)
     {
         return new ApiErrorResponse
         {
             Message = message,
+            ErrorCode = errorCode,
+            NumericCode = numericCode,
             Errors = errors,
             TraceId = traceId
         };
     }
-}
-
-/// <summary>
-/// Non-generic specialized response for success.
-/// </summary>
-public class ApiSuccessResponse : ApiResponse
-{
-    /// <example>true</example>
-    [DefaultValue(true)]
-    public override bool Success { get; set; } = true;
-}
-
-/// <summary>
-/// Non-generic specialized response for errors.
-/// </summary>
-public class ApiErrorResponse : ApiResponse
-{
-    /// <example>false</example>
-    [DefaultValue(false)]
-    public override bool Success { get; set; } = false;
 }

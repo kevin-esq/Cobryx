@@ -1,4 +1,6 @@
-namespace Cobryx.Api.Errors;
+using Cobryx.Api.Errors.Definitions;
+
+namespace Cobryx.Api.Errors.Catalog;
 
 public static class UserErrors
 {

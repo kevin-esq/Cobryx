@@ -5,6 +5,7 @@ using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 using Cobryx.Domain.Enums;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
@@ -28,13 +29,21 @@ public class SignUpValidator : AbstractValidator<SignUpCommand>
 {
     public SignUpValidator()
     {
-        RuleFor(x => x.BusinessName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.BusinessName)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.BusinessName.Required)
+            .MaximumLength(100).WithErrorCode(AuthValidationErrors.BusinessName.TooLong);
+        RuleFor(x => x.FirstName)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.FirstName.Required)
+            .MaximumLength(100).WithErrorCode(AuthValidationErrors.FirstName.TooLong);
+        RuleFor(x => x.LastName)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.LastName.Required)
+            .MaximumLength(100).WithErrorCode(AuthValidationErrors.LastName.TooLong);
+        RuleFor(x => x.Email)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Email.Required)
+            .EmailAddress().WithErrorCode(AuthValidationErrors.Email.Invalid);
         RuleFor(x => x.Password)
-            .NotEmpty()
-            .MinimumLength(12);
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Password.Required)
+            .MinimumLength(12).WithErrorCode(AuthValidationErrors.Password.TooShort);
     }
 }
 

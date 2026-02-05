@@ -4,6 +4,7 @@ using Cobryx.Application.Credits.Queries.GetCreditById;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -20,7 +21,7 @@ public class CreditsController : CobryxBaseController
     public async Task<IActionResult> Create(CreateCreditCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Credit created successfully");
+        return HandleResult(result, CreditOutcomes.Created);
     }
 
     [HttpGet]
@@ -28,7 +29,7 @@ public class CreditsController : CobryxBaseController
     public async Task<IActionResult> GetAll([FromQuery] Guid? customerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var result = await Sender.Send(new GetCreditsQuery(customerId, page, pageSize));
-        return HandleResult(result, "Credits retrieved successfully");
+        return HandleResult(result, CreditOutcomes.SearchCompleted);
     }
 
     [HttpGet("{id}")]
@@ -36,6 +37,6 @@ public class CreditsController : CobryxBaseController
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await Sender.Send(new GetCreditByIdQuery(id));
-        return HandleResult(result, "Credit retrieved successfully");
+        return HandleResult(result, CreditOutcomes.SearchCompleted);
     }
 }

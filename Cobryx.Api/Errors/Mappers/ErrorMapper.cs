@@ -1,6 +1,8 @@
 using Cobryx.Domain.Common;
+using Cobryx.Api.Errors.Definitions;
+using Cobryx.Api.Errors.Catalog;
 
-namespace Cobryx.Api.Errors;
+namespace Cobryx.Api.Errors.Mappers;
 
 public static class ErrorMapper
 {

@@ -86,7 +86,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
         Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
 
-        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>(JsonOptions);
+        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
         Assert.NotNull(apiResponse?.Data);
         Assert.NotNull(apiResponse.Data.Token);
 
@@ -105,7 +105,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
         var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginCmd);
-        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<ApiResponse<AuthResult>>(JsonOptions);
+        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiResponse!.Data!.Token);
 
         var logoutResponse = await _client.PostAsJsonAsync("/api/auth/logout", new { });

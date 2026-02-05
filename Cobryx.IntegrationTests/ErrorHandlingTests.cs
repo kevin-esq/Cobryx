@@ -54,15 +54,36 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var json = await response.Content.ReadAsStringAsync();
         var problemDetails = JsonSerializer.Deserialize<JsonElement>(json);
 
-        problemDetails.GetProperty("status").GetInt32().Should().Be(400);
-        problemDetails.GetProperty("title").GetString().Should().Be("Validation Failed");
-        problemDetails.GetProperty("code").GetString().Should().Be("VALIDATION.FAILED");
+        problemDetails.GetProperty("success").GetBoolean().Should().BeFalse();
+        problemDetails.GetProperty("message").GetString().Should().Be("Validation Failed");
+        problemDetails.GetProperty("errorCode").GetString().Should().Be("VALIDATION.FAILED");
         problemDetails.GetProperty("numericCode").GetInt32().Should().Be(1001);
 
         var errors = problemDetails.GetProperty("errors");
         errors.ValueKind.Should().Be(JsonValueKind.Object);
-        errors.TryGetProperty("BusinessName", out _).Should().BeTrue();
-        errors.TryGetProperty("Email", out _).Should().BeTrue();
+
+        var businessNameErrors = errors.GetProperty("BusinessName");
+        businessNameErrors.ValueKind.Should().Be(JsonValueKind.Array);
+        var firstError = businessNameErrors[0];
+        firstError.GetProperty("errorCode").GetString().Should().Be("VALIDATION.AUTH.BUSINESS_NAME.REQUIRED");
+
+        var emailErrors = errors.GetProperty("Email");
+        emailErrors[0].GetProperty("errorCode").GetString().Should().Be("VALIDATION.AUTH.EMAIL.INVALID");
+    }
+
+    [Fact]
+    public async Task NoHumanReadableText_InValidationErrors()
+    {
+        var command = new SignUpCommand("", "", "", "invalid", "short");
+        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+
+        var json = await response.Content.ReadAsStringAsync();
+
+        // Assert that common human-readable validation strings are NOT present
+        json.Should().NotContain("required");
+        json.Should().NotContain("must not be empty");
+        json.Should().NotContain("format");
+        json.Should().NotContain("longer than");
     }
 
     [Fact]
@@ -82,9 +103,9 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("status").GetInt32().Should().Be(401);
-        root.GetProperty("title").GetString().Should().Be("Invalid Credentials");
-        root.GetProperty("code").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
+        root.GetProperty("success").GetBoolean().Should().BeFalse();
+        root.GetProperty("message").GetString().Should().Be("Invalid Credentials");
+        root.GetProperty("errorCode").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
         root.GetProperty("numericCode").GetInt32().Should().Be(1101);
         root.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
     }

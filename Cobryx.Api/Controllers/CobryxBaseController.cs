@@ -1,4 +1,5 @@
-using Cobryx.Api.Errors;
+using Cobryx.Api.Errors.Mappers;
+using Cobryx.Api.Errors.Definitions;
 using Cobryx.Application.Common.Models;
 using Concordia;
 using Cobryx.Domain.Common;
@@ -17,84 +18,64 @@ public abstract class CobryxBaseController : ControllerBase
         Sender = sender;
     }
 
-    protected IActionResult HandleResult<T>(Result<T> result, string successMessage = "Operation completed successfully", string? code = null)
+    protected IActionResult HandleResult<T>(Result<T> result, string? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponse<T>.SuccessResponse(result.Value!, successMessage, code));
+            return Ok(ApiResponseFactory.Success(result.Value!, outcomeCode));
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
         var errorDef = ErrorMapper.Map(errorCode);
 
-        return StatusCode(errorDef.StatusCode, new ProblemDetails
-        {
-            Status = errorDef.StatusCode,
-            Title = errorDef.Title,
-            Detail = errorCode,
-            Instance = HttpContext.Request.Path,
-            Extensions = {
-                ["code"] = errorCode,
-                ["numericCode"] = errorDef.NumericCode,
-                ["traceId"] = HttpContext.TraceIdentifier
-            }
-        });
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            message: errorDef.Title,
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier));
     }
 
-    protected IActionResult HandleResult(Result result, string successMessage = "Operation completed successfully", string? code = null)
+    protected IActionResult HandleResult(Result result, string? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponse.SuccessResponse(successMessage, code));
+            return Ok(ApiResponseFactory.Success(outcomeCode: outcomeCode));
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
         var errorDef = ErrorMapper.Map(errorCode);
 
-        return StatusCode(errorDef.StatusCode, new ProblemDetails
-        {
-            Status = errorDef.StatusCode,
-            Title = errorDef.Title,
-            Detail = errorCode,
-            Instance = HttpContext.Request.Path,
-            Extensions = {
-                ["code"] = errorCode,
-                ["numericCode"] = errorDef.NumericCode,
-                ["traceId"] = HttpContext.TraceIdentifier
-            }
-        });
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            message: errorDef.Title,
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier));
     }
 
-    protected IActionResult Success<T>(T data, string message = "Success", string? code = null)
+    protected IActionResult Success<T>(T data, string? outcomeCode = null)
     {
-        return Ok(ApiResponse<T>.SuccessResponse(data, message, code));
+        return Ok(ApiResponseFactory.Success(data, outcomeCode));
     }
 
-    protected IActionResult CreatedResult<T>(string uri, T data, string message = "Resource created successfully", string? code = null)
+    protected IActionResult CreatedResult<T>(string uri, T data, string? outcomeCode = null)
     {
-        return Created(uri, ApiResponse<T>.SuccessResponse(data, message, code));
+        return Created(uri, ApiResponseFactory.Success(data, outcomeCode));
     }
 
-    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, string successMessage = "Resource created successfully", string? code = null)
+    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, string? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
-            return Created(uri, ApiResponse<T>.SuccessResponse(result.Value!, successMessage, code));
+            return Created(uri, ApiResponseFactory.Success(result.Value!, outcomeCode));
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
         var errorDef = ErrorMapper.Map(errorCode);
 
-        return StatusCode(errorDef.StatusCode, new ProblemDetails
-        {
-            Status = errorDef.StatusCode,
-            Title = errorDef.Title,
-            Detail = errorCode,
-            Extensions = {
-                ["code"] = errorCode,
-                ["numericCode"] = errorDef.NumericCode,
-                ["traceId"] = HttpContext.TraceIdentifier
-            }
-        });
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            message: errorDef.Title,
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier));
     }
 }

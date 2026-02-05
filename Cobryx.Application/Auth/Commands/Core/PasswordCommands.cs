@@ -5,6 +5,7 @@ using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
 using Cobryx.Application.Common.Observability;
@@ -18,7 +19,9 @@ public class ForgotPasswordValidator : AbstractValidator<ForgotPasswordCommand>
 {
     public ForgotPasswordValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Email)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Email.Required)
+            .EmailAddress().WithErrorCode(AuthValidationErrors.Email.Invalid);
     }
 }
 
@@ -94,8 +97,11 @@ public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>
 {
     public ResetPasswordValidator()
     {
-        RuleFor(x => x.Token).NotEmpty();
-        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(12);
+        RuleFor(x => x.Token)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Token.Required);
+        RuleFor(x => x.NewPassword)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Password.Required)
+            .MinimumLength(12).WithErrorCode(AuthValidationErrors.Password.TooShort);
     }
 }
 
@@ -118,14 +124,14 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, Result
         var user = await _userRepository.GetBySecurityTokenHashAsync(tokenHash, SecurityTokenType.PasswordReset, cancellationToken);
         if (user == null)
         {
-            return Result.Failure("Invalid or expired token.");
+            return Result.Failure("AUTH.TOKEN.INVALID");
         }
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.PasswordReset);
 
         if (token is not { IsActive: true })
         {
-            return Result.Failure("Invalid or expired token.");
+            return Result.Failure("AUTH.TOKEN.INVALID");
         }
 
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));
@@ -147,14 +153,15 @@ public class ChangePasswordValidator : AbstractValidator<ChangePasswordCommand>
 {
     public ChangePasswordValidator()
     {
-        RuleFor(x => x.CurrentPassword).NotEmpty();
+        RuleFor(x => x.CurrentPassword)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Password.Required);
         RuleFor(x => x.NewPassword)
-            .NotEmpty()
-            .MinimumLength(12)
-            .Matches("[A-Z]").WithMessage("Password must contain at least one uppercase letter.")
-            .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one number.")
-            .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain at least one special character.");
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Password.Required)
+            .MinimumLength(12).WithErrorCode(AuthValidationErrors.Password.TooShort)
+            .Matches("[A-Z]").WithErrorCode(AuthValidationErrors.Password.NoUppercase)
+            .Matches("[a-z]").WithErrorCode(AuthValidationErrors.Password.NoLowercase)
+            .Matches("[0-9]").WithErrorCode(AuthValidationErrors.Password.NoNumber)
+            .Matches("[^a-zA-Z0-9]").WithErrorCode(AuthValidationErrors.Password.NoSpecial);
     }
 }
 
@@ -180,14 +187,14 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
     public async Task<Result> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (!userId.HasValue) return Result.Failure("User not authenticated.");
+        if (!userId.HasValue) return Result.Failure("AUTH.NOT_AUTHENTICATED");
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure("User not found.");
+        if (user == null) return Result.Failure("USER.NOT_FOUND");
 
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
-            return Result.Failure("Invalid current password.");
+            return Result.Failure("AUTH.INVALID_CREDENTIALS");
         }
 
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));

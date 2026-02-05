@@ -8,6 +8,7 @@ using Cobryx.Domain.Exceptions.Auth;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
@@ -17,8 +18,11 @@ public class LoginValidator : AbstractValidator<LoginCommand>
 {
     public LoginValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
-        RuleFor(x => x.Password).NotEmpty();
+        RuleFor(x => x.Email)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Email.Required)
+            .EmailAddress().WithErrorCode(AuthValidationErrors.Email.Invalid);
+        RuleFor(x => x.Password)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Password.Required);
     }
 }
 

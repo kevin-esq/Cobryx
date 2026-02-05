@@ -3,6 +3,7 @@ using Cobryx.Application.Financial.Queries.GetInvoices;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -19,13 +20,13 @@ public class InvoicesController : CobryxBaseController
     public async Task<IActionResult> GetInvoices()
     {
         var result = await Sender.Send(new GetInvoicesQuery());
-        return HandleResult(result, "Invoices retrieved successfully");
+        return HandleResult(result, FinancialOutcomes.Invoices.SearchCompleted);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateInvoice(CreateInvoiceCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Invoice created successfully");
+        return HandleResult(result, FinancialOutcomes.Invoices.Created);
     }
 }

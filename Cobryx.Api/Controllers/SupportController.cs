@@ -2,6 +2,7 @@ using Cobryx.Application.Support.Commands.Create;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -18,6 +19,6 @@ public class SupportController : CobryxBaseController
     public async Task<IActionResult> Create(CreateSupportTicketCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Support ticket created successfully");
+        return HandleResult(result, "SUPPORT.TICKET.CREATED");
     }
 }

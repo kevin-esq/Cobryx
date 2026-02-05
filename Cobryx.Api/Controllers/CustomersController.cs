@@ -4,6 +4,7 @@ using Cobryx.Application.Common.Models;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -22,7 +23,7 @@ public class CustomersController : CobryxBaseController
     public async Task<IActionResult> Create(CreateCustomerCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Customer created successfully");
+        return HandleResult(result, CustomerOutcomes.Created);
     }
 
     [HttpGet]
@@ -30,7 +31,7 @@ public class CustomersController : CobryxBaseController
     public async Task<IActionResult> GetAll([FromQuery] string? searchTerm, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var result = await Sender.Send(new Cobryx.Application.Customers.Queries.GetCustomers.GetCustomersQuery(searchTerm, page, pageSize));
-        return HandleResult(result, "Customers retrieved successfully");
+        return HandleResult(result, CustomerOutcomes.SearchCompleted);
     }
 
     [HttpGet("{id}")]
@@ -38,7 +39,7 @@ public class CustomersController : CobryxBaseController
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await Sender.Send(new Cobryx.Application.Customers.Queries.GetCustomerById.GetCustomerByIdQuery(id));
-        return HandleResult(result, "Customer retrieved successfully");
+        return HandleResult(result, CustomerOutcomes.SearchCompleted);
     }
 
     [HttpPut("{id}")]
@@ -47,7 +48,7 @@ public class CustomersController : CobryxBaseController
     {
         if (id != command.Id) throw new FluentValidation.ValidationException("Mismatched ID");
         var result = await Sender.Send(command);
-        return HandleResult(result, "Customer updated successfully");
+        return HandleResult(result, CustomerOutcomes.Updated);
     }
 
     [HttpDelete("{id}")]
@@ -55,6 +56,6 @@ public class CustomersController : CobryxBaseController
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await Sender.Send(new Cobryx.Application.Customers.Commands.Delete.DeleteCustomerCommand(id));
-        return HandleResult(result, "Customer deleted successfully");
+        return HandleResult(result, CustomerOutcomes.Deleted);
     }
 }
