@@ -8,8 +8,8 @@ public abstract class CobryxException : Exception
     public abstract string ErrorCode { get; }
     public Dictionary<string, object> Metadata { get; }
 
-    protected CobryxException(string message, Dictionary<string, object>? metadata = null)
-        : base(message)
+    protected CobryxException(Dictionary<string, object>? metadata = null)
+        : base()
     {
         Metadata = metadata ?? new Dictionary<string, object>();
     }

@@ -40,7 +40,7 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void AddAllocation(Guid invoiceId, Money amount)
     {
-        if (amount.Amount <= 0) throw new ArgumentException("Allocation amount must be positive.");
+        if (amount.Amount <= 0) throw new DomainException("DOMAIN.INVALID_ALLOCATION_AMOUNT");
         _allocations.Add(new PaymentAllocation(Id, invoiceId, amount));
     }
 

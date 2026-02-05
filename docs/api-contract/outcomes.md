@@ -1,50 +1,187 @@
-# API Outcome Contract
+# Outcomes Contract
 
-This document defines the stable, machine-readable outcome codes returned by the Cobryx API. These codes are used by the frontend to determine application flow and display appropriate localized messages.
+This document defines the possible success outcomes for API operations. These codes are returned in the `outcome` field of the API response.
 
-## Zero-Text Policy
-The Cobryx API follows a strict **Zero-Text Policy** for success responses. The `message` field in the response is optional and usually `null`. The `outcomeCode` is the primary indicator of the operation's result.
+## Authentication Outcomes
 
-## State Taxonomy
-All outcome codes follow the pattern: `{CONTEXT}.{DOMAIN}.{STATE}`
+### AUTH.LOGIN.COMPLETED
+**Endpoint:** POST /api/auth/login
+**HTTP Status:** 200
 
-| State | Description |
-| :--- | :--- |
-| `COMPLETED` | The operation was fully successful and is finished. |
-| `CREATED` | A new resource was successfully created. |
-| `UPDATED` | An existing resource was successfully updated. |
-| `DELETED` | A resource was successfully removed. |
-| `REQUIRED` | The flow is blocked awaiting further user action (e.g., MFA). |
-| `PENDING` | The operation has started but is awaiting background processing or external confirmation. |
-| `SEARCH.COMPLETED` | A search or list operation was successful. |
+#### Meaning
+The user has successfully logged in and a session has been established.
 
-## Outcome Catalogs
+#### Expected Frontend Behavior
+- Store the returned `token` and `refreshToken` (if provided).
+- Redirect the user to the dashboard or intended page.
 
-### Authentication (`AUTH`)
-| Code | Meaning |
-| :--- | :--- |
-| `AUTH.LOGIN.COMPLETED` | Login successful, JWT issued. |
-| `AUTH.LOGIN.MFA_REQUIRED` | Credentials valid, but MFA is required to complete. |
-| `AUTH.SIGNUP.CREATED` | Account created successfully. |
-| `AUTH.SIGNUP.VERIFICATION_REQUIRED` | Account created, but email verification is pending. |
-| `AUTH.EMAIL_VERIFIED` | Email address was successfully verified. |
-| `AUTH.MFA.ENABLED` | MFA has been enabled for the user. |
-| `AUTH.MFA.VERIFIED` | MFA verification (TOTP/FIDO2) was successful. |
-| `AUTH.FIDO2.REGISTERED` | A new passkey was successfully registered. |
+---
 
-### Customers (`CUSTOMER`)
-| Code | Meaning |
-| :--- | :--- |
-| `CUSTOMER.CREATED` | Customer created. |
-| `CUSTOMER.UPDATED` | Customer updated. |
-| `CUSTOMER.DELETED` | Customer deleted. |
-| `CUSTOMER.SEARCH.COMPLETED` | Search results returned. |
+### AUTH.LOGIN.MFA_REQUIRED
+**Endpoint:** POST /api/auth/login
+**HTTP Status:** 200
 
-### Financial (`FINANCIAL`)
-| Code | Meaning |
-| :--- | :--- |
-| `FINANCIAL.PAYMENT.REGISTERED` | Payment was successfully registered. |
-| `FINANCIAL.TAX.CREATED` | Tax configuration created. |
-| `FINANCIAL.INVOICE.CREATED` | Invoice generated. |
+#### Meaning
+Primary credentials (email/password) are valid, but Multi-Factor Authentication is required to complete the login.
 
-*(Note: This list is not exhaustive and is updated as the API evolves.)*
+#### Expected Frontend Behavior
+- Redirect user to the MFA verification screen.
+- Pass the temporary session identifier if required by the MFA endpoint.
+
+---
+
+### AUTH.SIGNUP.CREATED
+**Endpoint:** POST /api/auth/register
+**HTTP Status:** 201
+
+#### Meaning
+A new user account has been successfully created.
+
+#### Expected Frontend Behavior
+- Notify the user of success.
+- Redirect to login or verification page depending on `AUTH.SIGNUP.VERIFICATION_REQUIRED`.
+
+---
+
+### AUTH.SIGNUP.VERIFICATION_REQUIRED
+**Endpoint:** POST /api/auth/register
+**HTTP Status:** 200
+
+#### Meaning
+Account created, but email verification is required before login is allowed.
+
+#### Expected Frontend Behavior
+- Show a message instructing the user to check their email.
+
+---
+
+### AUTH.VERIFICATION_EMAIL_SENT
+**Endpoint:** POST /api/auth/resend-verification
+**HTTP Status:** 200
+
+#### Meaning
+A new verification email has been dispatched.
+
+---
+
+### AUTH.EMAIL_VERIFIED
+**Endpoint:** POST /api/auth/verify-email
+**HTTP Status:** 200
+
+#### Meaning
+The user's email address has been successfully verified.
+
+---
+
+### AUTH.PASSWORD_RESET_REQUESTED
+**Endpoint:** POST /api/auth/forgot-password
+**HTTP Status:** 200
+
+#### Meaning
+If the account exists, a password reset link has been sent.
+
+#### Notes
+For security reasons, this outcome is returned even if the email does not exist in the system.
+
+---
+
+### AUTH.PASSWORD_CHANGED
+**Endpoint:** POST /api/auth/reset-password
+**HTTP Status:** 200
+
+#### Meaning
+The user's password has been successfully updated.
+
+---
+
+### AUTH.MFA.ENABLED
+**Endpoint:** POST /api/auth/mfa/enable
+**HTTP Status:** 200
+
+#### Meaning
+MFA has been enabled for the user account.
+
+---
+
+### AUTH.MFA.VERIFIED
+**Endpoint:** POST /api/auth/mfa/verify
+**HTTP Status:** 200
+
+#### Meaning
+The provided MFA code was valid.
+
+---
+
+### AUTH.FIDO2.REGISTERED
+**Endpoint:** POST /api/auth/fido2/register
+**HTTP Status:** 200
+
+#### Meaning
+A new FIDO2 (WebAuthn) credential has been registered.
+
+---
+
+### AUTH.SESSION.REVOKED
+**Endpoint:** POST /api/auth/logout
+**HTTP Status:** 200
+
+#### Meaning
+The user session has been invalidated.
+
+---
+
+## Customer Outcomes
+
+### CUSTOMER.CREATED
+**Endpoint:** POST /api/customers
+**HTTP Status:** 201
+
+#### Meaning
+A new customer record has been created.
+
+---
+
+### CUSTOMER.UPDATED
+**Endpoint:** PUT /api/customers/{id}
+**HTTP Status:** 200
+
+#### Meaning
+Customer details have been updated.
+
+---
+
+### CUSTOMER.DELETED
+**Endpoint:** DELETE /api/customers/{id}
+**HTTP Status:** 200
+
+#### Meaning
+The customer record has been soft-deleted or removed.
+
+---
+
+### CUSTOMER.SEARCH.COMPLETED
+**Endpoint:** GET /api/customers
+**HTTP Status:** 200
+
+#### Meaning
+The search query was executed successfully (even if zero results were found).
+
+---
+
+## Tenant Outcomes
+
+### TENANT.BRANDING.UPDATED
+**Endpoint:** PUT /api/tenant/branding
+**HTTP Status:** 200
+
+#### Meaning
+Tenant branding settings (logo, colors) have been updated.
+
+---
+
+### TENANT.SETTINGS.UPDATED
+**Endpoint:** PUT /api/tenant/settings
+**HTTP Status:** 200
+
+#### Meaning
+General tenant configuration has been updated.

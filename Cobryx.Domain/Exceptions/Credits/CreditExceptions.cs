@@ -7,7 +7,7 @@ public class CreditNotFoundException : CobryxException
     public override string ErrorCode => "CREDITS.NOT_FOUND";
 
     public CreditNotFoundException(Guid creditId)
-        : base($"Credit record with ID {creditId} was not found.")
+        : base(null!)
     {
         Metadata.Add("CreditId", creditId);
     }
@@ -18,7 +18,7 @@ public class InsufficientCreditsException : CobryxException
     public override string ErrorCode => "CREDITS.INSUFFICIENT";
 
     public InsufficientCreditsException(decimal currentBalance, decimal requiredAmount)
-        : base($"Insufficient credits. Available: {currentBalance}, Required: {requiredAmount}.")
+        : base(null!)
     {
         Metadata.Add("CurrentBalance", currentBalance);
         Metadata.Add("RequiredAmount", requiredAmount);

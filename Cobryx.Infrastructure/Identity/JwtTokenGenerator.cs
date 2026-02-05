@@ -6,6 +6,7 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Cobryx.Domain.Exceptions.System;
 
 namespace Cobryx.Infrastructure.Identity;
 
@@ -20,7 +21,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateAccessToken(User user, Guid sessionId, Role? roleOverride = null)
     {
-        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -78,7 +79,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateMfaToken(User user)
     {
-        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -103,7 +104,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
     public Guid? ValidateMfaToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
         try

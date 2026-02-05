@@ -29,10 +29,10 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Customer(Guid tenantId, string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("FirstName is required.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("LastName is required.", nameof(lastName));
-        if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required.", nameof(phone));
+        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException("DOMAIN.FIRST_NAME_REQUIRED");
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException("DOMAIN.LAST_NAME_REQUIRED");
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException("DOMAIN.PHONE_REQUIRED");
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -52,9 +52,9 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("FirstName is required.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("LastName is required.", nameof(lastName));
-        if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required.", nameof(phone));
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException("DOMAIN.FIRST_NAME_REQUIRED");
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException("DOMAIN.LAST_NAME_REQUIRED");
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException("DOMAIN.PHONE_REQUIRED");
 
         FirstName = firstName;
         LastName = lastName;

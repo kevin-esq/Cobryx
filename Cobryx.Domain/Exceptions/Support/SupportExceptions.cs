@@ -7,7 +7,7 @@ public class SupportTicketNotFoundException : CobryxException
     public override string ErrorCode => "SUPPORT.TICKET_NOT_FOUND";
 
     public SupportTicketNotFoundException(Guid ticketId)
-        : base($"Support ticket with ID {ticketId} was not found.")
+        : base(null!)
     {
         Metadata.Add("TicketId", ticketId);
     }

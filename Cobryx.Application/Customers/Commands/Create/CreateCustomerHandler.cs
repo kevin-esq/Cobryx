@@ -28,7 +28,7 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
         var existing = await _customerRepository.GetByPhoneAsync(tenantId, request.Phone);
         if (existing != null)
         {
-            throw new DuplicateCustomerException("Customer with this phone number already exists.");
+            throw new DuplicateCustomerException();
         }
 
         var customer = new Customer(

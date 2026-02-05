@@ -44,7 +44,7 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             var existing = await _customerRepository.GetByPhoneAsync(tenantId.Value, request.Phone);
             if (existing != null)
             {
-                throw new DuplicateCustomerException("Another customer already has this phone number.");
+                throw new DuplicateCustomerException();
             }
         }
 

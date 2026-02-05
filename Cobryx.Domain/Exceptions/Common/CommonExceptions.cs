@@ -4,10 +4,10 @@ namespace Cobryx.Domain.Exceptions.Common;
 
 public class EntityNotFoundException : CobryxException
 {
-    public override string ErrorCode => "DOMAIN.ENTITY_NOT_FOUND";
+    public override string ErrorCode => DomainErrorCodes.Common.EntityNotFound;
 
     public EntityNotFoundException(string entityName, object key)
-        : base($"{entityName} with key '{key}' was not found.")
+        : base()
     {
         Metadata.Add("Entity", entityName);
         Metadata.Add("Key", key);
@@ -16,10 +16,10 @@ public class EntityNotFoundException : CobryxException
 
 public class UnauthorizedContextException : CobryxException
 {
-    public override string ErrorCode => "COMMON.UNAUTHORIZED_CONTEXT";
+    public override string ErrorCode => DomainErrorCodes.Common.UnauthorizedContext;
 
-    public UnauthorizedContextException(string message = "Operation is not allowed in the current context.")
-        : base(message)
+    public UnauthorizedContextException()
+        : base()
     {
     }
 }

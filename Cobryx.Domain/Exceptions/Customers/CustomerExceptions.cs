@@ -4,10 +4,10 @@ namespace Cobryx.Domain.Exceptions.Customers;
 
 public class CustomerNotFoundException : CobryxException
 {
-    public override string ErrorCode => "CUSTOMER.NOT_FOUND";
+    public override string ErrorCode => DomainErrorCodes.Customer.NotFound;
 
     public CustomerNotFoundException(Guid customerId)
-        : base($"Customer with ID {customerId} was not found.")
+        : base()
     {
         Metadata.Add("CustomerId", customerId);
     }
@@ -15,9 +15,9 @@ public class CustomerNotFoundException : CobryxException
 
 public class DuplicateCustomerException : CobryxException
 {
-    public override string ErrorCode => "CUSTOMER.DUPLICATE";
+    public override string ErrorCode => DomainErrorCodes.Customer.Duplicate;
 
-    public DuplicateCustomerException(string message) : base(message)
+    public DuplicateCustomerException() : base()
     {
     }
 }

@@ -29,7 +29,6 @@ public abstract class CobryxBaseController : ControllerBase
         var errorDef = ErrorMapper.Map(errorCode);
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
-            message: errorDef.Title,
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
             traceId: HttpContext.TraceIdentifier));
@@ -46,7 +45,6 @@ public abstract class CobryxBaseController : ControllerBase
         var errorDef = ErrorMapper.Map(errorCode);
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
-            message: errorDef.Title,
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
             traceId: HttpContext.TraceIdentifier));
@@ -73,7 +71,6 @@ public abstract class CobryxBaseController : ControllerBase
         var errorDef = ErrorMapper.Map(errorCode);
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
-            message: errorDef.Title,
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
             traceId: HttpContext.TraceIdentifier));

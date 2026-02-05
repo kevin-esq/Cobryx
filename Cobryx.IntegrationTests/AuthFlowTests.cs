@@ -116,7 +116,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("message").Should().NotBeNull();
+        root.TryGetProperty("message", out _).Should().BeFalse();
         root.GetProperty("errorCode").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
     }
 
@@ -208,7 +208,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         await _client.PostAsJsonAsync("/api/auth/onboard", new OnboardBusinessCommand("XAXX010101000", "Software", "Tech St 123"));
 
         var onboardResp2 = await _client.PostAsJsonAsync("/api/auth/onboard", new OnboardBusinessCommand("XAXX010101000", "Software", "Tech St 123"));
-        onboardResp2.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        onboardResp2.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]

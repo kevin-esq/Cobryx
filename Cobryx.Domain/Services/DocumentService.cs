@@ -1,5 +1,6 @@
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.Services;
 
@@ -26,12 +27,12 @@ public class DocumentService
     {
         if (fileStream.Length > MaxFileSize)
         {
-            throw new InvalidOperationException("File size exceeds the 10MB limit.");
+            throw new DomainException(DomainErrorCodes.Documents.FileSizeExceeded);
         }
 
         if (!await _scanner.IsSafeAsync(fileStream))
         {
-            throw new InvalidOperationException("File contains a virus and cannot be uploaded.");
+            throw new DomainException(DomainErrorCodes.Documents.VirusDetected);
         }
 
         fileStream.Position = 0;

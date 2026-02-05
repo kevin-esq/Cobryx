@@ -42,7 +42,7 @@ public class Coupon : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Redeem()
     {
-        if (!IsValid()) throw new InvalidOperationException("Coupon is not valid.");
+        if (!IsValid()) throw new DomainException("DOMAIN.INVALID_COUPON");
         TimesRedeemed++;
         UpdateTimestamp();
     }

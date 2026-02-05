@@ -37,7 +37,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         }
         else if (targetException is FluentValidation.ValidationException validationEx)
         {
-            errorCode = "VALIDATION.FAILED";
+            errorCode = DomainErrorCodes.System.ValidationFailed;
             var errors = validationEx.Errors
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(
@@ -52,10 +52,12 @@ public class GlobalExceptionHandler : IExceptionHandler
         }
         else
         {
-            errorCode = "SYSTEM.INTERNAL_ERROR";
+            errorCode = DomainErrorCodes.System.InternalError;
         }
 
-        var (statusCode, numericCode, title) = ErrorMapper.Map(errorCode);
+        var errorDef = ErrorMapper.Map(errorCode);
+        var statusCode = errorDef.StatusCode;
+        var numericCode = errorDef.NumericCode;
 
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
@@ -69,22 +71,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/json";
 
-        string message;
-        if (statusCode == StatusCodes.Status500InternalServerError)
-        {
-            message = "An unexpected error occurred.";
-        }
-        else if (targetException is FluentValidation.ValidationException)
-        {
-            message = "Validation Failed";
-        }
-        else
-        {
-            message = targetException.Message;
-        }
-
         var response = ApiResponseFactory.Error(
-            message: message,
             errorCode: errorCode,
             numericCode: numericCode,
             errors: metadata?.GetValueOrDefault("errors"),

@@ -54,9 +54,6 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
 
         result.GetProperty("success").GetBoolean().Should().BeTrue();
         result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.SIGNUP.VERIFICATION_REQUIRED");
-        
-        // Zero-Text Policy: Message should be null
-        result.GetProperty("message").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
@@ -88,8 +85,5 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
 
         result.GetProperty("success").GetBoolean().Should().BeTrue();
         result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.LOGIN.COMPLETED");
-        
-        // Zero-Text Policy: Message should be null
-        result.GetProperty("message").ValueKind.Should().Be(JsonValueKind.Null);
     }
 }

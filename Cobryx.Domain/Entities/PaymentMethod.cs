@@ -18,9 +18,9 @@ public class PaymentMethod : BaseEntity, IAggregateRoot, ITenantEntity
 
     public PaymentMethod(Guid tenantId, string name, string code, string? description = null)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Payment method name is required.");
-        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Payment method code is required.");
+        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException("DOMAIN.PAYMENT_METHOD.NAME_REQUIRED");
+        if (string.IsNullOrWhiteSpace(code)) throw new DomainException("DOMAIN.PAYMENT_METHOD.CODE_REQUIRED");
 
         TenantId = tenantId;
         Name = name;

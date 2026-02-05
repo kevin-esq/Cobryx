@@ -37,7 +37,7 @@ public class SessionValidationFilter : IAsyncActionFilter
 
             if (session == null || session.IsRevoked)
             {
-                throw new NotAuthenticatedException("Session has been revoked. Please log in again.");
+                throw new NotAuthenticatedException();
             }
 
             var skipCheck = context.ActionDescriptor.EndpointMetadata.Any(em => em is SkipOnboardingCheckAttribute);

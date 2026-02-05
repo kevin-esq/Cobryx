@@ -4,21 +4,21 @@ namespace Cobryx.Domain.Exceptions.Users;
 
 public class UserNotRegisteredException : CobryxException
 {
-    public override string ErrorCode => "USER.NOT_REGISTERED";
-    public UserNotRegisteredException(string message = "User does not exist. Please register first.") : base(message) { }
+    public override string ErrorCode => DomainErrorCodes.User.NotRegistered;
+    public UserNotRegisteredException() : base() { }
 }
 
 public class UserEmailAlreadyExistsException : CobryxException
 {
-    public override string ErrorCode => "USER.EMAIL_ALREADY_EXISTS";
-    public UserEmailAlreadyExistsException(string message = "Email already registered.") : base(message) { }
+    public override string ErrorCode => DomainErrorCodes.User.EmailAlreadyExists;
+    public UserEmailAlreadyExistsException() : base() { }
 }
 
 public class UserNotFoundException : CobryxException
 {
-    public override string ErrorCode => "USER.NOT_FOUND";
+    public override string ErrorCode => DomainErrorCodes.User.NotFound;
     public UserNotFoundException(Guid userId)
-        : base($"User with ID {userId} was not found.")
+        : base(null!)
     {
         Metadata.Add("UserId", userId);
     }

@@ -86,9 +86,9 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        root.GetProperty("message").Should().NotBeNull();
+        root.GetProperty("success").GetBoolean().Should().BeFalse();
+        root.TryGetProperty("message", out _).Should().BeFalse();
         root.GetProperty("errorCode").GetString().Should().Be("AUTH.ACCOUNT_LOCKED");
-        root.GetProperty("numericCode").GetInt32().Should().Be(1102);
     }
 
     [Fact]
@@ -114,6 +114,6 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var root = doc.RootElement;
 
         root.GetProperty("errorCode").GetString().Should().Be("AUTH.NOT_AUTHENTICATED");
-        root.GetProperty("message").GetString().Should().Contain("Session has been revoked");
+        root.TryGetProperty("message", out _).Should().BeFalse();
     }
 }

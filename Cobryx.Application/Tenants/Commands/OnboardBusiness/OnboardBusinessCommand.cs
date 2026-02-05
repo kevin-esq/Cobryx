@@ -68,7 +68,7 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) throw new UserNotFoundException(userId.Value);
 
-        if (!user.RequiresOnboarding) throw new OnboardingCompletedException("User onboarding already completed.");
+        if (!user.RequiresOnboarding) throw new OnboardingCompletedException();
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
         if (tenant == null) throw new TenantNotFoundException(tenantId.Value);
@@ -78,7 +78,7 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
             user.CompleteOnboarding();
             await _userRepository.UpdateAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            throw new OnboardingCompletedException("Business onboarding already completed.");
+            throw new OnboardingCompletedException();
         }
 
         tenant.UpdateOnboardingInfo(request.TaxId, request.Industry, request.BusinessAddress, request.Phone);

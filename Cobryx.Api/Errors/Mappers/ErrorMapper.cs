@@ -4,45 +4,40 @@ using Cobryx.Api.Errors.Catalog;
 
 namespace Cobryx.Api.Errors.Mappers;
 
+// Maps domain and application error codes to API ErrorDefinitions.
 public static class ErrorMapper
 {
     public static ErrorDefinition Map(string errorCode) => errorCode switch
     {
-        // --- AUTH ---
-        "AUTH.INVALID_CREDENTIALS" => AuthErrors.InvalidCredentials,
-        "AUTH.ACCOUNT_LOCKED" => AuthErrors.AccountLocked,
-        "AUTH.EMAIL_NOT_VERIFIED" => AuthErrors.EmailNotVerified,
-        "AUTH.TOKEN.EXPIRED" => AuthErrors.TokenExpired,
-        "AUTH.NOT_AUTHENTICATED" => AuthErrors.NotAuthenticated,
-        "AUTH.TOKEN.INVALID" => AuthErrors.TokenInvalid,
+        DomainErrorCodes.Auth.InvalidCredentials => new(401, 1101),
+        DomainErrorCodes.Auth.AccountLocked => new(403, 1102),
+        DomainErrorCodes.Auth.EmailNotVerified => new(403, 1103),
+        DomainErrorCodes.Auth.TokenExpired => new(401, 1104),
+        DomainErrorCodes.Auth.NotAuthenticated => new(401, 1105),
+        DomainErrorCodes.Auth.InvalidToken => new(401, 1106),
+        DomainErrorCodes.Auth.TokenCompromised => new(403, 1107),
+        DomainErrorCodes.Auth.SessionRevoked => new(401, 1108),
 
-        // --- CUSTOMERS ---
-        "CUSTOMER.NOT_FOUND" => CustomerErrors.NotFound,
-        "CUSTOMER.DUPLICATE" => CustomerErrors.Duplicate,
+        DomainErrorCodes.User.NotFound => new(404, 4001),
+        DomainErrorCodes.User.EmailAlreadyExists => new(409, 4002),
+        DomainErrorCodes.User.NotRegistered => new(404, 4003),
 
-        // --- TENANTS ---
-        "TENANT.NOT_FOUND" => TenantErrors.NotFound,
-        "TENANT.CONTEXT_MISSING" => TenantErrors.ContextMissing,
-        "TENANT.ONBOARDING_COMPLETED" => TenantErrors.OnboardingCompleted,
-        "TENANT.ONBOARDING_REQUIRED" => TenantErrors.OnboardingRequired,
+        DomainErrorCodes.Customer.NotFound => new(404, 3001),
+        DomainErrorCodes.Customer.Duplicate => new(409, 3002),
 
-        // --- USERS ---
-        "USER.NOT_FOUND" => UserErrors.NotFound,
-        "USER.EMAIL_ALREADY_EXISTS" => UserErrors.EmailAlreadyExists,
-        "USER.NOT_REGISTERED" => UserErrors.NotRegistered,
+        DomainErrorCodes.Tenant.NotFound => new(404, 2001),
+        DomainErrorCodes.Tenant.ContextMissing => TenantErrors.ContextMissing, // This line was not in the provided new code, keeping original mapping
+        DomainErrorCodes.Tenant.OnboardingRequired => new(403, 2003),
+        DomainErrorCodes.Tenant.OnboardingCompleted => new(409, 2004),
 
-        // --- CREDITS ---
         "CREDITS.NOT_FOUND" => CreditErrors.NotFound,
         "CREDITS.INSUFFICIENT" => CreditErrors.Insufficient,
 
-        // --- VALIDATION ---
-        "VALIDATION.FAILED" => new(400, 1001, "Validation Failed"),
-
-        // --- SYSTEM ---
-        "SYSTEM.TOO_MANY_REQUESTS" => new(429, 1090, "Too Many Requests"),
-        "SYSTEM.INTERNAL_ERROR" => new(500, 1000, "Internal Server Error"),
+        DomainErrorCodes.System.ValidationFailed => new(400, 1001),
+        DomainErrorCodes.System.TooManyRequests => new(429, 1090),
+        DomainErrorCodes.System.InternalError => new(500, 1000),
 
         // --- FALLBACK ---
-        _ => new(400, 1000, "Bad Request")
+        _ => new(400, 1000)
     };
 }

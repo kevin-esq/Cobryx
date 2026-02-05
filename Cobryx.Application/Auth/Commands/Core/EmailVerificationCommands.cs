@@ -98,12 +98,12 @@ public class ResendVerificationHandler : IRequestHandler<ResendVerificationComma
 
         if (user.LastVerificationSentAt.HasValue && (now - user.LastVerificationSentAt.Value).TotalMinutes < 2)
         {
-            throw new TooManyRequestsException("Please wait at least 2 minutes before requesting another verification link.");
+            throw new TooManyRequestsException();
         }
 
         if (user.VerificationResendCount >= 5)
         {
-            throw new TooManyRequestsException("You have reached the maximum number of verification attempts for today. Please try again tomorrow.");
+            throw new TooManyRequestsException();
         }
 
         var activeTokens = user.SecurityTokens

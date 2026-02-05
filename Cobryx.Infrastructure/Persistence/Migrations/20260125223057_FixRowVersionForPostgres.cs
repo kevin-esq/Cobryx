@@ -59,10 +59,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                 table: "AuditLogs");
 
             // RefreshTokens handled separately if needed, but keeping existing logic if appropriate or dropping if it was RowVersion.
-            // The original migration had AlterColumn for RefreshTokens. 
-            // If RefreshTokens was byte[] and now is long, that seems fine to keep as AlterColumn if it's NOT xmin.
-            // But checking original code: lines 123-130. It alters "RowVersion" to "bigint". It does NOT rename to xmin.
-            // So I should KEEP that block.
             migrationBuilder.DropColumn(
                 name: "RowVersion",
                 table: "RefreshTokens");

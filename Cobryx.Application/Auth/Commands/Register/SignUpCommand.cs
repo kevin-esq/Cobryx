@@ -87,7 +87,7 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
             throw new UserEmailAlreadyExistsException();
 
         var ownerRole = await _roleRepository.GetByNameAsync("Owner", cancellationToken);
-        if (ownerRole == null) throw new SystemConfigurationException("System roles not initialized.");
+        if (ownerRole == null) throw new SystemConfigurationException();
 
         var tenant = new Tenant(request.BusinessName);
         await _tenantRepository.AddAsync(tenant, cancellationToken);

@@ -5,6 +5,7 @@ using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Cobryx.Api.Outcomes;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Api.Controllers;
 
@@ -46,7 +47,7 @@ public class CustomersController : CobryxBaseController
     [Authorize(Policy = "CanCreateCustomers")]
     public async Task<IActionResult> Update(Guid id, UpdateCustomerCommand command)
     {
-        if (id != command.Id) throw new FluentValidation.ValidationException("Mismatched ID");
+        if (id != command.Id) throw new DomainException("API.ID_MISMATCH");
         var result = await Sender.Send(command);
         return HandleResult(result, CustomerOutcomes.Updated);
     }

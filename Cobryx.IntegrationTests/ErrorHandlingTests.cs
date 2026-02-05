@@ -55,7 +55,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var problemDetails = JsonSerializer.Deserialize<JsonElement>(json);
 
         problemDetails.GetProperty("success").GetBoolean().Should().BeFalse();
-        problemDetails.GetProperty("message").GetString().Should().Be("Validation Failed");
+        problemDetails.TryGetProperty("message", out _).Should().BeFalse();
         problemDetails.GetProperty("errorCode").GetString().Should().Be("VALIDATION.FAILED");
         problemDetails.GetProperty("numericCode").GetInt32().Should().Be(1001);
 
@@ -104,7 +104,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var root = doc.RootElement;
 
         root.GetProperty("success").GetBoolean().Should().BeFalse();
-        root.GetProperty("message").GetString().Should().Be("Invalid Credentials");
+        root.TryGetProperty("message", out _).Should().BeFalse();
         root.GetProperty("errorCode").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
         root.GetProperty("numericCode").GetInt32().Should().Be(1101);
         root.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
