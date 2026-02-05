@@ -64,7 +64,6 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         Assert.NotEmpty(cookies);
         Assert.Contains(cookies, c => c.Contains("refreshToken="));
         Assert.Contains(cookies, c => c.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase));
-        // We just ensure SameSite is present if explicitly set, though format may vary
         Assert.Contains(cookies, c => c.Contains("SameSite", StringComparison.OrdinalIgnoreCase));
 
         var content = await response.Content.ReadAsStringAsync();

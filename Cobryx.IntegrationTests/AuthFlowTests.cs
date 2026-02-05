@@ -256,7 +256,6 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = "fast_" + Guid.NewGuid().ToString("N") + "@example.com";
         await _client.PostAsJsonAsync("/api/auth/signup", new SignUpCommand("Fast Corp", "Resend", "User", email, DefaultPassword));
 
-        // Attempt immediately (429) - SignUp already triggered the first send
         var resp = await _client.PostAsJsonAsync("/api/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resp.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
@@ -273,28 +272,23 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var token1 = _emailService.GetLastToken(email);
         token1.Should().NotBeNull();
 
-        // Backdate to allow resend (bypass 2-min limit)
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
             var user = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Email == (EmailAddress)email);
-            // Use ChangeTracker to bypass private set
             db.Entry(user).Property(u => u.LastVerificationSentAt).CurrentValue = DateTime.UtcNow.AddMinutes(-5);
             await db.SaveChangesAsync();
         }
 
-        // Resend
         var resendResp = await _client.PostAsJsonAsync("/api/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var token2 = _emailService.GetLastToken(email);
         token2.Should().NotBe(token1);
 
-        // Try verifying with old token (Failure - Maps to 400 with message)
         var verifyResp = await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token1!));
         verifyResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        // Try verifying with new token (Success)
         var verifyResp2 = await _client.PostAsJsonAsync("/api/auth/verify-email", new VerifyEmailCommand(token2!));
         verifyResp2.StatusCode.Should().Be(HttpStatusCode.OK);
     }

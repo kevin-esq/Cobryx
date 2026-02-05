@@ -71,7 +71,6 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var email = $"locked_{Guid.NewGuid():N}@example.com";
         await RegisterAndLoginAsync(email);
 
-        // Lock user in DB
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
@@ -97,7 +96,6 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var email = $"revoked_{Guid.NewGuid():N}@example.com";
         await RegisterAndLoginAsync(email);
 
-        // Revoke session in DB
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
@@ -108,7 +106,6 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
 
         var response = await _client.GetAsync("/api/auth/sessions");
 
-        // This should trigger the specific "Session has been revoked" check in filter
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         var json = await response.Content.ReadAsStringAsync();

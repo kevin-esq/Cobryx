@@ -33,7 +33,6 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var conn = db.Database.GetDbConnection();
-        // Reset connection to ensure fresh DB state if reused
         if (conn.State == System.Data.ConnectionState.Open) await conn.CloseAsync();
         await conn.OpenAsync();
 
@@ -46,13 +45,10 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     [Fact]
     public async Task ValidationFailure_ReturnsProblemDetails_WithCodeAndErrors()
     {
-        // Arrange
-        var command = new SignUpCommand("", "", "", "invalid-email", "short"); // Invalid data
+        var command = new SignUpCommand("", "", "", "invalid-email", "short");
 
-        // Act
         var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -72,18 +68,14 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     [Fact]
     public async Task DomainError_InvalidCredentials_ReturnsProblemDetails_WithAuthCode()
     {
-        // Arrange
-        // Create a user first to avoid SQLite in-memory specific crash when querying non-existent user with includes
         var email = $"existing_error_test_{Guid.NewGuid()}@example.com";
         var signupResponse = await _client.PostAsJsonAsync("/api/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, "SecurePass123!@#"));
         signupResponse.EnsureSuccessStatusCode();
 
         var command = new LoginCommand(email, "WrongPassword!");
 
-        // Act
         var response = await _client.PostAsJsonAsync("/api/auth/login", command);
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -93,7 +85,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         root.GetProperty("status").GetInt32().Should().Be(401);
         root.GetProperty("title").GetString().Should().Be("Invalid Credentials");
         root.GetProperty("code").GetString().Should().Be("AUTH.INVALID_CREDENTIALS");
-        root.GetProperty("numericCode").GetInt32().Should().Be(1101); // Numeric Code Verification
+        root.GetProperty("numericCode").GetInt32().Should().Be(1101);
         root.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
     }
 }

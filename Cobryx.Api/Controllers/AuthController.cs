@@ -1,4 +1,3 @@
-using Cobryx.Api.Outcomes;
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Sessions;
 using Cobryx.Application.Auth.Commands.RefreshToken;
@@ -9,6 +8,7 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Concordia;
+using Cobryx.Api.Outcomes;
 using Cobryx.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

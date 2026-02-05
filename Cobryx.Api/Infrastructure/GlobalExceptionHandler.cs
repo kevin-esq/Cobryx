@@ -21,10 +21,6 @@ public class GlobalExceptionHandler : IExceptionHandler
     {
         var exceptionFeature = httpContext.Features.Get<IExceptionHandlerFeature>();
 
-        // Ensure we are handling the right exception
-        if (exceptionFeature == null && exception == null)
-            return true;
-
         var targetException = exception ?? exceptionFeature?.Error;
 
         if (targetException == null) return true;
