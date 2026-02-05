@@ -9,6 +9,8 @@ using Cobryx.Domain.Enums;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Exceptions.System;
 
 namespace Cobryx.Application.Auth.Commands.Register;
 
@@ -20,7 +22,7 @@ public record SignUpCommand(
     string Password,
     bool MarketingConsent = false,
     string? TermsVersion = "v1.0",
-    string? CaptchaToken = null) : IRequest<Result>;
+    string? CaptchaToken = null) : IRequest<Result<Guid>>;
 
 public class SignUpValidator : AbstractValidator<SignUpCommand>
 {
@@ -36,7 +38,7 @@ public class SignUpValidator : AbstractValidator<SignUpCommand>
     }
 }
 
-public class SignUpHandler : IRequestHandler<SignUpCommand, Result>
+public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
 {
     private readonly ITenantRepository _tenantRepository;
     private readonly IUserRepository _userRepository;
@@ -70,58 +72,50 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result>
         _logger = logger;
     }
 
-    public async Task<Result> Handle(SignUpCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(SignUpCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
-                return Result.Failure("Email already registered.");
+        if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
+            throw new UserEmailAlreadyExistsException();
 
-            var ownerRole = await _roleRepository.GetByNameAsync("Owner", cancellationToken);
-            if (ownerRole == null) return Result.Failure("System roles not initialized.");
+        var ownerRole = await _roleRepository.GetByNameAsync("Owner", cancellationToken);
+        if (ownerRole == null) throw new SystemConfigurationException("System roles not initialized.");
 
-            var tenant = new Tenant(request.BusinessName);
-            await _tenantRepository.AddAsync(tenant, cancellationToken);
+        var tenant = new Tenant(request.BusinessName);
+        await _tenantRepository.AddAsync(tenant, cancellationToken);
 
-            var consent = new Cobryx.Domain.ValueObjects.LegalConsent(
-                true,
-                request.TermsVersion ?? "v1.0",
-                _httpContextService.GetIpAddress(),
-                _httpContextService.GetUserAgent());
+        var consent = new Cobryx.Domain.ValueObjects.LegalConsent(
+            true,
+            request.TermsVersion ?? "v1.0",
+            _httpContextService.GetIpAddress(),
+            _httpContextService.GetUserAgent());
 
-            var user = User.Register(
-                tenant.Id,
-                request.FirstName,
-                request.LastName,
-                request.Email,
-                ownerRole.Id,
-                consent,
-                request.MarketingConsent);
+        var user = User.Register(
+            tenant.Id,
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            ownerRole.Id,
+            consent,
+            request.MarketingConsent);
 
-            user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
-            user.CreateProfile();
+        user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
+        user.CreateProfile();
 
-            var tokenValue = Guid.NewGuid().ToString("N");
-            var tokenHash = TokenHasher.ComputeHash(tokenValue);
-            user.AddSecurityToken(tokenHash, SecurityTokenType.EmailVerification, 24 * 60);
+        var tokenValue = Guid.NewGuid().ToString("N");
+        var tokenHash = TokenHasher.ComputeHash(tokenValue);
+        user.AddSecurityToken(tokenHash, SecurityTokenType.EmailVerification, 24 * 60);
 
-            user.UpdateVerificationResend();
+        user.UpdateVerificationResend();
 
-            await _userRepository.AddAsync(user, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _userRepository.AddAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _emailService.SendEmailAsync(
-                user.Email,
-                "Verifica tu cuenta Cobryx",
-                $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
-                cancellationToken);
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "Verifica tu cuenta Cobryx",
+            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
+            cancellationToken);
 
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "SignUp failed for {Email}", request.Email);
-            throw;
-        }
+        return Result.Success(user.Id);
     }
 }

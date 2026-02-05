@@ -45,7 +45,7 @@ public class CustomersController : CobryxBaseController
     [Authorize(Policy = "CanCreateCustomers")]
     public async Task<IActionResult> Update(Guid id, UpdateCustomerCommand command)
     {
-        if (id != command.Id) return BadRequest(ApiResponse.FailureResponse("Mismatched ID"));
+        if (id != command.Id) throw new FluentValidation.ValidationException("Mismatched ID");
         var result = await Sender.Send(command);
         return HandleResult(result, "Customer updated successfully");
     }

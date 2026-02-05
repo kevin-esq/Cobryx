@@ -32,14 +32,23 @@ public class ApiResponse<T>
     /// <summary>
     /// Correlation ID for tracing requests.
     /// </summary>
+    /// <example>00-123456789-abcd</example>
     public string? TraceId { get; set; }
 
-    public static ApiResponse<T> SuccessResponse(T data, string message = "Success")
+    /// <summary>
+    /// Semantic outcome code for successful responses.
+    /// </summary>
+    /// <example>AUTH.SIGNUP.VERIFICATION_REQUIRED</example>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Code { get; set; }
+
+    public static ApiResponse<T> SuccessResponse(T data, string message = "Success", string? code = null)
     {
         return new ApiSuccessResponse<T>
         {
             Message = message,
-            Data = data
+            Data = data,
+            Code = code
         };
     }
 
@@ -85,12 +94,13 @@ public class ApiErrorResponse<T> : ApiResponse<T>
 /// </summary>
 public class ApiResponse : ApiResponse<object>
 {
-    public static ApiResponse SuccessResponse(string message = "Success")
+    public static ApiResponse SuccessResponse(string message = "Success", string? code = null)
     {
         return new ApiSuccessResponse
         {
             Message = message,
-            Data = null
+            Data = null,
+            Code = code
         };
     }
 

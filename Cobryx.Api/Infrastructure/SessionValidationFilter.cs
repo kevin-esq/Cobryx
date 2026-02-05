@@ -3,6 +3,8 @@ using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Cobryx.Domain.Exceptions.Auth;
+using Cobryx.Domain.Exceptions.Tenants;
 
 namespace Cobryx.Api.Infrastructure;
 
@@ -28,16 +30,14 @@ public class SessionValidationFilter : IAsyncActionFilter
 
             if (user == null || !user.IsActive || user.IsLocked)
             {
-                context.Result = new UnauthorizedObjectResult(ApiResponse.FailureResponse("Account is locked, disabled or missing."));
-                return;
+                throw new AccountLockedException();
             }
 
             var session = user.Sessions.FirstOrDefault(s => s.Id == sessionId.Value);
 
             if (session == null || session.IsRevoked)
             {
-                context.Result = new UnauthorizedObjectResult(ApiResponse.FailureResponse("Session has been revoked. Please log in again."));
-                return;
+                throw new NotAuthenticatedException("Session has been revoked. Please log in again.");
             }
 
             var skipCheck = context.ActionDescriptor.EndpointMetadata.Any(em => em is SkipOnboardingCheckAttribute);
@@ -46,14 +46,12 @@ public class SessionValidationFilter : IAsyncActionFilter
             {
                 if (!user.IsEmailVerified)
                 {
-                    context.Result = new ObjectResult(ApiResponse.FailureResponse("Email verification is required.")) { StatusCode = 403 };
-                    return;
+                    throw new EmailNotVerifiedException();
                 }
 
                 if (user.RequiresOnboarding)
                 {
-                    context.Result = new ObjectResult(ApiResponse.FailureResponse("Business onboarding is required.")) { StatusCode = 403 };
-                    return;
+                    throw new OnboardingRequiredException();
                 }
             }
         }

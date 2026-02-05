@@ -1,8 +1,7 @@
-using Cobryx.Application.Common.Models;
+using Cobryx.Api.Errors;
+using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using System.Net;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Cobryx.Api.Infrastructure;
 
@@ -14,50 +13,79 @@ public class GlobalExceptionHandler : IExceptionHandler
     {
         _logger = logger;
     }
+
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
         Exception exception,
         CancellationToken cancellationToken)
     {
-        var (statusCode, message) = exception switch
+        var exceptionFeature = httpContext.Features.Get<IExceptionHandlerFeature>();
+
+        // Ensure we are handling the right exception
+        if (exceptionFeature == null && exception == null)
+            return true;
+
+        var targetException = exception ?? exceptionFeature?.Error;
+
+        if (targetException == null) return true;
+
+        string errorCode;
+        Dictionary<string, object>? metadata = null;
+
+        if (targetException is CobryxException cobryxEx)
         {
-            Cobryx.Domain.Common.DomainException => (HttpStatusCode.BadRequest, exception.Message),
-            Cobryx.Domain.Common.TooManyRequestsException => (HttpStatusCode.TooManyRequests, exception.Message),
-            Cobryx.Domain.Common.EmailUnverifiedException => (HttpStatusCode.Forbidden, "Email not verified"),
-            FluentValidation.ValidationException => (HttpStatusCode.BadRequest, "Validation failed"),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred. Please try again later.")
+            errorCode = cobryxEx.ErrorCode;
+            metadata = cobryxEx.Metadata;
+        }
+        else if (targetException is FluentValidation.ValidationException validationEx)
+        {
+            errorCode = "VALIDATION.FAILED";
+            var errors = validationEx.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+            metadata = new Dictionary<string, object> { { "errors", errors } };
+        }
+        else
+        {
+            errorCode = "SYSTEM.INTERNAL_ERROR";
+        }
+
+        var (statusCode, numericCode, title) = ErrorMapper.Map(errorCode);
+
+        if (statusCode == StatusCodes.Status500InternalServerError)
+        {
+            _logger.LogError(targetException, "Unhandled exception occurred: {Message} [Code: {NumericCode}]", targetException.Message, numericCode);
+        }
+        else
+        {
+            _logger.LogWarning("Application exception: {Message} [Code: {NumericCode}]", targetException.Message, numericCode);
+        }
+
+        httpContext.Response.StatusCode = statusCode;
+        httpContext.Response.ContentType = "application/problem+json";
+
+        var problemDetails = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = statusCode == 500 ? "An unexpected error occurred." : targetException.Message,
+            Instance = httpContext.Request.Path
         };
 
-        if (statusCode == HttpStatusCode.InternalServerError)
-        {
-            _logger.LogError(exception, "Unhandled exception occurred: {Message}", exception.Message);
-        }
+        problemDetails.Extensions["code"] = errorCode;
+        problemDetails.Extensions["numericCode"] = numericCode;
+        problemDetails.Extensions["traceId"] = httpContext.TraceIdentifier;
 
-        object? data = null;
-        if (exception is Cobryx.Domain.Common.EmailUnverifiedException)
+        if (metadata != null && metadata.Count > 0)
         {
-            data = new
+            foreach (var item in metadata)
             {
-                action = "VERIFY_EMAIL",
-                canResend = true
-            };
+                problemDetails.Extensions[item.Key] = item.Value;
+            }
         }
 
-        var traceId = httpContext.TraceIdentifier;
-        var response = ApiResponse<object>.FailureResponse(
-            message,
-            statusCode == HttpStatusCode.Forbidden
-                ? new[] { "You must verify your email before logging in." }
-                : new[] { exception.Message },
-            traceId
-        );
-        response.Data = data;
-
-        httpContext.Response.StatusCode = (int)statusCode;
-        httpContext.Response.ContentType = "application/json";
-
-        await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
-
+        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
         return true;
     }
 }

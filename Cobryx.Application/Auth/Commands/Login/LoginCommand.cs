@@ -4,12 +4,23 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Exceptions.Auth;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using FluentValidation;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
 public record LoginCommand(string Email, string Password, string? DeviceName = null, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
+
+public class LoginValidator : AbstractValidator<LoginCommand>
+{
+    public LoginValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Password).NotEmpty();
+    }
+}
 
 public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 {
@@ -56,13 +67,13 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             var userAttempts = await _attemptService.GetUserAttemptCountAsync(request.Email);
             var maxAttempts = Math.Max(ipAttempts, userAttempts);
 
-            if (maxAttempts >= 5)
+            if (maxAttempts >= 10)
             {
-                var backoffSeconds = Math.Min(3600, Math.Pow(2, maxAttempts - 5) * 5);
+                var backoffSeconds = Math.Min(3600, Math.Pow(2, maxAttempts - 10) * 5);
                 _logger.LogWarning("Login lockout: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
 
                 await EnsureUniformTiming(startTime, 500, cancellationToken);
-                return Result.Failure<AuthResult>("Invalid credentials.");
+                return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
             }
 
             var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
@@ -76,15 +87,18 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 {
                     if (!user.IsEmailVerified)
                     {
+                        // SECURITY: Collapse Email Not Verified into InvalidCredentials during Login
                         _auditService.LogFailure("Login", user.Id.ToString(), ipAddress, "Email not verified");
+                        await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
                         await EnsureUniformTiming(startTime, 500, cancellationToken);
-                        throw new EmailUnverifiedException();
+                        return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
                     }
                     needsRehash = _passwordHasher.IsHashOutdated(user.PasswordHash);
                 }
             }
             else
             {
+                // Prevent timing attacks by hashing even if user not found/inactive
                 _passwordHasher.VerifyPassword(request.Password, "v1.10.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
             }
 
@@ -94,7 +108,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
 
                 await EnsureUniformTiming(startTime, 500, cancellationToken);
-                return Result.Failure<AuthResult>("Invalid credentials.");
+                return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
             }
 
             await _attemptService.ResetAttemptsAsync(ipAddress, request.Email);
@@ -124,15 +138,11 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
 
             return Result.Success(authResult);
         }
-        catch (EmailUnverifiedException)
-        {
-            throw;
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Login processing failed for {Email}", request.Email);
+            _logger.LogError(ex, "Login processing failed unexpectedly for {Email}", request.Email);
             await EnsureUniformTiming(startTime, 500, cancellationToken);
-            return Result.Failure<AuthResult>("Invalid credentials.");
+            return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
         }
     }
 

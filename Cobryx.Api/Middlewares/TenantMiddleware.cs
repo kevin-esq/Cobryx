@@ -50,9 +50,7 @@ public class TenantMiddleware
             }
 
             _logger.LogWarning("Request blocked: Tenant context missing for path {Path}", context.Request.Path);
-            context.Response.StatusCode = 400;
-            await context.Response.WriteAsync("Tenant-Id is required.");
-            return;
+            throw new Cobryx.Domain.Exceptions.Tenants.TenantContextMissingException();
         }
 
         if (Guid.TryParse(tenantId, out var id))

@@ -2,6 +2,9 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Exceptions.Tenants;
+using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Exceptions.Common;
 using Concordia;
 using FluentValidation;
 
@@ -55,22 +58,22 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
         var tenantId = _tenantProvider.GetTenantId();
         var userId = _userProvider.GetUserId();
 
-        if (tenantId == null || userId == null) return Result.Failure("Unauthorized context.");
+        if (tenantId == null || userId == null) throw new UnauthorizedContextException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure("User not found.");
+        if (user == null) throw new UserNotFoundException(userId.Value);
 
-        if (!user.RequiresOnboarding) return Result.Failure("Onboarding already completed.");
+        if (!user.RequiresOnboarding) throw new OnboardingCompletedException("User onboarding already completed.");
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) return Result.Failure("Tenant not found.");
+        if (tenant == null) throw new TenantNotFoundException(tenantId.Value);
 
         if (tenant.OnboardingStatus == Cobryx.Domain.Enums.TenantOnboardingStatus.Completed)
         {
             user.CompleteOnboarding();
             await _userRepository.UpdateAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Failure("Business onboarding already completed.");
+            throw new OnboardingCompletedException("Business onboarding already completed.");
         }
 
         tenant.UpdateOnboardingInfo(request.TaxId, request.Industry, request.BusinessAddress, request.Phone);

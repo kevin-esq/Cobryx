@@ -107,6 +107,18 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
+    public void Lock()
+    {
+        IsLocked = true;
+        UpdateTimestamp();
+    }
+
+    public void Unlock()
+    {
+        IsLocked = false;
+        UpdateTimestamp();
+    }
+
     public void VerifyEmail()
     {
         IsEmailVerified = true;
