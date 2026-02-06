@@ -5,6 +5,7 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Entities.Payments;
+using Cobryx.Application.Webhooks.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -109,6 +110,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<UserSecurityToken> SecurityTokens => Set<UserSecurityToken>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

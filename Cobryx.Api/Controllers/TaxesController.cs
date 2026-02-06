@@ -1,6 +1,6 @@
-using Cobryx.Application.Financial.Commands.CreateTaxConfiguration;
-using Cobryx.Application.Financial.Commands.DeleteTaxConfiguration;
-using Cobryx.Application.Financial.Queries.GetTaxConfigurations;
+using Cobryx.Application.Invoicing.Commands.CreateTaxConfiguration;
+using Cobryx.Application.Invoicing.Commands.DeleteTaxConfiguration;
+using Cobryx.Application.Invoicing.Queries.GetTaxConfigurations;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
