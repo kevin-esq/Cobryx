@@ -35,6 +35,13 @@ Detailed documentation:
 - [Validation Errors](docs/api-contract/validations.md)
 - [API Outcomes](docs/api-contract/outcomes.md)
 
+## Observability & Monitoring
+
+Cobryx is built for high observability, providing structured telemetry for every transaction.
+
+- [Observability Strategy](docs/observability.md): Technical details on metrics and outcome derivation.
+- [Dashboards & PromQL](docs/dashboards.md): Guide for creating Grafana dashboards and SLI/SLO alerts.
+
 ## Getting Started
 
 ### Prerequisites

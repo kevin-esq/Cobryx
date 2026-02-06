@@ -72,7 +72,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         errorCount.Should().BeGreaterThan(0);
         outcomeCount.Should().BeGreaterThan(0);
-        
+
         // Validation Failed -> Error: VALIDATION.FAILED -> Outcome: VALIDATION.FAILED (because of prefix and .FAILED detection)
         recordedErrorCode.Should().Be("VALIDATION.FAILED");
         recordedOutcomeCode.Should().Be("VALIDATION.FAILED");
@@ -143,7 +143,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         // Arrange
         var meterName = CobryxMetrics.MeterName;
         var metricName = "cobryx_business_outcomes_total";
-        
+
         string? recordedModule = null;
 
         using var listener = new MeterListener();
@@ -161,7 +161,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         listener.Start();
 
         var client = _factory.CreateClient();
-        
+
         // Use a mock token to bypass [Authorize]
         var token = CreateMockToken();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -171,7 +171,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"because the token should be valid. Body: {await response.Content.ReadAsStringAsync()}");
-        
+
         await Task.Delay(100);
         recordedModule.Should().Be("Product");
     }
@@ -186,7 +186,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         {
             new System.Security.Claims.Claim("sub", Guid.NewGuid().ToString()),
             new System.Security.Claims.Claim("tenant_id", Guid.NewGuid().ToString()),
-            new System.Security.Claims.Claim("onboarded", "true") 
+            new System.Security.Claims.Claim("onboarded", "true")
         };
 
         var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(

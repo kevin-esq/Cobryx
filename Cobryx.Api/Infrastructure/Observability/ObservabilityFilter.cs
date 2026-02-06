@@ -31,7 +31,7 @@ public class ObservabilityFilter : IAsyncActionFilter
             {
                 if (response is ApiSuccessResponse successResponse) // Keep for potential future props
                 {
-                   // base has OutcomeCode now
+                    // base has OutcomeCode now
                 }
                 outcomeCode = response.OutcomeCode;
             }
@@ -50,17 +50,17 @@ public class ObservabilityFilter : IAsyncActionFilter
         {
             if (executedContext.Exception != null || (executedContext.Result is ObjectResult or && or.StatusCode >= 400) || (executedContext.Result is StatusCodeResult sr && sr.StatusCode >= 400))
             {
-                 outcomeCode = !string.IsNullOrEmpty(errorCode) ? GetFailedOutcomeCode(errorCode) : "SYSTEM.OPERATION.FAILED";
+                outcomeCode = !string.IsNullOrEmpty(errorCode) ? GetFailedOutcomeCode(errorCode) : "SYSTEM.OPERATION.FAILED";
             }
             else
             {
-                 outcomeCode = "SYSTEM.OPERATION.SUCCESS";
+                outcomeCode = "SYSTEM.OPERATION.SUCCESS";
             }
         }
 
         _diagnosticContext.Set("OutcomeCode", outcomeCode);
         _metrics.RecordOutcome(outcomeCode);
-        
+
         if (!string.IsNullOrEmpty(errorCode))
         {
             _diagnosticContext.Set("ErrorCode", errorCode);
