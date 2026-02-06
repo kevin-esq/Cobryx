@@ -10,6 +10,10 @@ public abstract class ApiResponse
 
     [JsonPropertyName("traceId")]
     public string? TraceId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("outcomeCode")]
+    public string? OutcomeCode { get; set; }
 }
 
 public class ApiSuccessResponse : ApiResponse
@@ -18,10 +22,6 @@ public class ApiSuccessResponse : ApiResponse
 
     [JsonPropertyName("data")]
     public object? Data { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [JsonPropertyName("outcomeCode")]
-    public string? OutcomeCode { get; set; }
 }
 
 public class ApiSuccessResponse<T> : ApiResponse
@@ -30,10 +30,6 @@ public class ApiSuccessResponse<T> : ApiResponse
 
     [JsonPropertyName("data")]
     public T? Data { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [JsonPropertyName("outcomeCode")]
-    public string? OutcomeCode { get; set; }
 }
 
 public class ApiErrorResponse : ApiResponse
@@ -71,11 +67,12 @@ public static class ApiResponseFactory
         };
     }
 
-    public static ApiErrorResponse Error(string? errorCode = null, int? numericCode = null, object? errors = null, string? traceId = null)
+    public static ApiErrorResponse Error(string? errorCode = null, int? numericCode = null, object? errors = null, string? traceId = null, string? outcomeCode = null)
     {
         return new ApiErrorResponse
         {
             ErrorCode = errorCode,
+            OutcomeCode = outcomeCode,
             NumericCode = numericCode,
             Errors = errors,
             TraceId = traceId

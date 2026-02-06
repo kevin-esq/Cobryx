@@ -14,4 +14,9 @@ public static class AuthOutcomes
     public const string MfaVerified = "AUTH.MFA.VERIFIED";
     public const string Fido2Registered = "AUTH.FIDO2.REGISTERED";
     public const string SessionRevoked = "AUTH.SESSION.REVOKED";
+    public const string SessionSearchCompleted = "AUTH.SESSION.SEARCH.COMPLETED";
+    public const string MfaInitiated = "AUTH.MFA.INITIATED";
+    public const string LogoutCompleted = "AUTH.LOGOUT.COMPLETED";
+    public const string LogoutAllCompleted = "AUTH.LOGOUT_ALL.COMPLETED";
+    public const string TokenRotated = "AUTH.TOKEN.ROTATED";
 }

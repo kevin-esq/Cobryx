@@ -73,7 +73,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> Onboard(OnboardBusinessCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result);
+        return HandleResult(result, TenantOutcomes.OnboardingCompleted);
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.TokenRotated);
     }
 
     /// <summary>
@@ -177,13 +177,13 @@ public class AuthController : CobryxBaseController
     [Authorize]
     [SkipOnboardingCheck]
     [HttpPost("logout")]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutCommand(), cancellationToken);
         _cookieService.DeleteRefreshTokenCookie();
-        return NoContent();
+        return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutCompleted));
     }
 
     /// <summary>
@@ -191,18 +191,18 @@ public class AuthController : CobryxBaseController
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content on success.</returns>
-    /// <response code="204">Successfully logged out of all devices and cookie cleared.</response>
+    /// <response code="200">Successfully logged out of all devices and cookie cleared.</response>
     /// <response code="401">Unauthorized (success: false).</response>
     [Authorize]
     [SkipOnboardingCheck]
     [HttpPost("logout-all")]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutAllCommand(), cancellationToken);
         _cookieService.DeleteRefreshTokenCookie();
-        return NoContent();
+        return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutAllCompleted));
     }
 
     /// <summary>
@@ -220,6 +220,6 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> GetSessions(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetSessionsQuery(), cancellationToken);
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
     }
 }

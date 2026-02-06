@@ -4,16 +4,25 @@ using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Infrastructure.Observability;
+using Serilog;
 
 namespace Cobryx.Api.Infrastructure;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
+    private readonly CobryxMetrics _metrics;
+    private readonly IDiagnosticContext _diagnosticContext;
 
-    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    public GlobalExceptionHandler(
+        ILogger<GlobalExceptionHandler> logger,
+        CobryxMetrics metrics,
+        IDiagnosticContext diagnosticContext)
     {
         _logger = logger;
+        _metrics = metrics;
+        _diagnosticContext = diagnosticContext;
     }
 
     public async ValueTask<bool> TryHandleAsync(
@@ -59,6 +68,15 @@ public class GlobalExceptionHandler : IExceptionHandler
         var statusCode = errorDef.StatusCode;
         var numericCode = errorDef.NumericCode;
 
+        var outcomeCode = GetFailedOutcomeCode(errorCode);
+
+        // Observability Enrichment
+        _diagnosticContext.Set("ErrorCode", errorCode);
+        _diagnosticContext.Set("NumericCode", numericCode);
+        _diagnosticContext.Set("OutcomeCode", outcomeCode);
+        _metrics.RecordError(errorCode, numericCode);
+        _metrics.RecordOutcome(outcomeCode);
+
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
             _logger.LogError(targetException, "Unhandled exception occurred: {Message} [Code: {NumericCode}]", targetException.Message, numericCode);
@@ -75,9 +93,19 @@ public class GlobalExceptionHandler : IExceptionHandler
             errorCode: errorCode,
             numericCode: numericCode,
             errors: metadata?.GetValueOrDefault("errors"),
-            traceId: httpContext.TraceIdentifier);
+            traceId: httpContext.TraceIdentifier,
+            outcomeCode: outcomeCode);
 
         await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
         return true;
+    }
+
+    private static string GetFailedOutcomeCode(string errorCode)
+    {
+        if (string.IsNullOrEmpty(errorCode)) return "SYSTEM.FAILED";
+        if (errorCode.EndsWith(".FAILED")) return errorCode;
+
+        var parts = errorCode.Split('.');
+        return $"{parts[0]}.FAILED";
     }
 }

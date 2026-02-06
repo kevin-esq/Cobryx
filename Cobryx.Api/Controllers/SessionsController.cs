@@ -19,7 +19,7 @@ public class SessionsController : CobryxBaseController
     public async Task<IActionResult> GetSessions()
     {
         var result = await Sender.Send(new GetSessionsQuery());
-        return HandleResult(result, "AUTH.SESSION.SEARCH.COMPLETED");
+        return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
     }
 
     [HttpDelete("{id}")]

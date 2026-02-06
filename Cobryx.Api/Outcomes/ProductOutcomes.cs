@@ -7,4 +7,5 @@ public static class ProductOutcomes
     public const string Created = $"{Prefix}.CREATED";
     public const string Updated = $"{Prefix}.UPDATED";
     public const string Deleted = $"{Prefix}.DELETED";
+    public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
 }

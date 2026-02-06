@@ -13,7 +13,7 @@ public class ArchitectureTests
     public void AllCustomExceptions_MustInheritFromCobryxException()
     {
         var domainAssembly = typeof(CobryxException).Assembly;
-        
+
         var exceptionTypes = domainAssembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && t.Name.EndsWith("Exception"))
             .ToList();
@@ -21,7 +21,7 @@ public class ArchitectureTests
         foreach (var type in exceptionTypes)
         {
             if (type.Name == "DomainException" || type.Name == "CobryxException") continue;
-            
+
             type.Should().BeAssignableTo<CobryxException>(
                 $"Exception type {type.Name} must inherit from CobryxException to ensure Zero-Text compliance.");
         }
@@ -47,7 +47,7 @@ public class ArchitectureTests
                 foreach (var constructor in constructors)
                 {
                     var parameters = constructor.GetParameters();
-                    
+
                     // Prohibit constructors that take a 'message' parameter
                     parameters.Should().NotContain(p => p.Name!.Equals("message", StringComparison.OrdinalIgnoreCase),
                         $"Exception {type.Name} has a constructor with a 'message' parameter, violating the Zero-Text policy.");

@@ -59,7 +59,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> InitiateFido2Assertion(InitiateFido2AssertionCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.MfaInitiated);
     }
 
     [AllowAnonymous]

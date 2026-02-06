@@ -19,6 +19,6 @@ public class ProductsController : CobryxBaseController
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var result = await Sender.Send(new GetProductsQuery(page, pageSize));
-        return HandleResult(result, "PRODUCT.SEARCH.COMPLETED");
+        return HandleResult(result, ProductOutcomes.SearchCompleted);
     }
 }

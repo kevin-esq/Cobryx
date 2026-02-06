@@ -110,7 +110,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
         var logoutResponse = await _client.PostAsJsonAsync("/api/auth/logout", new { });
 
-        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
         _client.DefaultRequestHeaders.Authorization = null;
 
         var cookies = logoutResponse.Headers.GetValues("Set-Cookie").ToList();

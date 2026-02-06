@@ -31,7 +31,8 @@ public abstract class CobryxBaseController : ControllerBase
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
-            traceId: HttpContext.TraceIdentifier));
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
     protected IActionResult HandleResult(Result result, string? outcomeCode = null)
@@ -47,7 +48,8 @@ public abstract class CobryxBaseController : ControllerBase
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
-            traceId: HttpContext.TraceIdentifier));
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
     protected IActionResult Success<T>(T data, string? outcomeCode = null)
@@ -73,6 +75,20 @@ public abstract class CobryxBaseController : ControllerBase
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
-            traceId: HttpContext.TraceIdentifier));
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
+    }
+
+    private string GetFailureOutcomeCode(string? successOutcomeCode)
+    {
+        if (string.IsNullOrEmpty(successOutcomeCode)) return "SYSTEM.OPERATION.FAILED";
+
+        var lastDot = successOutcomeCode.LastIndexOf('.');
+        if (lastDot > 0)
+        {
+            return successOutcomeCode.Substring(0, lastDot) + ".FAILED";
+        }
+
+        return $"{successOutcomeCode}.FAILED";
     }
 }
