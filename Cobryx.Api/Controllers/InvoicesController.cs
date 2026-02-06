@@ -1,5 +1,5 @@
-using Cobryx.Application.Financial.Invoicing.CreateInvoice;
-using Cobryx.Application.Financial.Invoicing.GetInvoices;
+using Cobryx.Application.Invoicing.Commands.CreateInvoice;
+using Cobryx.Application.Invoicing.Queries.GetInvoices;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

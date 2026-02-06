@@ -36,4 +36,13 @@ public static class FinancialOutcomes
         public const string Completed = $"{Prefix}.COMPLETED";
         public const string Failed = $"{Prefix}.FAILED";
     }
+
+    public static class Webhooks
+    {
+        private const string Prefix = "FINANCIAL.WEBHOOK";
+        public const string Received = $"{Prefix}.RECEIVED";
+        public const string Deduped = $"{Prefix}.DEDUPED";
+        public const string Processed = $"{Prefix}.PROCESSED";
+        public const string Failed = $"{Prefix}.FAILED";
+    }
 }

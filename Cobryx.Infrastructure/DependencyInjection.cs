@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Security;
+using Cobryx.Application.Webhooks.Interfaces;
+using Cobryx.Infrastructure.Webhooks.Stripe;
 
 namespace Cobryx.Infrastructure;
 
@@ -112,6 +114,7 @@ public static class DependencyInjection
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
         services.AddScoped<Cobryx.Domain.Services.DocumentService>();
@@ -125,6 +128,7 @@ public static class DependencyInjection
         services.AddScoped<IFido2Service, Fido2Service>();
         services.AddScoped<ISecurityAuditService, SecurityAuditService>();
         services.AddScoped<IAuthAttemptService, AuthAttemptService>();
+        services.AddScoped<IWebhookParser, StripeWebhookParser>();
 
         services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
 

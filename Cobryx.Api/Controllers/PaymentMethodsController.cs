@@ -1,6 +1,6 @@
-using Cobryx.Application.Financial.Commands.CreatePaymentMethod;
-using Cobryx.Application.Financial.Commands.DeletePaymentMethod;
-using Cobryx.Application.Financial.Queries.GetPaymentMethods;
+using Cobryx.Application.Invoicing.Commands.CreatePaymentMethod;
+using Cobryx.Application.Invoicing.Commands.DeletePaymentMethod;
+using Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
