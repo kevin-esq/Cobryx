@@ -23,5 +23,17 @@ public static class FinancialOutcomes
         private const string Prefix = "FINANCIAL.INVOICE";
         public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
         public const string Created = $"{Prefix}.CREATED";
+        public const string Issued = $"{Prefix}.ISSUED";
+        public const string Paid = $"{Prefix}.PAID";
+        public const string PaymentApplied = $"{Prefix}.PAYMENT_APPLIED";
+        public const string Cancelled = $"{Prefix}.CANCELLED";
+    }
+
+    public static class Payments
+    {
+        private const string Prefix = "FINANCIAL.PAYMENT";
+        public const string Initiated = $"{Prefix}.INITIATED";
+        public const string Completed = $"{Prefix}.COMPLETED";
+        public const string Failed = $"{Prefix}.FAILED";
     }
 }

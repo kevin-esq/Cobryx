@@ -1,4 +1,4 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
@@ -7,7 +7,7 @@ namespace Cobryx.Domain.DomainServices;
 
 public class ScheduleGenerator : IScheduleGenerator
 {
-    public IEnumerable<Installment> GenerateSchedule(Credit credit)
+    public IEnumerable<Installment> GenerateSchedule(Entities.Credit credit)
     {
         var installments = new List<Installment>();
         decimal principal = credit.Principal.Amount;

@@ -1,4 +1,4 @@
-using Cobryx.Application.Financial.Commands.ProcessPayment;
+using Cobryx.Application.Payments.Commands.ProcessPayment;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +19,6 @@ public class PaymentsController : CobryxBaseController
     public async Task<IActionResult> ProcessPayment(ProcessPaymentCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, PaymentOutcomes.Registered);
+        return HandleResult(result, FinancialOutcomes.Payments.Completed);
     }
 }

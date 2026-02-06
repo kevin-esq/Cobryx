@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;

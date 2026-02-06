@@ -1,7 +1,7 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
 
-namespace Cobryx.Domain.Entities;
+namespace Cobryx.Domain.Entities.Invoicing;
 
 public class InvoiceItem : BaseEntity
 {

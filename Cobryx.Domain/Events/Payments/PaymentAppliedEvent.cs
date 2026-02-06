@@ -1,7 +1,7 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
 
-namespace Cobryx.Domain.Events;
+namespace Cobryx.Domain.Events.Payments;
 
 public record PaymentAppliedEvent(
     Guid CreditId,

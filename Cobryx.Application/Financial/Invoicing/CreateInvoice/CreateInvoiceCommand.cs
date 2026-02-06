@@ -1,10 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 
-namespace Cobryx.Application.Financial.Commands.CreateInvoice;
+namespace Cobryx.Application.Financial.Invoicing.CreateInvoice;
 
 public record CreateInvoiceCommand(
     Guid CustomerId,

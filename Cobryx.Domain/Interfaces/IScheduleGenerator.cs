@@ -1,8 +1,8 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface IScheduleGenerator
 {
-    IEnumerable<Installment> GenerateSchedule(Credit credit);
+    IEnumerable<Installment> GenerateSchedule(Entities.Credit credit);
 }

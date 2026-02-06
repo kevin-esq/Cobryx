@@ -1,4 +1,4 @@
-using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

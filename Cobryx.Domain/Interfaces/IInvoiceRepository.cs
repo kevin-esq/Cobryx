@@ -1,7 +1,7 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Interfaces;
 
-namespace Cobryx.Application.Common.Interfaces;
+namespace Cobryx.Domain.Interfaces;
 
 public interface IInvoiceRepository : IRepository<Invoice>
 {

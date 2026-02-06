@@ -1,12 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Services;
 using Cobryx.Domain.ValueObjects;
 using Concordia;
 
-namespace Cobryx.Application.Financial.Commands.ProcessPayment;
+namespace Cobryx.Application.Payments.Commands.ProcessPayment;
 
 public record ProcessPaymentCommand(
     Guid CustomerId,
@@ -70,14 +71,17 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
 
                 if (amountToApply > 0)
                 {
-                    _paymentService.ApplyPaymentToInvoice(payment, invoice, new Money(amountToApply, request.Currency));
-                    await _invoiceRepository.UpdateAsync(invoice);
+                    payment.AddAllocation(invoice.Id, new Money(amountToApply, request.Currency));
                     remainingAmount -= amountToApply;
                 }
             }
         }
 
         await _paymentRepository.AddAsync(payment);
+
+        payment.Initiate();
+
+        payment.Complete();
 
         return Result.Success(payment.Id);
     }

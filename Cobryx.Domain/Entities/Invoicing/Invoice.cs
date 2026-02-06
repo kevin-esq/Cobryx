@@ -1,8 +1,9 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Events.Invoicing;
 
-namespace Cobryx.Domain.Entities;
+namespace Cobryx.Domain.Entities.Invoicing;
 
 public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 {
@@ -23,6 +24,9 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     private readonly List<InvoiceItem> _items = new();
     public IReadOnlyCollection<InvoiceItem> Items => _items.AsReadOnly();
+
+    private readonly List<Guid> _appliedPaymentIds = new();
+    public IReadOnlyCollection<Guid> AppliedPaymentIds => _appliedPaymentIds.AsReadOnly();
 
     public virtual Customer Customer { get; private set; } = null!;
     public virtual Installment? Installment { get; private set; }
@@ -51,23 +55,39 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         TotalPaid = Money.Zero(currency);
     }
 
-    public void ApplyPayment(Money amount)
+    public void ApplyPayment(Guid paymentId, Money amount)
     {
-        if (amount.Currency != Total.Currency) throw new DomainException("DOMAIN.INVOICE.CURRENCY_MISMATCH");
+        if (Status is not (InvoiceStatus.Issued or InvoiceStatus.Partial))
+            throw new DomainException(DomainErrorCodes.Financial.InvoiceInvalidStatusForPayment);
+
+        if (_appliedPaymentIds.Contains(paymentId))
+            return;
+
+        if (amount.Currency != Total.Currency)
+            throw new DomainException(DomainErrorCodes.Financial.InvoiceCurrencyMismatch);
 
         decimal newPaid = TotalPaid.Amount + amount.Amount;
         TotalPaid = new Money(newPaid, Total.Currency);
 
         if (TotalPaid.Amount >= Total.Amount)
+        {
             Status = InvoiceStatus.Paid;
+            AddDomainEvent(new InvoicePaidEvent(Id, TenantId, CustomerId, DateTime.UtcNow));
+        }
         else if (TotalPaid.Amount > 0)
+        {
             Status = InvoiceStatus.Partial;
+        }
 
+        _appliedPaymentIds.Add(paymentId);
         UpdateTimestamp();
     }
 
     public void AddItem(string description, decimal quantity, decimal unitPrice, decimal taxRate, bool isTaxInclusive)
     {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT_ADD_ITEM");
+
         var item = new InvoiceItem(Id, description, quantity, unitPrice, taxRate, isTaxInclusive, Total.Currency);
         _items.Add(item);
         RecalculateTotals();
@@ -75,6 +95,9 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void RecalculateTotals()
     {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT_RECALCULATE");
+
         decimal subtotal = 0;
         decimal taxTotal = 0;
 
@@ -93,12 +116,18 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
     public void Issue()
     {
         if (Status != InvoiceStatus.Draft) throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT");
+        if (_items.Count == 0) throw new DomainException("DOMAIN.INVOICE.NO_ITEMS");
+
         Status = InvoiceStatus.Issued;
+        AddDomainEvent(new InvoiceIssuedEvent(Id, TenantId, CustomerId, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
     public void Cancel()
     {
+        if (Status is not (InvoiceStatus.Draft or InvoiceStatus.Issued))
+            throw new DomainException("DOMAIN.INVOICE.INVALID_STATUS_FOR_CANCEL");
+
         Status = InvoiceStatus.Cancelled;
         UpdateTimestamp();
     }
