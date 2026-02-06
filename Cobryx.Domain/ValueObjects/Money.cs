@@ -17,7 +17,7 @@ public record Money : ValueObject
     public Money(decimal amount, string currency)
     {
         if (string.IsNullOrWhiteSpace(currency))
-            throw new ArgumentException("Currency cannot be empty.", nameof(currency));
+            throw new DomainException("DOMAIN.INVALID_CURRENCY");
 
         Amount = amount;
         Currency = currency.ToUpperInvariant();
@@ -28,14 +28,14 @@ public record Money : ValueObject
     public static Money operator +(Money a, Money b)
     {
         if (a.Currency != b.Currency)
-            throw new InvalidOperationException("Cannot add money with different currencies.");
+            throw new DomainException("DOMAIN.CURRENCY_MISMATCH");
         return new Money(a.Amount + b.Amount, a.Currency);
     }
 
     public static Money operator -(Money a, Money b)
     {
         if (a.Currency != b.Currency)
-            throw new InvalidOperationException("Cannot subtract money with different currencies.");
+            throw new DomainException("DOMAIN.CURRENCY_MISMATCH");
         return new Money(a.Amount - b.Amount, a.Currency);
     }
 

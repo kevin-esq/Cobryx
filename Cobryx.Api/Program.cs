@@ -9,6 +9,9 @@ using System.Threading.RateLimiting;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
+using Cobryx.Infrastructure.Observability;
+using OpenTelemetry.Metrics;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +24,15 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Observability
+builder.Services.AddSingleton<CobryxMetrics>();
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics =>
+    {
+        metrics.AddMeter(CobryxMetrics.MeterName);
+        metrics.AddAspNetCoreInstrumentation();
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -67,6 +79,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<Cobryx.Api.Infrastructure.SessionValidationFilter>();
+    options.Filters.Add<Cobryx.Api.Infrastructure.Observability.ObservabilityFilter>();
 });
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
@@ -170,6 +183,17 @@ try
     {
         var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<Cobryx.Infrastructure.Persistence.CobryxDbContext>();
+
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+        {
+            await dbContext.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await dbContext.Database.MigrateAsync();
+        }
+
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
         Log.Information("Database seeding completed successfully");
     }

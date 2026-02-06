@@ -5,6 +5,7 @@ using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -31,14 +32,14 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 
         if (user == null)
         {
-            return Result.Failure("Invalid or expired token.");
+            return Result.Failure("AUTH.TOKEN.INVALID");
         }
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.EmailVerification);
 
         if (token is not { IsActive: true })
         {
-            return Result.Failure("Invalid or expired token.");
+            return Result.Failure("AUTH.TOKEN.INVALID");
         }
 
         token.Use();
@@ -58,7 +59,9 @@ public class ResendVerificationValidator : AbstractValidator<ResendVerificationC
 {
     public ResendVerificationValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Email)
+            .NotEmpty().WithErrorCode(AuthValidationErrors.Email.Required)
+            .EmailAddress().WithErrorCode(AuthValidationErrors.Email.Invalid);
     }
 }
 
@@ -95,12 +98,12 @@ public class ResendVerificationHandler : IRequestHandler<ResendVerificationComma
 
         if (user.LastVerificationSentAt.HasValue && (now - user.LastVerificationSentAt.Value).TotalMinutes < 2)
         {
-            throw new TooManyRequestsException("Please wait at least 2 minutes before requesting another verification link.");
+            throw new TooManyRequestsException();
         }
 
         if (user.VerificationResendCount >= 5)
         {
-            throw new TooManyRequestsException("You have reached the maximum number of verification attempts for today. Please try again tomorrow.");
+            throw new TooManyRequestsException();
         }
 
         var activeTokens = user.SecurityTokens

@@ -28,6 +28,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
                 .ThenInclude(r => r.Permissions)
             .Include(u => u.Profile)
             .Include(u => u.Sessions)
+            .Include(u => u.SecurityTokens)
             .FirstOrDefaultAsync(u => u.Email == (EmailAddress)emailLower, cancellationToken);
     }
 

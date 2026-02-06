@@ -40,9 +40,9 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
         int graceDays = 0,
         Guid? productId = null)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
-        if (customerId == Guid.Empty) throw new ArgumentException("CustomerId is required.");
-        if (installmentsCount <= 0) throw new ArgumentException("Installments count must be greater than zero.");
+        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
+        if (customerId == Guid.Empty) throw new DomainException("DOMAIN.CUSTOMER_ID_REQUIRED");
+        if (installmentsCount <= 0) throw new DomainException("DOMAIN.INVALID_INSTALLMENTS_COUNT");
 
         TenantId = tenantId;
         CustomerId = customerId;
@@ -63,7 +63,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     public void ApplyPayment(Guid paymentId, Money amount)
     {
         if (amount.Amount <= 0) return;
-        if (Status == CreditStatus.Paid) throw new InvalidOperationException("Credit is already fully paid.");
+        if (Status == CreditStatus.Paid) throw new DomainException("DOMAIN.CREDIT_ALREADY_PAID");
 
         decimal remainingAmount = amount.Amount;
 
@@ -86,7 +86,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void AddInstallments(IEnumerable<Installment> installments)
     {
-        if (_installments.Any()) throw new InvalidOperationException("Installments already generated.");
+        if (_installments.Any()) throw new DomainException("DOMAIN.INSTALLMENTS_ALREADY_GENERATED");
         _installments.AddRange(installments);
     }
 }

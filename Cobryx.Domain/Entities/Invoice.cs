@@ -53,7 +53,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void ApplyPayment(Money amount)
     {
-        if (amount.Currency != Total.Currency) throw new InvalidOperationException("Currency mismatch.");
+        if (amount.Currency != Total.Currency) throw new DomainException("DOMAIN.INVOICE.CURRENCY_MISMATCH");
 
         decimal newPaid = TotalPaid.Amount + amount.Amount;
         TotalPaid = new Money(newPaid, Total.Currency);
@@ -92,7 +92,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Issue()
     {
-        if (Status != InvoiceStatus.Draft) throw new InvalidOperationException("Only draft invoices can be issued.");
+        if (Status != InvoiceStatus.Draft) throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT");
         Status = InvoiceStatus.Issued;
         UpdateTimestamp();
     }

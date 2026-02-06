@@ -18,12 +18,12 @@ public record TaxId : ValueObject
     public TaxId(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("Tax ID cannot be empty.", nameof(value));
+            throw new DomainException("DOMAIN.INVALID_TAX_ID_FORMAT");
 
         var sanitizedValue = value.Trim().ToUpperInvariant();
 
         if (!RfcRegex.IsMatch(sanitizedValue))
-            throw new ArgumentException("Invalid Tax ID (RFC) format.", nameof(value));
+            throw new DomainException("DOMAIN.INVALID_TAX_ID_FORMAT");
 
         Value = sanitizedValue;
     }

@@ -8,6 +8,7 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Concordia;
+using Cobryx.Api.Outcomes;
 using Cobryx.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,81 +33,105 @@ public class AuthController : CobryxBaseController
     /// Lightweight user and tenant registration.
     /// Focuses strictly on identity and basic business name.
     /// </summary>
+    /// <summary>
+    /// Registers a new user and tenant (Sign Up).
+    /// </summary>
+    /// <param name="command">The registration details.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success response with the status of the registration (e.g., verification required).</returns>
+    /// <response code="201">User successfully registered.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="409">User already exists.</response>
     [HttpPost("signup")]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> SignUp(SignUpCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return CreatedResult("/api/auth/login", result, "Account created successfully. Please verify your email.");
+        return HandleCreatedResult("/api/auth/login", result, AuthOutcomes.SignupVerificationRequired);
     }
 
     /// <summary>
-    /// Completes business onboarding with fiscal and industry details.
-    /// Requires an authenticated session.
+    /// Onboards a business tenant with additional details.
     /// </summary>
+    /// <param name="command">The onboarding details (Tax ID, Sector, Address).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success status.</returns>
+    /// <response code="200">Onboarding completed successfully.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="401">Unauthorized.</response>
+    /// <response code="409">Tenant already onboarded.</response>
     [Authorize]
     [SkipOnboardingCheck]
     [HttpPost("onboard")]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> Onboard(OnboardBusinessCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result, "Business onboarding completed successfully.");
+        return HandleResult(result, TenantOutcomes.OnboardingCompleted);
     }
 
     /// <summary>
-    /// Verifies a user's email address using a security token.
+    /// Verifies a user's email address using a token.
     /// </summary>
     /// <param name="command">The verification token.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>No content on success.</returns>
-    /// <response code="204">Returns when the email is successfully verified.</response>
-    /// <response code="400">Returns when the token is invalid or expired.</response>
+    /// <returns>Success status.</returns>
+    /// <response code="200">Email successfully verified.</response>
+    /// <response code="400">Validation failed (e.g. empty token).</response>
+    /// <response code="401">Invalid or expired token.</response>
     [HttpPost("verify-email")]
     [SkipOnboardingCheck]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> VerifyEmail(VerifyEmailCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        if (result.IsSuccess) return NoContent();
-
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.EmailVerified);
     }
 
     /// <summary>
-    /// Resends the email verification link if the user exists and the email has not yet been verified.
-    /// The response is always successful to prevent account enumeration.
+    /// Resends the email verification link.
     /// </summary>
+    /// <param name="command">The email address to resend to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success status (always returns success for security reasons unless rate limited).</returns>
+    /// <response code="200">Verification email sent (or simulated).</response>
+    /// <response code="400">Validation failed (e.g. invalid email format) or Captcha failed.</response>
+    /// <response code="429">Too many requests.</response>
     [HttpPost("resend-verification")]
     [ValidateCaptcha]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 429)]
     public async Task<IActionResult> ResendVerification(ResendVerificationCommand command, CancellationToken cancellationToken)
     {
         var result = await Sender.Send(command, cancellationToken);
-        return HandleResult(result, "If an account exists with this email, a verification link has been sent.");
+        return HandleResult(result, AuthOutcomes.VerificationEmailSent);
     }
 
     /// <summary>
-    /// Authenticates a user and returns an access token.
-    /// A secure HttpOnly refresh token cookie is also set.
+    /// Authenticates a user and issues a JWT token.
     /// </summary>
-    /// <param name="command">The login credentials and device information.</param>
+    /// <param name="command">Login credentials.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Authentication result including the JWT access token.</returns>
-    /// <response code="200">Returns the access token and sets the refresh token cookie.</response>
-    /// <response code="400">Returns when credentials are invalid or the account is locked.</response>
-    /// <response code="403">Returns when the email is not verified (includes VERIFY_EMAIL action).</response>
+    /// <returns>Auth result containing the access token and user info.</returns>
+    /// <response code="200">Login successful.</response>
+    /// <response code="400">Validation failed (e.g. missing fields).</response>
+    /// <response code="401">Invalid credentials.</response>
+    /// <response code="403">Account locked or email not verified.</response>
     [HttpPost("login")]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse<AuthResult>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> Login(LoginCommand command, CancellationToken cancellationToken)
     {
@@ -116,7 +141,8 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        return HandleResult(result, "Login successful");
+        string? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginCompleted;
+        return HandleResult(result, code);
     }
 
     /// <summary>
@@ -138,7 +164,7 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        return HandleResult(result, "Token refreshed successfully");
+        return HandleResult(result, AuthOutcomes.TokenRotated);
     }
 
     /// <summary>
@@ -151,13 +177,13 @@ public class AuthController : CobryxBaseController
     [Authorize]
     [SkipOnboardingCheck]
     [HttpPost("logout")]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutCommand(), cancellationToken);
         _cookieService.DeleteRefreshTokenCookie();
-        return NoContent();
+        return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutCompleted));
     }
 
     /// <summary>
@@ -165,18 +191,18 @@ public class AuthController : CobryxBaseController
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>No content on success.</returns>
-    /// <response code="204">Successfully logged out of all devices and cookie cleared.</response>
+    /// <response code="200">Successfully logged out of all devices and cookie cleared.</response>
     /// <response code="401">Unauthorized (success: false).</response>
     [Authorize]
     [SkipOnboardingCheck]
     [HttpPost("logout-all")]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutAllCommand(), cancellationToken);
         _cookieService.DeleteRefreshTokenCookie();
-        return NoContent();
+        return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutAllCompleted));
     }
 
     /// <summary>
@@ -194,6 +220,6 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> GetSessions(CancellationToken cancellationToken)
     {
         var result = await Sender.Send(new GetSessionsQuery(), cancellationToken);
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
     }
 }

@@ -3,6 +3,7 @@ using Fido2NetLib.Objects;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.Extensions.Configuration;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Infrastructure.Security;
 
@@ -68,9 +69,9 @@ public class Fido2Service : IFido2Service
                 Convert.ToBase64String(success.PublicKey)
             );
         }
-        catch (Fido2VerificationException ex)
+        catch (Fido2VerificationException)
         {
-            throw new Exception($"FIDO2 Registration failed: {ex.Message}", ex);
+            throw new DomainException(DomainErrorCodes.Auth.MfaRegistrationFailed);
         }
     }
 

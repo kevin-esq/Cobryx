@@ -2,8 +2,12 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Exceptions.Tenants;
+using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Exceptions.Common;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 
 namespace Cobryx.Application.Tenants.Commands.OnboardBusiness;
 
@@ -18,13 +22,17 @@ public class OnboardBusinessValidator : AbstractValidator<OnboardBusinessCommand
     public OnboardBusinessValidator()
     {
         RuleFor(x => x.TaxId)
-            .NotEmpty()
-            .MaximumLength(13)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.TaxId.Required)
+            .MaximumLength(13).WithErrorCode(TenantValidationErrors.TaxId.TooLong)
             .Matches(@"^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{2}[0-9A]$")
-            .WithMessage("Invalid Tax ID (RFC) format.");
+            .WithErrorCode(TenantValidationErrors.TaxId.Invalid);
 
-        RuleFor(x => x.Industry).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.BusinessAddress).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.Industry)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.Industry.Required)
+            .MaximumLength(100).WithErrorCode(TenantValidationErrors.Industry.TooLong);
+        RuleFor(x => x.BusinessAddress)
+            .NotEmpty().WithErrorCode(TenantValidationErrors.BusinessAddress.Required)
+            .MaximumLength(500).WithErrorCode(TenantValidationErrors.BusinessAddress.TooLong);
     }
 }
 
@@ -55,22 +63,22 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
         var tenantId = _tenantProvider.GetTenantId();
         var userId = _userProvider.GetUserId();
 
-        if (tenantId == null || userId == null) return Result.Failure("Unauthorized context.");
+        if (tenantId == null || userId == null) throw new UnauthorizedContextException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure("User not found.");
+        if (user == null) throw new UserNotFoundException(userId.Value);
 
-        if (!user.RequiresOnboarding) return Result.Failure("Onboarding already completed.");
+        if (!user.RequiresOnboarding) throw new OnboardingCompletedException();
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) return Result.Failure("Tenant not found.");
+        if (tenant == null) throw new TenantNotFoundException(tenantId.Value);
 
         if (tenant.OnboardingStatus == Cobryx.Domain.Enums.TenantOnboardingStatus.Completed)
         {
             user.CompleteOnboarding();
             await _userRepository.UpdateAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Failure("Business onboarding already completed.");
+            throw new OnboardingCompletedException();
         }
 
         tenant.UpdateOnboardingInfo(request.TaxId, request.Industry, request.BusinessAddress, request.Phone);

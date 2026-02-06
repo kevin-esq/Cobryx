@@ -2,6 +2,7 @@ using Cobryx.Application.Financial.Commands.ProcessPayment;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -18,6 +19,6 @@ public class PaymentsController : CobryxBaseController
     public async Task<IActionResult> ProcessPayment(ProcessPaymentCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Payment processed successfully");
+        return HandleResult(result, PaymentOutcomes.Registered);
     }
 }

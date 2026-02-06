@@ -5,6 +5,8 @@ using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
 using Cobryx.Application.Common.Observability;
+using Cobryx.Domain.Exceptions.Auth;
+using Cobryx.Domain.Exceptions.Users;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 
@@ -41,36 +43,29 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<A
 
         if (string.IsNullOrEmpty(refreshTokenValue))
         {
-            return Result.Failure<AuthResult>("Refresh token cookie missing.");
+            throw new TokenMissingException();
         }
 
         var token = await _refreshTokenRepository.GetByTokenValueAsync(refreshTokenValue, cancellationToken);
 
         if (token == null)
         {
-            return Result.Failure<AuthResult>("Invalid refresh token.");
+            throw new InvalidTokenException();
         }
 
         var user = await _userRepository.GetByIdAsync(token.UserId, cancellationToken);
 
         if (user == null)
         {
-            return Result.Failure<AuthResult>("User not found.");
+            throw new UserNotFoundException(token.UserId);
         }
 
-        try
-        {
-            var ipAddress = _httpContextService.GetIpAddress();
-            var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
-            var authResult = await _authService.RefreshAuthResponse(user, token, ipAddress, deviceFingerprint, cancellationToken);
+        var ipAddress = _httpContextService.GetIpAddress();
+        var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
+        var authResult = await _authService.RefreshAuthResponse(user, token, ipAddress, deviceFingerprint, cancellationToken);
 
-            _metrics.TokenRefreshes.Add(1);
+        _metrics.TokenRefreshes.Add(1);
 
-            return Result.Success(authResult);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<AuthResult>(ex.Message);
-        }
+        return Result.Success(authResult);
     }
 }

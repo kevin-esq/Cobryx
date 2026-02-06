@@ -2,6 +2,7 @@ using Cobryx.Application.Auth.Commands.Mfa;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -18,7 +19,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> GetTotpSetup()
     {
         var result = await Sender.Send(new GetTotpSetupQuery());
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.LoginMfaRequired);
     }
 
     [Authorize]
@@ -26,7 +27,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> ActivateTotp(EnableMfaCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "MFA enabled successfully. Please save your recovery codes.");
+        return HandleResult(result, AuthOutcomes.MfaEnabled);
     }
 
     [AllowAnonymous]
@@ -34,7 +35,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> VerifyTotp(VerifyTotpLoginCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "MFA verification successful");
+        return HandleResult(result, AuthOutcomes.MfaVerified);
     }
 
     [Authorize]
@@ -42,7 +43,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> InitiateFido2Registration()
     {
         var result = await Sender.Send(new InitiateFido2RegistrationCommand());
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.LoginMfaRequired);
     }
 
     [Authorize]
@@ -50,7 +51,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> CompleteFido2Registration(CompleteFido2RegistrationCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "Passkey registered successfully");
+        return HandleResult(result, AuthOutcomes.Fido2Registered);
     }
 
     [AllowAnonymous]
@@ -58,7 +59,7 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> InitiateFido2Assertion(InitiateFido2AssertionCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.MfaInitiated);
     }
 
     [AllowAnonymous]
@@ -66,6 +67,6 @@ public class MfaController : CobryxBaseController
     public async Task<IActionResult> CompleteFido2Assertion(CompleteFido2AssertionCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, "MFA verification successful");
+        return HandleResult(result, AuthOutcomes.MfaVerified);
     }
 }

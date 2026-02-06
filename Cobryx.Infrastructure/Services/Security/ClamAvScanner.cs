@@ -2,6 +2,7 @@ using Cobryx.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using nClam;
+using Cobryx.Domain.Exceptions.System;
 
 namespace Cobryx.Infrastructure.Services.Security;
 
@@ -34,7 +35,7 @@ public class ClamAvScanner : IVirusScanner
                     return false;
                 case ClamScanResults.Error:
                     _logger.LogError("Error scanning file for viruses.");
-                    throw new InvalidOperationException("Could not complete virus scan.");
+                    throw new SystemConfigurationException();
                 default:
                     return false;
             }

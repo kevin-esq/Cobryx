@@ -2,23 +2,22 @@ using System;
 
 namespace Cobryx.Domain.Common;
 
-public class DomainException : Exception
+public class DomainException : CobryxException
 {
-    public DomainException(string message) : base(message)
+    private readonly string _errorCode;
+    public override string ErrorCode => _errorCode;
+
+    public DomainException(string errorCode) : base()
     {
+        _errorCode = errorCode;
     }
 }
 
-public class TooManyRequestsException : Exception
+public class TooManyRequestsException : CobryxException
 {
-    public TooManyRequestsException(string message = "Too many requests. Please try again later.") : base(message)
-    {
-    }
-}
+    public override string ErrorCode => "SYSTEM.TOO_MANY_REQUESTS";
 
-public class EmailUnverifiedException : Exception
-{
-    public EmailUnverifiedException(string message = "Email not verified") : base(message)
+    public TooManyRequestsException() : base()
     {
     }
 }

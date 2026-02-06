@@ -2,6 +2,7 @@ using Cobryx.Application.Auth.Commands.Sessions;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -18,13 +19,13 @@ public class SessionsController : CobryxBaseController
     public async Task<IActionResult> GetSessions()
     {
         var result = await Sender.Send(new GetSessionsQuery());
-        return HandleResult(result);
+        return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> RevokeSession(Guid id)
     {
         var result = await Sender.Send(new RevokeSessionCommand(id));
-        return HandleResult(result, "Session revoked successfully.");
+        return HandleResult(result, AuthOutcomes.SessionRevoked);
     }
 }

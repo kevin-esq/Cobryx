@@ -1,3 +1,5 @@
+using Cobryx.Api.Errors.Mappers;
+using Cobryx.Api.Errors.Definitions;
 using Cobryx.Application.Common.Models;
 using Concordia;
 using Cobryx.Domain.Common;
@@ -16,33 +18,77 @@ public abstract class CobryxBaseController : ControllerBase
         Sender = sender;
     }
 
-    protected IActionResult HandleResult<T>(Result<T> result, string successMessage = "Operation completed successfully")
+    protected IActionResult HandleResult<T>(Result<T> result, string? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponse<T>.SuccessResponse(result.Value!, successMessage));
+            return Ok(ApiResponseFactory.Success(result.Value!, outcomeCode));
         }
 
-        return BadRequest(ApiResponse<T>.FailureResponse(result.Error ?? "An error occurred", null, HttpContext.TraceIdentifier));
+        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorDef = ErrorMapper.Map(errorCode);
+
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult HandleResult(Result result, string successMessage = "Operation completed successfully")
+    protected IActionResult HandleResult(Result result, string? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponse.SuccessResponse(successMessage));
+            return Ok(ApiResponseFactory.Success(outcomeCode: outcomeCode));
         }
 
-        return BadRequest(ApiResponse.FailureResponse(result.Error ?? "An error occurred", null, HttpContext.TraceIdentifier));
+        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorDef = ErrorMapper.Map(errorCode);
+
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult Success<T>(T data, string message = "Success")
+    protected IActionResult Success<T>(T data, string? outcomeCode = null)
     {
-        return Ok(ApiResponse<T>.SuccessResponse(data, message));
+        return Ok(ApiResponseFactory.Success(data, outcomeCode));
     }
 
-    protected IActionResult CreatedResult<T>(string uri, T data, string message = "Resource created successfully")
+    protected IActionResult CreatedResult<T>(string uri, T data, string? outcomeCode = null)
     {
-        return Created(uri, ApiResponse<T>.SuccessResponse(data, message));
+        return Created(uri, ApiResponseFactory.Success(data, outcomeCode));
+    }
+
+    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, string? outcomeCode = null)
+    {
+        if (result.IsSuccess)
+        {
+            return Created(uri, ApiResponseFactory.Success(result.Value!, outcomeCode));
+        }
+
+        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorDef = ErrorMapper.Map(errorCode);
+
+        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
+    }
+
+    private string GetFailureOutcomeCode(string? successOutcomeCode)
+    {
+        if (string.IsNullOrEmpty(successOutcomeCode)) return "SYSTEM.OPERATION.FAILED";
+
+        var lastDot = successOutcomeCode.LastIndexOf('.');
+        if (lastDot > 0)
+        {
+            return successOutcomeCode.Substring(0, lastDot) + ".FAILED";
+        }
+
+        return $"{successOutcomeCode}.FAILED";
     }
 }

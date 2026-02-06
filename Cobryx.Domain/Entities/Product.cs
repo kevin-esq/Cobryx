@@ -27,8 +27,8 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Product(Guid tenantId, string name, Money basePrice, bool isService = false, bool isLoanProduct = false)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
+        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException("DOMAIN.NAME_REQUIRED");
 
 
         TenantId = tenantId;
@@ -41,7 +41,7 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void ConfigureLoanRules(decimal? defaultInterestRate, int? maxInstallments)
     {
-        if (!IsLoanProduct) throw new InvalidOperationException("Cannot configure loan rules for a non-loan product.");
+        if (!IsLoanProduct) throw new DomainException("DOMAIN.NOT_A_LOAN_PRODUCT");
         DefaultInterestRate = defaultInterestRate;
         MaxInstallments = maxInstallments;
         UpdateTimestamp();
@@ -49,8 +49,8 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string name, string? description, Money basePrice, string? sku)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
-        if (basePrice == null) throw new ArgumentNullException(nameof(basePrice));
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException("DOMAIN.NAME_REQUIRED");
+        if (basePrice == null) throw new DomainException("DOMAIN.BASE_PRICE_REQUIRED");
 
         Name = name;
         Description = description;

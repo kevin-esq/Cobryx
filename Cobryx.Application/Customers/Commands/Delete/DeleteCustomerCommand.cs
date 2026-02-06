@@ -1,6 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Exceptions.Customers;
+using Cobryx.Domain.Exceptions.Tenants;
 using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Delete;
@@ -21,15 +23,14 @@ public class DeleteCustomerHandler : IRequestHandler<DeleteCustomerCommand, Resu
     public async Task<Result> Handle(DeleteCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+        if (!tenantId.HasValue) throw new TenantContextMissingException();
 
         var customer = await _customerRepository.GetByIdAsync(request.Id);
 
         if (customer == null || customer.TenantId != tenantId.Value)
         {
-            return Result.Failure("Customer not found.");
+            throw new CustomerNotFoundException(request.Id);
         }
-
 
         await _customerRepository.DeleteAsync(customer.Id);
 

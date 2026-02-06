@@ -3,6 +3,7 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Auth.Services;
 
@@ -63,18 +64,18 @@ public class AuthService : IAuthService
             user.RevokeSession(token.SessionId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            throw new Exception("Compromised session. Please re-authenticate.");
+            throw new DomainException(DomainErrorCodes.Auth.TokenCompromised);
         }
 
         if (token.IsExpired)
         {
-            throw new Exception("Session expired.");
+            throw new DomainException(DomainErrorCodes.Auth.TokenExpired);
         }
 
         var session = user.Sessions.FirstOrDefault(s => s.Id == token.SessionId);
         if (session == null || session.IsRevoked)
         {
-            throw new Exception("Session revoked.");
+            throw new DomainException(DomainErrorCodes.Auth.SessionRevoked);
         }
 
         var newRefreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();

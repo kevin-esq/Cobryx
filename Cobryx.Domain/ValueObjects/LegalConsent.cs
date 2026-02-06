@@ -22,13 +22,13 @@ public record LegalConsent : ValueObject
     public LegalConsent(bool accepted, string version, string ipAddress, string userAgent)
     {
         if (!accepted)
-            throw new ArgumentException("Consent must be accepted.", nameof(accepted));
+            throw new DomainException("DOMAIN.CONSENT_REQUIRED");
         if (string.IsNullOrWhiteSpace(version))
-            throw new ArgumentException("Document version is required.", nameof(version));
+            throw new DomainException("DOMAIN.INVALID_CONSENT_VERSION");
         if (string.IsNullOrWhiteSpace(ipAddress))
-            throw new ArgumentException("IP address is required for legal traceability.", nameof(ipAddress));
+            throw new DomainException("DOMAIN.IP_ADDRESS_REQUIRED");
         if (string.IsNullOrWhiteSpace(userAgent))
-            throw new ArgumentException("User-Agent is required for legal traceability.", nameof(userAgent));
+            throw new DomainException("DOMAIN.USER_AGENT_REQUIRED");
 
         Accepted = accepted;
         Timestamp = DateTime.UtcNow;

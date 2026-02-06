@@ -2,6 +2,7 @@ using Cobryx.Application.Users.Queries.GetUsers;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cobryx.Api.Outcomes;
 
 namespace Cobryx.Api.Controllers;
 
@@ -18,6 +19,6 @@ public class UsersController : CobryxBaseController
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var result = await Sender.Send(new GetUsersQuery(page, pageSize));
-        return HandleResult(result, "Users retrieved successfully");
+        return HandleResult(result, UserOutcomes.SearchCompleted);
     }
 }

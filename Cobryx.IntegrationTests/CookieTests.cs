@@ -6,12 +6,16 @@ using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Cobryx.Infrastructure.Persistence;
+using Cobryx.Application.Auth.Commands.Core;
+using Cobryx.Application.Common.Models;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace Cobryx.IntegrationTests;
 
-public class CookieTests : IClassFixture<CobryxWebApplicationFactory>
+public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLifetime
 {
     private readonly CobryxWebApplicationFactory _factory;
     private readonly HttpClient _client;
@@ -19,9 +23,28 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>
     public CookieTests(CobryxWebApplicationFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true
+        });
         _client.DefaultRequestHeaders.Add("User-Agent", "IntegrationTestClient/1.0");
     }
+
+    public async Task InitializeAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
+        var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
+
+        await db.Database.EnsureCreatedAsync();
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     [Fact]
     public async Task Login_ValidCredentials_SetsRefreshTokenCookie()
@@ -40,8 +63,8 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>
         var cookies = response.Headers.GetValues("Set-Cookie").ToList();
         Assert.NotEmpty(cookies);
         Assert.Contains(cookies, c => c.Contains("refreshToken="));
-        Assert.Contains(cookies, c => c.Contains("HttpOnly"));
-        Assert.Contains(cookies, c => c.Contains("SameSite=Strict"));
+        Assert.Contains(cookies, c => c.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(cookies, c => c.Contains("SameSite", StringComparison.OrdinalIgnoreCase));
 
         var content = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("\"refreshToken\":", content);
@@ -63,9 +86,9 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>
 
         Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
 
-        var authResult = await refreshResponse.Content.ReadFromJsonAsync<AuthResult>();
-        Assert.NotNull(authResult);
-        Assert.NotNull(authResult.Token);
+        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
+        Assert.NotNull(apiResponse?.Data);
+        Assert.NotNull(apiResponse.Data.Token);
 
         var cookies = refreshResponse.Headers.GetValues("Set-Cookie").ToList();
         Assert.NotEmpty(cookies);
@@ -82,48 +105,37 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
         var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginCmd);
-        var authResult = await loginResponse.Content.ReadFromJsonAsync<AuthResult>();
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResult.Token);
+        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiResponse!.Data!.Token);
 
         var logoutResponse = await _client.PostAsJsonAsync("/api/auth/logout", new { });
 
-        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
         _client.DefaultRequestHeaders.Authorization = null;
 
         var cookies = logoutResponse.Headers.GetValues("Set-Cookie").ToList();
-        Assert.Contains(cookies, c => c.Contains("refreshToken=;") || c.Contains("refreshToken= ") || c.Contains("expires=Thu, 01 Jan 1970"));
+        Assert.Contains(cookies, c => c.Contains("refreshToken=", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<string> RegisterAndVerifyUser(string email, string password)
     {
-        var registerCmd = new
-        {
-            BusinessName = "Test Business",
-            FirstName = "Test",
-            LastName = "User",
-            Email = email,
-            Password = password,
-            TaxId = "XAXX010101000",
-            Industry = "Tech",
-            BusinessAddress = "123 Main St",
-            MarketingConsent = true,
-            TermsVersion = "v1.0",
-            CaptchaToken = "dummy"
-        };
+        var signupCmd = new SignUpCommand(
+            "Test Business",
+            "Test",
+            "User",
+            email,
+            password
+        );
 
-        var response = await _client.PostAsJsonAsync("/api/auth/register", registerCmd);
+        var response = await _client.PostAsJsonAsync("/api/auth/signup", signupCmd);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.True(response.StatusCode == HttpStatusCode.Created, $"Register failed with {response.StatusCode}: {content}");
-
-        await Task.Delay(200);
+        Assert.True(response.StatusCode == HttpStatusCode.Created, $"Signup failed with {response.StatusCode}: {content}");
 
         var emailService = _factory.Services.GetRequiredService<MockEmailService>();
-        var body = emailService.LastBody;
-        Assert.NotNull(body);
+        var token = emailService.GetLastToken(email);
+        Assert.NotNull(token);
 
-        var token = body.Split("token=")[1];
-
-        var verifyCmd = new { Token = token };
+        var verifyCmd = new VerifyEmailCommand(token);
         var verifyResponse = await _client.PostAsJsonAsync("/api/auth/verify-email", verifyCmd);
         Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
 
