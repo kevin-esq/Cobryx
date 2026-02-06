@@ -1,8 +1,9 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Enums;
+using Cobryx.Domain.Events.Payments;
 
-namespace Cobryx.Domain.Entities;
+namespace Cobryx.Domain.Entities.Payments;
 
 public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 {
@@ -35,7 +36,39 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         PaymentDate = paymentDate;
         Reference = reference;
         Notes = notes;
+        Status = PaymentStatus.Pending;
+    }
+
+    public void Initiate()
+    {
+        if (Status != PaymentStatus.Pending)
+            throw new DomainException("DOMAIN.PAYMENT.NOT_PENDING");
+
+        Status = PaymentStatus.Processing;
+        UpdateTimestamp();
+    }
+
+    public void Complete()
+    {
+        if (Status != PaymentStatus.Processing)
+            throw new DomainException(DomainErrorCodes.Financial.PaymentNotProcessing);
+
         Status = PaymentStatus.Completed;
+
+        var allocations = _allocations.Select(a => new PaymentAllocationEventData(a.InvoiceId, a.Amount)).ToList();
+        AddDomainEvent(new PaymentCompletedEvent(Id, TenantId, CustomerId, Amount, allocations, DateTime.UtcNow));
+
+        UpdateTimestamp();
+    }
+
+    public void Fail(string reason)
+    {
+        if (Status != PaymentStatus.Processing)
+            throw new DomainException("DOMAIN.PAYMENT.NOT_PROCESSING");
+
+        Status = PaymentStatus.Failed;
+        AddDomainEvent(new PaymentFailedEvent(Id, TenantId, CustomerId, reason, DateTime.UtcNow));
+        UpdateTimestamp();
     }
 
     public void AddAllocation(Guid invoiceId, Money amount)
@@ -46,6 +79,9 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Cancel()
     {
+        if (Status != PaymentStatus.Pending)
+            throw new DomainException("DOMAIN.PAYMENT.CANNOT_CANCEL");
+
         Status = PaymentStatus.Cancelled;
         UpdateTimestamp();
     }

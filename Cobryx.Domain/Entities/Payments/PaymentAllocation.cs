@@ -1,7 +1,7 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
 
-namespace Cobryx.Domain.Entities;
+namespace Cobryx.Domain.Entities.Payments;
 
 public class PaymentAllocation : BaseEntity
 {

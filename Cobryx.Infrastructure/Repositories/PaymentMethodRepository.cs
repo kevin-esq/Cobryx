@@ -1,5 +1,5 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Entities.Payments;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

@@ -2,8 +2,9 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Entities.Invoicing;
 
-namespace Cobryx.Application.Financial.Queries.GetInvoices;
+namespace Cobryx.Application.Financial.Invoicing.GetInvoices;
 
 public record GetInvoicesQuery() : IRequest<Result<IReadOnlyList<InvoiceDto>>>;
 

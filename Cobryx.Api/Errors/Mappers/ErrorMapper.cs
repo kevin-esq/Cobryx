@@ -4,7 +4,6 @@ using Cobryx.Api.Errors.Catalog;
 
 namespace Cobryx.Api.Errors.Mappers;
 
-// Maps domain and application error codes to API ErrorDefinitions.
 public static class ErrorMapper
 {
     public static ErrorDefinition Map(string errorCode) => errorCode switch
@@ -26,9 +25,14 @@ public static class ErrorMapper
         DomainErrorCodes.Customer.Duplicate => new(409, 3002),
 
         DomainErrorCodes.Tenant.NotFound => new(404, 2001),
-        DomainErrorCodes.Tenant.ContextMissing => TenantErrors.ContextMissing, // This line was not in the provided new code, keeping original mapping
+        DomainErrorCodes.Tenant.ContextMissing => TenantErrors.ContextMissing,
         DomainErrorCodes.Tenant.OnboardingRequired => new(403, 2003),
         DomainErrorCodes.Tenant.OnboardingCompleted => new(409, 2004),
+
+        DomainErrorCodes.Financial.InvoiceInvalidStatusForPayment => FinancialErrors.InvoiceInvalidStatusForPayment,
+        DomainErrorCodes.Financial.InvoiceCurrencyMismatch => FinancialErrors.InvoiceCurrencyMismatch,
+        DomainErrorCodes.Financial.PaymentNotProcessing => FinancialErrors.PaymentNotProcessing,
+        DomainErrorCodes.Financial.InvoiceNotFound => FinancialErrors.InvoiceNotFound,
 
         "CREDITS.NOT_FOUND" => CreditErrors.NotFound,
         "CREDITS.INSUFFICIENT" => CreditErrors.Insufficient,
@@ -37,7 +41,7 @@ public static class ErrorMapper
         DomainErrorCodes.System.TooManyRequests => new(429, 1090),
         DomainErrorCodes.System.InternalError => new(500, 1000),
 
-        // --- FALLBACK ---
+
         _ => new(400, 1000)
     };
 }

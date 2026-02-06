@@ -1,4 +1,4 @@
-namespace Cobryx.Application.Common.Interfaces;
+namespace Cobryx.Domain.Interfaces;
 
 public interface IInvoiceNumberService
 {

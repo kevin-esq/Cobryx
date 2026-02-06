@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Common;
 
@@ -14,7 +15,7 @@ public class PaymentService
         if (payment.CustomerId != invoice.CustomerId)
             throw new DomainException("DOMAIN.PAYMENT.CUSTOMER_MISMATCH");
 
-        invoice.ApplyPayment(amount);
+        invoice.ApplyPayment(payment.Id, amount);
         payment.AddAllocation(invoice.Id, amount);
     }
 }

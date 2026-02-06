@@ -59,6 +59,18 @@ public static class DomainErrorCodes
         public const string FileSizeExceeded = "DOMAIN.DOCUMENTS.FILE_SIZE_EXCEEDED";
         public const string VirusDetected = "DOMAIN.DOCUMENTS.VIRUS_DETECTED";
     }
+
+    public static class Financial
+    {
+        public const string InvoiceInvalidStatusForPayment = "DOMAIN.INVOICE.INVALID_STATUS_FOR_PAYMENT";
+        public const string InvoiceCurrencyMismatch = "DOMAIN.INVOICE.CURRENCY_MISMATCH";
+        public const string PaymentNotProcessing = "DOMAIN.PAYMENT.NOT_PROCESSING";
+        public const string InvoiceNotFound = "DOMAIN.FINANCIAL.INVOICE_NOT_FOUND";
+        public const string InvoiceNoItems = "DOMAIN.INVOICE.NO_ITEMS";
+        public const string InvoiceNotDraftAddItem = "DOMAIN.INVOICE.NOT_DRAFT_ADD_ITEM";
+        public const string InvoiceNotDraftRecalculate = "DOMAIN.INVOICE.NOT_DRAFT_RECALCULATE";
+    }
+
     public static class System
     {
         public const string InternalError = "SYSTEM.INTERNAL_ERROR";

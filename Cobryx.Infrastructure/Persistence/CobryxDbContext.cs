@@ -3,6 +3,8 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Entities.Payments;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;

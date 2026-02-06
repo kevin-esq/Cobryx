@@ -1,7 +1,10 @@
+using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Events;
+using Cobryx.Domain.Events.Payments;
 
 namespace Cobryx.Domain.Entities;
 

@@ -1,6 +1,6 @@
 using Cobryx.Domain.Common;
 
-namespace Cobryx.Domain.Entities;
+namespace Cobryx.Domain.Entities.Payments;
 
 public class PaymentMethod : BaseEntity, IAggregateRoot, ITenantEntity
 {

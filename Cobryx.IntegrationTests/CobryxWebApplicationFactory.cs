@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.Infrastructure.Persistence.Interceptors;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.IntegrationTests.Fakes;
 using Microsoft.Data.Sqlite;
@@ -87,13 +88,30 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(CobryxDbContext));
             if (dbContextDescriptor != null) services.Remove(dbContextDescriptor);
 
-            services.AddDbContext<CobryxDbContext>(options =>
+            services.AddDbContext<CobryxDbContext>((sp, options) =>
             {
+                options.AddInterceptors(
+                    sp.GetRequiredService<AuditInterceptor>(),
+                    sp.GetRequiredService<DispatchDomainEventsInterceptor>());
                 options.UseSqlite(_connection);
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
             });
+
+
+            var tenantDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(ITenantProvider));
+            if (tenantDescriptor != null) services.Remove(tenantDescriptor);
+            services.AddSingleton<ITenantProvider, TestTenantProvider>();
         });
+    }
+
+    public class TestTenantProvider : ITenantProvider
+    {
+        public Guid TenantId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+        public Guid? GetTenantId() => TenantId;
+
+        public void SetTenantId(Guid tenantId) => TenantId = tenantId;
     }
 
     protected override void Dispose(bool disposing)

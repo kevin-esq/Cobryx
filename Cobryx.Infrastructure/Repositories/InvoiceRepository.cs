@@ -1,5 +1,5 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
