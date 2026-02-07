@@ -26,7 +26,7 @@ public abstract class CobryxBaseController : ControllerBase
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
-        var errorDef = ErrorMapper.Map(errorCode);
+        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
@@ -43,7 +43,7 @@ public abstract class CobryxBaseController : ControllerBase
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
-        var errorDef = ErrorMapper.Map(errorCode);
+        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
@@ -70,7 +70,7 @@ public abstract class CobryxBaseController : ControllerBase
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
-        var errorDef = ErrorMapper.Map(errorCode);
+        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
             errorCode: errorCode,

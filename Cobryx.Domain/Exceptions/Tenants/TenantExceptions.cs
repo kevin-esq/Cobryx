@@ -4,7 +4,7 @@ namespace Cobryx.Domain.Exceptions.Tenants;
 
 public class TenantNotFoundException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Tenant.NotFound;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Tenant.NotFound;
 
     public TenantNotFoundException(Guid tenantId)
         : base()
@@ -15,7 +15,7 @@ public class TenantNotFoundException : CobryxException
 
 public class TenantContextMissingException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Tenant.ContextMissing;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Tenant.ContextMissing;
 
     public TenantContextMissingException()
         : base()
@@ -25,12 +25,12 @@ public class TenantContextMissingException : CobryxException
 
 public class OnboardingCompletedException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Tenant.OnboardingCompleted;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Tenant.OnboardingCompleted;
     public OnboardingCompletedException() : base() { }
 }
 
 public class OnboardingRequiredException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Tenant.OnboardingRequired;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Tenant.OnboardingRequired;
     public OnboardingRequiredException() : base() { }
 }

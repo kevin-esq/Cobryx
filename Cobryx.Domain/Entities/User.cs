@@ -52,11 +52,11 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public User(Guid tenantId, string firstName, string lastName, EmailAddress email, Guid roleId)
     {
-        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.USER.TENANT_ID_REQUIRED");
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException("DOMAIN.USER.FIRST_NAME_REQUIRED");
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException("DOMAIN.USER.LAST_NAME_REQUIRED");
-        if (email == null) throw new DomainException("DOMAIN.USER.EMAIL_REQUIRED");
-        if (roleId == Guid.Empty) throw new DomainException("DOMAIN.USER.ROLE_ID_REQUIRED");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.User.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.User.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.User.LastNameRequired);
+        if (email == null) throw new DomainException(DomainErrorCode.User.EmailRequired);
+        if (roleId == Guid.Empty) throw new DomainException(DomainErrorCode.User.RoleIdRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -142,14 +142,14 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public void SetPasswordHash(string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(passwordHash))
-            throw new DomainException("DOMAIN.USER.PASSWORD_HASH_REQUIRED");
+            throw new DomainException(DomainErrorCode.User.PasswordHashRequired);
 
         PasswordHash = passwordHash;
     }
 
     public void UpdateRole(Guid roleId)
     {
-        if (roleId == Guid.Empty) throw new DomainException("DOMAIN.USER.ROLE_ID_REQUIRED");
+        if (roleId == Guid.Empty) throw new DomainException(DomainErrorCode.User.RoleIdRequired);
         RoleId = roleId;
     }
 

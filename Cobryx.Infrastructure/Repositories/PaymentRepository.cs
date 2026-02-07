@@ -18,4 +18,9 @@ public class PaymentRepository : BaseRepository<Payment>, IPaymentRepository
     {
         return await _dbSet.ToListAsync(cancellationToken);
     }
+
+    public async Task<Payment?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.FirstOrDefaultAsync(p => p.Reference == reference, cancellationToken);
+    }
 }

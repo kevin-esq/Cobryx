@@ -18,6 +18,12 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             m.Property(x => x.Currency).HasMaxLength(3);
         });
 
+        builder.OwnsOne(p => p.RefundedAmount, m =>
+        {
+            m.Property(x => x.Amount).HasPrecision(18, 2);
+            m.Property(x => x.Currency).HasMaxLength(3);
+        });
+
         builder.HasMany(p => p.Allocations)
             .WithOne()
             .HasForeignKey(pa => pa.PaymentId)

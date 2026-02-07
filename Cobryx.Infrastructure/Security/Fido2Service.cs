@@ -71,7 +71,7 @@ public class Fido2Service : IFido2Service
         }
         catch (Fido2VerificationException)
         {
-            throw new DomainException(DomainErrorCodes.Auth.MfaRegistrationFailed);
+            throw new DomainException(DomainErrorCode.Auth.MfaRegistrationFailed);
         }
     }
 

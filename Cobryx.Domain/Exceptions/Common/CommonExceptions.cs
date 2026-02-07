@@ -4,7 +4,7 @@ namespace Cobryx.Domain.Exceptions.Common;
 
 public class EntityNotFoundException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Common.EntityNotFound;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Common.EntityNotFound;
 
     public EntityNotFoundException(string entityName, object key)
         : base()
@@ -16,7 +16,7 @@ public class EntityNotFoundException : CobryxException
 
 public class UnauthorizedContextException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Common.UnauthorizedContext;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Common.UnauthorizedContext;
 
     public UnauthorizedContextException()
         : base()

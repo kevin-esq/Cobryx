@@ -64,18 +64,18 @@ public class AuthService : IAuthService
             user.RevokeSession(token.SessionId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            throw new DomainException(DomainErrorCodes.Auth.TokenCompromised);
+            throw new DomainException(DomainErrorCode.Auth.TokenCompromised);
         }
 
         if (token.IsExpired)
         {
-            throw new DomainException(DomainErrorCodes.Auth.TokenExpired);
+            throw new DomainException(DomainErrorCode.Auth.TokenExpired);
         }
 
         var session = user.Sessions.FirstOrDefault(s => s.Id == token.SessionId);
         if (session == null || session.IsRevoked)
         {
-            throw new DomainException(DomainErrorCodes.Auth.SessionRevoked);
+            throw new DomainException(DomainErrorCode.Auth.SessionRevoked);
         }
 
         var newRefreshTokenValue = _jwtTokenGenerator.GenerateRefreshToken();

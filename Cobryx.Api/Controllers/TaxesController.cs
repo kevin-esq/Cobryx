@@ -21,20 +21,20 @@ public class TaxesController : CobryxBaseController
     public async Task<IActionResult> GetTaxes()
     {
         var result = await Sender.Send(new GetTaxConfigurationsQuery());
-        return HandleResult(result, FinancialOutcomes.Taxes.SearchCompleted);
+        return HandleResult(result, InvoicingOutcomes.Taxes.SearchCompleted);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateTax(CreateTaxConfigurationCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, FinancialOutcomes.Taxes.Created);
+        return HandleResult(result, InvoicingOutcomes.Taxes.Created);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTax(Guid id)
     {
         var result = await Sender.Send(new DeleteTaxConfigurationCommand(id));
-        return HandleResult(result, FinancialOutcomes.Taxes.Deleted);
+        return HandleResult(result, InvoicingOutcomes.Taxes.Deleted);
     }
 }

@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Cobryx.Domain.Exceptions.Auth;
@@ -21,6 +22,13 @@ public class SessionValidationFilter : IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        var allowAnonymous = context.ActionDescriptor.EndpointMetadata.Any(em => em is AllowAnonymousAttribute);
+        if (allowAnonymous)
+        {
+            await next();
+            return;
+        }
+
         var userId = _currentUserProvider.GetUserId();
         var sessionId = _currentUserProvider.GetSessionId();
 

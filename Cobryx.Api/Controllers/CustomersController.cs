@@ -10,7 +10,6 @@ using Cobryx.Domain.Common;
 namespace Cobryx.Api.Controllers;
 
 [Authorize(Policy = "CanCreateCustomers")]
-[Authorize(Policy = "CanCreateCustomers")]
 [ApiController]
 [Route("api/customers")]
 public class CustomersController : CobryxBaseController
@@ -47,7 +46,7 @@ public class CustomersController : CobryxBaseController
     [Authorize(Policy = "CanCreateCustomers")]
     public async Task<IActionResult> Update(Guid id, UpdateCustomerCommand command)
     {
-        if (id != command.Id) throw new DomainException("API.ID_MISMATCH");
+        if (id != command.Id) throw new DomainException(DomainErrorCode.Api.IdMismatch);
         var result = await Sender.Send(command);
         return HandleResult(result, CustomerOutcomes.Updated);
     }

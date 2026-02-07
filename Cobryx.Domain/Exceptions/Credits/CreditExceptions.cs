@@ -4,7 +4,7 @@ namespace Cobryx.Domain.Exceptions.Credits;
 
 public class CreditNotFoundException : CobryxException
 {
-    public override string ErrorCode => "CREDITS.NOT_FOUND";
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Credits.GenericNotFound;
 
     public CreditNotFoundException(Guid creditId)
         : base(null!)
@@ -15,7 +15,7 @@ public class CreditNotFoundException : CobryxException
 
 public class InsufficientCreditsException : CobryxException
 {
-    public override string ErrorCode => "CREDITS.INSUFFICIENT";
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Credits.Insufficient;
 
     public InsufficientCreditsException(decimal currentBalance, decimal requiredAmount)
         : base(null!)

@@ -27,6 +27,16 @@ public class StripeWebhookParser : IWebhookParser
                 data,
                 data.GetProperty("id").GetString()),
 
+            "charge.refunded" => new WebhookParseResult(
+                "ChargeRefunded",
+                data,
+                data.GetProperty("payment_intent").GetString()),
+
+            "charge.dispute.created" => new WebhookParseResult(
+                "ChargeDisputeCreated",
+                data,
+                data.GetProperty("payment_intent").GetString()),
+
             _ => throw new NotSupportedException($"Stripe event type {type} is not supported.")
         };
 

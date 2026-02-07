@@ -4,6 +4,6 @@ namespace Cobryx.Domain.Exceptions.System;
 
 public class SystemConfigurationException : CobryxException
 {
-    public override string ErrorCode => DomainErrorCodes.Common.SystemConfigurationError;
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Common.SystemConfigurationError;
     public SystemConfigurationException() : base() { }
 }

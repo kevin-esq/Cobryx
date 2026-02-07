@@ -20,13 +20,13 @@ public class InvoicesController : CobryxBaseController
     public async Task<IActionResult> GetInvoices()
     {
         var result = await Sender.Send(new GetInvoicesQuery());
-        return HandleResult(result, FinancialOutcomes.Invoices.SearchCompleted);
+        return HandleResult(result, InvoicingOutcomes.Invoices.SearchCompleted);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateInvoice(CreateInvoiceCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, FinancialOutcomes.Invoices.Created);
+        return HandleResult(result, InvoicingOutcomes.Invoices.Created);
     }
 }
