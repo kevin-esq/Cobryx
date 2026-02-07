@@ -30,9 +30,9 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
         var paymentMethodRepo = scope.ServiceProvider.GetRequiredService<IPaymentMethodRepository>();
         var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        
+
         var tenantId = tenantProvider.GetTenantId().GetValueOrDefault();
-        
+
         var customer = new Customer(tenantId, "Test", "User", "5551234", null, null);
         await customerRepo.AddAsync(customer);
 
@@ -43,7 +43,7 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
         invoice.AddItem("Production Item", 1, 500, 0, false);
         invoice.Issue();
         await invoiceRepo.AddAsync(invoice);
-        
+
         await dbContext.SaveChangesAsync();
 
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
@@ -65,7 +65,7 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
         updatedInvoice.Should().NotBeNull();
         updatedInvoice!.Status.Should().Be(InvoiceStatus.Paid);
         updatedInvoice.TotalPaid.Amount.Should().Be(500);
-        
+
         var paymentRepo = scope.ServiceProvider.GetRequiredService<IPaymentRepository>();
         var payment = await paymentRepo.GetByIdAsync(paymentId);
         payment.Should().NotBeNull();

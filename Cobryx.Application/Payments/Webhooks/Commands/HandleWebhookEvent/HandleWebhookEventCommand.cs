@@ -87,7 +87,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
     {
         if (parseResult.Data is not JsonElement data)
         {
-             return Result.Failure("Invalid webhook data format.");
+            return Result.Failure("Invalid webhook data format.");
         }
 
         return parseResult.InternalEventType switch

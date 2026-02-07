@@ -11,7 +11,7 @@ public class StripeWebhookParser : IWebhookParser
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        
+
         var type = root.GetProperty("type").GetString();
         var data = root.GetProperty("data").GetProperty("object");
 
@@ -21,7 +21,7 @@ public class StripeWebhookParser : IWebhookParser
                 "PaymentSucceeded",
                 data,
                 data.GetProperty("id").GetString()),
-            
+
             "payment_intent.payment_failed" => new WebhookParseResult(
                 "PaymentFailed",
                 data,

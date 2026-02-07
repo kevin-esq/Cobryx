@@ -129,7 +129,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode PaymentNotCompletedCannotRefund = new("DOMAIN.PAYMENT.NOT_COMPLETED_CANNOT_REFUND");
         public static readonly DomainErrorCode PaymentInvalidStatusForChargeback = new("DOMAIN.PAYMENT.INVALID_STATUS_FOR_CHARGEBACK");
         public static readonly DomainErrorCode InvalidAllocationAmount = new("DOMAIN.INVALID_ALLOCATION_AMOUNT");
-        
+
         public static readonly DomainErrorCode PaymentMethodRequired = new("DOMAIN.PAYMENT.METHOD_REQUIRED");
         public static readonly DomainErrorCode PaymentReferenceRequired = new("DOMAIN.PAYMENT.REFERENCE_REQUIRED");
         public static readonly DomainErrorCode PaymentProviderError = new("DOMAIN.PAYMENT.PROVIDER_ERROR");
@@ -138,10 +138,10 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TaxNameRequired = new("DOMAIN.TAX.NAME_REQUIRED");
         public static readonly DomainErrorCode TaxNotFound = new("DOMAIN.TAX.NOT_FOUND");
         public static readonly DomainErrorCode TaxRateNegative = new("DOMAIN.TAX.RATE_NEGATIVE");
-        
+
         public static readonly DomainErrorCode PaymentTenantMismatch = new("DOMAIN.PAYMENT.TENANT_MISMATCH");
         public static readonly DomainErrorCode PaymentCustomerMismatch = new("DOMAIN.PAYMENT.CUSTOMER_MISMATCH");
-        
+
         public static readonly DomainErrorCode PaymentMethodNameRequired = new("DOMAIN.PAYMENT_METHOD.NAME_REQUIRED");
         public static readonly DomainErrorCode PaymentMethodCodeRequired = new("DOMAIN.PAYMENT_METHOD.CODE_REQUIRED");
     }

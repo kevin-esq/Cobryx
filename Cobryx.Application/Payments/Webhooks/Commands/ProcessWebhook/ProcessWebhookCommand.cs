@@ -19,7 +19,7 @@ public class ProcessWebhookHandler : IRequestHandler<ProcessWebhookCommand, Resu
     private readonly ILogger<ProcessWebhookHandler> _logger;
 
     public ProcessWebhookHandler(
-        IWebhookEventRepository webhookEventRepository, 
+        IWebhookEventRepository webhookEventRepository,
         IUnitOfWork unitOfWork,
         ILogger<ProcessWebhookHandler> logger)
     {
@@ -30,20 +30,20 @@ public class ProcessWebhookHandler : IRequestHandler<ProcessWebhookCommand, Resu
 
     public async Task<Result> Handle(ProcessWebhookCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Ingesting webhook from {Provider} with ExternalEventId {ExternalEventId}", 
+        _logger.LogInformation("Ingesting webhook from {Provider} with ExternalEventId {ExternalEventId}",
             request.Provider, request.ExternalEventId);
 
         var existing = await _webhookEventRepository.ExistsAsync(request.Provider, request.ExternalEventId, cancellationToken);
 
         if (existing)
         {
-            _logger.LogInformation("Webhook already ingested (Deduped). Provider: {Provider}, ExternalEventId: {ExternalEventId}", 
+            _logger.LogInformation("Webhook already ingested (Deduped). Provider: {Provider}, ExternalEventId: {ExternalEventId}",
                 request.Provider, request.ExternalEventId);
             return Result.Success();
         }
 
         var webhookEvent = new WebhookEvent(request.Provider, request.ExternalEventId, request.RawPayload);
-        
+
         await _webhookEventRepository.AddAsync(webhookEvent, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

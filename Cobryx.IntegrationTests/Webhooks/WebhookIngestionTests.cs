@@ -35,10 +35,10 @@ public class WebhookIngestionTests : IClassFixture<CobryxWebApplicationFactory>
 
         // Assert - First
         firstResult.IsSuccess.Should().BeTrue();
-        
+
         var ingestedEvent = dbContext.WebhookEvents
             .FirstOrDefault(e => e.Provider == provider && e.ExternalEventId == externalEventId);
-        
+
         ingestedEvent.Should().NotBeNull();
         ingestedEvent!.Status.Should().Be(WebhookStatus.Pending);
 
@@ -46,10 +46,10 @@ public class WebhookIngestionTests : IClassFixture<CobryxWebApplicationFactory>
 
         // Assert - Duplicate (Should be success but deduped)
         secondResult.IsSuccess.Should().BeTrue();
-        
+
         var count = dbContext.WebhookEvents
             .Count(e => e.Provider == provider && e.ExternalEventId == externalEventId);
-        
+
         count.Should().Be(1); // Still only one
     }
 }

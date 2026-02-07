@@ -25,7 +25,7 @@ public class PaymentChargebackedHandler : INotificationHandler<DomainEventNotifi
     public async Task Handle(DomainEventNotification<PaymentChargebackedEvent> notification, CancellationToken cancellationToken)
     {
         var domainEvent = notification.DomainEvent;
-        _logger.LogWarning("Processing PaymentChargebackedEvent for Payment {PaymentId}. Reversing all allocations.", 
+        _logger.LogWarning("Processing PaymentChargebackedEvent for Payment {PaymentId}. Reversing all allocations.",
             domainEvent.PaymentId);
 
         var payment = await _paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);

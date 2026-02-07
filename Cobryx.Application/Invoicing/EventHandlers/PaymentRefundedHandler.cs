@@ -25,14 +25,14 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
     public async Task Handle(DomainEventNotification<PaymentRefundedEvent> notification, CancellationToken cancellationToken)
     {
         var domainEvent = notification.DomainEvent;
-        _logger.LogInformation("Processing PaymentRefundedEvent for Payment {PaymentId}. Amount: {Amount}", 
+        _logger.LogInformation("Processing PaymentRefundedEvent for Payment {PaymentId}. Amount: {Amount}",
             domainEvent.PaymentId, domainEvent.Amount);
 
         var payment = await _paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);
         if (payment == null) return;
 
-        
-        
+
+
         if (payment.IsFullyRefunded)
         {
             foreach (var allocation in payment.Allocations)
@@ -45,9 +45,9 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
                 }
             }
         }
-        else 
+        else
         {
-             _logger.LogWarning("Partial refund detected for Payment {PaymentId}. Manual intervention or refined allocation reversal strategy required.", domainEvent.PaymentId);
+            _logger.LogWarning("Partial refund detected for Payment {PaymentId}. Manual intervention or refined allocation reversal strategy required.", domainEvent.PaymentId);
         }
     }
 }

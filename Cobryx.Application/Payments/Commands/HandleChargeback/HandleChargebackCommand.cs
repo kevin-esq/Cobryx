@@ -23,7 +23,7 @@ public class HandleChargebackHandler : IRequestHandler<HandleChargebackCommand, 
         var payment = await _paymentRepository.GetByIdAsync(request.PaymentId);
         if (payment == null) return Result.Failure("Payment not found.");
 
-        try 
+        try
         {
             payment.Chargeback();
             await _unitOfWork.SaveChangesAsync(cancellationToken);

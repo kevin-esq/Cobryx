@@ -28,8 +28,8 @@ public class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, Result
         if (payment == null) return Result.Failure("Payment not found.");
 
         var refundAmount = new Money(request.Amount, request.Currency);
-        
-        try 
+
+        try
         {
             payment.Refund(refundAmount);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
