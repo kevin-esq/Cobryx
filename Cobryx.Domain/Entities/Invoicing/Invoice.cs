@@ -106,8 +106,9 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
             Status = InvoiceStatus.Partial;
         }
 
-        // We don't remove from _appliedPaymentIds because the IDEMPOTENCY is now handled by PaymentAllocation.IsReversed
-        // and we want to keep the historical trace that this payment WAS once applied.
+        // We mark the allocation as reversed once the invoice state has been updated.
+        // This ensures idempotency even if the handler/process is retried.
+        allocation.MarkAsReversed();
 
         AddDomainEvent(new InvoiceStateReversedEvent(Id, TenantId, Status, TotalPaid, DateTime.UtcNow));
         UpdateTimestamp();

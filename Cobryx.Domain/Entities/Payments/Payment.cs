@@ -116,10 +116,7 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         RefundedAmount = Amount;
 
         // In a chargeback, we implicitly reverse all allocations
-        foreach (var allocation in _allocations)
-        {
-            allocation.MarkAsReversed();
-        }
+        // The reversal status will be confirmed by the invoice via the handler.
 
         AddDomainEvent(new PaymentChargebackedEvent(Id, TenantId, DateTime.UtcNow));
         UpdateTimestamp();

@@ -37,10 +37,6 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
         {
             foreach (var allocation in payment.Allocations)
             {
-                if (allocation.IsReversed) continue;
-                
-                allocation.MarkAsReversed();
-                
                 var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
                 if (invoice != null)
                 {

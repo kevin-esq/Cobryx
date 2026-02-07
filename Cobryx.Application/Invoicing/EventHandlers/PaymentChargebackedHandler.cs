@@ -37,24 +37,12 @@ public class PaymentChargebackedHandler : INotificationHandler<DomainEventNotifi
 
         foreach (var allocation in payment.Allocations)
         {
-            if (!allocation.IsReversed) 
-            {
-                continue;
-            }
-
             var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
-            if (invoice == null)
+            if (invoice != null)
             {
-                _logger.LogWarning("Invoice {InvoiceId} not found during chargeback reversal of Payment {PaymentId}", 
-                    allocation.InvoiceId, domainEvent.PaymentId);
-                continue;
+                invoice.ReverseAllocation(allocation);
+                await _invoiceRepository.UpdateAsync(invoice);
             }
-
-            _logger.LogInformation("Reversing allocation of {Amount} from Invoice {InvoiceId} due to Chargeback of Payment {PaymentId}",
-                allocation.Amount, invoice.Id, domainEvent.PaymentId);
-
-            invoice.ReverseAllocation(allocation);
-            await _invoiceRepository.UpdateAsync(invoice);
         }
     }
 }
