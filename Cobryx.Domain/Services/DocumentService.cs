@@ -27,12 +27,12 @@ public class DocumentService
     {
         if (fileStream.Length > MaxFileSize)
         {
-            throw new DomainException(DomainErrorCodes.Documents.FileSizeExceeded);
+            throw new DomainException(DomainErrorCode.Documents.FileSizeExceeded);
         }
 
         if (!await _scanner.IsSafeAsync(fileStream))
         {
-            throw new DomainException(DomainErrorCodes.Documents.VirusDetected);
+            throw new DomainException(DomainErrorCode.Documents.VirusDetected);
         }
 
         fileStream.Position = 0;

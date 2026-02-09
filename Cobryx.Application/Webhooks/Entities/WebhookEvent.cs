@@ -33,7 +33,7 @@ public class WebhookEvent : BaseEntity
     {
         Provider = provider;
         ExternalEventId = externalEventId;
-        RawPayload = rawPayload;
+        RawPayload = string.IsNullOrWhiteSpace(rawPayload) ? "{}" : rawPayload;
         Status = WebhookStatus.Pending;
         Attempts = 0;
     }

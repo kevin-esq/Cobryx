@@ -29,10 +29,10 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Customer(Guid tenantId, string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException("DOMAIN.FIRST_NAME_REQUIRED");
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException("DOMAIN.LAST_NAME_REQUIRED");
-        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException("DOMAIN.PHONE_REQUIRED");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -52,9 +52,9 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException("DOMAIN.FIRST_NAME_REQUIRED");
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException("DOMAIN.LAST_NAME_REQUIRED");
-        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException("DOMAIN.PHONE_REQUIRED");
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
 
         FirstName = firstName;
         LastName = lastName;

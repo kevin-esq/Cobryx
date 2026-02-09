@@ -22,8 +22,11 @@ public enum CobryxModule
     [Description("Product & Catalog")]
     Product,
 
-    [Description("Financial & Payments")]
-    Financial,
+    [Description("Invoicing Management")]
+    Invoicing,
+
+    [Description("Payments & Gateway")]
+    Payments,
 
     [Description("Support & Helpdesk")]
     Support,

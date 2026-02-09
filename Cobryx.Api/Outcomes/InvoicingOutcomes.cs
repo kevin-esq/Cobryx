@@ -1,6 +1,6 @@
 namespace Cobryx.Api.Outcomes;
 
-public static class FinancialOutcomes
+public static class InvoicingOutcomes
 {
     public static class Taxes
     {

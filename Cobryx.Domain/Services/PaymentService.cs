@@ -10,10 +10,10 @@ public class PaymentService
     public void ApplyPaymentToInvoice(Payment payment, Invoice invoice, Money amount)
     {
         if (payment.TenantId != invoice.TenantId)
-            throw new DomainException("DOMAIN.PAYMENT.TENANT_MISMATCH");
+            throw new DomainException(DomainErrorCode.Invoicing.PaymentTenantMismatch);
 
         if (payment.CustomerId != invoice.CustomerId)
-            throw new DomainException("DOMAIN.PAYMENT.CUSTOMER_MISMATCH");
+            throw new DomainException(DomainErrorCode.Invoicing.PaymentCustomerMismatch);
 
         invoice.ApplyPayment(payment.Id, amount);
         payment.AddAllocation(invoice.Id, amount);

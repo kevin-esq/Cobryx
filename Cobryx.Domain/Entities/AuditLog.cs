@@ -32,8 +32,8 @@ public class AuditLog : BaseEntity, ITenantEntity
         string? ipAddress = null,
         string? userAgent = null)
     {
-        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
-        if (string.IsNullOrWhiteSpace(entityName)) throw new DomainException("DOMAIN.ENTITY_NAME_REQUIRED");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(entityName)) throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
 
         TenantId = tenantId;
         UserId = userId;

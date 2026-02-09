@@ -23,16 +23,16 @@ public record EmailAddress : ValueObject
     public EmailAddress(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException(DomainErrorCodes.ValueObjects.InvalidEmailFormat);
+            throw new DomainException(DomainErrorCode.ValueObjects.InvalidEmailFormat);
 
         var trimmedValue = value.Trim().ToLowerInvariant();
 
         if (!EmailRegex.IsMatch(trimmedValue))
-            throw new DomainException(DomainErrorCodes.ValueObjects.InvalidEmailFormat);
+            throw new DomainException(DomainErrorCode.ValueObjects.InvalidEmailFormat);
 
         var domain = trimmedValue.Split('@')[1];
         if (DisposableDomains.Contains(domain))
-            throw new DomainException(DomainErrorCodes.ValueObjects.DisposableEmail);
+            throw new DomainException(DomainErrorCode.ValueObjects.DisposableEmail);
 
         Value = trimmedValue;
     }

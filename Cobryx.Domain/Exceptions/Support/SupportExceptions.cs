@@ -4,7 +4,7 @@ namespace Cobryx.Domain.Exceptions.Support;
 
 public class SupportTicketNotFoundException : CobryxException
 {
-    public override string ErrorCode => "SUPPORT.TICKET_NOT_FOUND";
+    public override DomainErrorCode ErrorCode => DomainErrorCode.Support.TicketNotFound;
 
     public SupportTicketNotFoundException(Guid ticketId)
         : base(null!)

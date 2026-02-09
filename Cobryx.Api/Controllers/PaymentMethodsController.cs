@@ -21,20 +21,20 @@ public class PaymentMethodsController : CobryxBaseController
     public async Task<IActionResult> GetPaymentMethods()
     {
         var result = await Sender.Send(new GetPaymentMethodsQuery());
-        return HandleResult(result, FinancialOutcomes.PaymentMethods.SearchCompleted);
+        return HandleResult(result, InvoicingOutcomes.PaymentMethods.SearchCompleted);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreatePaymentMethod(CreatePaymentMethodCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, FinancialOutcomes.PaymentMethods.Created);
+        return HandleResult(result, InvoicingOutcomes.PaymentMethods.Created);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePaymentMethod(Guid id)
     {
         var result = await Sender.Send(new DeletePaymentMethodCommand(id));
-        return HandleResult(result, FinancialOutcomes.PaymentMethods.Deleted);
+        return HandleResult(result, InvoicingOutcomes.PaymentMethods.Deleted);
     }
 }

@@ -36,7 +36,7 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         if (targetException == null) return true;
 
-        string errorCode;
+        DomainErrorCode errorCode;
         Dictionary<string, object>? metadata = null;
 
         if (targetException is CobryxException cobryxEx)
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         }
         else if (targetException is FluentValidation.ValidationException validationEx)
         {
-            errorCode = DomainErrorCodes.System.ValidationFailed;
+            errorCode = DomainErrorCode.System.ValidationFailed;
             var errors = validationEx.Errors
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(
@@ -61,20 +61,19 @@ public class GlobalExceptionHandler : IExceptionHandler
         }
         else
         {
-            errorCode = DomainErrorCodes.System.InternalError;
+            errorCode = DomainErrorCode.System.InternalError;
         }
 
         var errorDef = ErrorMapper.Map(errorCode);
         var statusCode = errorDef.StatusCode;
         var numericCode = errorDef.NumericCode;
 
-        var outcomeCode = GetFailedOutcomeCode(errorCode);
+        var outcomeCode = GetFailedOutcomeCode(errorCode.Value);
 
-        // Observability Enrichment
-        _diagnosticContext.Set("ErrorCode", errorCode);
+        _diagnosticContext.Set("ErrorCode", errorCode.Value);
         _diagnosticContext.Set("NumericCode", numericCode);
         _diagnosticContext.Set("OutcomeCode", outcomeCode);
-        _metrics.RecordError(errorCode, numericCode);
+        _metrics.RecordError(errorCode.Value, numericCode);
         _metrics.RecordOutcome(outcomeCode);
 
         if (statusCode == StatusCodes.Status500InternalServerError)
@@ -90,7 +89,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         httpContext.Response.ContentType = "application/json";
 
         var response = ApiResponseFactory.Error(
-            errorCode: errorCode,
+            errorCode: errorCode.Value,
             numericCode: numericCode,
             errors: metadata?.GetValueOrDefault("errors"),
             traceId: httpContext.TraceIdentifier,

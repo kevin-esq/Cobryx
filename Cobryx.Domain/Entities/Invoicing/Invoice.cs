@@ -2,6 +2,7 @@ using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Events.Invoicing;
+using Cobryx.Domain.Entities.Payments;
 
 namespace Cobryx.Domain.Entities.Invoicing;
 
@@ -58,13 +59,13 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
     public void ApplyPayment(Guid paymentId, Money amount)
     {
         if (Status is not (InvoiceStatus.Issued or InvoiceStatus.Partial))
-            throw new DomainException(DomainErrorCodes.Financial.InvoiceInvalidStatusForPayment);
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceInvalidStatusForPayment);
 
         if (_appliedPaymentIds.Contains(paymentId))
             return;
 
         if (amount.Currency != Total.Currency)
-            throw new DomainException(DomainErrorCodes.Financial.InvoiceCurrencyMismatch);
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceCurrencyMismatch);
 
         decimal newPaid = TotalPaid.Amount + amount.Amount;
         TotalPaid = new Money(newPaid, Total.Currency);
@@ -83,10 +84,40 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
+    public void ReverseAllocation(PaymentAllocation allocation)
+    {
+        if (allocation.InvoiceId != Id)
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceAllocationMismatch);
+
+        if (allocation.IsReversed) return;
+
+        if (allocation.Amount.Currency != Total.Currency)
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceCurrencyMismatch);
+
+        decimal newPaid = TotalPaid.Amount - allocation.Amount.Amount;
+        TotalPaid = new Money(Math.Max(0, newPaid), Total.Currency);
+
+        if (TotalPaid.Amount <= 0)
+        {
+            Status = InvoiceStatus.Issued;
+        }
+        else if (TotalPaid.Amount < Total.Amount)
+        {
+            Status = InvoiceStatus.Partial;
+        }
+
+        // We mark the allocation as reversed once the invoice state has been updated.
+        // This ensures idempotency even if the handler/process is retried.
+        allocation.MarkAsReversed();
+
+        AddDomainEvent(new InvoiceStateReversedEvent(Id, TenantId, Status, TotalPaid, DateTime.UtcNow));
+        UpdateTimestamp();
+    }
+
     public void AddItem(string description, decimal quantity, decimal unitPrice, decimal taxRate, bool isTaxInclusive)
     {
         if (Status != InvoiceStatus.Draft)
-            throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT_ADD_ITEM");
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceNotDraftAddItem);
 
         var item = new InvoiceItem(Id, description, quantity, unitPrice, taxRate, isTaxInclusive, Total.Currency);
         _items.Add(item);
@@ -96,7 +127,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
     public void RecalculateTotals()
     {
         if (Status != InvoiceStatus.Draft)
-            throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT_RECALCULATE");
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceNotDraftRecalculate);
 
         decimal subtotal = 0;
         decimal taxTotal = 0;
@@ -115,8 +146,8 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Issue()
     {
-        if (Status != InvoiceStatus.Draft) throw new DomainException("DOMAIN.INVOICE.NOT_DRAFT");
-        if (_items.Count == 0) throw new DomainException("DOMAIN.INVOICE.NO_ITEMS");
+        if (Status != InvoiceStatus.Draft) throw new DomainException(DomainErrorCode.Invoicing.InvoiceNotDraft);
+        if (_items.Count == 0) throw new DomainException(DomainErrorCode.Invoicing.InvoiceNoItems);
 
         Status = InvoiceStatus.Issued;
         AddDomainEvent(new InvoiceIssuedEvent(Id, TenantId, CustomerId, DateTime.UtcNow));
@@ -126,7 +157,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
     public void Cancel()
     {
         if (Status is not (InvoiceStatus.Draft or InvoiceStatus.Issued))
-            throw new DomainException("DOMAIN.INVOICE.INVALID_STATUS_FOR_CANCEL");
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceInvalidStatusForCancel);
 
         Status = InvoiceStatus.Cancelled;
         UpdateTimestamp();

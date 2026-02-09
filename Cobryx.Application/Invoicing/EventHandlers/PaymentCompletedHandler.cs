@@ -28,7 +28,7 @@ public class PaymentCompletedHandler : INotificationHandler<DomainEventNotificat
     public async Task Handle(DomainEventNotification<PaymentCompletedEvent> notification, CancellationToken cancellationToken)
     {
         var domainEvent = notification.DomainEvent;
-        _logger.LogInformation("Processing PaymentCompletedEvent for Payment {PaymentId} with {AllocationCount} allocations", 
+        _logger.LogInformation("Processing PaymentCompletedEvent for Payment {PaymentId} with {AllocationCount} allocations",
             domainEvent.PaymentId, domainEvent.Allocations.Count);
 
         foreach (var allocation in domainEvent.Allocations)
@@ -36,7 +36,7 @@ public class PaymentCompletedHandler : INotificationHandler<DomainEventNotificat
             var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
             if (invoice == null)
             {
-                _logger.LogWarning("Invoice {InvoiceId} not found for allocation from Payment {PaymentId}", 
+                _logger.LogWarning("Invoice {InvoiceId} not found for allocation from Payment {PaymentId}",
                     allocation.InvoiceId, domainEvent.PaymentId);
                 continue;
             }

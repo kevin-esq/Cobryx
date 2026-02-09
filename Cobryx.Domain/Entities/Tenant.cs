@@ -30,7 +30,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public Tenant(string businessName, string currency = "MXN")
     {
         if (string.IsNullOrWhiteSpace(businessName))
-            throw new DomainException("DOMAIN.BUSINESS_NAME_REQUIRED");
+            throw new DomainException(DomainErrorCode.Tenant.BusinessNameRequired);
 
         BusinessName = businessName;
         Currency = currency;

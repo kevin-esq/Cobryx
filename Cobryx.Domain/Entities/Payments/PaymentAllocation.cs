@@ -8,6 +8,7 @@ public class PaymentAllocation : BaseEntity
     public Guid PaymentId { get; private set; }
     public Guid InvoiceId { get; private set; }
     public Money Amount { get; private set; }
+    public bool IsReversed { get; private set; }
 
     private PaymentAllocation()
     {
@@ -19,5 +20,11 @@ public class PaymentAllocation : BaseEntity
         PaymentId = paymentId;
         InvoiceId = invoiceId;
         Amount = amount;
+        IsReversed = false;
+    }
+
+    public void MarkAsReversed()
+    {
+        IsReversed = true;
     }
 }

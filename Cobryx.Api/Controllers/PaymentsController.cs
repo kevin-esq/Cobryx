@@ -19,6 +19,6 @@ public class PaymentsController : CobryxBaseController
     public async Task<IActionResult> ProcessPayment(ProcessPaymentCommand command)
     {
         var result = await Sender.Send(command);
-        return HandleResult(result, FinancialOutcomes.Payments.Completed);
+        return HandleResult(result, InvoicingOutcomes.Payments.Completed);
     }
 }

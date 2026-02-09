@@ -34,7 +34,7 @@ public class InvoicingDomainTests
 
         var act = () => invoice.Issue();
 
-        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCodes.Financial.InvoiceNoItems);
+        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCode.Invoicing.InvoiceNoItems);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class InvoicingDomainTests
 
         var act = () => invoice.AddItem("Item 2", 1, 50, 0, false);
 
-        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCodes.Financial.InvoiceNotDraftAddItem);
+        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCode.Invoicing.InvoiceNotDraftAddItem);
     }
 
     [Fact]
@@ -108,6 +108,6 @@ public class InvoicingDomainTests
 
         var act = () => payment.Complete();
 
-        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCodes.Financial.PaymentNotProcessing);
+        act.Should().Throw<DomainException>().Which.ErrorCode.Should().Be(DomainErrorCode.Invoicing.PaymentNotProcessing);
     }
 }

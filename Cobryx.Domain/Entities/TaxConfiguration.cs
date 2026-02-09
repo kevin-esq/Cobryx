@@ -18,9 +18,9 @@ public class TaxConfiguration : BaseEntity, IAggregateRoot, ITenantEntity
 
     public TaxConfiguration(Guid tenantId, string name, decimal rate, bool isInclusive = true, bool isDefault = false)
     {
-        if (tenantId == Guid.Empty) throw new DomainException("DOMAIN.TENANT_ID_REQUIRED");
-        if (string.IsNullOrWhiteSpace(name)) throw new DomainException("DOMAIN.TAX.NAME_REQUIRED");
-        if (rate < 0) throw new DomainException("DOMAIN.TAX.RATE_NEGATIVE");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(DomainErrorCode.Invoicing.TaxNameRequired);
+        if (rate < 0) throw new DomainException(DomainErrorCode.Invoicing.TaxRateNegative);
 
         TenantId = tenantId;
         Name = name;

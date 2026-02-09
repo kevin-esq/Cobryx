@@ -30,10 +30,6 @@ public class AuthController : CobryxBaseController
     }
 
     /// <summary>
-    /// Lightweight user and tenant registration.
-    /// Focuses strictly on identity and basic business name.
-    /// </summary>
-    /// <summary>
     /// Registers a new user and tenant (Sign Up).
     /// </summary>
     /// <param name="command">The registration details.</param>
@@ -43,6 +39,7 @@ public class AuthController : CobryxBaseController
     /// <response code="400">Validation failed.</response>
     /// <response code="409">User already exists.</response>
     [HttpPost("signup")]
+    [AllowAnonymous]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
@@ -128,6 +125,7 @@ public class AuthController : CobryxBaseController
     /// <response code="401">Invalid credentials.</response>
     /// <response code="403">Account locked or email not verified.</response>
     [HttpPost("login")]
+    [AllowAnonymous]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse<AuthResult>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
