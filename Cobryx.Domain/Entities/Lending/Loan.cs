@@ -6,17 +6,19 @@ using Cobryx.Domain.Exceptions;
 namespace Cobryx.Domain.Entities.Lending;
 
 /// <summary>
-/// Mutable execution of a loan representing the living state of payments.
+/// Domain aggregate root representing an active loan and its current financial state.
 /// </summary>
 public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
 {
     public Guid TenantId { get; private set; }
+    public Guid CustomerId { get; private set; }
     public Guid LoanAgreementId { get; private set; }
     public string LoanNumber { get; private set; } = string.Empty;
     public LoanStatus Status { get; private set; }
     public LegalStatus LegalStatus { get; private set; }
     public RiskStatus RiskStatus { get; private set; }
     public CollectionStage CollectionStage { get; private set; }
+    public decimal OriginalPrincipal { get; private set; }
     public decimal CurrentPrincipalBalance { get; private set; }
     public decimal CurrentInterestBalance { get; private set; }
     public decimal CurrentLateFeeBalance { get; private set; }
@@ -38,20 +40,25 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Loan(
         Guid tenantId,
+        Guid customerId,
         Guid loanAgreementId,
         string loanNumber,
         decimal principalAmount)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (customerId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.Customer.CustomerIdRequired);
         if (loanAgreementId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Loans.AgreementNotFound);
         if (string.IsNullOrWhiteSpace(loanNumber))
             throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
 
         TenantId = tenantId;
+        CustomerId = customerId;
         LoanAgreementId = loanAgreementId;
         LoanNumber = loanNumber;
+        OriginalPrincipal = principalAmount;
         CurrentPrincipalBalance = principalAmount;
         CurrentInterestBalance = 0;
         CurrentLateFeeBalance = 0;

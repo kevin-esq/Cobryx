@@ -112,6 +112,15 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
+    // Lending Domain
+    public DbSet<Domain.Entities.Lending.Loan> Loans => Set<Domain.Entities.Lending.Loan>();
+    public DbSet<Domain.Entities.Lending.LoanAgreement> LoanAgreements => Set<Domain.Entities.Lending.LoanAgreement>();
+    public DbSet<Domain.Entities.Lending.Installment> LoanInstallments => Set<Domain.Entities.Lending.Installment>();
+    public DbSet<Domain.Entities.Lending.CreditSale> CreditSales => Set<Domain.Entities.Lending.CreditSale>();
+    public DbSet<Domain.Entities.Lending.InterestPolicy> InterestPolicies => Set<Domain.Entities.Lending.InterestPolicy>();
+    public DbSet<Domain.Entities.Lending.LateFeePolicy> LateFeePolicies => Set<Domain.Entities.Lending.LateFeePolicy>();
+    public DbSet<Domain.Entities.Lending.PaymentApplicationPolicy> PaymentApplicationPolicies => Set<Domain.Entities.Lending.PaymentApplicationPolicy>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CobryxDbContext).Assembly);
