@@ -40,6 +40,18 @@ public static class ErrorMapper
         _ when errorCode == DomainErrorCode.Credits.NotFound => CreditErrors.NotFound,
         _ when errorCode == DomainErrorCode.Credits.InsufficientFunds => CreditErrors.Insufficient,
 
+        _ when errorCode == DomainErrorCode.Loans.NotFound => LendingErrors.LoanNotFound,
+        _ when errorCode == DomainErrorCode.Loans.AgreementNotFound => LendingErrors.AgreementNotFound,
+        _ when errorCode == DomainErrorCode.Loans.AgreementAlreadySigned => LendingErrors.AlreadySigned,
+        _ when errorCode == DomainErrorCode.Loans.AgreementImmutableAfterSigning => LendingErrors.ImmutableAfterSigning,
+        _ when errorCode == DomainErrorCode.Loans.AlreadyClosed => LendingErrors.LoanAlreadyClosed,
+        _ when errorCode == DomainErrorCode.Loans.InvalidPaymentAmount => LendingErrors.InvalidPaymentAmount,
+        _ when errorCode == DomainErrorCode.Loans.InstallmentNotFound => LendingErrors.InstallmentNotFound,
+        _ when errorCode == DomainErrorCode.Loans.InstallmentAlreadyPaid => LendingErrors.InstallmentAlreadyPaid,
+        _ when errorCode == DomainErrorCode.Loans.InvalidInterestPolicy => LendingErrors.InvalidPolicy,
+        _ when errorCode == DomainErrorCode.Loans.InvalidLateFeePolicy => LendingErrors.InvalidPolicy,
+        _ when errorCode == DomainErrorCode.Loans.CreditSaleNotFound => LendingErrors.CreditSaleNotFound,
+
         _ when errorCode == DomainErrorCode.System.ValidationFailed => new(400, 1001),
         _ when errorCode == DomainErrorCode.System.TooManyRequests => new(429, 1090),
         _ when errorCode == DomainErrorCode.System.InternalError => new(500, 1000),
