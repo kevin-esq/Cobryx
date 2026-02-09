@@ -37,8 +37,8 @@ public static class ErrorMapper
         _ when errorCode == DomainErrorCode.Invoicing.PaymentNotCompletedCannotRefund => new(400, 5006),
         _ when errorCode == DomainErrorCode.Invoicing.PaymentInvalidStatusForChargeback => new(400, 5007),
 
-        _ when errorCode.Value == "CREDITS.NOT_FOUND" => CreditErrors.NotFound,
-        _ when errorCode.Value == "CREDITS.INSUFFICIENT" => CreditErrors.Insufficient,
+        _ when errorCode == DomainErrorCode.Credits.NotFound => CreditErrors.NotFound,
+        _ when errorCode == DomainErrorCode.Credits.InsufficientFunds => CreditErrors.Insufficient,
 
         _ when errorCode == DomainErrorCode.System.ValidationFailed => new(400, 1001),
         _ when errorCode == DomainErrorCode.System.TooManyRequests => new(429, 1090),

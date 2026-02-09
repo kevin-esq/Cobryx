@@ -70,7 +70,6 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         var outcomeCode = GetFailedOutcomeCode(errorCode.Value);
 
-        // Observability Enrichment
         _diagnosticContext.Set("ErrorCode", errorCode.Value);
         _diagnosticContext.Set("NumericCode", numericCode);
         _diagnosticContext.Set("OutcomeCode", outcomeCode);

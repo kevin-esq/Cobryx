@@ -29,10 +29,6 @@ public class ObservabilityFilter : IAsyncActionFilter
         {
             if (response.Success)
             {
-                if (response is ApiSuccessResponse successResponse) // Keep for potential future props
-                {
-                    // base has OutcomeCode now
-                }
                 outcomeCode = response.OutcomeCode;
             }
             else if (response is ApiErrorResponse errorResponse)

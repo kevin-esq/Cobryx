@@ -151,8 +151,6 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode AmountMustBePositive = new("DOMAIN.CREDIT.AMOUNT_MUST_BE_POSITIVE");
         public static readonly DomainErrorCode InsufficientFunds = new("DOMAIN.CREDIT.INSUFFICIENT_FUNDS");
         public static readonly DomainErrorCode NotFound = new("DOMAIN.CREDIT.NOT_FOUND");
-        public static readonly DomainErrorCode Insufficient = new("CREDITS.INSUFFICIENT"); // Legacy/Custom exception alignment
-        public static readonly DomainErrorCode GenericNotFound = new("CREDITS.NOT_FOUND"); // Legacy/Custom exception alignment
         public static readonly DomainErrorCode InvalidInstallmentsCount = new("DOMAIN.INVALID_INSTALLMENTS_COUNT");
         public static readonly DomainErrorCode CreditAlreadyPaid = new("DOMAIN.CREDIT_ALREADY_PAID");
         public static readonly DomainErrorCode InstallmentsAlreadyGenerated = new("DOMAIN.INSTALLMENTS_ALREADY_GENERATED");

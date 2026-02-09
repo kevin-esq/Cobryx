@@ -25,7 +25,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Observability
 builder.Services.AddSingleton<CobryxMetrics>();
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics =>

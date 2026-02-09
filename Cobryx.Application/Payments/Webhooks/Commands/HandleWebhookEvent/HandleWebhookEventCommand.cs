@@ -107,7 +107,6 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
         if (payment == null)
             return Result.Failure($"Payment with reference {parseResult.ExternalTransactionId} not found.");
 
-        // Stripe amount_refunded is in cents
         decimal amount = data.GetProperty("amount_refunded").GetInt64() / 100m;
         string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? "MXN";
 
