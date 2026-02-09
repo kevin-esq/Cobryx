@@ -5,7 +5,7 @@ using Cobryx.Domain.Exceptions;
 namespace Cobryx.Domain.Entities.Lending;
 
 /// <summary>
-/// Individual payment obligation in the amortization schedule.
+/// Represents a single payment obligation within an amortization schedule.
 /// </summary>
 public class Installment : BaseEntity
 {
@@ -34,8 +34,6 @@ public class Installment : BaseEntity
         decimal principalAmount,
         decimal interestAmount)
     {
-        if (loanId == Guid.Empty)
-            throw new DomainException(DomainErrorCode.Loans.NotFound);
         if (installmentNumber <= 0)
             throw new DomainException(DomainErrorCode.Credits.InvalidInstallmentsCount);
         if (principalAmount < 0 || interestAmount < 0)
@@ -50,6 +48,13 @@ public class Installment : BaseEntity
         InterestPaid = 0;
         LateFeesPaid = 0;
         Status = InstallmentStatus.Pending;
+    }
+
+    public void SetLoanId(Guid loanId)
+    {
+        if (LoanId != Guid.Empty)
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
+        LoanId = loanId;
     }
 
     public decimal ApplyAllocation(decimal amount, PaymentApplicationType allocationType)
