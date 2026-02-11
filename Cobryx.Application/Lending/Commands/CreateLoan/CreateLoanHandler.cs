@@ -41,34 +41,40 @@ public class CreateLoanHandler : IRequestHandler<CreateLoanCommand, Result<Guid>
         if (tenantId == null || tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
 
-        // 1. Load Policies
-        var interestPolicy = await _interestPolicyRepository.GetByIdAsync(request.InterestPolicyId, ct);
+        // 1. Load Policies by Code
+        var interestPolicy = await _interestPolicyRepository.GetByCodeAsync(tenantId.Value, request.InterestPolicyCode, ct);
         if (interestPolicy == null)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
 
-        var paymentPolicy = await _paymentPolicyRepository.GetByIdAsync(request.PaymentApplicationPolicyId, ct);
+        var paymentPolicy = await _paymentPolicyRepository.GetByCodeAsync(tenantId.Value, request.PaymentApplicationPolicyCode, ct);
         if (paymentPolicy == null)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
+
+        InterestPolicy? lateFeePolicy = null;
+        if (!string.IsNullOrWhiteSpace(request.LateFeePolicyCode))
+        {
+            lateFeePolicy = await _interestPolicyRepository.GetByCodeAsync(tenantId.Value, request.LateFeePolicyCode, ct);
+        }
 
         // 2. Create Agreement
         var agreement = new LoanAgreement(
             tenantId: tenantId.Value,
             customerId: request.CustomerId,
             principalAmount: request.PrincipalAmount,
-            interestPolicyId: request.InterestPolicyId,
+            interestPolicyId: interestPolicy.Id,
             paymentFrequency: request.PaymentFrequency,
             numberOfInstallments: request.NumberOfInstallments,
             startDate: DateTime.UtcNow,
             firstPaymentDate: request.FirstDueDate,
             origin: request.Origin,
-            lateFeePolicyId: request.LateFeePolicyId);
+            lateFeePolicyId: lateFeePolicy?.Id);
 
         // 3. Generate Schedule
         var installments = _amortizationService.GenerateSchedule(agreement, interestPolicy);
 
         // 4. Create Loan
         var loanNumber = request.LoanNumber ?? $"LN-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..4].ToUpper()}";
-        
+
         var loan = new Loan(
             tenantId.Value,
             request.CustomerId,

@@ -22,9 +22,9 @@ public enum LegalStatus
 public enum RiskStatus
 {
     OnTime = 1,
-    Late = 2,        // 1-30 days
-    SevereLate = 3,  // 31-60 days
-    Critical = 4     // 60+ days
+    Late = 2,
+    SevereLate = 3,
+    Critical = 4
 }
 
 public enum CollectionStage

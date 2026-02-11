@@ -26,7 +26,7 @@ public class GetLoanScheduleHandler : IRequestHandler<GetLoanScheduleQuery, Resu
     public async Task<Result<LoanScheduleDto>> Handle(GetLoanScheduleQuery request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) 
+        if (!tenantId.HasValue)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
 
         var loan = await _loanRepository.GetByIdWithInstallmentsAsync(request.LoanId, ct);

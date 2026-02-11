@@ -8,4 +8,7 @@ public static class ProductOutcomes
     public const string Updated = $"{Prefix}.UPDATED";
     public const string Deleted = $"{Prefix}.DELETED";
     public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
+
+    public const string ValidationFailed = $"{Prefix}.VALIDATION_FAILED";
+    public const string Conflict = $"{Prefix}.CONFLICT";
 }

@@ -7,4 +7,7 @@ public static class UserOutcomes
     public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
     public const string ProfileUpdated = $"{Prefix}.PROFILE.UPDATED";
     public const string PasswordChanged = $"{Prefix}.PASSWORD.CHANGED";
+
+    public const string ValidationFailed = $"{Prefix}.VALIDATION_FAILED";
+    public const string Conflict = $"{Prefix}.CONFLICT";
 }

@@ -8,6 +8,9 @@ public static class InvoicingOutcomes
         public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
         public const string Created = $"{Prefix}.CREATED";
         public const string Deleted = $"{Prefix}.DELETED";
+
+        public const string ValidationFailed = $"{Prefix}.VALIDATION_FAILED";
+        public const string Conflict = $"{Prefix}.CONFLICT";
     }
 
     public static class PaymentMethods

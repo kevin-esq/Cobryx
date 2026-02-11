@@ -1,6 +1,6 @@
 using Cobryx.Api.Errors.Mappers;
 using Cobryx.Api.Errors.Definitions;
-using Cobryx.Application.Common.Models;
+using Cobryx.Api.Contracts.V1.Common;
 using Concordia;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -18,34 +18,44 @@ public abstract class CobryxBaseController : ControllerBase
         Sender = sender;
     }
 
-    protected IActionResult HandleResult<T>(Result<T> result, string? outcomeCode = null)
+    protected IActionResult HandleResult<T>(Result<T> result, string? outcomeCode = null, int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponseFactory.Success(result.Value!, outcomeCode));
+            var response = ApiResponseFactory.Success(result.Value!, outcomeCode);
+            return successStatusCode.HasValue
+                ? StatusCode(successStatusCode.Value, response)
+                : Ok(response);
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
         var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
-        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+        var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
+
+        return StatusCode(statusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
             traceId: HttpContext.TraceIdentifier,
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult HandleResult(Result result, string? outcomeCode = null)
+    protected IActionResult HandleResult(Result result, string? outcomeCode = null, int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
-            return Ok(ApiResponseFactory.Success(outcomeCode: outcomeCode));
+            var response = ApiResponseFactory.Success(outcomeCode: outcomeCode);
+            return successStatusCode.HasValue
+                ? StatusCode(successStatusCode.Value, response)
+                : Ok(response);
         }
 
         var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
         var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
-        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
+        var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
+
+        return StatusCode(statusCode, ApiResponseFactory.Error(
             errorCode: errorCode,
             numericCode: errorDef.NumericCode,
             traceId: HttpContext.TraceIdentifier,
@@ -57,6 +67,24 @@ public abstract class CobryxBaseController : ControllerBase
         return Ok(ApiResponseFactory.Success(data, outcomeCode));
     }
 
+    protected IActionResult HandleDeleteResult(Result result, string? outcomeCode = null)
+    {
+        if (result.IsSuccess)
+        {
+            return NoContent();
+        }
+
+        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
+        var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
+
+        return StatusCode(statusCode, ApiResponseFactory.Error(
+            errorCode: errorCode,
+            numericCode: errorDef.NumericCode,
+            traceId: HttpContext.TraceIdentifier,
+            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
+    }
+
     protected IActionResult CreatedResult<T>(string uri, T data, string? outcomeCode = null)
     {
         return Created(uri, ApiResponseFactory.Success(data, outcomeCode));
@@ -64,19 +92,16 @@ public abstract class CobryxBaseController : ControllerBase
 
     protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, string? outcomeCode = null)
     {
-        if (result.IsSuccess)
-        {
-            return Created(uri, ApiResponseFactory.Success(result.Value!, outcomeCode));
-        }
+        return HandleResult(result, outcomeCode, 201);
+    }
 
-        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
-        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
+    private int GetErrorStatusCode(string errorCode, int defaultStatusCode)
+    {
+        if (errorCode.EndsWith(".ALREADY_EXISTS") || errorCode.EndsWith(".DUPLICATE")) return 409;
+        if (errorCode.EndsWith(".NOT_FOUND")) return 404;
+        if (errorCode.EndsWith(".BUSINESS_RULE_VIOLATION") || errorCode.Contains(".INVALID_STATUS")) return 422;
 
-        return StatusCode(errorDef.StatusCode, ApiResponseFactory.Error(
-            errorCode: errorCode,
-            numericCode: errorDef.NumericCode,
-            traceId: HttpContext.TraceIdentifier,
-            outcomeCode: GetFailureOutcomeCode(outcomeCode)));
+        return defaultStatusCode;
     }
 
     private string GetFailureOutcomeCode(string? successOutcomeCode)

@@ -38,38 +38,27 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         if (!tenantId.HasValue)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
 
-        // 1. Load Loan with installments
         var loan = await _loanRepository.GetByIdWithInstallmentsAsync(request.LoanId, ct);
         if (loan == null || loan.TenantId != tenantId.Value)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
-
-        // 2. Load Policy (Default for tenant)
         var policy = await _policyRepository.GetDefaultByTenantAsync(tenantId.Value, ct);
         if (policy == null)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
 
-        // 3. Create Payment entity
         var payment = new Payment(
             tenantId.Value,
             loan.CustomerId,
             request.PaymentMethodId,
-            new Money(request.Amount, "MXN"), // Currency could be dynamic
+            new Money(request.Amount, "MXN"),
             request.PaidAt,
             request.Reference,
             request.Notes);
 
-        // 4. Apply Payment via Domain Service
         var allocations = _paymentAppService.Apply(loan, request.Amount, policy);
 
-        // 5. Update Payment aggregate with allocations (if the entity supports it, otherwise keep it simple for now)
-        // Note: The Domain IPaymentApplicationService already updated the installments in the memory 'loan' object.
-        
-        // Record payment in loan
         loan.RecordPaymentApplied(request.Amount, request.PaidAt);
         loan.RecalculateBalances();
         loan.UpdateRiskStatus();
-
-        // 6. Persist both
         await _paymentRepository.AddAsync(payment, ct);
         await _loanRepository.UpdateAsync(loan, ct);
 

@@ -18,6 +18,7 @@ public class PaymentApplicationPolicy : BaseEntity, ITenantEntity
 
     public Guid TenantId { get; private set; }
     public string Name { get; private set; } = string.Empty;
+    public string Code { get; private set; } = string.Empty;
     public PaymentApplicationMode Mode { get; private set; }
     public string? ApplicationOrderJson { get; private set; }
     public bool IsActive { get; private set; }
@@ -28,17 +29,21 @@ public class PaymentApplicationPolicy : BaseEntity, ITenantEntity
     public static PaymentApplicationPolicy CreateStandard(
         Guid tenantId,
         string name,
+        string code,
         bool isDefault = false)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
+        if (string.IsNullOrWhiteSpace(code))
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
 
         return new PaymentApplicationPolicy
         {
             TenantId = tenantId,
             Name = name,
+            Code = code.ToUpperInvariant(),
             Mode = PaymentApplicationMode.Standard,
             IsActive = true,
             IsDefault = isDefault
@@ -48,6 +53,7 @@ public class PaymentApplicationPolicy : BaseEntity, ITenantEntity
     public static PaymentApplicationPolicy CreateCustom(
         Guid tenantId,
         string name,
+        string code,
         PaymentApplicationType[] applicationOrder,
         bool isDefault = false)
     {
@@ -55,6 +61,8 @@ public class PaymentApplicationPolicy : BaseEntity, ITenantEntity
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
+        if (string.IsNullOrWhiteSpace(code))
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
         if (applicationOrder == null || applicationOrder.Length == 0)
             throw new DomainException(DomainErrorCode.Common.GeneralError);
 

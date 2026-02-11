@@ -18,7 +18,6 @@ public class RefundsDomainTests
     [Fact]
     public void Refund_ShouldUpdateRefundedAmountAndEmitEvent()
     {
-        // Arrange
         var amount = new Money(100, "MXN");
         var payment = new Payment(_tenantId, _customerId, _paymentMethodId, amount, DateTime.UtcNow);
         payment.Initiate();
@@ -26,10 +25,8 @@ public class RefundsDomainTests
 
         var refundAmount = new Money(40, "MXN");
 
-        // Act
         payment.Refund(refundAmount);
 
-        // Assert
         payment.RefundedAmount.Amount.Should().Be(40);
         payment.RefundableAmount.Amount.Should().Be(60);
         payment.IsFullyRefunded.Should().BeFalse();
@@ -39,7 +36,6 @@ public class RefundsDomainTests
     [Fact]
     public void Chargeback_ShouldSetTerminalStateAndReverseAllocations()
     {
-        // Arrange
         var amount = new Money(100, "MXN");
         var payment = new Payment(_tenantId, _customerId, _paymentMethodId, amount, DateTime.UtcNow);
         var invoiceId = Guid.NewGuid();
@@ -47,10 +43,8 @@ public class RefundsDomainTests
         payment.Initiate();
         payment.Complete();
 
-        // Act
         payment.Chargeback();
 
-        // Assert
         payment.Status.Should().Be(PaymentStatus.Chargeback);
         payment.RefundedAmount.Amount.Should().Be(100);
         payment.IsFullyRefunded.Should().BeTrue();
@@ -61,7 +55,6 @@ public class RefundsDomainTests
     [Fact]
     public void Invoice_ReverseAllocation_ShouldDecrementPaidAmountAndEmitEvent()
     {
-        // Arrange
         var invoice = new Invoice(_tenantId, _customerId, "INV-001", DateTime.UtcNow, DateTime.UtcNow.AddDays(30));
         invoice.AddItem("Test Item", 1, 100, 0, false);
         invoice.Issue();
@@ -73,10 +66,8 @@ public class RefundsDomainTests
 
         var allocation = new PaymentAllocation(paymentId, invoice.Id, amount);
 
-        // Act
         invoice.ReverseAllocation(allocation);
 
-        // Assert
         invoice.TotalPaid.Amount.Should().Be(0);
         invoice.Status.Should().Be(InvoiceStatus.Issued);
         invoice.DomainEvents.Should().ContainItemsAssignableTo<InvoiceStateReversedEvent>();
@@ -85,7 +76,6 @@ public class RefundsDomainTests
     [Fact]
     public void Invoice_ReverseAllocation_ShouldBeIdempotentUsingAllocationFlag()
     {
-        // Arrange
         var invoice = new Invoice(_tenantId, _customerId, "INV-001", DateTime.UtcNow, DateTime.UtcNow.AddDays(30));
         invoice.AddItem("Test Item", 1, 100, 0, false);
         invoice.Issue();
@@ -96,14 +86,12 @@ public class RefundsDomainTests
 
         var allocation = new PaymentAllocation(paymentId, invoice.Id, amount);
 
-        // Act
         invoice.ReverseAllocation(allocation);
         var firstReversalPaid = invoice.TotalPaid.Amount;
 
         allocation.MarkAsReversed();
         invoice.ReverseAllocation(allocation);
 
-        // Assert
         invoice.TotalPaid.Amount.Should().Be(firstReversalPaid);
         invoice.TotalPaid.Amount.Should().Be(0);
     }

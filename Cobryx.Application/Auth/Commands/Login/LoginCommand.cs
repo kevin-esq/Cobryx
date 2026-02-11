@@ -91,7 +91,6 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 {
                     if (!user.IsEmailVerified)
                     {
-                        // SECURITY: Collapse Email Not Verified into InvalidCredentials during Login
                         _auditService.LogFailure("Login", user.Id.ToString(), ipAddress, "Email not verified");
                         await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
                         await EnsureUniformTiming(startTime, 500, cancellationToken);

@@ -43,7 +43,6 @@ public class PaymentApplicationServiceTests
         var loan = CreateLoanWithInstallments(principal: 1000m, interest: 100m);
         var policy = CreateStandardPolicy();
 
-        // Pay only 50 (less than interest)
         var allocations = _service.Apply(loan, 50m, policy);
 
         Assert.Single(allocations);
@@ -57,11 +56,10 @@ public class PaymentApplicationServiceTests
         var loan = CreateLoanWithInstallments(principal: 1000m, interest: 0m);
         var policy = CreateStandardPolicy();
 
-        // Pay 1500 when only 1000 owed
         var allocations = _service.Apply(loan, 1500m, policy);
 
         var principalAllocations = allocations.Where(a => a.Type == PaymentApplicationType.Principal).Sum(a => a.Amount);
-        Assert.Equal(1500m, principalAllocations);  // Includes credit
+        Assert.Equal(1500m, principalAllocations);
     }
 
     [Fact]
@@ -115,6 +113,6 @@ public class PaymentApplicationServiceTests
 
     private PaymentApplicationPolicy CreateStandardPolicy()
     {
-        return PaymentApplicationPolicy.CreateStandard(_tenantId, "Standard");
+        return PaymentApplicationPolicy.CreateStandard(_tenantId, "Standard", "STD-PAYMENT");
     }
 }

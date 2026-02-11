@@ -28,13 +28,10 @@ public class CloseLoanHandler : IRequestHandler<CloseLoanCommand, Result>
         if (loan == null || loan.TenantId != tenantId.Value)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
 
-        // Verify balance is truly zero
         if (loan.CurrentPrincipalBalance > 0 || loan.CurrentInterestBalance > 0 || loan.CurrentLateFeeBalance > 0)
         {
             throw new DomainException(DomainErrorCode.Loans.InvalidPaymentAmount);
         }
-
-        // Ensure all installments are marked as Paid
         if (loan.Installments.Any(i => i.Status != InstallmentStatus.Paid))
         {
             throw new DomainException(DomainErrorCode.Loans.InvalidPaymentAmount);

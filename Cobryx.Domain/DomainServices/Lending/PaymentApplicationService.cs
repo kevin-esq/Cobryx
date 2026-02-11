@@ -26,7 +26,6 @@ public class PaymentApplicationService : IPaymentApplicationService
 
         if (remaining > 0)
         {
-            // Credit balance - overpayment to be tracked
             allocations.Add(new PaymentAllocation(null, PaymentApplicationType.Principal, remaining));
         }
 

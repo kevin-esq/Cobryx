@@ -36,7 +36,6 @@ public class AmortizationServiceTests
     [Fact]
     public void GenerateSchedule_SimpleInterest_CalculatesCorrectTotalInterest()
     {
-        // 10% rate * 4 installments = 40% of principal
         var agreement = CreateAgreement(principal: 10000, installments: 4);
         var policy = CreateExplicitInterestPolicy(rate: 10);
 
@@ -55,7 +54,7 @@ public class AmortizationServiceTests
 
         var schedule = _service.GenerateSchedule(agreement, policy);
 
-        Assert.Equal(new DateTime(2025, 1, 8), schedule[0].DueDate);  // Weekly
+        Assert.Equal(new DateTime(2025, 1, 8), schedule[0].DueDate);
         Assert.Equal(new DateTime(2025, 1, 15), schedule[1].DueDate);
         Assert.Equal(new DateTime(2025, 1, 22), schedule[2].DueDate);
         Assert.Equal(new DateTime(2025, 1, 29), schedule[3].DueDate);
@@ -110,6 +109,7 @@ public class AmortizationServiceTests
         return InterestPolicy.CreateExplicit(
             tenantId: _tenantId,
             name: "Test Policy",
+            code: "TEST-INTEREST",
             rate: rate,
             method: InterestMethod.Simple);
     }

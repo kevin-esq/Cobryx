@@ -63,7 +63,6 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var signupCommand = new SignUpCommand("Login Corp", "Test", "User", email, "SecurePass123!@#");
         await _client.PostAsJsonAsync("/api/auth/signup", signupCommand);
 
-        // Simulate activating user in DB (bypassing email verification for test)
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();

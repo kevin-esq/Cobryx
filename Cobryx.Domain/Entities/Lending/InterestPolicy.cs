@@ -11,7 +11,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
 {
     public Guid TenantId { get; private set; }
     public string Name { get; private set; } = string.Empty;
-    public InterestType Type { get; private set; }
+    public string Code { get; private set; } = string.Empty;
+    public InterestOrigin Type { get; private set; }
     public InterestMethod Method { get; private set; }
     public decimal? Rate { get; private set; }
     public CompoundingFrequency? CompoundingFrequency { get; private set; }
@@ -24,6 +25,7 @@ public class InterestPolicy : BaseEntity, ITenantEntity
     public static InterestPolicy CreateExplicit(
         Guid tenantId,
         string name,
+        string code,
         decimal rate,
         InterestMethod method = InterestMethod.Simple,
         CompoundingFrequency? compoundingFrequency = null)
@@ -32,6 +34,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
+        if (string.IsNullOrWhiteSpace(code))
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
         if (rate < 0)
             throw new DomainException(DomainErrorCode.Common.InvalidAmount);
 
@@ -39,7 +43,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
         {
             TenantId = tenantId,
             Name = name,
-            Type = InterestType.Explicit,
+            Code = code.ToUpperInvariant(),
+            Type = InterestOrigin.Explicit,
             Method = method,
             Rate = rate,
             CompoundingFrequency = compoundingFrequency,
@@ -50,6 +55,7 @@ public class InterestPolicy : BaseEntity, ITenantEntity
     public static InterestPolicy CreateImplicit(
         Guid tenantId,
         string name,
+        string code,
         decimal cashPrice,
         decimal creditPrice)
     {
@@ -57,6 +63,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
+        if (string.IsNullOrWhiteSpace(code))
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
         if (cashPrice <= 0 || creditPrice <= 0)
             throw new DomainException(DomainErrorCode.Common.InvalidAmount);
         if (creditPrice < cashPrice)
@@ -66,7 +74,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
         {
             TenantId = tenantId,
             Name = name,
-            Type = InterestType.Implicit,
+            Code = code.ToUpperInvariant(),
+            Type = InterestOrigin.Implicit,
             Method = InterestMethod.Simple,
             CashPrice = cashPrice,
             CreditPrice = creditPrice,
@@ -76,7 +85,7 @@ public class InterestPolicy : BaseEntity, ITenantEntity
 
     public decimal CalculateInterest(decimal principal, int numberOfInstallments)
     {
-        if (Type == InterestType.Implicit)
+        if (Type == InterestOrigin.Implicit)
             return CalculateImplicitInterest(principal);
 
         if (!Rate.HasValue)

@@ -44,9 +44,6 @@ public class ApplyLateFeesHandler : IRequestHandler<ApplyLateFeesCommand, Result
         else
         {
             var activeLoans = await _loanRepository.GetActiveByTenantAsync(tenantId.Value, ct);
-            // We need installments for all, but GetActiveByTenantAsync might not include them.
-            // For batch processing, we'd ideally have a more optimized query.
-            // For now, we'll load them individually (or optimize if needed).
             foreach (var activeLoan in activeLoans)
             {
                 var fullLoan = await _loanRepository.GetByIdWithInstallmentsAsync(activeLoan.Id, ct);

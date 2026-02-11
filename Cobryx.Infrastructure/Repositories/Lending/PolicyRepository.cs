@@ -17,7 +17,6 @@ public class PolicyRepository : IInterestPolicyRepository, ILateFeePolicyReposit
         _context = context;
     }
 
-    // IInterestPolicyRepository
     async Task<InterestPolicy?> IInterestPolicyRepository.GetByIdAsync(Guid id, CancellationToken ct) =>
         await _context.InterestPolicies.FindAsync(new object[] { id }, ct);
 
@@ -25,6 +24,10 @@ public class PolicyRepository : IInterestPolicyRepository, ILateFeePolicyReposit
         await _context.InterestPolicies
             .Where(p => p.TenantId == tenantId && p.IsActive)
             .ToListAsync(ct);
+
+    async Task<InterestPolicy?> IInterestPolicyRepository.GetByCodeAsync(Guid tenantId, string code, CancellationToken ct) =>
+        await _context.InterestPolicies
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Code == code && p.IsActive, ct);
 
     async Task IInterestPolicyRepository.AddAsync(InterestPolicy policy, CancellationToken ct) =>
         await _context.InterestPolicies.AddAsync(policy, ct);
@@ -35,7 +38,6 @@ public class PolicyRepository : IInterestPolicyRepository, ILateFeePolicyReposit
         await Task.CompletedTask;
     }
 
-    // ILateFeePolicyRepository
     async Task<LateFeePolicy?> ILateFeePolicyRepository.GetByIdAsync(Guid id, CancellationToken ct) =>
         await _context.LateFeePolicies.FindAsync(new object[] { id }, ct);
 
@@ -53,9 +55,12 @@ public class PolicyRepository : IInterestPolicyRepository, ILateFeePolicyReposit
         await Task.CompletedTask;
     }
 
-    // IPaymentApplicationPolicyRepository
     async Task<PaymentApplicationPolicy?> IPaymentApplicationPolicyRepository.GetByIdAsync(Guid id, CancellationToken ct) =>
         await _context.PaymentApplicationPolicies.FindAsync(new object[] { id }, ct);
+
+    async Task<PaymentApplicationPolicy?> IPaymentApplicationPolicyRepository.GetByCodeAsync(Guid tenantId, string code, CancellationToken ct) =>
+        await _context.PaymentApplicationPolicies
+            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Code == code && p.IsActive, ct);
 
     async Task<PaymentApplicationPolicy?> IPaymentApplicationPolicyRepository.GetDefaultByTenantAsync(Guid tenantId, CancellationToken ct) =>
         await _context.PaymentApplicationPolicies

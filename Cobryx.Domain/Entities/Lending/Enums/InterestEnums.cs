@@ -1,9 +1,9 @@
 namespace Cobryx.Domain.Entities.Lending.Enums;
 
-public enum InterestType
+public enum InterestOrigin
 {
     Explicit = 1,
-    Implicit = 2  // From price difference (cash vs credit price)
+    Implicit = 2
 }
 
 public enum InterestMethod
