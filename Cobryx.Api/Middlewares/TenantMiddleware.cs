@@ -43,7 +43,11 @@ public class TenantMiddleware
         if (string.IsNullOrEmpty(tenantId))
         {
             var path = context.Request.Path.Value?.ToLowerInvariant();
-            if (path != null && (path.Contains("/health") || path.Contains("/api/auth")))
+            if (path != null && (
+                path.Contains("/health") ||
+                path.Contains("/api/auth") ||
+                path.StartsWith("/swagger") ||
+                path.StartsWith("/hangfire")))
             {
                 await _next(context);
                 return;
