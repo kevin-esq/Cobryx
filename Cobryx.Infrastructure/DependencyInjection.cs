@@ -67,25 +67,9 @@ public static class DependencyInjection
             KeepAlive = 30,
             CommandTimeout = 300,
             Pooling = true,
-            MinPoolSize = 10,
+            MinPoolSize = 0,
             MaxPoolSize = 100
         };
-
-        try
-        {
-            if (!string.IsNullOrEmpty(npgsqlBuilder.Host))
-            {
-                var ips = System.Net.Dns.GetHostAddresses(npgsqlBuilder.Host);
-                var ipv4 = ips.FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                if (ipv4 != null)
-                {
-                    npgsqlBuilder.Host = ipv4.ToString();
-                }
-            }
-        }
-        catch
-        {
-        }
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>
         {

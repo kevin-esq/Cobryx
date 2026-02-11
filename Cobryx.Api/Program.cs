@@ -21,7 +21,6 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "Cobryx.Api")
     .WriteTo.Console()
-    .WriteTo.File("logs/cobryx-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -184,10 +183,7 @@ app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+// Cloud Run terminates TLS — no HTTPS redirect needed in container.
 
 app.MapControllers();
 
@@ -209,9 +205,10 @@ try
         {
             await dbContext.Database.EnsureCreatedAsync();
         }
-        else
+        else if (Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
         {
             await dbContext.Database.MigrateAsync();
+            Log.Information("Database migration completed successfully");
         }
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
