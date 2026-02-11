@@ -15,15 +15,15 @@ public static class DependencyInjection
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Register Concordia Core Services
         services.AddConcordiaCoreServices();
         services.AddConcordiaHandlers();
 
-        // Domain Services
         services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddValidatorsFromAssembly(assembly);
+
+        services.AddSingleton<Common.Observability.CobryxMetrics>();
 
         return services;
     }

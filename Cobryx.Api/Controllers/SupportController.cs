@@ -1,23 +1,56 @@
-using Cobryx.Application.Support.Commands.Create;
+using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Api.Contracts.V1.System;
+using Cobryx.Api.Outcomes;
+using Cobryx.Domain.Entities;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers;
 
+/// <summary>
+/// Controller for managing customer support operations, technical assistance tickets, and operational feedback.
+/// Orchestrates the communication between end-users and the tenant support infrastructure.
+/// </summary>
 [Authorize]
 [ApiController]
-[Route("api/support")]
+[Route("api/support/tickets")]
+[Tags("Support & Operations")]
 public class SupportController : CobryxBaseController
 {
     public SupportController(ISender sender) : base(sender)
     {
     }
 
+    /// <summary>
+    /// Submits a new technical or operational support ticket.
+    /// </summary>
+    /// <param name="request">Ticket details including subject, category, and priority level.</param>
+    /// <remarks>
+    /// Tickets are automatically associated with the authenticated user context.
+    ///
+    /// Possible Outcomes:
+    /// - SUPPORT.TICKET.CREATED: Ticket successfully queued for triage.
+    /// - SUPPORT.TICKET.FAILED: Validation failed (e.g., empty subject or invalid category).
+    /// </remarks>
+    /// <response code="201">Returns the unique identifier for the submitted support ticket.</response>
+    /// <response code="400">Malformed request or invalid priority levels.</response>
     [HttpPost]
-    public async Task<IActionResult> Create(CreateSupportTicketCommand command)
+    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<Guid>), 201)]
+    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    public async Task<IActionResult> Create([FromBody] CreateSupportTicketRequest request)
     {
+        // Intentional Mapping: Public Request -> Internal Domain Command
+        var command = new Application.Support.Commands.Create.CreateSupportTicketCommand(
+            request.Subject,
+            request.Description,
+            request.Priority,
+            request.Category);
+
         var result = await Sender.Send(command);
-        return HandleResult(result, "Support ticket created successfully");
+        return HandleCreatedResult($"/api/support/tickets/{result.Value}", result, SupportOutcomes.TicketCreated);
     }
 }

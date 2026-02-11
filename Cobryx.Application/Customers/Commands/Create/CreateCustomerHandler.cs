@@ -3,6 +3,8 @@ using Cobryx.Domain.Common;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Exceptions.Customers;
+using Cobryx.Domain.Exceptions.Tenants;
 using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Create;
@@ -21,12 +23,12 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
     public async Task<Result<Guid>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
+        if (tenantId == Guid.Empty) throw new TenantContextMissingException();
 
-        // Check if phone already exists in this tenant
         var existing = await _customerRepository.GetByPhoneAsync(tenantId, request.Phone);
         if (existing != null)
         {
-            return Result.Failure<Guid>("Customer with this phone number already exists.");
+            throw new DuplicateCustomerException();
         }
 
         var customer = new Customer(

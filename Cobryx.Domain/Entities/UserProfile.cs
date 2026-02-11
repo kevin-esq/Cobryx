@@ -10,7 +10,7 @@ public class UserProfile : BaseEntity
     public string PreferredLanguage { get; private set; } = "es-MX";
     public string Timezone { get; private set; } = "America/Mexico_City";
 
-    // Navigation
+
     public virtual User User { get; private set; } = null!;
 
     private UserProfile() { }

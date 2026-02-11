@@ -1,0 +1,81 @@
+using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Api.Contracts.V1.Identity;
+using Cobryx.Api.Outcomes;
+using Concordia;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Cobryx.Api.Controllers;
+
+/// <summary>
+/// Controller for managing authenticated user sessions, device tracking, and remote session revocation.
+/// </summary>
+[Authorize]
+[ApiController]
+[Route("api/sessions")]
+[Tags("Identity & Access")]
+public class SessionsController : CobryxBaseController
+{
+    public SessionsController(ISender sender) : base(sender)
+    {
+    }
+
+    /// <summary>
+    /// Retrieves a list of all active sessions across different devices for the authenticated user.
+    /// </summary>
+    /// <remarks>
+    /// Allows users to audit where their account is currently logged in.
+    ///
+    /// Possible Outcomes:
+    /// - AUTH.SESSION.SEARCH.COMPLETED: Sessions successfully retrieved.
+    /// </remarks>
+    /// <response code="200">A collection of active session details.</response>
+    [HttpGet]
+    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<List<SessionContract>>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    public async Task<IActionResult> GetSessions()
+    {
+        var result = await Sender.Send(new Application.Auth.Commands.Sessions.GetSessionsQuery());
+
+        if (!result.IsSuccess)
+        {
+            return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
+        }
+
+        // Intentional Mapping: Internal DTO -> Public API Contract
+        var mappedResult = result.Value?.Select(s => new SessionContract(
+            s.Id,
+            s.IpAddress,
+            s.DeviceFingerprint,
+            s.DeviceName,
+            s.LastActiveAt,
+            s.IsCurrent)).ToList();
+
+        return Success(mappedResult, AuthOutcomes.SessionSearchCompleted);
+    }
+
+    /// <summary>
+    /// Formally revokes and terminates a specific user session by its identifier.
+    /// </summary>
+    /// <param name="id">Unique identifier of the session to terminate.</param>
+    /// <remarks>
+    /// Once revoked, the associated device will be forced to re-authenticate.
+    ///
+    /// Possible Outcomes:
+    /// - AUTH.SESSION.REVOKED: Session successfully terminated.
+    /// - AUTH.SESSION.FAILED: Session not found or unauthorized for the current user context.
+    /// </remarks>
+    /// <response code="204">Session successfully revoked.</response>
+    /// <response code="404">Session not found or already expired.</response>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> RevokeSession(Guid id)
+    {
+        var result = await Sender.Send(new Application.Auth.Commands.Sessions.RevokeSessionCommand(id));
+        return HandleDeleteResult(result, AuthOutcomes.SessionRevoked);
+    }
+}

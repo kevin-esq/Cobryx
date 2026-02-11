@@ -4,6 +4,7 @@ using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 using FluentValidation;
+using Cobryx.Application.Common.Validation;
 
 namespace Cobryx.Application.Support.Commands.Create;
 
@@ -17,8 +18,11 @@ public class CreateSupportTicketValidator : AbstractValidator<CreateSupportTicke
 {
     public CreateSupportTicketValidator()
     {
-        RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Description).NotEmpty();
+        RuleFor(x => x.Title)
+            .NotEmpty().WithErrorCode(SupportValidationErrors.Subject.Required)
+            .MaximumLength(200).WithErrorCode(SupportValidationErrors.Subject.TooLong);
+        RuleFor(x => x.Description)
+            .NotEmpty().WithErrorCode(SupportValidationErrors.Description.Required);
     }
 }
 
@@ -45,7 +49,7 @@ public class CreateSupportTicketHandler : IRequestHandler<CreateSupportTicketCom
 
         if (tenantId == null || userId == null)
         {
-            return Result.Failure<Guid>("User or Tenant context missing.");
+            return Result.Failure<Guid>("TENANT.CONTEXT_MISSING");
         }
 
         var ticket = new SupportTicket(

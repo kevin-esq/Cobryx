@@ -7,6 +7,6 @@ namespace Cobryx.Domain.Interfaces;
 
 public interface ICustomerRepository : IRepository<Customer>
 {
-    Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone);
-    Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId);
+    Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

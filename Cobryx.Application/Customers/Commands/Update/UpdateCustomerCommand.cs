@@ -2,6 +2,8 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Exceptions.Customers;
+using Cobryx.Domain.Exceptions.Tenants;
 using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Update;
@@ -28,13 +30,13 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
     public async Task<Result> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+        if (!tenantId.HasValue) throw new TenantContextMissingException();
 
         var customer = await _customerRepository.GetByIdAsync(request.Id);
 
         if (customer == null || customer.TenantId != tenantId.Value)
         {
-            return Result.Failure("Customer not found.");
+            throw new CustomerNotFoundException(request.Id);
         }
 
         if (customer.Phone != request.Phone)
@@ -42,7 +44,7 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             var existing = await _customerRepository.GetByPhoneAsync(tenantId.Value, request.Phone);
             if (existing != null)
             {
-                return Result.Failure("Another customer already has this phone number.");
+                throw new DuplicateCustomerException();
             }
         }
 

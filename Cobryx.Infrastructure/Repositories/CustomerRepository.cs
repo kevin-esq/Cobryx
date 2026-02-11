@@ -9,13 +9,13 @@ public class CustomerRepository : BaseRepository<Customer>, ICustomerRepository
 {
     public CustomerRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
-    public async Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone)
+    public async Task<Customer?> GetByPhoneAsync(Guid tenantId, string phone, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.FirstOrDefaultAsync(c => c.Phone == phone); // TenantId handled by Global Filter
+        return await _dbSet.FirstOrDefaultAsync(c => c.Phone == phone, cancellationToken);
     }
 
-    public async Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId)
+    public async Task<IEnumerable<Customer>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.ToListAsync(cancellationToken);
     }
 }

@@ -7,7 +7,7 @@ public class Permission : BaseEntity, IAggregateRoot
     public string Name { get; private set; }
     public string Description { get; private set; }
 
-    // Navigation
+
     private readonly List<Role> _roles = new();
     public IReadOnlyCollection<Role> Roles => _roles.AsReadOnly();
 

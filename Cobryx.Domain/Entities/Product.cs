@@ -10,10 +10,10 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
     public string? Description { get; private set; }
     public Money BasePrice { get; private set; }
     public string? Sku { get; private set; }
-    public bool IsService { get; private set; } // True for "Cash Loans" or "Services"
-    public bool IsLoanProduct { get; private set; } // If true, this product behaves as a template for a loan
+    public bool IsService { get; private set; }
+    public bool IsLoanProduct { get; private set; }
 
-    // Loan-specific configuration (overrides Tenant settings if present)
+
     public decimal? DefaultInterestRate { get; private set; }
     public int? MaxInstallments { get; private set; }
 
@@ -27,9 +27,9 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Product(Guid tenantId, string name, Money basePrice, bool isService = false, bool isLoanProduct = false)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
-        // BasePrice can be 0 if the loan amount is variable
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
+
 
         TenantId = tenantId;
         Name = name;
@@ -41,7 +41,7 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void ConfigureLoanRules(decimal? defaultInterestRate, int? maxInstallments)
     {
-        if (!IsLoanProduct) throw new InvalidOperationException("Cannot configure loan rules for a non-loan product.");
+        if (!IsLoanProduct) throw new DomainException(DomainErrorCode.Products.NotALoanProduct);
         DefaultInterestRate = defaultInterestRate;
         MaxInstallments = maxInstallments;
         UpdateTimestamp();
@@ -49,8 +49,8 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string name, string? description, Money basePrice, string? sku)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Name is required.", nameof(name));
-        if (basePrice == null) throw new ArgumentNullException(nameof(basePrice));
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
+        if (basePrice == null) throw new DomainException(DomainErrorCode.Products.BasePriceRequired);
 
         Name = name;
         Description = description;

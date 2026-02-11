@@ -1,4 +1,4 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,6 +13,12 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(p => p.PaymentMethodId);
 
         builder.OwnsOne(p => p.Amount, m =>
+        {
+            m.Property(x => x.Amount).HasPrecision(18, 2);
+            m.Property(x => x.Currency).HasMaxLength(3);
+        });
+
+        builder.OwnsOne(p => p.RefundedAmount, m =>
         {
             m.Property(x => x.Amount).HasPrecision(18, 2);
             m.Property(x => x.Currency).HasMaxLength(3);

@@ -1,7 +1,5 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-jammy-chiseled AS base
 WORKDIR /app
-EXPOSE 80
-EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -20,17 +18,16 @@ RUN dotnet publish "Cobryx.Api.csproj" -c Release -o /app/publish /p:UseAppHost=
 FROM base AS final
 WORKDIR /app
 
-# Create a non-root user to run the application
-RUN adduser --disabled-password --gecos '' --uid 1000 appuser && \
-    chown -R appuser:appuser /app
-
 COPY --from=publish /app/publish .
 
-# Add health check to monitor application status
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl --fail http://localhost:80/health || exit 1
+# Cloud Run sets PORT env var (default 8080). Bind to it.
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 
-# Switch to non-root user
-USER appuser
+# Cloud Run uses its own HTTP health probes externally.
+# Chiseled images have no shell/curl, so Docker-level HEALTHCHECK is not feasible.
+HEALTHCHECK NONE
+
+# Chiseled images run as non-root (uid 1654) by default.
+USER 1654
 
 ENTRYPOINT ["dotnet", "Cobryx.Api.dll"]

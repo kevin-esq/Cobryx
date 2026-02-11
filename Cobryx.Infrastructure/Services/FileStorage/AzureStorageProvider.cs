@@ -4,6 +4,7 @@ using Azure.Storage.Sas;
 using Cobryx.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Exceptions.System;
 
 namespace Cobryx.Infrastructure.Services.FileStorage;
 
@@ -16,7 +17,7 @@ public class AzureStorageProvider : IDocumentStorage
     public AzureStorageProvider(IConfiguration configuration, ILogger<AzureStorageProvider> logger)
     {
         var connectionString = configuration["Storage:AzureBlob:ConnectionString"]
-            ?? throw new InvalidOperationException("Azure Storage ConnectionString is missing.");
+            ?? throw new SystemConfigurationException();
         _containerName = configuration["Storage:AzureBlob:ContainerName"] ?? "documents";
         _serviceClient = new BlobServiceClient(connectionString);
         _logger = logger;
@@ -61,7 +62,7 @@ public class AzureStorageProvider : IDocumentStorage
 
         if (!blobClient.CanGenerateSasUri)
         {
-            throw new InvalidOperationException("BlobClient cannot generate SAS URI. Check connection string permissions.");
+            throw new SystemConfigurationException();
         }
 
         var sasBuilder = new BlobSasBuilder

@@ -1,0 +1,10 @@
+using Cobryx.Domain.Entities;
+using Cobryx.Domain.Interfaces;
+
+namespace Cobryx.Domain.Interfaces;
+
+public interface ITaxConfigurationRepository : IRepository<TaxConfiguration>
+{
+    Task<TaxConfiguration?> GetDefaultAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TaxConfiguration>> GetAllActiveAsync(Guid tenantId, CancellationToken cancellationToken = default);
+}

@@ -1,9 +1,10 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Payments;
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface IPaymentRepository : IRepository<Payment>
 {
-    Task<IEnumerable<Payment>> GetByCustomerAsync(Guid customerId);
-    Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId);
+    Task<IEnumerable<Payment>> GetByCustomerAsync(Guid customerId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Payment>> GetByTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    Task<Payment?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default);
 }

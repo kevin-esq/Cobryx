@@ -1,114 +1,84 @@
-# Cobryx - Credit Control & Sales SaaS
+# Cobryx API
 
-## Product Vision
+Cobryx is a modular, multi-tenant backend platform built with .NET, following Clean Architecture principles, explicit error contracts, and machine-readable API outcomes.
 
-SaaS designed for **informal lenders, installment sellers, and small businesses**.
-Objective: Clear, simple, and reliable control of customers, loans, payments, and penalties.
-Focus: **Robust Backend, Clean Architecture, Scalability**.
+## Architecture Overview
 
----
+Cobryx follows Clean Architecture with strict separation of concerns:
 
-## 🏗 Architecture
+- **Cobryx.Api**: HTTP layer, request/response contracts, error/outcome mapping
+- **Cobryx.Application**: Use cases, business workflows, validation
+- **Cobryx.Domain**: Core domain, entities, domain rules, domain exceptions
+- **Cobryx.Infrastructure**: Persistence, external services, security, background jobs
 
-**Clean Architecture + DDD light + Simple CQRS**
+## Design Principles
 
-```text
-API
- ├── Controllers        → Standardized Envelope Responses (ApiResponse<T>)
-Application
- ├── UseCases           → Application rules (MediatR Handlers)
-Domain
- ├── Entities           → Pure business rules (User, Tenant, Credit, Payment...)
-Infrastructure
- ├── Persistence        → EF Core + Npgsql
- ├── Caching            → Redis (Distributed Cache)
- ├── Security           → JWT, Claims, ClamAV (Anti-virus)
+The following rules are enforced across the codebase:
+
+- The Application layer is HTTP-agnostic
+- Domain and Application layers never return human-readable messages
+- All errors are represented using stable error codes
+- All success responses expose explicit outcome codes
+- Exceptions are reserved for exceptional domain or infrastructure failures
+- Expected flows use Result-based control flow
+
+## API Contracts
+
+Cobryx uses explicit, machine-readable contracts for both errors and successful outcomes.
+
+- Errors are returned using stable error codes and structured metadata
+- Success responses return semantic outcome codes
+- No human-readable messages are exposed by the backend
+
+Detailed documentation:
+- [Error Handling](docs/api-contract/errors.md)
+- [Validation Errors](docs/api-contract/validations.md)
+- [API Outcomes](docs/api-contract/outcomes.md)
+
+## Observability & Monitoring
+
+Cobryx is built for high observability, providing structured telemetry for every transaction.
+
+- [Observability Strategy](docs/observability.md): Technical details on metrics and outcome derivation.
+- [Dashboards & PromQL](docs/dashboards.md): Guide for creating Grafana dashboards and SLI/SLO alerts.
+
+## Getting Started
+
+### Prerequisites
+- .NET SDK 8+
+- Docker & Docker Compose
+
+### Run locally
+
+```bash
+docker-compose up -d
+dotnet run --project Cobryx.Api
 ```
 
-### Key Technical Features
+## Testing
 
-- **Standardized API Responses**: All endpoints return a consistent `ApiResponse<T>` envelope.
-- **Global Error Handling**: Centralized `IExceptionHandler` returning `ProblemDetails` like structures within the envelope.
-- **Multi-tenancy**: Global query filters and middleware for data isolation.
-- **Performance**:
-    - **Redis Caching**: Distributed caching for high-traffic endpoints.
-    - **Composite Indexes**: Optimized database queries.
-    - **Connection Pooling**: Tuned Npgsql configuration.
-- **Security**:
-    - Automatic IP & Device Fingerprinting.
-    - ClamAV integration for file uploads.
-    - Role-based Access Control (RBAC).
-
----
-
-## 🛠 Technology Stack
-
-- **.NET 8**
-- **PostgreSQL** (Supabase)
-- **Redis** (StackExchange.Redis)
-- **Docker & Docker Compose**
-- **ASP.NET Identity** (JWT)
-- **Serilog** (Structured Logging)
-
----
-
-## 🚀 Development Roadmap Status
-
-### Phase 1: Foundation (✅ Completed)
-- [x] **Base Repository**: Solution structure, Layers.
-- [x] **Base Domain**: Tenant, User, ValueObjects.
-- [x] **Architecture**: Dependency Injection, MediatR.
-
-### Phase 2: Business Core (✅ Completed)
-- [x] **Customers**: CRUD, Search, Sorting.
-- [x] **Credits**: Interest logic, Amortization schedules.
-- [x] **Payments**: Partial payments, logic for capital/interest allocation.
-- [x] **Invoices**: Tax calculation, generation.
-
-### Phase 3: Real Multi-tenancy (✅ Completed)
-- [x] **Tenant Isolation**: Middleware, Global Query Filters.
-- [x] **Branding**: Business configuration.
-
-### Phase 4: Infrastructure (✅ Completed)
-- [x] **Database**: PostgreSQL Migrations.
-- [x] **Docker**: Dockerfile, docker-compose.
-- [x] **Caching**: Redis implementation.
-
-### Phase 5: Production & Security (✅ Completed)
-- [x] **Security**: JWT, Roles, IP Detection.
-- [x] **Observability**: Serilog, HealthChecks (API, DB, Redis, ClamAV).
-- [x] **Standardization**: Uniform API Responses.
-
----
-
-## 💻 How to Run
-
-1. **Prerequisites**: Docker Desktop, .NET 8 SDK.
-2. **Start Infrastructure**:
-   ```bash
-   docker-compose up -d
-   ```
-3. **Run API**:
-   ```bash
-   dotnet watch run --project Cobryx.Api
-   ```
-4. **Access Swagger**: `http://localhost:5142/swagger`
-
----
-
-## 📡 API Response Standard
-
-Every response follows this structure:
-
-```json
-{
-  "success": true,
-  "message": "Operation completed successfully",
-  "data": {
-    "id": "...",
-    "name": "..."
-  },
-  "errors": null,
-  "traceId": "00-123456789..."
-}
+```bash
+dotnet test
 ```
+
+Integration tests validate:
+
+* Error mapping and contracts
+* Session and tenant enforcement
+* Authentication and MFA flows
+
+## Contribution Guidelines
+
+Before adding new features:
+
+- Do not introduce human-readable messages in backend responses
+- Always use centralized error or outcome catalogs
+- Do not throw raw `Exception`
+- New validators must define explicit error codes
+- All new API endpoints must return an outcomeCode on success
+
+## Non-goals
+
+- The API does not handle localization
+- The API does not format user-facing messages
+- The API does not expose internal exception details

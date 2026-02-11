@@ -6,6 +6,13 @@ using Cobryx.Infrastructure;
 using Cobryx.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
+using Microsoft.Extensions.Options;
+using Cobryx.Infrastructure.Observability;
+using OpenTelemetry.Metrics;
+using Microsoft.EntityFrameworkCore;
+using Asp.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,15 +21,27 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "Cobryx.Api")
     .WriteTo.Console()
-    .WriteTo.File("logs/cobryx-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
+builder.Services.AddSingleton<CobryxMetrics>();
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics =>
+    {
+        metrics.AddMeter(CobryxMetrics.MeterName);
+        metrics.AddAspNetCoreInstrumentation();
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Cobryx API", Version = "v1" });
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Cobryx API",
+        Version = "v1",
+        Description = "Cobryx Financial Platform API. Organized by business domains: Identity, Financial Core, and System Administration."
+    });
 
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -48,9 +67,31 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    c.CustomSchemaIds(type => GetSchemaId(type));
+
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+
+    var appXmlFile = "Cobryx.Application.xml";
+    var appXmlPath = Path.Combine(AppContext.BaseDirectory, appXmlFile);
+    if (File.Exists(appXmlPath))
+    {
+        c.IncludeXmlComments(appXmlPath);
+    }
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<Cobryx.Api.Infrastructure.SessionValidationFilter>();
+    options.Filters.Add<Cobryx.Api.Infrastructure.Observability.ObservabilityFilter>();
+    options.Filters.Add<Cobryx.Api.Infrastructure.IdempotencyKeyFilter>();
+})
+.AddJsonOptions(json =>
+{
+    json.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
 
@@ -79,13 +120,26 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim("permissions", "credits:create"));
     options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim("permissions", "payments:apply"));
     options.AddPolicy("CanManageTenant", policy => policy.RequireClaim("permissions", "tenant:manage"));
+    options.AddPolicy("EmailVerified", policy => policy.RequireClaim("email_verified", "true"));
+    options.AddPolicy("AccountVerified", policy =>
+        policy.RequireClaim("email_verified", "true")
+              .RequireClaim("requires_onboarding", "false"));
+});
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new HeaderApiVersionReader("X-Api-Version");
 });
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCors", policy =>
     {
-        policy.WithOrigins("https://app.cobryx.com.mx")
+        var appOptions = builder.Configuration.GetSection("App").Get<Cobryx.Application.Common.Configuration.AppOptions>() ?? new Cobryx.Application.Common.Configuration.AppOptions();
+        policy.WithOrigins(appOptions.AppUrl)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -100,8 +154,22 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<Cobryx.Infrastructure.Middleware.RequestLogContextMiddleware>();
+app.UseMiddleware<Cobryx.Infrastructure.Middleware.DynamicRateLimitingMiddleware>();
 app.UseRateLimiter();
 app.UseCors("DefaultCors");
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'self'; object-src 'none';");
+    await next();
+});
+
+app.UseCookiePolicy();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -115,10 +183,7 @@ app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+// Cloud Run terminates TLS — no HTTPS redirect needed in container.
 
 app.MapControllers();
 
@@ -133,7 +198,20 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
-        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo);
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<Cobryx.Infrastructure.Persistence.CobryxDbContext>();
+
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+        {
+            await dbContext.Database.EnsureCreatedAsync();
+        }
+        else if (Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
+        {
+            await dbContext.Database.MigrateAsync();
+            Log.Information("Database migration completed successfully");
+        }
+
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
         Log.Information("Database seeding completed successfully");
     }
 }
@@ -145,3 +223,23 @@ catch (Exception ex)
 Log.Information("Starting web host...");
 app.Run();
 Log.Information("Web host stopped");
+
+static string GetSchemaId(Type type)
+{
+    if (!type.IsGenericType)
+    {
+        if (type.Namespace != null && type.Namespace.StartsWith("Cobryx.Domain"))
+        {
+            var suffix = type.Namespace
+                .Replace("Cobryx.Domain.", "")
+                .Replace(".", "_");
+            return $"{suffix}_{type.Name}";
+        }
+        return type.Name;
+    }
+    var genericName = type.Name.Split('`')[0];
+    var genericArgs = string.Join("Of", type.GetGenericArguments().Select(GetSchemaId));
+    return $"{genericName}{genericArgs}";
+}
+
+public partial class Program { }

@@ -13,13 +13,13 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public Address? Address { get; private set; }
     public IdentityDocument? Document { get; private set; }
     public string? Notes { get; private set; }
-    public int TrustScore { get; private set; } // 0-100
+    public int TrustScore { get; private set; }
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
 
     public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
-    // Private ctor for EF
+
     private Customer()
     {
         FirstName = null!;
@@ -29,10 +29,10 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Customer(Guid tenantId, string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.", nameof(tenantId));
-        if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("FirstName is required.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("LastName is required.", nameof(lastName));
-        if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required.", nameof(phone));
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -52,9 +52,9 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
     {
-        if (string.IsNullOrWhiteSpace(firstName)) throw new ArgumentException("FirstName is required.", nameof(firstName));
-        if (string.IsNullOrWhiteSpace(lastName)) throw new ArgumentException("LastName is required.", nameof(lastName));
-        if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required.", nameof(phone));
+        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
 
         FirstName = firstName;
         LastName = lastName;

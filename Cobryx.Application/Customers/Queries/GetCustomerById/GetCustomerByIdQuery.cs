@@ -3,6 +3,8 @@ using Cobryx.Application.Customers.Common;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Enums;
+using Cobryx.Domain.Exceptions.Customers;
+using Cobryx.Domain.Exceptions.Tenants;
 using Concordia;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +26,7 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
     public async Task<Result<CustomerDto>> Handle(GetCustomerByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<CustomerDto>("Tenant context missing.");
+        if (!tenantId.HasValue) throw new TenantContextMissingException();
 
         var customer = await _customerRepository.Query()
             .AsNoTracking()
@@ -33,7 +35,7 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
 
         if (customer == null)
         {
-            return Result.Failure<CustomerDto>("Customer not found.");
+            throw new CustomerNotFoundException(request.Id);
         }
 
         return Result.Success(new CustomerDto(

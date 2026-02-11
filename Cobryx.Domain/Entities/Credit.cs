@@ -1,7 +1,10 @@
+using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Events;
+using Cobryx.Domain.Events.Payments;
 
 namespace Cobryx.Domain.Entities;
 
@@ -40,9 +43,9 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
         int graceDays = 0,
         Guid? productId = null)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
-        if (customerId == Guid.Empty) throw new ArgumentException("CustomerId is required.");
-        if (installmentsCount <= 0) throw new ArgumentException("Installments count must be greater than zero.");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (customerId == Guid.Empty) throw new DomainException(DomainErrorCode.Customer.CustomerIdRequired);
+        if (installmentsCount <= 0) throw new DomainException(DomainErrorCode.Credits.InvalidInstallmentsCount);
 
         TenantId = tenantId;
         CustomerId = customerId;
@@ -63,7 +66,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
     public void ApplyPayment(Guid paymentId, Money amount)
     {
         if (amount.Amount <= 0) return;
-        if (Status == CreditStatus.Paid) throw new InvalidOperationException("Credit is already fully paid.");
+        if (Status == CreditStatus.Paid) throw new DomainException(DomainErrorCode.Credits.CreditAlreadyPaid);
 
         decimal remainingAmount = amount.Amount;
 
@@ -86,7 +89,7 @@ public class Credit : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void AddInstallments(IEnumerable<Installment> installments)
     {
-        if (_installments.Any()) throw new InvalidOperationException("Installments already generated.");
+        if (_installments.Any()) throw new DomainException(DomainErrorCode.Credits.InstallmentsAlreadyGenerated);
         _installments.AddRange(installments);
     }
 }

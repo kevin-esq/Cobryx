@@ -1,5 +1,5 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,26 +11,26 @@ public class InvoiceRepository : BaseRepository<Invoice>, IInvoiceRepository
     {
     }
 
-    public async Task<Invoice?> GetByNumberAsync(Guid tenantId, string invoiceNumber)
+    public async Task<Invoice?> GetByNumberAsync(Guid tenantId, string invoiceNumber, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Invoices
             .Include(i => i.Items)
-            .FirstOrDefaultAsync(i => i.TenantId == tenantId && i.InvoiceNumber == invoiceNumber);
+            .FirstOrDefaultAsync(i => i.TenantId == tenantId && i.InvoiceNumber == invoiceNumber, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Invoice>> GetByCustomerAsync(Guid tenantId, Guid customerId)
+    public async Task<IReadOnlyList<Invoice>> GetByCustomerAsync(Guid tenantId, Guid customerId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Invoices
             .Include(i => i.Items)
             .Where(i => i.TenantId == tenantId && i.CustomerId == customerId)
             .OrderByDescending(i => i.IssueDate)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
-    public override async Task<Invoice?> GetByIdAsync(Guid id)
+    public override async Task<Invoice?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Invoices
             .Include(i => i.Items)
-            .FirstOrDefaultAsync(i => i.Id == id);
+            .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
     }
 }

@@ -2,9 +2,22 @@ using System;
 
 namespace Cobryx.Domain.Common;
 
-public class DomainException : Exception
+public class DomainException : CobryxException
 {
-    public DomainException(string message) : base(message)
+    private readonly DomainErrorCode _errorCode;
+    public override DomainErrorCode ErrorCode => _errorCode;
+
+    public DomainException(DomainErrorCode errorCode) : base()
+    {
+        _errorCode = errorCode;
+    }
+}
+
+public class TooManyRequestsException : CobryxException
+{
+    public override DomainErrorCode ErrorCode => DomainErrorCode.System.TooManyRequests;
+
+    public TooManyRequestsException() : base()
     {
     }
 }

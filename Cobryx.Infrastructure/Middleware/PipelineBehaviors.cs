@@ -3,6 +3,7 @@ using Cobryx.Application.Common.Interfaces;
 using Concordia;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Infrastructure.Middleware;
 
@@ -69,6 +70,51 @@ public static class PipelineBehaviors
         public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
             return next();
+        }
+    }
+
+    public class UnitOfWork<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
+    {
+        private readonly Cobryx.Domain.Interfaces.IUnitOfWork _unitOfWork;
+
+        public UnitOfWork(Cobryx.Domain.Interfaces.IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        {
+            var response = await next();
+
+            if (ShouldSave(response))
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            return response;
+        }
+
+        private static bool ShouldSave(TResponse response)
+        {
+            if (response is null) return false;
+
+            if (response is Result result)
+            {
+                return result.IsSuccess;
+            }
+
+            var type = response.GetType();
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Result<>))
+            {
+                var isSuccessProp = type.GetProperty("IsSuccess");
+                if (isSuccessProp != null && isSuccessProp.GetValue(response) is bool isSuccess)
+                {
+                    return isSuccess;
+                }
+            }
+
+            return true;
         }
     }
 }

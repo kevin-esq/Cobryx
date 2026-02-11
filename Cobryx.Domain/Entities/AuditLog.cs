@@ -8,9 +8,9 @@ public class AuditLog : BaseEntity, ITenantEntity
     public Guid? UserId { get; private set; }
     public string EntityName { get; private set; }
     public string EntityId { get; private set; }
-    public string Action { get; private set; } // "Create", "Update", "Delete"
-    public string? OldValues { get; private set; } // JSON Snapshot
-    public string? NewValues { get; private set; } // JSON Snapshot
+    public string Action { get; private set; }
+    public string? OldValues { get; private set; }
+    public string? NewValues { get; private set; }
     public string? IpAddress { get; private set; }
     public string? UserAgent { get; private set; }
 
@@ -32,8 +32,8 @@ public class AuditLog : BaseEntity, ITenantEntity
         string? ipAddress = null,
         string? userAgent = null)
     {
-        if (tenantId == Guid.Empty) throw new ArgumentException("TenantId is required.");
-        if (string.IsNullOrWhiteSpace(entityName)) throw new ArgumentException("EntityName is required.");
+        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(entityName)) throw new DomainException(DomainErrorCode.Common.EntityNameRequired);
 
         TenantId = tenantId;
         UserId = userId;

@@ -1,4 +1,4 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
@@ -7,18 +7,16 @@ namespace Cobryx.Domain.DomainServices;
 
 public class ScheduleGenerator : IScheduleGenerator
 {
-    public IEnumerable<Installment> GenerateSchedule(Credit credit)
+    public IEnumerable<Installment> GenerateSchedule(Entities.Credit credit)
     {
         var installments = new List<Installment>();
         decimal principal = credit.Principal.Amount;
 
-        // 1. Adjust rate based on frequency (Professional Standard)
         decimal periodicRate = GetPeriodicRate(credit.InterestRate / 100, credit.Frequency);
         int n = credit.InstallmentsCount;
 
         if (credit.InterestType == InterestType.Amortized)
         {
-            // Handling 0% Interest case (Division by zero prevention)
             if (periodicRate == 0)
             {
                 decimal fixedPayment = Math.Round(principal / n, 2);
@@ -42,7 +40,6 @@ public class ScheduleGenerator : IScheduleGenerator
             }
             else
             {
-                // French Amortization using Pure Decimal
                 decimal onePlusI_n = DecimalPower(1 + periodicRate, n);
                 decimal numerator = principal * (periodicRate * onePlusI_n);
                 decimal denominator = onePlusI_n - 1;
@@ -70,10 +67,9 @@ public class ScheduleGenerator : IScheduleGenerator
         }
         else
         {
-            // Simple or Flat logic (Already adjusted to periodic)
             decimal totalInterest = credit.InterestType == InterestType.Simple
                 ? Math.Round(principal * periodicRate * n, 2)
-                : Math.Round(credit.InterestRate, 2); // Flat is a fixed total amount
+                : Math.Round(credit.InterestRate, 2);
 
             decimal totalDebt = principal + totalInterest;
             decimal installmentAmount = Math.Round(totalDebt / n, 2);
@@ -87,7 +83,6 @@ public class ScheduleGenerator : IScheduleGenerator
             {
                 currentDate = GetNextDueDate(currentDate, credit.Frequency);
 
-                // Adjustment for the last installment to avoid cent drifts
                 if (j == n)
                 {
                     installmentAmount = remainingBalance;
@@ -127,7 +122,6 @@ public class ScheduleGenerator : IScheduleGenerator
         for (int i = 0; i < n; i++)
         {
             result *= x;
-            // Rounding to 10 decimal places to prevent precision-overflow in very long terms (e.g. 360 months)
             result = Math.Round(result, 10);
         }
         return result;
@@ -141,7 +135,7 @@ public class ScheduleGenerator : IScheduleGenerator
             PaymentFrequency.Weekly => date.AddDays(7),
             PaymentFrequency.BiWeekly => date.AddDays(14),
             PaymentFrequency.Monthly => date.AddMonths(1),
-            _ => date.AddMonths(1) // Single payment or default
+            _ => date.AddMonths(1)
         };
     }
 }

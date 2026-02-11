@@ -6,6 +6,7 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Cobryx.Domain.Exceptions.System;
 
 namespace Cobryx.Infrastructure.Identity;
 
@@ -18,9 +19,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(User user, Role? roleOverride = null)
+    public string GenerateAccessToken(User user, Guid sessionId, Role? roleOverride = null)
     {
-        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -30,14 +31,17 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.GivenName, user.FirstName),
-            new(JwtRegisteredClaimNames.FamilyName, user.LastName),
+            new(JwtRegisteredClaimNames.Email, user.Email?.Value ?? string.Empty),
+            new(JwtRegisteredClaimNames.GivenName, user.FirstName ?? string.Empty),
+            new(JwtRegisteredClaimNames.FamilyName, user.LastName ?? string.Empty),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new(JwtRegisteredClaimNames.Nbf, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            new("tenant_name", user.FullName),
+            new("tenant_name", user.FullName ?? string.Empty),
             new("tenant_id", user.TenantId.ToString()),
+            new("requires_onboarding", user.RequiresOnboarding.ToString().ToLower()),
+            new("email_verified", user.IsEmailVerified.ToString().ToLower()),
+            new("sid", sessionId.ToString()),
             new(ClaimTypes.Role, roleName)
         };
 
@@ -45,15 +49,21 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         {
             foreach (var permission in effectiveRole.Permissions)
             {
-                claims.Add(new Claim("permissions", permission.Name));
+                if (permission != null && !string.IsNullOrEmpty(permission.Name))
+                {
+                    claims.Add(new Claim("permissions", permission.Name));
+                }
             }
         }
+
+        var expiryStr = _configuration["JwtSettings:ExpiryMinutes"] ?? "60";
+        if (!double.TryParse(expiryStr, out var expiryMinutes)) expiryMinutes = 60;
 
         var token = new JwtSecurityToken(
             issuer: _configuration["JwtSettings:Issuer"],
             audience: _configuration["JwtSettings:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:ExpiryMinutes"] ?? "15")),
+            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -65,5 +75,63 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
+    }
+
+    public string GenerateMfaToken(User user)
+    {
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("purpose", "mfa_verification"),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: _configuration["JwtSettings:Issuer"],
+            audience: _configuration["JwtSettings:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public Guid? ValidateMfaToken(string token)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var secretKey = _configuration["JwtSettings:Secret"] ?? throw new SystemConfigurationException();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+
+        try
+        {
+            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ValidateIssuer = true,
+                ValidIssuer = _configuration["JwtSettings:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = _configuration["JwtSettings:Audience"],
+                ClockSkew = TimeSpan.Zero
+            }, out SecurityToken validatedToken);
+
+            var jwtToken = (JwtSecurityToken)validatedToken;
+            var purpose = jwtToken.Claims.FirstOrDefault(x => x.Type == "purpose")?.Value;
+            if (purpose != "mfa_verification") return null;
+
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return null;
+
+            return userId;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
