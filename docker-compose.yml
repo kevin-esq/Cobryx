@@ -12,8 +12,9 @@ services:
       - ConnectionStrings__DefaultConnection=${COBRYX_CONNECTION_STRING:-Host=aws-0-us-west-2.pooler.supabase.com;Database=postgres;Username=postgres.wofxgtfarmbqhoqwqaqd;Password=YOUR_PASSWORD;SSL Mode=Require;Keepalive=30}
       - JwtSettings__Secret=${COBRYX_JWT_SECRET:-YOUR_JWT_SECRET_MIN_32_CHARS}
       - Storage__AzureBlob__ConnectionString=${COBRYX_STORAGE_CONNECTION_STRING:-UseDevelopmentStorage=true}
-      - Security__ClamAV__Host=clamav
-      - Caching__Redis__ConnectionString=redis:6379
+      - Security__ClamAV__Host=${COBRYX_CLAMAV_HOST:-clamav}
+      - Security__ClamAV__Port=${COBRYX_CLAMAV_PORT:-3310}
+      - Caching__Redis__ConnectionString=${COBRYX_REDIS_CONNECTION_STRING:-redis:6379}
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
       # OAuth
       - OAuth__Google__ClientId=${COBRYX_OAUTH_GOOGLE_CLIENTID}
