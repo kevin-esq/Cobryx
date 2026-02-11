@@ -33,7 +33,6 @@ public class ArchitectureTests
         var assemblies = new[]
         {
             typeof(CobryxException).Assembly,
-            // Add other relevant assemblies if exceptions are defined elsewhere
         };
 
         foreach (var assembly in assemblies)
@@ -48,7 +47,6 @@ public class ArchitectureTests
                 {
                     var parameters = constructor.GetParameters();
 
-                    // Prohibit constructors that take a 'message' parameter
                     parameters.Should().NotContain(p => p.Name!.Equals("message", StringComparison.OrdinalIgnoreCase),
                         $"Exception {type.Name} has a constructor with a 'message' parameter, violating the Zero-Text policy.");
                 }

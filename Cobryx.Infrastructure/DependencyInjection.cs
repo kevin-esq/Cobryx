@@ -21,6 +21,10 @@ using Cobryx.Infrastructure.Security;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Webhooks.Stripe;
 
+using Cobryx.Domain.Interfaces.Lending;
+using Cobryx.Domain.DomainServices.Lending;
+using Cobryx.Infrastructure.Repositories.Lending;
+
 namespace Cobryx.Infrastructure;
 
 public static class DependencyInjection
@@ -115,6 +119,20 @@ public static class DependencyInjection
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
+
+        // Lending Domain Repositories
+        services.AddScoped<ILoanRepository, LoanRepository>();
+        services.AddScoped<ILoanAgreementRepository, LoanAgreementRepository>();
+        services.AddScoped<IInstallmentRepository, InstallmentRepository>();
+        services.AddScoped<ICreditSaleRepository, CreditSaleRepository>();
+        services.AddScoped<IInterestPolicyRepository, PolicyRepository>();
+        services.AddScoped<ILateFeePolicyRepository, PolicyRepository>();
+        services.AddScoped<IPaymentApplicationPolicyRepository, PolicyRepository>();
+
+        // Lending Domain Services
+        services.AddScoped<IAmortizationService, AmortizationService>();
+        services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
+
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
         services.AddScoped<Cobryx.Domain.Services.DocumentService>();

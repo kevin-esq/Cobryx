@@ -19,7 +19,6 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
     [Fact]
     public async Task InvalidLogin_RecordsBothErrorAndOutcomeMetrics()
     {
-        // Arrange
         var meterName = CobryxMetrics.MeterName;
         var errorMetric = "cobryx_domain_errors_total";
         var outcomeMetric = "cobryx_business_outcomes_total";
@@ -60,12 +59,9 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         listener.Start();
         var client = _factory.CreateClient();
 
-        // Act
-        // Invalid email format triggers Validation Error (400)
         var command = new { Email = "not-an-email", Password = "123" };
         var response = await client.PostAsJsonAsync("/api/auth/login", command);
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         await Task.Delay(100);
@@ -73,17 +69,15 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         errorCount.Should().BeGreaterThan(0);
         outcomeCount.Should().BeGreaterThan(0);
 
-        // Validation Failed -> Error: VALIDATION.FAILED -> Outcome: VALIDATION.FAILED (because of prefix and .FAILED detection)
         recordedErrorCode.Should().Be("VALIDATION.FAILED");
         recordedOutcomeCode.Should().Be("VALIDATION.FAILED");
-        recordedModule.Should().Be("Other"); // prefix VALIDATION is not in my switch, maps to Other
+        recordedModule.Should().Be("Other");
         recordedNumericCode.Should().NotBeNull();
     }
 
     [Fact]
     public async Task SuccessfulRequest_IncrementsOutcomeMetric()
     {
-        // Arrange
         var meterName = CobryxMetrics.MeterName;
         var metricName = "cobryx_business_outcomes_total";
         long recordedValue = 0;
@@ -112,35 +106,22 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         var client = _factory.CreateClient();
 
-        // Act
-        // Trigger a success endpoint. 
-        // We can simulate ResendVerification. It requires valid email format but mock implementations might success?
-        // Or Health check? Health check doesn't use ApiResponse.
-        // We need an endpoint returning ApiResponse.
-        // Auth/Onboard requires token.
-        // Auth/Signup requires data.
-
-        // Let's use Signup with unique email.
         var uniqueEmail = $"test-{Guid.NewGuid()}@example.com";
         var command = new { BusinessName = "Test Biz", Email = uniqueEmail, Password = "Password123!", FirstName = "Test", LastName = "User" };
         var response = await client.PostAsJsonAsync("/api/auth/signup", command);
         var content = await response.Content.ReadAsStringAsync();
-
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"because signup should succeed. Response: {content}");
 
-        // Allow some time for metrics
         await Task.Delay(100);
 
         recordedValue.Should().BeGreaterThan(0);
-        recordedCode.Should().Be("AUTH.SIGNUP.VERIFICATION_REQUIRED"); // Was .CREATED, but actually VERIFICATION_REQUIRED
+        recordedCode.Should().Be("AUTH.SIGNUP.VERIFICATION_REQUIRED");
         recordedModule.Should().Be("Auth");
     }
 
     [Fact]
     public async Task ProductSearch_RecordsProductModule()
     {
-        // Arrange
         var meterName = CobryxMetrics.MeterName;
         var metricName = "cobryx_business_outcomes_total";
 
@@ -162,14 +143,11 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         var client = _factory.CreateClient();
 
-        // Use a mock token to bypass [Authorize]
         var token = CreateMockToken();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        // Act
         var response = await client.GetAsync("/api/products");
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK, $"because the token should be valid. Body: {await response.Content.ReadAsStringAsync()}");
 
         await Task.Delay(100);

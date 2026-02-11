@@ -106,8 +106,6 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
             Status = InvoiceStatus.Partial;
         }
 
-        // We mark the allocation as reversed once the invoice state has been updated.
-        // This ensures idempotency even if the handler/process is retried.
         allocation.MarkAsReversed();
 
         AddDomainEvent(new InvoiceStateReversedEvent(Id, TenantId, Status, TotalPaid, DateTime.UtcNow));

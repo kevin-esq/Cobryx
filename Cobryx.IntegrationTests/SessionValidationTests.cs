@@ -80,7 +80,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         }
 
         var response = await _client.GetAsync("/api/auth/sessions");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden); // Or 401 depending on mapping
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var json = await response.Content.ReadAsStringAsync();
         using var doc = System.Text.Json.JsonDocument.Parse(json);

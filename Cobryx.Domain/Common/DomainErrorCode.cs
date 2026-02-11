@@ -80,6 +80,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode GeneralError = new("DOMAIN.GENERAL_ERROR");
         public static readonly DomainErrorCode TenantIdRequired = new("DOMAIN.TENANT_ID_REQUIRED");
         public static readonly DomainErrorCode EntityNameRequired = new("DOMAIN.ENTITY_NAME_REQUIRED");
+        public static readonly DomainErrorCode InvalidAmount = new("DOMAIN.INVALID_AMOUNT");
     }
 
     public static class ValueObjects
@@ -189,6 +190,23 @@ public sealed record DomainErrorCode
     public static class Support
     {
         public static readonly DomainErrorCode TicketNotFound = new("SUPPORT.TICKET_NOT_FOUND");
+    }
+
+    public static class Loans
+    {
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.LOAN.NOT_FOUND");
+        public static readonly DomainErrorCode AgreementNotFound = new("DOMAIN.LOAN_AGREEMENT.NOT_FOUND");
+        public static readonly DomainErrorCode AgreementAlreadySigned = new("DOMAIN.LOAN_AGREEMENT.ALREADY_SIGNED");
+        public static readonly DomainErrorCode AgreementImmutableAfterSigning = new("DOMAIN.LOAN_AGREEMENT.IMMUTABLE_AFTER_SIGNING");
+        public static readonly DomainErrorCode AlreadyClosed = new("DOMAIN.LOAN.ALREADY_CLOSED");
+        public static readonly DomainErrorCode InvalidPaymentAmount = new("DOMAIN.LOAN.INVALID_PAYMENT_AMOUNT");
+        public static readonly DomainErrorCode InstallmentNotFound = new("DOMAIN.INSTALLMENT.NOT_FOUND");
+        public static readonly DomainErrorCode InstallmentAlreadyPaid = new("DOMAIN.INSTALLMENT.ALREADY_PAID");
+        public static readonly DomainErrorCode InvalidInterestPolicy = new("DOMAIN.LOAN.INVALID_INTEREST_POLICY");
+        public static readonly DomainErrorCode InvalidLateFeePolicy = new("DOMAIN.LOAN.INVALID_LATE_FEE_POLICY");
+        public static readonly DomainErrorCode CreditSaleNotFound = new("DOMAIN.CREDIT_SALE.NOT_FOUND");
+        public static readonly DomainErrorCode CreditSaleInvalidPricing = new("DOMAIN.CREDIT_SALE.INVALID_PRICING");
+        public static readonly DomainErrorCode CannotModifyPaidInstallment = new("DOMAIN.INSTALLMENT.CANNOT_MODIFY_PAID");
     }
 
     internal static DomainErrorCode From(string value) => new(value);

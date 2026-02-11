@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Cobryx.Infrastructure.Observability;
 using OpenTelemetry.Metrics;
 using Microsoft.EntityFrameworkCore;
+using Asp.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +37,12 @@ builder.Services.AddOpenTelemetry()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Cobryx API", Version = "v1" });
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Cobryx API",
+        Version = "v1",
+        Description = "Cobryx Financial Platform API. Organized by business domains: Identity, Financial Core, and System Administration."
+    });
 
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
@@ -63,6 +69,8 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
+    c.CustomSchemaIds(type => GetSchemaId(type));
+
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     c.IncludeXmlComments(xmlPath);
@@ -79,6 +87,11 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<Cobryx.Api.Infrastructure.SessionValidationFilter>();
     options.Filters.Add<Cobryx.Api.Infrastructure.Observability.ObservabilityFilter>();
+    options.Filters.Add<Cobryx.Api.Infrastructure.IdempotencyKeyFilter>();
+})
+.AddJsonOptions(json =>
+{
+    json.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
@@ -112,6 +125,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AccountVerified", policy =>
         policy.RequireClaim("email_verified", "true")
               .RequireClaim("requires_onboarding", "false"));
+});
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new HeaderApiVersionReader("X-Api-Version");
 });
 
 builder.Services.AddCors(options =>
@@ -205,5 +226,23 @@ catch (Exception ex)
 Log.Information("Starting web host...");
 app.Run();
 Log.Information("Web host stopped");
+
+static string GetSchemaId(Type type)
+{
+    if (!type.IsGenericType)
+    {
+        if (type.Namespace != null && type.Namespace.StartsWith("Cobryx.Domain"))
+        {
+            var suffix = type.Namespace
+                .Replace("Cobryx.Domain.", "")
+                .Replace(".", "_");
+            return $"{suffix}_{type.Name}";
+        }
+        return type.Name;
+    }
+    var genericName = type.Name.Split('`')[0];
+    var genericArgs = string.Join("Of", type.GetGenericArguments().Select(GetSchemaId));
+    return $"{genericName}{genericArgs}";
+}
 
 public partial class Program { }

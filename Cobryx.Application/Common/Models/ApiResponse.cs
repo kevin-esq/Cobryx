@@ -5,8 +5,10 @@ namespace Cobryx.Application.Common.Models;
 
 public abstract class ApiResponse
 {
+    /// <example>false</example>
+    [DefaultValue(false)]
     [JsonPropertyName("success")]
-    public bool Success { get; protected set; }
+    public bool Success { get; internal set; }
 
     [JsonPropertyName("traceId")]
     public string? TraceId { get; set; }
@@ -34,7 +36,10 @@ public class ApiSuccessResponse<T> : ApiResponse
 
 public class ApiErrorResponse : ApiResponse
 {
-    public ApiErrorResponse() => Success = false;
+    public ApiErrorResponse()
+    {
+        Success = false;
+    }
 
     [JsonPropertyName("errorCode")]
     public string? ErrorCode { get; set; }
@@ -69,7 +74,7 @@ public static class ApiResponseFactory
 
     public static ApiErrorResponse Error(string? errorCode = null, int? numericCode = null, object? errors = null, string? traceId = null, string? outcomeCode = null)
     {
-        return new ApiErrorResponse
+        var response = new ApiErrorResponse
         {
             ErrorCode = errorCode,
             OutcomeCode = outcomeCode,
@@ -77,5 +82,8 @@ public static class ApiResponseFactory
             Errors = errors,
             TraceId = traceId
         };
+
+        response.Success = false; // Guaranteed explicit override
+        return response;
     }
 }

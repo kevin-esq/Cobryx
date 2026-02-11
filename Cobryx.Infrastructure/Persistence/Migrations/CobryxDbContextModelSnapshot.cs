@@ -831,6 +831,628 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("InvoiceItems");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.CreditSale", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CashPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CreditPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DownPayment")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("DownPaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LoanAgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LoanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductCategory")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProductDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("SaleDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("LoanAgreementId");
+
+                    b.HasIndex("LoanId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "SaleDate");
+
+                    b.ToTable("CreditSales", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Installment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("InstallmentNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("InterestAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("InterestPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("LateFeesPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("LoanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("PrincipalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("PrincipalPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("LoanId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("LoanId", "InstallmentNumber");
+
+                    b.ToTable("LoanInstallments", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.InterestPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CashPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int?>("CompoundingFrequency")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CreditPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("Rate")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("InterestPolicies", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LateFeePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GracePeriodDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("MaxLateFeeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("PercentageRate")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("LateFeePolicies", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CollectionStage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CurrentInterestBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("CurrentLateFeeBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("CurrentPrincipalBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DaysInArrears")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LegalStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("LoanAgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LoanNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("NextPaymentDueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("OriginalPrincipal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("RiskStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("LoanAgreementId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "RiskStatus");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("Loans", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LoanAgreement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreditSaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DaysBetweenPayments")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FirstPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GracePeriodDays")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InterestPolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRecoverable")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSigned")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LateFeePolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("NumberOfInstallments")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PaymentFrequency")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PrincipalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ProductSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("RecoveryValue")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("RoundingMode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "StartDate");
+
+                    b.ToTable("LoanAgreements", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.PaymentApplicationPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApplicationOrderJson")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.HasIndex("TenantId", "IsDefault");
+
+                    b.ToTable("PaymentApplicationPolicies", (string)null);
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.LoginSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1068,6 +1690,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("LoanId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MetadataJson")
                         .HasColumnType("text");
 
@@ -1108,6 +1733,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("LoanId");
+
                     b.HasIndex("PaymentMethodId");
 
                     b.HasIndex("TenantId");
@@ -1140,6 +1767,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReversed")
                         .HasColumnType("boolean");
 
                     b.Property<string>("MetadataJson")
@@ -2917,6 +3547,45 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.CreditSale", b =>
+                {
+                    b.HasOne("Cobryx.Domain.Entities.Lending.LoanAgreement", "Agreement")
+                        .WithMany()
+                        .HasForeignKey("LoanAgreementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", "Loan")
+                        .WithMany()
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Agreement");
+
+                    b.Navigation("Loan");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Installment", b =>
+                {
+                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", "Loan")
+                        .WithMany("Installments")
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Loan");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+                {
+                    b.HasOne("Cobryx.Domain.Entities.Lending.LoanAgreement", "Agreement")
+                        .WithOne("Loan")
+                        .HasForeignKey("Cobryx.Domain.Entities.Lending.Loan", "LoanAgreementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agreement");
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.LoginSession", b =>
                 {
                     b.HasOne("Cobryx.Domain.Entities.User", "User")
@@ -2951,6 +3620,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", null)
+                        .WithMany("Payments")
+                        .HasForeignKey("LoanId");
+
                     b.HasOne("Cobryx.Domain.Entities.Payments.PaymentMethod", "PaymentMethod")
                         .WithMany()
                         .HasForeignKey("PaymentMethodId")
@@ -2979,12 +3652,37 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("PaymentId");
                         });
 
+                    b.OwnsOne("Cobryx.Domain.ValueObjects.Money", "RefundedAmount", b1 =>
+                        {
+                            b1.Property<Guid>("PaymentId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)");
+
+                            b1.HasKey("PaymentId");
+
+                            b1.ToTable("Payments");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PaymentId");
+                        });
+
                     b.Navigation("Amount")
                         .IsRequired();
 
                     b.Navigation("Customer");
 
                     b.Navigation("PaymentMethod");
+
+                    b.Navigation("RefundedAmount")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Payments.PaymentAllocation", b =>
@@ -3240,6 +3938,18 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Invoice", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+                {
+                    b.Navigation("Installments");
+
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LoanAgreement", b =>
+                {
+                    b.Navigation("Loan");
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Payments.Payment", b =>

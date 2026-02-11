@@ -79,7 +79,6 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
 
         var json = await response.Content.ReadAsStringAsync();
 
-        // Assert that common human-readable validation strings are NOT present
         json.Should().NotContain("required");
         json.Should().NotContain("must not be empty");
         json.Should().NotContain("format");

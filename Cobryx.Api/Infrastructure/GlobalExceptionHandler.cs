@@ -88,10 +88,15 @@ public class GlobalExceptionHandler : IExceptionHandler
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/json";
 
+        var rawErrors = metadata?.GetValueOrDefault("errors");
+        IReadOnlyList<Cobryx.Api.Contracts.V1.Common.ValidationError>? structuredErrors = rawErrors != null
+            ? new[] { new Cobryx.Api.Contracts.V1.Common.ValidationError("_global", "DOMAIN_ERROR", rawErrors.ToString() ?? string.Empty) }
+            : null;
+
         var response = ApiResponseFactory.Error(
             errorCode: errorCode.Value,
             numericCode: numericCode,
-            errors: metadata?.GetValueOrDefault("errors"),
+            errors: structuredErrors,
             traceId: httpContext.TraceIdentifier,
             outcomeCode: outcomeCode);
 

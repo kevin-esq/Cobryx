@@ -33,7 +33,6 @@ public class WebhookIngestionTests : IClassFixture<CobryxWebApplicationFactory>
 
         var firstResult = await sender.Send(command);
 
-        // Assert - First
         firstResult.IsSuccess.Should().BeTrue();
 
         var ingestedEvent = dbContext.WebhookEvents
@@ -44,12 +43,11 @@ public class WebhookIngestionTests : IClassFixture<CobryxWebApplicationFactory>
 
         var secondResult = await sender.Send(command);
 
-        // Assert - Duplicate (Should be success but deduped)
         secondResult.IsSuccess.Should().BeTrue();
 
         var count = dbContext.WebhookEvents
             .Count(e => e.Provider == provider && e.ExternalEventId == externalEventId);
 
-        count.Should().Be(1); // Still only one
+        count.Should().Be(1);
     }
 }
