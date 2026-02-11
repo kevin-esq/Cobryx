@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddTransient<IExternalAuthService, ExternalAuthService>();
         services.AddScoped<IHttpContextService, Services.HttpContextService>();
         services.AddScoped<ICookieService, CookieService>();
+        services.AddScoped<IAuditLogQueryService, Services.AuditLogQueryService>();
 
         services.AddStackExchangeRedisCache(options =>
         {
