@@ -1,0 +1,30 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# Test projects
+**/*.Tests/
+**/Cobryx.IntegrationTests/
+**/Cobryx.Domain.Tests/
+
+# IDE / OS
+**/.vs/
+**/.vscode/
+**/.idea/
+**/.DS_Store
+
+# Git
+**/.git/
+**/.gitignore
+
+# Docker
+**/docker-compose*.yml
+**/Dockerfile*
+
+# Documentation
+**/*.md
+**/LICENSE
+
+# Agent artifacts
+**/.gemini/
+**/.agent/
