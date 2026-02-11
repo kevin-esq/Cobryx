@@ -64,6 +64,12 @@ public class Tenant : BaseEntity, IAggregateRoot
         UpdateTimestamp();
     }
 
+    public void UpdateSettings(BusinessSettings settings)
+    {
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        UpdateTimestamp();
+    }
+
     public void UpdateOnboardingInfo(string taxIdCode, string industry, string address, string? phone = null)
     {
         TaxId = new TaxId(taxIdCode);

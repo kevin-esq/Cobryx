@@ -1,0 +1,58 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
+using Cobryx.Domain.Interfaces;
+using Concordia;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cobryx.Application.Users.Queries.GetMyProfile;
+
+public record MyProfileDto(
+    Guid Id,
+    string FirstName,
+    string LastName,
+    string Email,
+    string Role,
+    bool IsMfaEnabled,
+    bool IsEmailVerified,
+    string? PhoneNumber,
+    string? AvatarUrl,
+    string PreferredLanguage,
+    string Timezone,
+    DateTime CreatedAt);
+
+public record GetMyProfileQuery(Guid UserId) : IRequest<Result<MyProfileDto>>;
+
+public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, Result<MyProfileDto>>
+{
+    private readonly IUserRepository _userRepository;
+
+    public GetMyProfileHandler(IUserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    public async Task<Result<MyProfileDto>> Handle(GetMyProfileQuery request, CancellationToken cancellationToken)
+    {
+        var user = await _userRepository.Query()
+            .AsNoTracking()
+            .Include(u => u.Role)
+            .Include(u => u.Profile)
+            .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
+
+        if (user == null) return Result.Failure<MyProfileDto>(DomainErrorCode.User.NotFound);
+
+        return Result.Success(new MyProfileDto(
+            user.Id,
+            user.FirstName,
+            user.LastName,
+            user.Email.Value,
+            user.Role?.Name ?? "Unknown",
+            user.IsMfaEnabled,
+            user.IsEmailVerified,
+            user.Profile?.PhoneNumber,
+            user.Profile?.AvatarUrl,
+            user.Profile?.PreferredLanguage ?? "es-MX",
+            user.Profile?.Timezone ?? "America/Mexico_City",
+            user.CreatedAt));
+    }
+}

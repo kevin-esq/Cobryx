@@ -47,7 +47,8 @@ public class TenantMiddleware
                 path.Contains("/health") ||
                 path.Contains("/api/auth") ||
                 path.StartsWith("/swagger") ||
-                path.StartsWith("/hangfire")))
+                path.StartsWith("/hangfire") ||
+                path == "/"))
             {
                 await _next(context);
                 return;
