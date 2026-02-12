@@ -23,7 +23,7 @@ public class ProjectNotificationOnPaymentCompletedHandler : INotificationHandler
         var dbContext = (DbContext)_unitOfWork;
 
         var exists = await dbContext.Set<Notification>()
-            .AnyAsync(n => n.TenantId == domainEvent.TenantId && 
+            .AnyAsync(n => n.TenantId == domainEvent.TenantId &&
                          n.RelatedEntityId == domainEvent.PaymentId.ToString() &&
                          n.Type == NotificationType.Success, cancellationToken);
 

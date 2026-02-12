@@ -48,30 +48,6 @@ public class CobryxDbContext : DbContext, IUnitOfWork
         return await base.SaveChangesAsync(cancellationToken);
     }
 
-    private void ProcessDomainEvents()
-    {
-        var domainEvents = ChangeTracker.Entries<BaseEntity>()
-            .Select(x => x.Entity)
-            .SelectMany(x =>
-            {
-                var events = x.DomainEvents.ToList();
-                x.ClearDomainEvents();
-                return events;
-            })
-            .ToList();
-
-        var outboxEvents = domainEvents
-            .Select(domainEvent =>
-            new OutboxEvent(
-                domainEvent.GetType().FullName!,
-                JsonConvert.SerializeObject(domainEvent, new JsonSerializerSettings
-                {
-                    TypeNameHandling = TypeNameHandling.All
-                })))
-            .ToList();
-
-        this.Set<OutboxEvent>().AddRange(outboxEvents);
-    }
 
     private void UpdateAuditFields()
     {
@@ -83,7 +59,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
             }
             else if (entry.State == EntityState.Modified)
             {
-                if (entry.Entity.Version == 0)
+                if (entry.Entity.Version == 0 && entry.Entity is not OutboxEvent)
                 {
                     entry.State = EntityState.Added;
                     entry.Entity.IncrementVersion();

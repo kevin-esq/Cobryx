@@ -64,11 +64,13 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var errors = problemDetails.GetProperty("errors");
         errors.ValueKind.Should().Be(JsonValueKind.Array);
 
-        var businessNameError = errors.EnumerateArray().FirstOrDefault(e => e.GetProperty("field").GetString().Equals("businessName", StringComparison.OrdinalIgnoreCase) || e.GetProperty("field").GetString().Equals("BusinessName", StringComparison.OrdinalIgnoreCase));
+        var businessNameError = errors.EnumerateArray().FirstOrDefault(e =>
+            e.TryGetProperty("field", out var f) && (f.GetString()?.Equals("businessName", StringComparison.OrdinalIgnoreCase) == true || f.GetString()?.Equals("BusinessName", StringComparison.OrdinalIgnoreCase) == true));
         businessNameError.ValueKind.Should().NotBe(JsonValueKind.Undefined);
         businessNameError.GetProperty("code").GetString().Should().Be("VALIDATION.AUTH.BUSINESS_NAME.REQUIRED");
 
-        var emailError = errors.EnumerateArray().FirstOrDefault(e => e.GetProperty("field").GetString().Equals("email", StringComparison.OrdinalIgnoreCase) || e.GetProperty("field").GetString().Equals("Email", StringComparison.OrdinalIgnoreCase));
+        var emailError = errors.EnumerateArray().FirstOrDefault(e =>
+            e.TryGetProperty("field", out var f) && (f.GetString()?.Equals("email", StringComparison.OrdinalIgnoreCase) == true || f.GetString()?.Equals("Email", StringComparison.OrdinalIgnoreCase) == true));
         emailError.GetProperty("code").GetString().Should().Be("VALIDATION.AUTH.EMAIL.INVALID");
     }
 

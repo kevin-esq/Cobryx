@@ -98,7 +98,7 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.AddInterceptors(
                     sp.GetRequiredService<AuditInterceptor>(),
-                    sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                    sp.GetRequiredService<OutboxInterceptor>());
                 options.UseSqlite(_connection);
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();

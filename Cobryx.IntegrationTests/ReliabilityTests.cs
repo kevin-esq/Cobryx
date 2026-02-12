@@ -25,7 +25,8 @@ public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var client = _factory.CreateClient();
         var idempotencyKey = Guid.NewGuid().ToString();
 
-        var requestBody = new {
+        var requestBody = new
+        {
             Email = $"test-{Guid.NewGuid()}@example.com",
             Password = "SecurePassword123!",
             FirstName = "Test",
@@ -37,12 +38,12 @@ public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Idempotency-Key", idempotencyKey);
 
         var response1 = await client.PostAsJsonAsync("/api/auth/signup", requestBody);
-        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+        response1.StatusCode.Should().Be(HttpStatusCode.Created);
         var content1 = await response1.Content.ReadAsStringAsync();
 
         var response2 = await client.PostAsJsonAsync("/api/auth/signup", requestBody);
 
-        response2.StatusCode.Should().Be(HttpStatusCode.OK);
+        response2.StatusCode.Should().Be(HttpStatusCode.Created);
         var content2 = await response2.Content.ReadAsStringAsync();
         content2.Should().Be(content1);
     }
@@ -57,7 +58,7 @@ public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var now = DateTime.UtcNow;
         var event1 = new OutboxEvent("TypeA", "{}", now);
         var event2 = new OutboxEvent("TypeB", "{}", now);
-        
+
         infraContext.OutboxEvents.Add(event1);
         infraContext.OutboxEvents.Add(event2);
         await dbContext.SaveChangesAsync();

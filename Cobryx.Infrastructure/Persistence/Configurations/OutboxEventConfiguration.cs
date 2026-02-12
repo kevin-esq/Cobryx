@@ -26,7 +26,7 @@ public class OutboxEventConfiguration : IEntityTypeConfiguration<OutboxEvent>
 
         builder.HasIndex(x => new { x.ProcessedOnUtc, x.OccurredOnUtc })
             .HasDatabaseName("IX_OutboxEvents_Processed_Occurred");
-        
+
         builder.HasIndex(x => x.ProcessedOnUtc);
     }
 }

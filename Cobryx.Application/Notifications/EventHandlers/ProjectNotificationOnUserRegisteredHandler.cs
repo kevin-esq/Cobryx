@@ -23,7 +23,7 @@ public class ProjectNotificationOnUserRegisteredHandler : INotificationHandler<D
         var dbContext = (DbContext)_unitOfWork;
 
         var exists = await dbContext.Set<Notification>()
-            .AnyAsync(n => n.TenantId == domainEvent.TenantId && 
+            .AnyAsync(n => n.TenantId == domainEvent.TenantId &&
                          n.RelatedEntityId == domainEvent.UserId.ToString() &&
                          n.Type == NotificationType.Information, cancellationToken);
 

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Dashboard.EventHandlers;
 
-public class DashboardCacheInvalidationHandler : 
+public class DashboardCacheInvalidationHandler :
     INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>,
     INotificationHandler<DomainEventNotification<UserRegisteredEvent>>
 {

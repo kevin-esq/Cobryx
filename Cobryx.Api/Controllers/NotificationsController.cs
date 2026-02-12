@@ -16,7 +16,7 @@ public class NotificationsController : CobryxBaseController
     private readonly ITenantProvider _tenantProvider;
     private readonly IUnitOfWork _unitOfWork;
 
-    public NotificationsController(ISender sender, ITenantProvider tenantProvider, IUnitOfWork unitOfWork) 
+    public NotificationsController(ISender sender, ITenantProvider tenantProvider, IUnitOfWork unitOfWork)
         : base(sender)
     {
         _tenantProvider = tenantProvider;

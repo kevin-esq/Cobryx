@@ -14,7 +14,7 @@ public class DashboardController : CobryxBaseController
     private readonly ICacheService _cacheService;
     private readonly ITenantProvider _tenantProvider;
 
-    public DashboardController(ISender sender, ICacheService cacheService, ITenantProvider tenantProvider) 
+    public DashboardController(ISender sender, ICacheService cacheService, ITenantProvider tenantProvider)
         : base(sender)
     {
         _cacheService = cacheService;
