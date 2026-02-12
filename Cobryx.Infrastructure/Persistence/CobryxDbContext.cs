@@ -1,14 +1,17 @@
 using System.Linq.Expressions;
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Invoicing;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Application.Webhooks.Entities;
+using Cobryx.Domain.Events;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cobryx.Application.Common.Interfaces; // Keep this as IUnitOfWork and ITenantProvider are used
+using Cobryx.Domain.Common; // Keep this as BaseEntity is used
+using Cobryx.Domain.Entities; // Keep this as Tenant, User, Customer, Product, Credit, Installment, Payment, PaymentAllocation, Role, Permission, AuditLog, SystemErrorLog, UserProfile, LoginSession, TaxConfiguration, PaymentMethod, Invoice, InvoiceItem, SupportTicket, SubscriptionPlan, TenantSubscription, UsageRecord, BillingAlert, Coupon, CustomerSuggestion, ReleaseNote, DocumentMetadata, MfaDevice, RecoveryCode, UserSecurityToken are used
+using Cobryx.Application.Webhooks.Entities; // Keep this as WebhookEvent is used
+using Cobryx.Domain.Entities.Invoicing; // Keep this as Invoice and InvoiceItem are used
+using Cobryx.Domain.Entities.Payments; // Keep this as Payment, PaymentAllocation, PaymentMethod are used
+using Cobryx.Domain.Interfaces; // Keep this as IUnitOfWork is used
+using Microsoft.EntityFrameworkCore.Metadata.Builders; // Added for IEntityTypeConfiguration and EntityTypeBuilder
 
 namespace Cobryx.Infrastructure.Persistence;
 
@@ -17,9 +20,19 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     private readonly ITenantProvider _tenantProvider;
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
         WriteIndented = false
     };
+
+    public class OutboxEventConfiguration : IEntityTypeConfiguration<OutboxEvent>
+    {
+        public void Configure(EntityTypeBuilder<OutboxEvent> builder)
+        {
+            builder.ToTable("OutboxEvents");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.ProcessedOnUtc);
+            builder.HasIndex(x => x.OccurredOnUtc);
+        }
+    }
 
     public CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider)
         : base(options)
@@ -47,13 +60,17 @@ public class CobryxDbContext : DbContext, IUnitOfWork
             })
             .ToList();
 
-        var outboxMessages = domainEvents.Select(domainEvent =>
-            new OutboxMessage(
-                domainEvent.GetType().Name,
-                JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), _jsonSerializerOptions)))
+        var outboxEvents = domainEvents
+            .Select(domainEvent =>
+            new OutboxEvent(
+                domainEvent.GetType().FullName!,
+                JsonConvert.SerializeObject(domainEvent, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.All
+                })))
             .ToList();
 
-        this.Set<OutboxMessage>().AddRange(outboxMessages);
+        this.Set<OutboxEvent>().AddRange(outboxEvents);
     }
 
     private void UpdateAuditFields()
@@ -109,7 +126,8 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<MfaDevice> MfaDevices => Set<MfaDevice>();
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<UserSecurityToken> SecurityTokens => Set<UserSecurityToken>();
-    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
     // Lending Domain
