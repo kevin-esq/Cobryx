@@ -1,5 +1,6 @@
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.Infrastructure.Configuration;
+using Amazon.S3;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Infrastructure.Persistence.Interceptors;
 using Cobryx.Infrastructure.Repositories;
@@ -8,6 +9,11 @@ using Cobryx.Infrastructure.Middleware;
 using Cobryx.Infrastructure.Services;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
+using Cobryx.Infrastructure.HealthChecks;
+using Cobryx.Infrastructure.Identity;
+using Cobryx.Infrastructure.Services.FileStorage;
+using Cobryx.Infrastructure.Services.Security;
 using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -121,7 +127,7 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
         services.AddScoped<Cobryx.Domain.Services.DocumentService>();
-        services.AddScoped<IDocumentStorage, Services.FileStorage.AzureStorageProvider>();
+        services.AddScoped<IDocumentStorage, R2StorageProvider>();
         services.AddScoped<IVirusScanner, Services.Security.ClamAvScanner>();
 
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();

@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using nClam;
-using Azure.Storage.Blobs;
 
 namespace Cobryx.Infrastructure.HealthChecks;
 
@@ -13,20 +12,29 @@ public static class HealthCheckExtensions
         var dbConnectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        var azureConnectionString = configuration["Storage:AzureBlob:ConnectionString"]
-            ?? throw new InvalidOperationException("Azure Storage ConnectionString is missing.");
-
-        var containerName = configuration["Storage:AzureBlob:ContainerName"] ?? "documents";
+        var s3AccessKey = configuration["Storage:S3:AccessKey"]
+            ?? throw new InvalidOperationException("S3 AccessKey is missing.");
+        var s3SecretKey = configuration["Storage:S3:SecretKey"]
+            ?? throw new InvalidOperationException("S3 SecretKey is missing.");
+        var s3ServiceUrl = configuration["Storage:S3:ServiceUrl"]
+            ?? throw new InvalidOperationException("S3 ServiceUrl is missing.");
+        var bucketName = configuration["Storage:S3:BucketName"] ?? "documents";
 
         var clamAvHost = configuration["Security:ClamAV:Host"] ?? "localhost";
         var clamAvPort = int.Parse(configuration["Security:ClamAV:Port"] ?? "3310");
 
         services.AddHealthChecks()
             .AddNpgSql(dbConnectionString, name: "Database")
-            .AddAzureBlobStorage(
-                azureConnectionString,
-                containerName: containerName,
-                name: "AzureBlobStorage")
+            .AddS3(options =>
+            {
+                options.BucketName = bucketName;
+                options.Credentials = new Amazon.Runtime.BasicAWSCredentials(s3AccessKey, s3SecretKey);
+                options.S3Config = new Amazon.S3.AmazonS3Config
+                {
+                    ServiceURL = s3ServiceUrl,
+                    ForcePathStyle = true
+                };
+            }, name: "CloudflareR2")
             .AddAsyncCheck("ClamAV", async () =>
             {
                 try
