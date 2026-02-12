@@ -14,7 +14,13 @@ services:
       - Storage__AzureBlob__ConnectionString=${COBRYX_STORAGE_CONNECTION_STRING:-UseDevelopmentStorage=true}
       - Security__ClamAV__Host=${COBRYX_CLAMAV_HOST:-clamav}
       - Security__ClamAV__Port=${COBRYX_CLAMAV_PORT:-3310}
-      - Caching__Redis__ConnectionString=${COBRYX_REDIS_CONNECTION_STRING:-redis:6379}
+      - Caching__Redis__ConnectionString=${COBRYX_REDIS_CONNECTION_STRING:-localhost:6379}
+      - Storage__S3__AccessKey=${COBRYX_R2_ACCESS_KEY}
+      - Storage__S3__SecretKey=${COBRYX_R2_SECRET_KEY}
+      - Storage__S3__ServiceUrl=${COBRYX_R2_ENDPOINT}
+      - Storage__S3__BucketName=${COBRYX_R2_BUCKET_NAME:-documents}
+      - Security__Captcha__SecretKey=${COBRYX_CAPTCHA_SECRET_KEY:-1x0000000000000000000000000000000AA}
+      - Security__Captcha__SiteKey=${COBRYX_CAPTCHA_SITE_KEY:-1x0000000000000000000000000000000AA}
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
       # OAuth
       - OAuth__Google__ClientId=${COBRYX_OAUTH_GOOGLE_CLIENTID}
