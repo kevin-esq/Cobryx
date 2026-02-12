@@ -8,5 +8,5 @@ public record SignUpRequest(
     string Password,
     string FirstName,
     string LastName,
-    string CompanyName
+    string BusinessName
 );

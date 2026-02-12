@@ -9,7 +9,8 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.Application.Auth.Commands.Core;
-using Cobryx.Application.Common.Models;
+using Cobryx.Api.Contracts.V1.Identity;
+using Cobryx.Api.Contracts.V1.Common;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
@@ -86,9 +87,9 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
         Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
 
-        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
+        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(JsonOptions);
         Assert.NotNull(apiResponse?.Data);
-        Assert.NotNull(apiResponse.Data.Token);
+        Assert.NotNull(apiResponse.Data.AccessToken);
 
         var cookies = refreshResponse.Headers.GetValues("Set-Cookie").ToList();
         Assert.NotEmpty(cookies);
@@ -105,8 +106,8 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
         var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginCmd);
-        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>(JsonOptions);
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiResponse!.Data!.Token);
+        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(JsonOptions);
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiResponse!.Data!.AccessToken);
 
         var logoutResponse = await _client.PostAsJsonAsync("/api/auth/logout", new { });
 

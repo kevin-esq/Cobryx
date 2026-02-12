@@ -23,7 +23,6 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
 
-        services.AddSingleton<Common.Observability.CobryxMetrics>();
 
         return services;
     }

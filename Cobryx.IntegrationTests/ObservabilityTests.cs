@@ -1,7 +1,10 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Json;
-using Cobryx.Infrastructure.Observability;
+using Cobryx.Application.Common.Observability;
+using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Api.Contracts.V1.Financial;
+using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
@@ -109,8 +112,8 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var uniqueEmail = $"test-{Guid.NewGuid()}@example.com";
         var command = new { BusinessName = "Test Biz", Email = uniqueEmail, Password = "Password123!", FirstName = "Test", LastName = "User" };
         var response = await client.PostAsJsonAsync("/api/auth/signup", command);
-        var content = await response.Content.ReadAsStringAsync();
-        response.StatusCode.Should().Be(HttpStatusCode.Created, $"because signup should succeed. Response: {content}");
+        var signupResult = await response.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<Guid>>();
+        response.StatusCode.Should().Be(HttpStatusCode.Created, $"because signup should succeed. Response: {await response.Content.ReadAsStringAsync()}");
 
         await Task.Delay(100);
 
@@ -120,7 +123,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
     }
 
     [Fact]
-    public async Task ProductSearch_RecordsProductModule()
+    public async Task ProductCreate_RecordsProductModule()
     {
         var meterName = CobryxMetrics.MeterName;
         var metricName = "cobryx_business_outcomes_total";
@@ -146,9 +149,10 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var token = CreateMockToken();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var response = await client.GetAsync("/api/products");
+        var productPayload = new CreateProductRequest("Test Product", "Test Description", 100.00m, "MXN");
+        var response = await client.PostAsJsonAsync("/api/financial/products", productPayload);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK, $"because the token should be valid. Body: {await response.Content.ReadAsStringAsync()}");
+        response.StatusCode.Should().Be(HttpStatusCode.Created, $"because the token should be valid and payload is correct. Body: {await response.Content.ReadAsStringAsync()}");
 
         await Task.Delay(100);
         recordedModule.Should().Be("Product");
