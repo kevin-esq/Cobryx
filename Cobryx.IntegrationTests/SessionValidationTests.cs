@@ -3,11 +3,12 @@ using System.Net.Http.Json;
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Application.Auth.Common;
-using Cobryx.Application.Common.Models;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Cobryx.IntegrationTests.Fakes;
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.Api.Contracts.V1.Identity;
+using Cobryx.Api.Contracts.V1.Common;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -57,12 +58,12 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var token = _emailService.GetLastToken(email);
         await _client.PostAsJsonAsync("/api/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
         var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(email, DefaultPassword));
-        var loginResult = await loginResp.Content.ReadFromJsonAsync<ApiSuccessResponse<AuthResult>>();
+        var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
         loginResult.Should().NotBeNull();
         loginResult!.Data.Should().NotBeNull();
 
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult.Data!.Token);
-        return loginResult.Data.Token!;
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult.Data!.AccessToken);
+        return loginResult.Data.AccessToken!;
     }
 
     [Fact]
@@ -79,7 +80,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.GetAsync("/api/auth/sessions");
+        var response = await _client.GetAsync("/api/sessions");
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -105,7 +106,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.GetAsync("/api/auth/sessions");
+        var response = await _client.GetAsync("/api/sessions");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 

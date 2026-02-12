@@ -12,7 +12,7 @@ public abstract class ApiResponse
     /// Indicates if the operation was successful.
     /// </summary>
     [JsonPropertyName("success")]
-    public bool Success { get; internal set; }
+    public bool Success { get; set; }
 
     [JsonPropertyName("traceId")]
     public string? TraceId { get; set; }

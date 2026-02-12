@@ -50,11 +50,11 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> SignUp([FromBody] SignUpRequest request, CancellationToken cancellationToken)
     {
         var command = new SignUpCommand(
-            request.Email,
-            request.Password,
+            request.BusinessName,
             request.FirstName,
             request.LastName,
-            request.CompanyName);
+            request.Email,
+            request.Password);
 
         var result = await Sender.Send(command, cancellationToken);
         return HandleCreatedResult("/api/auth/login", result, AuthOutcomes.SignupVerificationRequired);
@@ -133,7 +133,7 @@ public class AuthController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 429)]
     public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request, CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new ResendVerificationCommand(request.Email), cancellationToken);
+        var result = await Sender.Send(new ResendVerificationCommand(request.Email, request.CaptchaToken), cancellationToken);
         return HandleResult(result, AuthOutcomes.VerificationEmailSent);
     }
 
@@ -157,7 +157,7 @@ public class AuthController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var command = new LoginCommand(request.Email, request.Password, request.CaptchaToken);
+        var command = new LoginCommand(request.Email, request.Password, CaptchaToken: request.CaptchaToken);
         var result = await Sender.Send(command, cancellationToken);
 
         if (result.IsSuccess && result.Value?.RefreshToken != null && result.Value.RefreshExpires.HasValue)

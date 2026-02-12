@@ -9,7 +9,7 @@ using System.Threading.RateLimiting;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Options;
-using Cobryx.Infrastructure.Observability;
+using Cobryx.Application.Common.Observability;
 using OpenTelemetry.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Asp.Versioning;
