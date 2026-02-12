@@ -210,5 +210,14 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode CannotModifyPaidInstallment = new("DOMAIN.INSTALLMENT.CANNOT_MODIFY_PAID");
     }
 
+    public static class Subscription
+    {
+        public static readonly DomainErrorCode NotFound = new("SUBSCRIPTION.NOT_FOUND");
+        public static readonly DomainErrorCode LimitReached = new("SUBSCRIPTION.LIMIT_REACHED");
+        public static readonly DomainErrorCode Expired = new("SUBSCRIPTION.EXPIRED");
+        public static readonly DomainErrorCode Blocked = new("SUBSCRIPTION.BLOCKED");
+        public static readonly DomainErrorCode DowngradeNotAllowed = new("SUBSCRIPTION.DOWNGRADE_NOT_ALLOWED");
+    }
+
     internal static DomainErrorCode From(string value) => new(value);
 }

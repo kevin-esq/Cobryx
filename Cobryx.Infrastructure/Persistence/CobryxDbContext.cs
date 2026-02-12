@@ -10,6 +10,7 @@ using Cobryx.Domain.Entities; // Keep this as Tenant, User, Customer, Product, C
 using Cobryx.Application.Webhooks.Entities; // Keep this as WebhookEvent is used
 using Cobryx.Domain.Entities.Invoicing; // Keep this as Invoice and InvoiceItem are used
 using Cobryx.Domain.Entities.Payments; // Keep this as Payment, PaymentAllocation, PaymentMethod are used
+using Cobryx.Domain.Entities.Lending; // Keep this as Loan is used
 using Cobryx.Domain.Interfaces; // Keep this as IUnitOfWork is used
 using Microsoft.EntityFrameworkCore.Metadata.Builders; // Added for IEntityTypeConfiguration and EntityTypeBuilder
 
@@ -77,11 +78,12 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Credit> Credits => Set<Credit>();
-    public DbSet<Installment> Installments => Set<Installment>();
+    public DbSet<Domain.Entities.Invoicing.Installment> Installments => Set<Domain.Entities.Invoicing.Installment>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -167,6 +169,15 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
         modelBuilder.Entity<Invoice>()
             .HasIndex(i => new { i.TenantId, i.Status });
+
+        modelBuilder.Entity<Invoice>()
+            .HasIndex(i => new { i.TenantId, i.CreatedAt });
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.TenantId, u.IsActive });
+
+        modelBuilder.Entity<Loan>()
+            .HasIndex(l => new { l.TenantId, l.IsDeleted });
 
         modelBuilder.Entity<SupportTicket>()
             .HasIndex(s => new { s.TenantId, s.Status });

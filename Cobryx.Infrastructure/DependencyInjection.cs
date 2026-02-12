@@ -28,6 +28,8 @@ using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Webhooks.Stripe;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authorization;
+using Cobryx.Infrastructure.Security.Authorization;
 
 using Cobryx.Domain.Interfaces.Lending;
 using Cobryx.Domain.DomainServices.Lending;
@@ -109,6 +111,8 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
+        services.AddScoped<ITenantSubscriptionRepository, TenantSubscriptionRepository>();
+        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
@@ -140,6 +144,17 @@ public static class DependencyInjection
         services.AddScoped<ISecurityAuditService, SecurityAuditService>();
         services.AddScoped<IAuthAttemptService, AuthAttemptService>();
         services.AddScoped<IWebhookParser, StripeWebhookParser>();
+
+        services.AddScoped<UsageMeteringService>();
+        services.AddScoped<IUsageMeteringService>(sp => 
+            new CachedUsageMeteringService(
+                sp.GetRequiredService<UsageMeteringService>(), 
+                sp.GetRequiredService<ICacheService>()));
+        services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+
+        services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
         services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
 
