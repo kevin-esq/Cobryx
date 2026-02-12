@@ -1,0 +1,50 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Enums;
+using Concordia;
+
+namespace Cobryx.Application.Tenants.Commands.ManageSubscription;
+
+public record CancelSubscriptionCommand(
+    CancellationReason Reason,
+    string? Feedback = null) : IRequest<Result>;
+
+public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionCommand, Result>
+{
+    private readonly ITenantProvider _tenantProvider;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantSubscriptionRepository _subscriptionRepository;
+
+    public CancelSubscriptionHandler(
+        ITenantProvider tenantProvider,
+        IUnitOfWork unitOfWork,
+        ITenantSubscriptionRepository subscriptionRepository)
+    {
+        _tenantProvider = tenantProvider;
+        _unitOfWork = unitOfWork;
+        _subscriptionRepository = subscriptionRepository;
+    }
+
+    public async Task<Result> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.GetTenantId();
+        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+
+        var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
+
+        if (subscription == null) return Result.Failure("Subscription not found.");
+
+        if (subscription.Status == SubscriptionStatus.Cancelled)
+            return Result.Failure("Subscription is already cancelled.");
+
+        // Grace period logic: 7 days from now
+        var gracePeriodEnd = DateTime.UtcNow.AddDays(7);
+
+        subscription.ExecuteCancellation(gracePeriodEnd, request.Reason, request.Feedback);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+}

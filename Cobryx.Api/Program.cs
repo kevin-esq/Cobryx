@@ -208,17 +208,14 @@ try
         var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
         var dbContext = scope.ServiceProvider.GetRequiredService<Cobryx.Infrastructure.Persistence.CobryxDbContext>();
 
-        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
-        {
-            await dbContext.Database.EnsureCreatedAsync();
-        }
-        else if (Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing") || Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
         {
             await dbContext.Database.MigrateAsync();
             Log.Information("Database migration completed successfully");
         }
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedPlansAsync(dbContext);
         Log.Information("Database seeding completed successfully");
 
         // Register Recurring Jobs

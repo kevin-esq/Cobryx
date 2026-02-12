@@ -27,6 +27,7 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     public bool MarketingConsent { get; private set; }
     public DateTime? LastVerificationSentAt { get; private set; }
     public int VerificationResendCount { get; private set; }
+    public int PermissionVersion { get; private set; }
 
     public virtual UserProfile? Profile { get; private set; }
     private readonly List<LoginSession> _sessions = new();
@@ -232,5 +233,11 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         }
 
         return false;
+    }
+
+    public void IncrementPermissionVersion()
+    {
+        PermissionVersion++;
+        UpdateTimestamp();
     }
 }

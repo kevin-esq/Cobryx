@@ -25,25 +25,30 @@ public class CreateInvoiceHandler : IRequestHandler<CreateInvoiceCommand, Result
     private readonly ITenantProvider _tenantProvider;
     private readonly ICustomerRepository _customerRepository;
     private readonly IInvoiceNumberService _invoiceNumberService;
+    private readonly ISubscriptionEnforcementService _subscriptionEnforcement;
 
     public CreateInvoiceHandler(
         IInvoiceRepository invoiceRepository,
         ITaxConfigurationRepository taxRepository,
         ITenantProvider tenantProvider,
         ICustomerRepository customerRepository,
-        IInvoiceNumberService invoiceNumberService)
+        IInvoiceNumberService invoiceNumberService,
+        ISubscriptionEnforcementService subscriptionEnforcement)
     {
         _invoiceRepository = invoiceRepository;
         _taxRepository = taxRepository;
         _tenantProvider = tenantProvider;
         _customerRepository = customerRepository;
         _invoiceNumberService = invoiceNumberService;
+        _subscriptionEnforcement = subscriptionEnforcement;
     }
 
     public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<Guid>("Tenant context missing.");
+
+        await _subscriptionEnforcement.EnsureWithinInvoicesLimitAsync(tenantId.Value, cancellationToken);
 
         var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
         if (customer == null || customer.TenantId != tenantId.Value)
