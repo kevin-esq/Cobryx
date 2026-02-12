@@ -19,7 +19,7 @@ public class CachedUsageMeteringService : IUsageMeteringService
 
     public async Task<UsageSnapshot> GetUsageSnapshotAsync(Guid tenantId, CancellationToken ct = default)
     {
-        string cacheKey = $"{CacheKeyPrefix}{tenantId}";
+        string cacheKey = IUsageMeteringService.GetCacheKey(tenantId);
         
         var cached = await _cacheService.GetAsync<UsageSnapshot>(cacheKey, ct);
         if (cached != null)
@@ -34,6 +34,4 @@ public class CachedUsageMeteringService : IUsageMeteringService
         
         return snapshot;
     }
-
-    public static string GetCacheKey(Guid tenantId) => $"{CacheKeyPrefix}{tenantId}";
 }

@@ -146,9 +146,9 @@ public static class DependencyInjection
         services.AddScoped<IWebhookParser, StripeWebhookParser>();
 
         services.AddScoped<UsageMeteringService>();
-        services.AddScoped<IUsageMeteringService>(sp => 
+        services.AddScoped<IUsageMeteringService>(sp =>
             new CachedUsageMeteringService(
-                sp.GetRequiredService<UsageMeteringService>(), 
+                sp.GetRequiredService<UsageMeteringService>(),
                 sp.GetRequiredService<ICacheService>()));
         services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
         services.AddScoped<IPermissionService, PermissionService>();
