@@ -26,6 +26,8 @@ using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Security;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Webhooks.Stripe;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 using Cobryx.Domain.Interfaces.Lending;
 using Cobryx.Domain.DomainServices.Lending;
@@ -42,7 +44,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
-        services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddHostedService<BackgroundJobs.ProcessOutboxJob>();
         services.AddTransient<IEmailService, SmtpEmailService>();
         services.AddTransient<IExternalAuthService, ExternalAuthService>();
@@ -61,7 +63,7 @@ public static class DependencyInjection
             new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), defaultTTL));
 
         services.AddScoped<AuditInterceptor>();
-        services.AddScoped<DispatchDomainEventsInterceptor>();
+        services.AddScoped<OutboxInterceptor>();
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
@@ -82,7 +84,7 @@ public static class DependencyInjection
         {
             options.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
-                sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                sp.GetRequiredService<OutboxInterceptor>());
 
             options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
             {
@@ -140,6 +142,23 @@ public static class DependencyInjection
         services.AddScoped<IWebhookParser, StripeWebhookParser>();
 
         services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
+
+        services.AddHangfire(config =>
+        {
+            config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(options =>
+                {
+                    options.UseNpgsqlConnection(connectionString);
+                }, new PostgreSqlStorageOptions
+                {
+                    JobExpirationCheckInterval = TimeSpan.FromHours(1),
+                    PrepareSchemaIfNecessary = true
+                });
+        });
+
+        services.AddHangfireServer();
 
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");

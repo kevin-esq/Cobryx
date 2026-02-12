@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Cobryx.Api")]
 [assembly: InternalsVisibleTo("Cobryx.Application")]
 [assembly: InternalsVisibleTo("Cobryx.Infrastructure")]
+[assembly: InternalsVisibleTo("Cobryx.IntegrationTests")]
 
 namespace Cobryx.Domain.Common;
 

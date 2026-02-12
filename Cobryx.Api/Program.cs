@@ -13,6 +13,7 @@ using Cobryx.Application.Common.Observability;
 using OpenTelemetry.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Asp.Versioning;
+using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -183,6 +184,12 @@ app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    DashboardTitle = "Cobryx Jobs Manager",
+    Authorization = new[] { new Cobryx.Api.Infrastructure.HangfireDashboardFilter() }
+});
+
 // Cloud Run terminates TLS — no HTTPS redirect needed in container.
 
 app.MapControllers();
@@ -213,6 +220,12 @@ try
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
         Log.Information("Database seeding completed successfully");
+
+        // Register Recurring Jobs
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob>(
+            "process-outbox-events",
+            job => job.RunAsync(CancellationToken.None),
+            "*/10 * * * * *"); // Every 10 seconds
     }
 }
 catch (Exception ex)
