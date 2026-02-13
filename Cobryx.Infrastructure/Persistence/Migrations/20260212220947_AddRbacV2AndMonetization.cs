@@ -56,11 +56,20 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                 defaultValue: "");
 
             // Migrate data: Map PermissionsId (Guid) to PermissionKey (Name/String)
-            migrationBuilder.Sql(@"
-                UPDATE ""RolePermissions"" rp
-                SET ""PermissionKey"" = p.""Name""
-                FROM ""Permissions"" p
-                WHERE rp.""PermissionsId"" = p.""Id""");
+            if (migrationBuilder.ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+            {
+                migrationBuilder.Sql(@"
+                    UPDATE ""RolePermissions"" rp
+                    SET ""PermissionKey"" = p.""Name""
+                    FROM ""Permissions"" p
+                    WHERE rp.""PermissionsId"" = p.""Id""");
+            }
+            else
+            {
+                migrationBuilder.Sql(@"
+                    UPDATE RolePermissions
+                    SET PermissionKey = (SELECT Name FROM Permissions WHERE Id = RolePermissions.PermissionsId)");
+            }
 
             // Now clean up the old schema
             migrationBuilder.DropColumn(

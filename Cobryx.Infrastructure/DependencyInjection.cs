@@ -149,7 +149,8 @@ public static class DependencyInjection
         services.AddScoped<IUsageMeteringService>(sp =>
             new CachedUsageMeteringService(
                 sp.GetRequiredService<UsageMeteringService>(),
-                sp.GetRequiredService<ICacheService>()));
+                sp.GetRequiredService<ICacheService>(),
+                sp.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>()));
         services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
         services.AddScoped<IPermissionService, PermissionService>();
 

@@ -3,6 +3,7 @@ using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace Cobryx.Infrastructure.Persistence.Interceptors;
 
@@ -39,12 +40,21 @@ public class OutboxInterceptor : SaveChangesInterceptor
                 e.ClearDomainEvents();
                 return domainEvents;
             })
-            .Select(domainEvent => new OutboxEvent(
-                domainEvent.GetType().FullName!,
-                JsonConvert.SerializeObject(domainEvent, new JsonSerializerSettings
-                {
-                    TypeNameHandling = TypeNameHandling.All
-                })))
+            .Select(domainEvent =>
+            {
+                var outboxEvent = new OutboxEvent(
+                    domainEvent.GetType().FullName!,
+                    JsonConvert.SerializeObject(domainEvent, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All
+                    }));
+
+                // Capture CorrelationId from the ambient Activity
+                outboxEvent.SetCorrelationId(Activity.Current?.GetTagItem("CorrelationId")?.ToString()
+                                           ?? Activity.Current?.Id);
+
+                return outboxEvent;
+            })
             .ToList();
 
         context.Set<OutboxEvent>().AddRange(outboxEvents);

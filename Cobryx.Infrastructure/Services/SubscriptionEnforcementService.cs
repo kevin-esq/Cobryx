@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Observability;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Exceptions;
 using Cobryx.Infrastructure.Persistence;
@@ -10,13 +11,16 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
 {
     private readonly IUsageMeteringService _usageMeteringService;
     private readonly CobryxDbContext _dbContext;
+    private readonly CobryxMetrics _metrics;
 
     public SubscriptionEnforcementService(
         IUsageMeteringService usageMeteringService,
-        CobryxDbContext dbContext)
+        CobryxDbContext dbContext,
+        CobryxMetrics metrics)
     {
         _usageMeteringService = usageMeteringService;
         _dbContext = dbContext;
+        _metrics = metrics;
     }
 
     public async Task EnsureWithinInvoicesLimitAsync(Guid tenantId, CancellationToken ct = default)
@@ -26,6 +30,7 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId, ct);
         if (usage.InvoicesCount >= usage.MaxInvoices)
         {
+            _metrics.SubscriptionLimitReached.Add(1, new KeyValuePair<string, object?>("Resource", "Invoices"), new KeyValuePair<string, object?>("TenantId", tenantId));
             throw SubscriptionLimitExceededException.LimitReached("Invoices");
         }
     }
@@ -37,6 +42,7 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId, ct);
         if (usage.ActiveUsersCount >= usage.MaxUsers)
         {
+            _metrics.SubscriptionLimitReached.Add(1, new KeyValuePair<string, object?>("Resource", "Users"), new KeyValuePair<string, object?>("TenantId", tenantId));
             throw SubscriptionLimitExceededException.LimitReached("Users");
         }
     }
@@ -48,6 +54,7 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId, ct);
         if (usage.ActiveLoansCount >= 999999) // Placeholder if no loan limit defined in plan yet
         {
+            _metrics.SubscriptionLimitReached.Add(1, new KeyValuePair<string, object?>("Resource", "Loans"), new KeyValuePair<string, object?>("TenantId", tenantId));
             throw SubscriptionLimitExceededException.LimitReached("Loans");
         }
     }
