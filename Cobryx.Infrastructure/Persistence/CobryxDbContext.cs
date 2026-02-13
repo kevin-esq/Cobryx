@@ -146,6 +146,10 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                         .Property<long>(nameof(BaseEntity.Version))
                         .IsConcurrencyToken();
                 }
+
+                // Ignore legacy shadow properties that cause SQLite issues
+                modelBuilder.Entity(entityType.ClrType).Ignore("RowVersion");
+                modelBuilder.Entity(entityType.ClrType).Ignore("xmin");
             }
 
             if (filterExpr != null && !entityType.IsOwned())

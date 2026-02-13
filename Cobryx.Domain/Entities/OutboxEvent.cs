@@ -13,6 +13,7 @@ public class OutboxEvent : BaseEntity
     public DateTime OccurredOnUtc { get; private set; }
     public DateTime? ProcessedOnUtc { get; private set; }
     public string? Error { get; private set; }
+    public string? CorrelationId { get; private set; }
 
     private OutboxEvent()
     {
@@ -47,5 +48,10 @@ public class OutboxEvent : BaseEntity
     {
         Error = error;
         UpdateTimestamp();
+    }
+
+    public void SetCorrelationId(string? correlationId)
+    {
+        CorrelationId = correlationId;
     }
 }

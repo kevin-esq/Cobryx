@@ -1,3 +1,4 @@
+using System;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -81,7 +82,7 @@ public class IdempotencyKeyFilter : IAsyncActionFilter
 
         if (executedContext.Exception == null && executedContext.Result != null)
         {
-            var response = await CaptureResponse(executedContext.Result);
+            var response = CaptureResponse(executedContext.Result);
             if (response != null && response.StatusCode >= 200 && response.StatusCode < 300)
             {
                 if (context.HttpContext.Response.Headers.TryGetValue("Location", out var location))
@@ -95,7 +96,7 @@ public class IdempotencyKeyFilter : IAsyncActionFilter
         }
     }
 
-    private async Task<IdempotencyResponse?> CaptureResponse(IActionResult result)
+    private IdempotencyResponse? CaptureResponse(IActionResult result)
     {
         int statusCode = 200;
         string? content = null;

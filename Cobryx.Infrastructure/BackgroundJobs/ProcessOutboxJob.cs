@@ -62,7 +62,15 @@ public class ProcessOutboxJob : BackgroundService
         {
             try
             {
-                _logger.LogInformation("Processing outbox event: {Type}", outboxEvent.Type);
+                _logger.LogInformation("Processing outbox event: {Type} (CorrelationId: {CorrelationId})",
+                    outboxEvent.Type, outboxEvent.CorrelationId);
+
+                using var correlationContext = Serilog.Context.LogContext.PushProperty("CorrelationId", outboxEvent.CorrelationId);
+                System.Diagnostics.Activity.Current?.AddTag("CorrelationId", outboxEvent.CorrelationId);
+
+                var lag = (DateTime.UtcNow - outboxEvent.OccurredOnUtc).TotalSeconds;
+                var metrics = scope.ServiceProvider.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>();
+                metrics.OutboxProcessingLag.Record(lag, new KeyValuePair<string, object?>("Type", outboxEvent.Type));
 
                 var domainEvent = DeserializeDomainEvent(outboxEvent);
                 if (domainEvent != null)

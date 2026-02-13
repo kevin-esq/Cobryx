@@ -155,6 +155,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<Cobryx.Api.Middlewares.CorrelationIdMiddleware>();
 app.UseMiddleware<Cobryx.Infrastructure.Middleware.RequestLogContextMiddleware>();
 app.UseMiddleware<Cobryx.Infrastructure.Middleware.DynamicRateLimitingMiddleware>();
 app.UseRateLimiter();
@@ -210,8 +211,16 @@ try
 
         if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing") || Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
         {
-            await dbContext.Database.MigrateAsync();
-            Log.Information("Database migration completed successfully");
+            if (dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+                Log.Information("SQLite database created from model (skipping PG-specific migrations)");
+            }
+            else
+            {
+                await dbContext.Database.MigrateAsync();
+                Log.Information("Database migration completed successfully");
+            }
         }
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
