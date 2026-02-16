@@ -45,7 +45,7 @@ public class GetInvoicesHandler : IRequestHandler<GetInvoicesQuery, Result<IRead
                 i.Id,
                 i.InvoiceNumber,
                 i.CustomerId,
-                i.Customer?.FullName ?? "Unknown",
+                i.Customer?.FullName ?? CobryxDefaults.UnknownValue,
                 i.IssueDate,
                 i.DueDate,
                 i.Total.Amount,

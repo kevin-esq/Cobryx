@@ -4,6 +4,7 @@ namespace Cobryx.Domain.Entities;
 
 public enum SupportTicketStatus { Open, InProgress, Resolved, Closed }
 public enum SupportTicketPriority { Low, Medium, High, Critical }
+public enum SupportTicketCategory { Inquiry, Bug, FeatureRequest, TechnicalSupport, Billing }
 
 public class SupportTicket : BaseEntity, ITenantEntity
 {
@@ -13,7 +14,7 @@ public class SupportTicket : BaseEntity, ITenantEntity
     public string Description { get; private set; }
     public SupportTicketStatus Status { get; private set; }
     public SupportTicketPriority Priority { get; private set; }
-    public string? Category { get; private set; }
+    public SupportTicketCategory Category { get; private set; }
 
     private SupportTicket()
     {
@@ -27,7 +28,7 @@ public class SupportTicket : BaseEntity, ITenantEntity
         string title,
         string description,
         SupportTicketPriority priority = SupportTicketPriority.Medium,
-        string? category = "Inquiry")
+        SupportTicketCategory category = SupportTicketCategory.Inquiry)
     {
         TenantId = tenantId;
         UserId = userId;

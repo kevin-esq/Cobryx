@@ -103,7 +103,7 @@ public class AuditEntry
 
     public AuditLog ToAuditLog()
     {
-        var entityId = Entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString() ?? "Unknown";
+        var entityId = Entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString() ?? CobryxDefaults.UnknownValue;
 
         foreach (var property in Entry.Properties)
         {

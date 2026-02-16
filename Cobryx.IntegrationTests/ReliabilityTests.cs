@@ -37,11 +37,11 @@ public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         client.DefaultRequestHeaders.Add("X-Idempotency-Key", idempotencyKey);
 
-        var response1 = await client.PostAsJsonAsync("/api/auth/signup", requestBody);
+        var response1 = await client.PostAsJsonAsync("/api/v1/auth/signup", requestBody);
         response1.StatusCode.Should().Be(HttpStatusCode.Created);
         var content1 = await response1.Content.ReadAsStringAsync();
 
-        var response2 = await client.PostAsJsonAsync("/api/auth/signup", requestBody);
+        var response2 = await client.PostAsJsonAsync("/api/v1/auth/signup", requestBody);
 
         response2.StatusCode.Should().Be(HttpStatusCode.Created);
         var content2 = await response2.Content.ReadAsStringAsync();

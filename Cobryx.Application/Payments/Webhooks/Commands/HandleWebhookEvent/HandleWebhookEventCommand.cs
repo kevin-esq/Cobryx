@@ -42,7 +42,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
         var webhookEvent = await _webhookEventRepository.GetByIdAsync(request.WebhookEventId, cancellationToken);
 
         if (webhookEvent == null)
-            return Result.Failure("Webhook event not found.");
+            return Result.Failure(DomainErrorCode.Webhooks.EventNotFound);
 
         if (webhookEvent.Status == WebhookStatus.Processed)
             return Result.Success();
@@ -70,7 +70,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
             }
             else
             {
-                webhookEvent.MarkAsFailed(result.Error ?? "Unknown error during command dispatch.");
+                webhookEvent.MarkAsFailed(result.Error ?? CobryxDefaults.UnknownValue);
             }
         }
         catch (Exception ex)
@@ -87,7 +87,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
     {
         if (parseResult.Data is not JsonElement data)
         {
-            return Result.Failure("Invalid webhook data format.");
+            return Result.Failure(DomainErrorCode.Webhooks.InvalidDataFormat);
         }
 
         return parseResult.InternalEventType switch
@@ -101,14 +101,14 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
     private async Task<Result> HandleRefundAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(parseResult.ExternalTransactionId))
-            return Result.Failure("Missing ExternalTransactionId for refund.");
+            return Result.Failure(DomainErrorCode.Webhooks.MissingTransactionId);
 
         var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
         if (payment == null)
             return Result.Failure($"Payment with reference {parseResult.ExternalTransactionId} not found.");
 
         decimal amount = data.GetProperty("amount_refunded").GetInt64() / 100m;
-        string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? "MXN";
+        string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
 
         var command = new RefundPaymentCommand(payment.Id, amount, currency);
         return await _sender.Send(command, ct);
@@ -117,7 +117,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
     private async Task<Result> HandleChargebackAsync(WebhookParseResult parseResult, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(parseResult.ExternalTransactionId))
-            return Result.Failure("Missing ExternalTransactionId for chargeback.");
+            return Result.Failure(DomainErrorCode.Webhooks.MissingTransactionId);
 
         var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
         if (payment == null)

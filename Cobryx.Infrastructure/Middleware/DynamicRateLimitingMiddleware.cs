@@ -1,3 +1,4 @@
+using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ public class DynamicRateLimitingMiddleware
         if (context.Request.Path.StartsWithSegments("/api/auth/login") ||
             context.Request.Path.StartsWithSegments("/api/mfa/verify"))
         {
-            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? CobryxDefaults.UnknownValue;
             var cacheKey = $"auth_attempts_{ipAddress}";
 
             var attemptsStr = await _cache.GetStringAsync(cacheKey);

@@ -1,4 +1,6 @@
+using Cobryx.Domain.Common;
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -32,10 +34,10 @@ public class DbInitializer
 
             var roles = new[]
             {
-                new Role("Owner", "Full access to the tenant and settings", true),
-                new Role("Admin", "Full management of credits and customers", true),
-                new Role("Manager", "Operations management without tenant settings", true),
-                new Role("Accountant", "Financial oversight and reports", true)
+                new Role(Role.Constants.Owner, "Full access to the tenant and settings", true),
+                new Role(Role.Constants.Admin, "Full management of credits and customers", true),
+                new Role(Role.Constants.Manager, "Operations management without tenant settings", true),
+                new Role(Role.Constants.Accountant, "Financial oversight and reports", true)
             };
 
             bool anyAdded = false;
@@ -51,15 +53,15 @@ public class DbInitializer
 
                 // Determine target permissions for this specific role
                 IEnumerable<Permission> targetPermissions;
-                if (role.Name == "Owner")
+                if (role.Name == Role.Constants.Owner)
                 {
                     targetPermissions = permissions;
                 }
-                else if (role.Name == "Admin")
+                else if (role.Name == Role.Constants.Admin)
                 {
                     targetPermissions = permissions.Where(x => !x.Name.StartsWith("tenant."));
                 }
-                else if (role.Name == "Manager")
+                else if (role.Name == Role.Constants.Manager)
                 {
                     var managerPerms = new[]
                     {
@@ -69,7 +71,7 @@ public class DbInitializer
                     };
                     targetPermissions = permissions.Where(x => managerPerms.Contains(x.Name));
                 }
-                else if (role.Name == "Accountant")
+                else if (role.Name == Role.Constants.Accountant)
                 {
                     var accountantPerms = new[]
                     {
@@ -118,8 +120,15 @@ public class DbInitializer
 
         var plans = new[]
         {
-            new SubscriptionPlan("Basic", "Perfect for small lenders", new Money(999, "MXN"), 100, 3),
-            new SubscriptionPlan("Professional", "Scale your lending business", new Money(2499, "MXN"), 1000, 10)
+            new SubscriptionPlan("Starter", "Free forever — get started with Cobryx",
+                new Money(0, CobryxDefaults.Currency), 50, 1,
+                PlanTier.Starter, trialDays: 0),
+            new SubscriptionPlan("Pro", "Scale your lending business",
+                new Money(299, CobryxDefaults.Currency), 500, 3,
+                PlanTier.Pro, trialDays: 14),
+            new SubscriptionPlan("Business", "Full power for growing teams",
+                new Money(799, CobryxDefaults.Currency), 999999, 10,
+                PlanTier.Business, trialDays: 14),
         };
 
         await dbContext.SubscriptionPlans.AddRangeAsync(plans);

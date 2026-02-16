@@ -13,7 +13,7 @@ using Cobryx.Application.Common.Observability;
 namespace Cobryx.Application.Auth.Commands.Core;
 
 
-public record ForgotPasswordCommand(string Email) : IRequest<Result>;
+public record ForgotPasswordCommand(string Email, string? ReturnUrl = null) : IRequest<Result>;
 
 public class ForgotPasswordValidator : AbstractValidator<ForgotPasswordCommand>
 {
@@ -61,10 +61,11 @@ public class ForgotPasswordHandler : IRequestHandler<ForgotPasswordCommand, Resu
             await _userRepository.UpdateAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            var baseUrl = request.ReturnUrl ?? _appOptions.AppUrl;
             await _emailService.SendEmailAsync(
                 user.Email,
                 "Restablecer contraseña Cobryx",
-                $"Para restablecer tu contraseña, haz clic aquí: {_appOptions.AppUrl}/reset-password?token={tokenValue}",
+                $"Para restablecer tu contraseña, haz clic aquí: {baseUrl}/reset-password?token={tokenValue}",
                 cancellationToken);
 
             _metrics.PasswordResets.Add(1);
@@ -124,14 +125,14 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, Result
         var user = await _userRepository.GetBySecurityTokenHashAsync(tokenHash, SecurityTokenType.PasswordReset, cancellationToken);
         if (user == null)
         {
-            return Result.Failure("AUTH.TOKEN.INVALID");
+            return Result.Failure(DomainErrorCode.Auth.InvalidToken);
         }
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.PasswordReset);
 
         if (token is not { IsActive: true })
         {
-            return Result.Failure("AUTH.TOKEN.INVALID");
+            return Result.Failure(DomainErrorCode.Auth.InvalidToken);
         }
 
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));
@@ -187,14 +188,14 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
     public async Task<Result> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (!userId.HasValue) return Result.Failure("AUTH.NOT_AUTHENTICATED");
+        if (!userId.HasValue) return Result.Failure(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure("USER.NOT_FOUND");
+        if (user == null) return Result.Failure(DomainErrorCode.User.NotFound);
 
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
-            return Result.Failure("AUTH.INVALID_CREDENTIALS");
+            return Result.Failure(DomainErrorCode.Auth.InvalidCredentials);
         }
 
         user.SetPasswordHash(_passwordHasher.HashPassword(request.NewPassword));

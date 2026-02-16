@@ -7,6 +7,10 @@ using System.Runtime.CompilerServices;
 
 namespace Cobryx.Domain.Common;
 
+/// <summary>
+/// Domain-wide structured error codes following the elite engineering standard.
+/// Usage: Result.Failure(Error.Customer.NotFound)
+/// </summary>
 public sealed record DomainErrorCode
 {
     public string Value { get; }
@@ -33,14 +37,14 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TokenCompromised = new("AUTH.TOKEN.COMPROMISED");
         public static readonly DomainErrorCode TokenExpired = new("AUTH.TOKEN.EXPIRED");
         public static readonly DomainErrorCode SessionRevoked = new("AUTH.SESSION.REVOKED");
-        public static readonly DomainErrorCode TokenNotActive = new("DOMAIN.TOKEN.NOT_ACTIVE");
+        public static readonly DomainErrorCode TokenNotActive = new("AUTH.TOKEN.NOT_ACTIVE");
     }
 
     public static class User
     {
+        public static readonly DomainErrorCode NotFound = new("USER.NOT_FOUND");
         public static readonly DomainErrorCode NotRegistered = new("USER.NOT_REGISTERED");
         public static readonly DomainErrorCode EmailAlreadyExists = new("USER.EMAIL_ALREADY_EXISTS");
-        public static readonly DomainErrorCode NotFound = new("USER.NOT_FOUND");
         public static readonly DomainErrorCode TenantIdRequired = new("DOMAIN.USER.TENANT_ID_REQUIRED");
         public static readonly DomainErrorCode FirstNameRequired = new("DOMAIN.USER.FIRST_NAME_REQUIRED");
         public static readonly DomainErrorCode LastNameRequired = new("DOMAIN.USER.LAST_NAME_REQUIRED");
@@ -92,60 +96,54 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TaxIdRequired = new("DOMAIN.TAX_ID.REQUIRED");
         public static readonly DomainErrorCode InvalidCurrency = new("DOMAIN.INVALID_CURRENCY");
         public static readonly DomainErrorCode CurrencyMismatch = new("DOMAIN.CURRENCY_MISMATCH");
-        public static readonly DomainErrorCode TaxIdFormatInvalid = new("DOMAIN.INVALID_TAX_ID_FORMAT");
+        public static readonly DomainErrorCode TaxIdFormatInvalid = new("DOMAIN.TAX_ID.FORMAT_INVALID");
     }
 
     public static class Legal
     {
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.LEGAL.NOT_FOUND");
         public static readonly DomainErrorCode ConsentRequired = new("DOMAIN.LEGAL.CONSENT_REQUIRED");
-        public static readonly DomainErrorCode PrivacyPolicyRequired = new("DOMAIN.LEGAL.PRIVACY_POLICY_REQUIRED");
-        public static readonly DomainErrorCode TermsRequired = new("DOMAIN.LEGAL.TERMS_REQUIRED");
-        public static readonly DomainErrorCode TaxConsentRequired = new("DOMAIN.LEGAL.TAX_CONSENT_REQUIRED");
-        public static readonly DomainErrorCode InvalidConsentVersion = new("DOMAIN.INVALID_CONSENT_VERSION");
-        public static readonly DomainErrorCode IpAddressRequired = new("DOMAIN.IP_ADDRESS_REQUIRED");
-        public static readonly DomainErrorCode UserAgentRequired = new("DOMAIN.USER_AGENT_REQUIRED");
+        public static readonly DomainErrorCode InvalidConsentVersion = new("DOMAIN.LEGAL.INVALID_VERSION");
+        public static readonly DomainErrorCode IpAddressRequired = new("DOMAIN.LEGAL.IP_REQUIRED");
+        public static readonly DomainErrorCode UserAgentRequired = new("DOMAIN.LEGAL.UA_REQUIRED");
     }
 
     public static class Documents
     {
-        public static readonly DomainErrorCode FileSizeExceeded = new("DOMAIN.DOCUMENTS.FILE_SIZE_EXCEEDED");
-        public static readonly DomainErrorCode VirusDetected = new("DOMAIN.DOCUMENTS.VIRUS_DETECTED");
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.DOCUMENT.NOT_FOUND");
+        public static readonly DomainErrorCode VerificationFailed = new("DOMAIN.DOCUMENT.VERIFICATION_FAILED");
+        public static readonly DomainErrorCode FileSizeExceeded = new("DOMAIN.DOCUMENT.SIZE_EXCEEDED");
+        public static readonly DomainErrorCode VirusDetected = new("DOMAIN.DOCUMENT.VIRUS_DETECTED");
     }
 
     public static class Invoicing
     {
+        public static readonly DomainErrorCode InvoiceNotFound = new("DOMAIN.INVOICING.INVOICE_NOT_FOUND");
         public static readonly DomainErrorCode InvoiceInvalidStatusForPayment = new("DOMAIN.INVOICE.INVALID_STATUS_FOR_PAYMENT");
         public static readonly DomainErrorCode InvoiceCurrencyMismatch = new("DOMAIN.INVOICE.CURRENCY_MISMATCH");
         public static readonly DomainErrorCode PaymentNotProcessing = new("DOMAIN.PAYMENT.NOT_PROCESSING");
-        public static readonly DomainErrorCode InvoiceNotFound = new("DOMAIN.INVOICING.INVOICE_NOT_FOUND");
-        public static readonly DomainErrorCode InvoiceNoItems = new("DOMAIN.INVOICE.NO_ITEMS");
+        public static readonly DomainErrorCode PaymentNotFound = new("DOMAIN.PAYMENT.NOT_FOUND");
+        public static readonly DomainErrorCode PaymentMethodNotFound = new("DOMAIN.PAYMENT_METHOD.NOT_FOUND");
+        public static readonly DomainErrorCode PaymentMethodNameRequired = new("DOMAIN.PAYMENT_METHOD.NAME_REQUIRED");
+        public static readonly DomainErrorCode PaymentMethodCodeRequired = new("DOMAIN.PAYMENT_METHOD.CODE_REQUIRED");
+        public static readonly DomainErrorCode TaxNotFound = new("DOMAIN.TAX.NOT_FOUND");
+        public static readonly DomainErrorCode PaymentTenantMismatch = new("DOMAIN.PAYMENT.TENANT_MISMATCH");
+        public static readonly DomainErrorCode PaymentCustomerMismatch = new("DOMAIN.PAYMENT.CUSTOMER_MISMATCH");
+        public static readonly DomainErrorCode PaymentNotPending = new("DOMAIN.PAYMENT.NOT_PENDING");
+        public static readonly DomainErrorCode InvalidAllocationAmount = new("DOMAIN.PAYMENT.INVALID_ALLOCATION");
+        public static readonly DomainErrorCode PaymentCannotCancel = new("DOMAIN.PAYMENT.CANNOT_CANCEL");
+        public static readonly DomainErrorCode PaymentNotCompletedCannotRefund = new("DOMAIN.PAYMENT.NOT_COMPLETED_CANNOT_REFUND");
+        public static readonly DomainErrorCode PaymentInsufficientRefundableAmount = new("DOMAIN.PAYMENT.INSUFFICIENT_REFUNDABLE");
+        public static readonly DomainErrorCode PaymentInvalidStatusForChargeback = new("DOMAIN.PAYMENT.INVALID_STATUS_FOR_CHARGEBACK");
+        public static readonly DomainErrorCode InvoiceAllocationMismatch = new("DOMAIN.INVOICE.ALLOCATION_MISMATCH");
         public static readonly DomainErrorCode InvoiceNotDraftAddItem = new("DOMAIN.INVOICE.NOT_DRAFT_ADD_ITEM");
         public static readonly DomainErrorCode InvoiceNotDraftRecalculate = new("DOMAIN.INVOICE.NOT_DRAFT_RECALCULATE");
         public static readonly DomainErrorCode InvoiceNotDraft = new("DOMAIN.INVOICE.NOT_DRAFT");
+        public static readonly DomainErrorCode InvoiceNoItems = new("DOMAIN.INVOICE.NO_ITEMS");
         public static readonly DomainErrorCode InvoiceInvalidStatusForCancel = new("DOMAIN.INVOICE.INVALID_STATUS_FOR_CANCEL");
-        public static readonly DomainErrorCode InvoiceAllocationMismatch = new("DOMAIN.INVOICE.ALLOCATION_MISMATCH");
-
-        public static readonly DomainErrorCode PaymentNotPending = new("DOMAIN.PAYMENT.NOT_PENDING");
-        public static readonly DomainErrorCode PaymentCannotCancel = new("DOMAIN.PAYMENT.CANNOT_CANCEL");
-        public static readonly DomainErrorCode PaymentInsufficientRefundableAmount = new("DOMAIN.PAYMENT.INSUFFICIENT_REFUNDABLE_AMOUNT");
-        public static readonly DomainErrorCode PaymentNotCompletedCannotRefund = new("DOMAIN.PAYMENT.NOT_COMPLETED_CANNOT_REFUND");
-        public static readonly DomainErrorCode PaymentInvalidStatusForChargeback = new("DOMAIN.PAYMENT.INVALID_STATUS_FOR_CHARGEBACK");
-        public static readonly DomainErrorCode InvalidAllocationAmount = new("DOMAIN.INVALID_ALLOCATION_AMOUNT");
-
-        public static readonly DomainErrorCode PaymentMethodRequired = new("DOMAIN.PAYMENT.METHOD_REQUIRED");
-        public static readonly DomainErrorCode PaymentReferenceRequired = new("DOMAIN.PAYMENT.REFERENCE_REQUIRED");
-        public static readonly DomainErrorCode PaymentProviderError = new("DOMAIN.PAYMENT.PROVIDER_ERROR");
-        public static readonly DomainErrorCode InvalidPaymentMethod = new("DOMAIN.PAYMENT.INVALID_METHOD");
-        public static readonly DomainErrorCode TaxRateRequired = new("DOMAIN.TAX.RATE_REQUIRED");
         public static readonly DomainErrorCode TaxNameRequired = new("DOMAIN.TAX.NAME_REQUIRED");
-        public static readonly DomainErrorCode TaxNotFound = new("DOMAIN.TAX.NOT_FOUND");
         public static readonly DomainErrorCode TaxRateNegative = new("DOMAIN.TAX.RATE_NEGATIVE");
-
-        public static readonly DomainErrorCode PaymentTenantMismatch = new("DOMAIN.PAYMENT.TENANT_MISMATCH");
-        public static readonly DomainErrorCode PaymentCustomerMismatch = new("DOMAIN.PAYMENT.CUSTOMER_MISMATCH");
-
-        public static readonly DomainErrorCode PaymentMethodNameRequired = new("DOMAIN.PAYMENT_METHOD.NAME_REQUIRED");
-        public static readonly DomainErrorCode PaymentMethodCodeRequired = new("DOMAIN.PAYMENT_METHOD.CODE_REQUIRED");
+        public static readonly DomainErrorCode TaxDeleteDefaultForbidden = new("DOMAIN.TAX.DELETE_DEFAULT_FORBIDDEN");
     }
 
     public static class Credits
@@ -153,9 +151,9 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode AmountMustBePositive = new("DOMAIN.CREDIT.AMOUNT_MUST_BE_POSITIVE");
         public static readonly DomainErrorCode InsufficientFunds = new("DOMAIN.CREDIT.INSUFFICIENT_FUNDS");
         public static readonly DomainErrorCode NotFound = new("DOMAIN.CREDIT.NOT_FOUND");
-        public static readonly DomainErrorCode InvalidInstallmentsCount = new("DOMAIN.INVALID_INSTALLMENTS_COUNT");
-        public static readonly DomainErrorCode CreditAlreadyPaid = new("DOMAIN.CREDIT_ALREADY_PAID");
-        public static readonly DomainErrorCode InstallmentsAlreadyGenerated = new("DOMAIN.INSTALLMENTS_ALREADY_GENERATED");
+        public static readonly DomainErrorCode InvalidInstallmentsCount = new("DOMAIN.CREDIT.INVALID_INSTALLMENTS_COUNT");
+        public static readonly DomainErrorCode CreditAlreadyPaid = new("DOMAIN.CREDIT.ALREADY_PAID");
+        public static readonly DomainErrorCode InstallmentsAlreadyGenerated = new("DOMAIN.CREDIT.INSTALLMENTS_GENERATED");
     }
 
     public static class Products
@@ -165,9 +163,62 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode InvalidCategory = new("DOMAIN.PRODUCT.INVALID_CATEGORY");
         public static readonly DomainErrorCode NotFound = new("DOMAIN.PRODUCT.NOT_FOUND");
         public static readonly DomainErrorCode CodeRequired = new("DOMAIN.PRODUCT.CODE_REQUIRED");
-        public static readonly DomainErrorCode GenericNameRequired = new("DOMAIN.NAME_REQUIRED");
-        public static readonly DomainErrorCode NotALoanProduct = new("DOMAIN.NOT_A_LOAN_PRODUCT");
-        public static readonly DomainErrorCode BasePriceRequired = new("DOMAIN.BASE_PRICE_REQUIRED");
+        public static readonly DomainErrorCode GenericNameRequired = new("DOMAIN.PRODUCT.GENERIC_NAME_REQUIRED");
+        public static readonly DomainErrorCode NotALoanProduct = new("DOMAIN.PRODUCT.NOT_A_LOAN");
+        public static readonly DomainErrorCode BasePriceRequired = new("DOMAIN.PRODUCT.BASE_PRICE_REQUIRED");
+    }
+
+    public static class Loans
+    {
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.LOAN.NOT_FOUND");
+        public static readonly DomainErrorCode AlreadyClosed = new("DOMAIN.LOAN.ALREADY_CLOSED");
+        public static readonly DomainErrorCode InstallmentNotFound = new("DOMAIN.INSTALLMENT.NOT_FOUND");
+        public static readonly DomainErrorCode InstallmentAlreadyPaid = new("DOMAIN.INSTALLMENT.ALREADY_PAID");
+        public static readonly DomainErrorCode AgreementAlreadySigned = new("DOMAIN.LOAN.AGREEMENT_SIGNED");
+        public static readonly DomainErrorCode AgreementImmutableAfterSigning = new("DOMAIN.LOAN.AGREEMENT_LOCKED");
+        public static readonly DomainErrorCode AgreementNotFound = new("DOMAIN.LOAN.AGREEMENT_NOT_FOUND");
+        public static readonly DomainErrorCode CreditSaleInvalidPricing = new("DOMAIN.LOAN.INVALID_PRICING");
+        public static readonly DomainErrorCode CannotModifyPaidInstallment = new("DOMAIN.LOAN.INSTALLMENT_PAID_LOCKED");
+        public static readonly DomainErrorCode InvalidPaymentAmount = new("DOMAIN.LOAN.INVALID_PAYMENT_AMOUNT");
+        public static readonly DomainErrorCode InvalidInterestPolicy = new("DOMAIN.LOAN.INVALID_INTEREST_POLICY");
+        public static readonly DomainErrorCode InvalidLateFeePolicy = new("DOMAIN.LOAN.INVALID_LATE_FEE_POLICY");
+        public static readonly DomainErrorCode CreditSaleNotFound = new("DOMAIN.LOAN.CREDIT_SALE_NOT_FOUND");
+    }
+
+    public static class Subscription
+    {
+        public static readonly DomainErrorCode LimitExceeded = new("DOMAIN.SUBSCRIPTION.LIMIT_EXCEEDED");
+        public static readonly DomainErrorCode PlanRequired = new("DOMAIN.SUBSCRIPTION.PLAN_REQUIRED");
+        public static readonly DomainErrorCode FeatureLocked = new("DOMAIN.SUBSCRIPTION.FEATURE_LOCKED");
+        public static readonly DomainErrorCode LimitReached = new("DOMAIN.SUBSCRIPTION.LIMIT_REACHED");
+        public static readonly DomainErrorCode Expired = new("DOMAIN.SUBSCRIPTION.EXPIRED");
+        public static readonly DomainErrorCode Blocked = new("DOMAIN.SUBSCRIPTION.BLOCKED");
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.SUBSCRIPTION.NOT_FOUND");
+        public static readonly DomainErrorCode PlanNotFound = new("DOMAIN.SUBSCRIPTION.PLAN_NOT_FOUND");
+        public static readonly DomainErrorCode AlreadyCancelled = new("DOMAIN.SUBSCRIPTION.ALREADY_CANCELLED");
+        public static readonly DomainErrorCode DowngradeNotAllowed = new("DOMAIN.SUBSCRIPTION.DOWNGRADE_FORBIDDEN");
+    }
+
+    public static class Support
+    {
+        public static readonly DomainErrorCode TicketNotFound = new("DOMAIN.SUPPORT.TICKET_NOT_FOUND");
+        public static readonly DomainErrorCode TicketAlreadyClosed = new("DOMAIN.SUPPORT.TICKET_CLOSED");
+    }
+
+    public static class Marketing
+    {
+        public static readonly DomainErrorCode CouponNotFound = new("DOMAIN.MARKETING.COUPON_NOT_FOUND");
+        public static readonly DomainErrorCode CouponExpired = new("DOMAIN.MARKETING.COUPON_EXPIRED");
+        public static readonly DomainErrorCode InvalidCouponGeneral = new("DOMAIN.MARKETING.COUPON_INVALID");
+    }
+
+    public static class Webhooks
+    {
+        public static readonly DomainErrorCode EventAlreadyProcessed = new("DOMAIN.WEBHOOK.ALREADY_PROCESSED");
+        public static readonly DomainErrorCode InvalidSignature = new("DOMAIN.WEBHOOK.INVALID_SIGNATURE");
+        public static readonly DomainErrorCode EventNotFound = new("DOMAIN.WEBHOOK.NOT_FOUND");
+        public static readonly DomainErrorCode InvalidDataFormat = new("DOMAIN.WEBHOOK.INVALID_DATA_FORMAT");
+        public static readonly DomainErrorCode MissingTransactionId = new("DOMAIN.WEBHOOK.MISSING_TRANSACTION_ID");
     }
 
     public static class System
@@ -177,47 +228,28 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode ValidationFailed = new("VALIDATION.FAILED");
     }
 
-    public static class Marketing
-    {
-        public static readonly DomainErrorCode CouponInvalid = new("DOMAIN.COUPON.INVALID");
-        public static readonly DomainErrorCode InvalidCouponGeneral = new("DOMAIN.INVALID_COUPON");
-    }
-
-    public static class Api
-    {
-        public static readonly DomainErrorCode IdMismatch = new("API.ID_MISMATCH");
-    }
-
-    public static class Support
-    {
-        public static readonly DomainErrorCode TicketNotFound = new("SUPPORT.TICKET_NOT_FOUND");
-    }
-
-    public static class Loans
-    {
-        public static readonly DomainErrorCode NotFound = new("DOMAIN.LOAN.NOT_FOUND");
-        public static readonly DomainErrorCode AgreementNotFound = new("DOMAIN.LOAN_AGREEMENT.NOT_FOUND");
-        public static readonly DomainErrorCode AgreementAlreadySigned = new("DOMAIN.LOAN_AGREEMENT.ALREADY_SIGNED");
-        public static readonly DomainErrorCode AgreementImmutableAfterSigning = new("DOMAIN.LOAN_AGREEMENT.IMMUTABLE_AFTER_SIGNING");
-        public static readonly DomainErrorCode AlreadyClosed = new("DOMAIN.LOAN.ALREADY_CLOSED");
-        public static readonly DomainErrorCode InvalidPaymentAmount = new("DOMAIN.LOAN.INVALID_PAYMENT_AMOUNT");
-        public static readonly DomainErrorCode InstallmentNotFound = new("DOMAIN.INSTALLMENT.NOT_FOUND");
-        public static readonly DomainErrorCode InstallmentAlreadyPaid = new("DOMAIN.INSTALLMENT.ALREADY_PAID");
-        public static readonly DomainErrorCode InvalidInterestPolicy = new("DOMAIN.LOAN.INVALID_INTEREST_POLICY");
-        public static readonly DomainErrorCode InvalidLateFeePolicy = new("DOMAIN.LOAN.INVALID_LATE_FEE_POLICY");
-        public static readonly DomainErrorCode CreditSaleNotFound = new("DOMAIN.CREDIT_SALE.NOT_FOUND");
-        public static readonly DomainErrorCode CreditSaleInvalidPricing = new("DOMAIN.CREDIT_SALE.INVALID_PRICING");
-        public static readonly DomainErrorCode CannotModifyPaidInstallment = new("DOMAIN.INSTALLMENT.CANNOT_MODIFY_PAID");
-    }
-
-    public static class Subscription
-    {
-        public static readonly DomainErrorCode NotFound = new("SUBSCRIPTION.NOT_FOUND");
-        public static readonly DomainErrorCode LimitReached = new("SUBSCRIPTION.LIMIT_REACHED");
-        public static readonly DomainErrorCode Expired = new("SUBSCRIPTION.EXPIRED");
-        public static readonly DomainErrorCode Blocked = new("SUBSCRIPTION.BLOCKED");
-        public static readonly DomainErrorCode DowngradeNotAllowed = new("SUBSCRIPTION.DOWNGRADE_NOT_ALLOWED");
-    }
-
     internal static DomainErrorCode From(string value) => new(value);
+}
+
+/// <summary>
+/// Domain error entry point for elite engineering standard.
+/// Example: Error.Customer.NotFound
+/// </summary>
+public static class Error
+{
+    public static class Auth
+    {
+        public static DomainErrorCode NotAuthenticated => global::Cobryx.Domain.Common.DomainErrorCode.Auth.NotAuthenticated;
+        public static DomainErrorCode InvalidCredentials => global::Cobryx.Domain.Common.DomainErrorCode.Auth.InvalidCredentials;
+    }
+
+    public static class Customer
+    {
+        public static DomainErrorCode NotFound => global::Cobryx.Domain.Common.DomainErrorCode.Customer.NotFound;
+    }
+
+    public static class System
+    {
+        public static DomainErrorCode InternalError => global::Cobryx.Domain.Common.DomainErrorCode.System.InternalError;
+    }
 }

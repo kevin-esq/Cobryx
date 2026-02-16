@@ -46,13 +46,13 @@ public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, Result<MyP
             user.FirstName,
             user.LastName,
             user.Email.Value,
-            user.Role?.Name ?? "Unknown",
+            user.Role?.Name ?? CobryxDefaults.UnknownValue,
             user.IsMfaEnabled,
             user.IsEmailVerified,
             user.Profile?.PhoneNumber,
             user.Profile?.AvatarUrl,
-            user.Profile?.PreferredLanguage ?? "es-MX",
-            user.Profile?.Timezone ?? "America/Mexico_City",
+            user.Profile?.PreferredLanguage ?? CobryxDefaults.Locale,
+            user.Profile?.Timezone ?? CobryxDefaults.Timezone,
             user.CreatedAt));
     }
 }

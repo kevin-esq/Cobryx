@@ -54,10 +54,10 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
 
     private async Task<string> RegisterAndLoginAsync(string email)
     {
-        await _client.PostAsJsonAsync("/api/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, DefaultPassword));
+        await _client.PostAsJsonAsync("/api/v1/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostAsJsonAsync("/api/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
-        var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new LoginCommand(email, DefaultPassword));
+        await _client.PostAsJsonAsync("/api/v1/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
+        var loginResp = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
         loginResult.Should().NotBeNull();
         loginResult!.Data.Should().NotBeNull();
@@ -80,7 +80,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.GetAsync("/api/sessions");
+        var response = await _client.GetAsync("/api/v1/sessions");
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -106,7 +106,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await _client.GetAsync("/api/sessions");
+        var response = await _client.GetAsync("/api/v1/sessions");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 

@@ -15,7 +15,41 @@ public record BusinessSettingsDto(
     bool AllowPartialPayments,
     string PaymentPriority,
     int GraceDays,
-    decimal MinimumPaymentAmount);
+    decimal MinimumPaymentAmount
+)
+{
+    /// <summary>Calculation method for late interests (PERCENTAGE, FIXED).</summary>
+    /// <example>PERCENTAGE</example>
+    public string InterestType { get; init; } = InterestType;
+
+    /// <summary>Default interest rate or amount.</summary>
+    /// <example>1.5</example>
+    public decimal DefaultInterestValue { get; init; } = DefaultInterestValue;
+
+    /// <summary>Calculation method for penalties (PERCENTAGE, FIXED).</summary>
+    /// <example>FIXED</example>
+    public string PenaltyType { get; init; } = PenaltyType;
+
+    /// <summary>Default penalty rate or amount.</summary>
+    /// <example>50.00</example>
+    public decimal PenaltyValue { get; init; } = PenaltyValue;
+
+    /// <summary>True if customers can pay less than the total due.</summary>
+    /// <example>true</example>
+    public bool AllowPartialPayments { get; init; } = AllowPartialPayments;
+
+    /// <summary>Order of fund allocation (FIFO, OLDEST_FIRST).</summary>
+    /// <example>OLDEST_FIRST</example>
+    public string PaymentPriority { get; init; } = PaymentPriority;
+
+    /// <summary>Days allowed before interest/penalties apply.</summary>
+    /// <example>3</example>
+    public int GraceDays { get; init; } = GraceDays;
+
+    /// <summary>Minimum allow payment amount.</summary>
+    /// <example>10.00</example>
+    public decimal MinimumPaymentAmount { get; init; } = MinimumPaymentAmount;
+}
 
 public record GetBusinessSettingsQuery : IRequest<Result<BusinessSettingsDto>>;
 

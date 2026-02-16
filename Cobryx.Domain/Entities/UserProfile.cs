@@ -7,8 +7,8 @@ public class UserProfile : BaseEntity
     public Guid UserId { get; private set; }
     public string? PhoneNumber { get; private set; }
     public string? AvatarUrl { get; private set; }
-    public string PreferredLanguage { get; private set; } = "es-MX";
-    public string Timezone { get; private set; } = "America/Mexico_City";
+    public string PreferredLanguage { get; private set; } = CobryxDefaults.Locale;
+    public string Timezone { get; private set; } = CobryxDefaults.Timezone;
 
 
     public virtual User User { get; private set; } = null!;

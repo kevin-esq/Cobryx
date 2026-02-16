@@ -14,16 +14,16 @@ When a `VALIDATION.FAILED` error occurs (HTTP 400), the response `metadata` will
   "numericCode": 1001,
   "metadata": {
     "errors": {
-      "email": [
+      "firstName": [
         {
-          "errorCode": "VALIDATION.EMAIL.INVALID",
-          "params": { "currentValue": "not-an-email" }
+          "errorCode": "VALIDATION.CUSTOMER.FIRST_NAME.REQUIRED",
+          "params": { }
         }
       ],
-      "password": [
+      "phone": [
         {
-          "errorCode": "VALIDATION.PASSWORD.TOO_SHORT",
-          "params": { "minLength": 8 }
+          "errorCode": "VALIDATION.CUSTOMER.PHONE.INVALID",
+          "params": { "currentValue": "123" }
         }
       ]
     }
@@ -37,27 +37,15 @@ The `errors` object is a map where:
 
 ---
 
-## Common Validation Codes
+## Hierarchy Pattern
+Validation codes are hierarchical to allow granular frontend mapping:
+`VALIDATION.{MODULE}.{FIELD}.{REASON}`
 
-### Required Fields
-**Code Pattern:** `VALIDATION.{ENTITY}.{FIELD}.REQUIRED`
-**Example:** `VALIDATION.USER.EMAIL.REQUIRED`
-
-### Format Errors
-**Code Pattern:** `VALIDATION.{ENTITY}.{FIELD}.INVALID_FORMAT`
-**Example:** `VALIDATION.USER.EMAIL.INVALID`
-
-### Length Constraints
-**Code Pattern:** `VALIDATION.{ENTITY}.{FIELD}.TOO_SHORT` / `TOO_LONG`
-**Params:**
-- `minLength`: The minimum required length.
-- `maxLength`: The maximum required length.
-
-### Range Constraints
-**Code Pattern:** `VALIDATION.{ENTITY}.{FIELD}.OUT_OF_RANGE`
-**Params:**
-- `min`: Minimum value.
-- `max`: Maximum value.
+### Common Patterns:
+- **REQUIRED**: `VALIDATION.CUSTOMER.FIRST_NAME.REQUIRED`
+- **INVALID**: `VALIDATION.CUSTOMER.PHONE.INVALID`
+- **TOO_LONG**: `VALIDATION.CUSTOMER.FIRST_NAME.TOO_LONG`
+- **TOO_SHORT**: `VALIDATION.PASSWORD.TOO_SHORT`
 
 ---
 
@@ -69,13 +57,13 @@ The frontend should map these codes to user-friendly messages using an i18n libr
 ```json
 {
   "VALIDATION": {
-    "USER": {
-      "EMAIL": {
-        "REQUIRED": "Email address is required.",
-        "INVALID": "Please enter a valid email address."
+    "CUSTOMER": {
+      "FIRST_NAME": {
+        "REQUIRED": "First name is required.",
+        "TOO_LONG": "First name cannot exceed 100 characters."
       },
-      "PASSWORD": {
-        "TOO_SHORT": "Password must be at least {{minLength}} characters."
+      "PHONE": {
+        "INVALID": "Please enter a valid phone number."
       }
     }
   }

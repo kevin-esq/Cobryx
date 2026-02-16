@@ -1,7 +1,8 @@
 using System.Net.Http.Json;
 using Cobryx.Application.Common.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Cobryx.Infrastructure.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Security;
 
@@ -11,10 +12,10 @@ public class TurnstileCaptchaService : ICaptchaService
     private readonly string _secretKey;
     private readonly ILogger<TurnstileCaptchaService> _logger;
 
-    public TurnstileCaptchaService(HttpClient httpClient, IConfiguration configuration, ILogger<TurnstileCaptchaService> logger)
+    public TurnstileCaptchaService(HttpClient httpClient, IOptions<CaptchaOptions> options, ILogger<TurnstileCaptchaService> logger)
     {
         _httpClient = httpClient;
-        _secretKey = configuration["Security:Captcha:SecretKey"] ?? "1x0000000000000000000000000000000AA";
+        _secretKey = options.Value.SecretKey;
         _logger = logger;
     }
 

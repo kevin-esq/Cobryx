@@ -28,7 +28,7 @@ public abstract class CobryxBaseController : ControllerBase
                 : Ok(response);
         }
 
-        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
         var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
@@ -50,7 +50,7 @@ public abstract class CobryxBaseController : ControllerBase
                 : Ok(response);
         }
 
-        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
         var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
@@ -74,7 +74,7 @@ public abstract class CobryxBaseController : ControllerBase
             return NoContent();
         }
 
-        var errorCode = result.Error ?? "DOMAIN.GENERAL_ERROR";
+        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
         var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
 

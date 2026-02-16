@@ -41,8 +41,40 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<Cobryx.Application.Common.Configuration.AppOptions>(configuration.GetSection("App"));
-        services.Configure<EmailSettings>(configuration.GetSection("Email"));
+        services.AddOptions<Cobryx.Application.Common.Configuration.AppOptions>()
+            .Bind(configuration.GetSection("App"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<EmailSettings>()
+            .Bind(configuration.GetSection("Email"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Options with startup validation
+        services.AddOptions<Configuration.JwtOptions>()
+            .Bind(configuration.GetSection(Configuration.JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.Fido2Options>()
+            .Bind(configuration.GetSection(Configuration.Fido2Options.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.CaptchaOptions>()
+            .Bind(configuration.GetSection(Configuration.CaptchaOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.ClamAvOptions>()
+            .Bind(configuration.GetSection(Configuration.ClamAvOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.CachingOptions>()
+            .Bind(configuration.GetSection(Configuration.CachingOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<IClock, SystemClock>();
+
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
@@ -54,15 +86,17 @@ public static class DependencyInjection
         services.AddScoped<ICookieService, CookieService>();
         services.AddScoped<IAuditLogQueryService, Services.AuditLogQueryService>();
 
+        var cachingConfig = configuration.GetSection(Configuration.CachingOptions.SectionName).Get<Configuration.CachingOptions>()
+            ?? throw new InvalidOperationException("Caching configuration is missing.");
+
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379";
+            options.Configuration = cachingConfig.Redis.ConnectionString;
             options.InstanceName = "Cobryx_";
         });
 
-        var defaultTTL = int.Parse(configuration["Caching:DefaultTTL"] ?? "300");
         services.AddSingleton<ICacheService>(sp =>
-            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), defaultTTL));
+            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), cachingConfig.DefaultTTL));
 
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<OutboxInterceptor>();
@@ -116,6 +150,14 @@ public static class DependencyInjection
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
+
+        // Stripe Billing
+        services.AddOptions<Configuration.StripeOptions>()
+            .Bind(configuration.GetSection(Configuration.StripeOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddScoped<IStripeService, Payments.Stripe.StripeService>();
+        services.AddScoped<Application.Subscriptions.Services.StripeSubscriptionSyncService>();
 
         // Lending Domain Repositories
         services.AddScoped<ILoanRepository, LoanRepository>();
@@ -176,8 +218,8 @@ public static class DependencyInjection
 
         services.AddHangfireServer();
 
-        var jwtSettings = configuration.GetSection("JwtSettings");
-        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        var jwtConfig = configuration.GetSection(Configuration.JwtOptions.SectionName).Get<Configuration.JwtOptions>()
+            ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
 
         services.AddAuthentication(options =>
         {
@@ -192,9 +234,9 @@ public static class DependencyInjection
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings["Issuer"],
-                ValidAudience = jwtSettings["Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidIssuer = jwtConfig.Issuer,
+                ValidAudience = jwtConfig.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Secret)),
                 ClockSkew = TimeSpan.Zero
             };
 
@@ -202,7 +244,7 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    var token = context.Request.Cookies["X-Access-Token"];
+                    var token = context.Request.Cookies[CobryxClaimTypes.AccessTokenCookieName];
                     if (!string.IsNullOrEmpty(token))
                     {
                         context.Token = token;

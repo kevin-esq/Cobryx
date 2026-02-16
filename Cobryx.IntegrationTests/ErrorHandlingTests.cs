@@ -47,7 +47,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     {
         var command = new SignUpCommand("", "", "", "invalid-email", "short");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
@@ -78,7 +78,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     public async Task NoHumanReadableText_InValidationErrors()
     {
         var command = new SignUpCommand("", "", "", "invalid", "short");
-        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
 
         var json = await response.Content.ReadAsStringAsync();
 
@@ -92,12 +92,12 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     public async Task DomainError_InvalidCredentials_ReturnsProblemDetails_WithAuthCode()
     {
         var email = $"existing_error_test_{Guid.NewGuid()}@example.com";
-        var signupResponse = await _client.PostAsJsonAsync("/api/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, "SecurePass123!@#"));
+        var signupResponse = await _client.PostAsJsonAsync("/api/v1/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, "SecurePass123!@#"));
         signupResponse.EnsureSuccessStatusCode();
 
         var command = new LoginCommand(email, "WrongPassword!");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/login", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 

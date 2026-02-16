@@ -1,6 +1,7 @@
 using Cobryx.Domain.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Cobryx.Infrastructure.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using nClam;
 using Cobryx.Domain.Exceptions.System;
 
@@ -12,10 +13,10 @@ public class ClamAvScanner : IVirusScanner
     private readonly int _port;
     private readonly ILogger<ClamAvScanner> _logger;
 
-    public ClamAvScanner(IConfiguration configuration, ILogger<ClamAvScanner> logger)
+    public ClamAvScanner(IOptions<ClamAvOptions> options, ILogger<ClamAvScanner> logger)
     {
-        _host = configuration["Security:ClamAV:Host"] ?? "localhost";
-        _port = int.Parse(configuration["Security:ClamAV:Port"] ?? "3310");
+        _host = options.Value.Host;
+        _port = options.Value.Port;
         _logger = logger;
     }
 

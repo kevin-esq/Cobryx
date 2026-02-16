@@ -38,7 +38,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
         var externalUserResult = await _externalAuthService.VerifyTokenAsync(request.Provider, request.IdToken, cancellationToken);
         if (!externalUserResult.IsSuccess)
         {
-            return Result.Failure<AuthResult>(externalUserResult.Error ?? "External authentication failed.");
+            return Result.Failure<AuthResult>(externalUserResult.Error ?? DomainErrorCode.Auth.ExternalLoginFailed);
         }
 
         var externalUser = externalUserResult.Value;
@@ -64,7 +64,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
             return Result.Failure<AuthResult>("Please verify your email.");
         }
 
-        var ipAddress = _httpContextService.GetIpAddress() ?? "0.0.0.0";
+        var ipAddress = _httpContextService.GetIpAddress() ?? CobryxDefaults.FallbackIpAddress;
         var deviceFingerprint = _httpContextService.GetDeviceFingerprint();
         var userAgent = _httpContextService.GetUserAgent();
 

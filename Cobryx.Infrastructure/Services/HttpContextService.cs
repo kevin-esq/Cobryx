@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Infrastructure.Services;
 
@@ -15,7 +16,7 @@ public class HttpContextService : IHttpContextService
     public string GetIpAddress()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return "0.0.0.0";
+        if (context == null) return CobryxDefaults.FallbackIpAddress;
 
         var ipAddress = context.Connection.RemoteIpAddress?.ToString();
 
@@ -24,16 +25,16 @@ public class HttpContextService : IHttpContextService
             ipAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
         }
 
-        return ipAddress ?? "0.0.0.0";
+        return ipAddress ?? CobryxDefaults.FallbackIpAddress;
     }
 
     public string GetUserAgent()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return "Unknown";
+        if (context == null) return CobryxDefaults.UnknownValue;
 
         var userAgent = context.Request.Headers["User-Agent"].ToString();
-        return string.IsNullOrWhiteSpace(userAgent) ? "Unknown" : userAgent;
+        return string.IsNullOrWhiteSpace(userAgent) ? CobryxDefaults.UnknownValue : userAgent;
     }
 
     public string GetDeviceFingerprint()

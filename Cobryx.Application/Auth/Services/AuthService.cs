@@ -119,7 +119,7 @@ public class AuthService : IAuthService
             user.LastName,
             user.FullName,
             user.Email,
-            roleOverride?.Name ?? user.Role?.Name ?? "User",
+            roleOverride?.Name ?? user.Role?.Name ?? Role.Constants.User,
             DateTime.UtcNow.AddMinutes(60),
             refreshExpires,
             sessionId,

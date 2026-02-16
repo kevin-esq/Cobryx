@@ -21,13 +21,13 @@ public class UpdateBrandingHandler : IRequestHandler<UpdateBrandingCommand, Resu
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
         {
-            return Result.Failure("TENANT.CONTEXT_MISSING");
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
         }
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value);
         if (tenant == null)
         {
-            return Result.Failure("TENANT.NOT_FOUND");
+            return Result.Failure(DomainErrorCode.Tenant.NotFound);
         }
 
         tenant.UpdateBranding(request.LogoUrl, request.PrimaryColor, request.SecondaryColor);
