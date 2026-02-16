@@ -61,14 +61,26 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
         result.IsSuccess.Should().BeTrue();
         var paymentId = result.Value;
 
-        var updatedInvoice = await invoiceRepo.GetByIdAsync(invoice.Id);
-        updatedInvoice.Should().NotBeNull();
-        updatedInvoice!.Status.Should().Be(InvoiceStatus.Paid);
-        updatedInvoice.TotalPaid.Amount.Should().Be(500);
+        var outboxProcessor = new Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob(
+            _factory.Services,
+            scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob>>());
+        await outboxProcessor.RunAsync(CancellationToken.None);
 
-        var paymentRepo = scope.ServiceProvider.GetRequiredService<IPaymentRepository>();
-        var payment = await paymentRepo.GetByIdAsync(paymentId);
-        payment.Should().NotBeNull();
-        payment!.Status.Should().Be(PaymentStatus.Completed);
+        // Assert in a fresh scope to avoid stale entity state from the initial scope
+        using (var assertionScope = _factory.Services.CreateScope())
+        {
+            var assertionInvoiceRepo = assertionScope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
+            var finalInvoice = await assertionInvoiceRepo.GetByIdAsync(invoice.Id);
+
+            finalInvoice.Should().NotBeNull();
+            finalInvoice!.Status.Should().Be(InvoiceStatus.Paid);
+            finalInvoice.TotalPaid.Amount.Should().Be(500);
+
+            var assertionPaymentRepo = assertionScope.ServiceProvider.GetRequiredService<IPaymentRepository>();
+            var finalPayment = await assertionPaymentRepo.GetByIdAsync(paymentId);
+
+            finalPayment.Should().NotBeNull();
+            finalPayment!.Status.Should().Be(PaymentStatus.Completed);
+        }
     }
 }

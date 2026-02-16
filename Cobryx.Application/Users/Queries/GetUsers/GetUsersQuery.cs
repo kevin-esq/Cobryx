@@ -2,6 +2,7 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Cobryx.Application.Users.Common;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
 using Concordia;
 
@@ -38,7 +39,7 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, Result<PaginatedLi
                 u.LastName,
                 u.FullName,
                 u.Email,
-                u.Role?.Name ?? "User",
+                u.Role?.Name ?? Role.Constants.User,
                 u.CreatedAt))
             .ToList();
 

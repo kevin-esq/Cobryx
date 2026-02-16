@@ -756,6 +756,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "CreatedAt");
+
                     b.HasIndex("TenantId", "InvoiceNumber")
                         .IsUnique();
 
@@ -1017,6 +1019,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int?>("CompoundingFrequency")
                         .HasColumnType("integer");
 
@@ -1266,6 +1272,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "IsDeleted");
+
                     b.HasIndex("TenantId", "RiskStatus");
 
                     b.HasIndex("TenantId", "Status");
@@ -1393,6 +1401,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("ApplicationOrderJson")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1604,7 +1616,86 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("MfaDevices");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.OutboxMessage", b =>
+            modelBuilder.Entity("Cobryx.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RelatedEntityId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "IsRead");
+
+                    b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.OutboxEvent", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1612,6 +1703,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CorrelationId")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1635,7 +1729,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<string>("MetadataJson")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("ProcessedAt")
+                    b.Property<DateTime>("OccurredOnUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedOnUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Tags")
@@ -1658,9 +1755,14 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessedAt");
+                    b.HasIndex("OccurredOnUtc");
 
-                    b.ToTable("OutboxMessages");
+                    b.HasIndex("ProcessedOnUtc");
+
+                    b.HasIndex("ProcessedOnUtc", "OccurredOnUtc")
+                        .HasDatabaseName("IX_OutboxEvents_Processed_Occurred");
+
+                    b.ToTable("OutboxEvents", (string)null);
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Payments.Payment", b =>
@@ -2260,6 +2362,21 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PermissionKey")
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("RoleId", "PermissionKey");
+
+                    b.HasIndex("PermissionKey");
+
+                    b.ToTable("RolePermissions", (string)null);
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.SubscriptionPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2643,6 +2760,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<int?>("CancellationReason")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2653,6 +2773,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("GracePeriodEndsAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("InternalNotes")
@@ -2819,6 +2942,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("PermissionVersion")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("RequiresOnboarding")
                         .HasColumnType("boolean");
 
@@ -2852,6 +2978,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "IsActive");
 
                     b.HasIndex("TenantId", "LastName", "FirstName");
 
@@ -2985,21 +3113,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SecurityTokens");
-                });
-
-            modelBuilder.Entity("PermissionRole", b =>
-                {
-                    b.Property<Guid>("PermissionsId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RolesId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("PermissionsId", "RolesId");
-
-                    b.HasIndex("RolesId");
-
-                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Credit", b =>
@@ -3760,6 +3873,26 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("Cobryx.Domain.Entities.Permission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionKey")
+                        .HasPrincipalKey("Name")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Cobryx.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.SubscriptionPlan", b =>
                 {
                     b.OwnsOne("Cobryx.Domain.ValueObjects.Money", "Price", b1 =>
@@ -3906,21 +4039,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PermissionRole", b =>
-                {
-                    b.HasOne("Cobryx.Domain.Entities.Permission", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Cobryx.Domain.Entities.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Credit", b =>

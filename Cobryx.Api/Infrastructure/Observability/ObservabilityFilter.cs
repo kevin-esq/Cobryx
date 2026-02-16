@@ -1,5 +1,6 @@
-using Cobryx.Application.Common.Models;
-using Cobryx.Infrastructure.Observability;
+using Cobryx.Application.Common.Observability;
+using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Api.Contracts.V1.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Serilog;
@@ -25,13 +26,13 @@ public class ObservabilityFilter : IAsyncActionFilter
         string? errorCode = null;
         int? numericCode = null;
 
-        if (executedContext.Result is ObjectResult objectResult && objectResult.Value is ApiResponse response)
+        if (executedContext.Result is ObjectResult objectResult && objectResult.Value is Cobryx.Api.Contracts.V1.Common.ApiResponse response)
         {
             if (response.Success)
             {
                 outcomeCode = response.OutcomeCode;
             }
-            else if (response is ApiErrorResponse errorResponse)
+            else if (response is Cobryx.Api.Contracts.V1.Common.ApiErrorResponse errorResponse)
             {
                 errorCode = errorResponse.ErrorCode;
                 numericCode = errorResponse.NumericCode;

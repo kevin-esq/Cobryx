@@ -115,6 +115,11 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         Status = PaymentStatus.Chargeback;
         RefundedAmount = Amount;
 
+        foreach (var allocation in _allocations)
+        {
+            allocation.MarkAsReversed();
+        }
+
         AddDomainEvent(new PaymentChargebackedEvent(Id, TenantId, DateTime.UtcNow));
         UpdateTimestamp();
     }

@@ -26,6 +26,10 @@ using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Security;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Webhooks.Stripe;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authorization;
+using Cobryx.Infrastructure.Security.Authorization;
 
 using Cobryx.Domain.Interfaces.Lending;
 using Cobryx.Domain.DomainServices.Lending;
@@ -37,12 +41,44 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<Cobryx.Application.Common.Configuration.AppOptions>(configuration.GetSection("App"));
-        services.Configure<EmailSettings>(configuration.GetSection("Email"));
+        services.AddOptions<Cobryx.Application.Common.Configuration.AppOptions>()
+            .Bind(configuration.GetSection("App"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<EmailSettings>()
+            .Bind(configuration.GetSection("Email"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Options with startup validation
+        services.AddOptions<Configuration.JwtOptions>()
+            .Bind(configuration.GetSection(Configuration.JwtOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.Fido2Options>()
+            .Bind(configuration.GetSection(Configuration.Fido2Options.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.CaptchaOptions>()
+            .Bind(configuration.GetSection(Configuration.CaptchaOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.ClamAvOptions>()
+            .Bind(configuration.GetSection(Configuration.ClamAvOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<Configuration.CachingOptions>()
+            .Bind(configuration.GetSection(Configuration.CachingOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<IClock, SystemClock>();
+
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
-        services.AddScoped<IDomainEventService, DomainEventService>();
+        services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddHostedService<BackgroundJobs.ProcessOutboxJob>();
         services.AddTransient<IEmailService, SmtpEmailService>();
         services.AddTransient<IExternalAuthService, ExternalAuthService>();
@@ -50,18 +86,20 @@ public static class DependencyInjection
         services.AddScoped<ICookieService, CookieService>();
         services.AddScoped<IAuditLogQueryService, Services.AuditLogQueryService>();
 
+        var cachingConfig = configuration.GetSection(Configuration.CachingOptions.SectionName).Get<Configuration.CachingOptions>()
+            ?? throw new InvalidOperationException("Caching configuration is missing.");
+
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379";
+            options.Configuration = cachingConfig.Redis.ConnectionString;
             options.InstanceName = "Cobryx_";
         });
 
-        var defaultTTL = int.Parse(configuration["Caching:DefaultTTL"] ?? "300");
         services.AddSingleton<ICacheService>(sp =>
-            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), defaultTTL));
+            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), cachingConfig.DefaultTTL));
 
         services.AddScoped<AuditInterceptor>();
-        services.AddScoped<DispatchDomainEventsInterceptor>();
+        services.AddScoped<OutboxInterceptor>();
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
@@ -82,7 +120,7 @@ public static class DependencyInjection
         {
             options.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
-                sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                sp.GetRequiredService<OutboxInterceptor>());
 
             options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
             {
@@ -107,9 +145,19 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<ITaxConfigurationRepository, TaxConfigurationRepository>();
+        services.AddScoped<ITenantSubscriptionRepository, TenantSubscriptionRepository>();
+        services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
+
+        // Stripe Billing
+        services.AddOptions<Configuration.StripeOptions>()
+            .Bind(configuration.GetSection(Configuration.StripeOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddScoped<IStripeService, Payments.Stripe.StripeService>();
+        services.AddScoped<Application.Subscriptions.Services.StripeSubscriptionSyncService>();
 
         // Lending Domain Repositories
         services.AddScoped<ILoanRepository, LoanRepository>();
@@ -139,10 +187,39 @@ public static class DependencyInjection
         services.AddScoped<IAuthAttemptService, AuthAttemptService>();
         services.AddScoped<IWebhookParser, StripeWebhookParser>();
 
+        services.AddScoped<UsageMeteringService>();
+        services.AddScoped<IUsageMeteringService>(sp =>
+            new CachedUsageMeteringService(
+                sp.GetRequiredService<UsageMeteringService>(),
+                sp.GetRequiredService<ICacheService>(),
+                sp.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>()));
+        services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+
+        services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
         services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
 
-        var jwtSettings = configuration.GetSection("JwtSettings");
-        var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret is missing.");
+        services.AddHangfire(config =>
+        {
+            config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(options =>
+                {
+                    options.UseNpgsqlConnection(connectionString);
+                }, new PostgreSqlStorageOptions
+                {
+                    JobExpirationCheckInterval = TimeSpan.FromHours(1),
+                    PrepareSchemaIfNecessary = true
+                });
+        });
+
+        services.AddHangfireServer();
+
+        var jwtConfig = configuration.GetSection(Configuration.JwtOptions.SectionName).Get<Configuration.JwtOptions>()
+            ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
 
         services.AddAuthentication(options =>
         {
@@ -157,9 +234,9 @@ public static class DependencyInjection
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings["Issuer"],
-                ValidAudience = jwtSettings["Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                ValidIssuer = jwtConfig.Issuer,
+                ValidAudience = jwtConfig.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Secret)),
                 ClockSkew = TimeSpan.Zero
             };
 
@@ -167,7 +244,7 @@ public static class DependencyInjection
             {
                 OnMessageReceived = context =>
                 {
-                    var token = context.Request.Cookies["X-Access-Token"];
+                    var token = context.Request.Cookies[CobryxClaimTypes.AccessTokenCookieName];
                     if (!string.IsNullOrEmpty(token))
                     {
                         context.Token = token;

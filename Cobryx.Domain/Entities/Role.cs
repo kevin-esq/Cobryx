@@ -4,6 +4,15 @@ namespace Cobryx.Domain.Entities;
 
 public class Role : BaseEntity, IAggregateRoot
 {
+    public static class Constants
+    {
+        public const string Owner = "Owner";
+        public const string Admin = "Admin";
+        public const string Manager = "Manager";
+        public const string Accountant = "Accountant";
+        public const string User = "User";
+    }
+
     public string Name { get; private set; }
     public string Description { get; private set; }
     public bool IsSystemRole { get; private set; }

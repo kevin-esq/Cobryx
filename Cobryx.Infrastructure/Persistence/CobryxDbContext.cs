@@ -1,14 +1,18 @@
 using System.Linq.Expressions;
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Invoicing;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Application.Webhooks.Entities;
+using Cobryx.Domain.Events;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cobryx.Application.Common.Interfaces; // Keep this as IUnitOfWork and ITenantProvider are used
+using Cobryx.Domain.Common; // Keep this as BaseEntity is used
+using Cobryx.Domain.Entities; // Keep this as Tenant, User, Customer, Product, Credit, Installment, Payment, PaymentAllocation, Role, Permission, AuditLog, SystemErrorLog, UserProfile, LoginSession, TaxConfiguration, PaymentMethod, Invoice, InvoiceItem, SupportTicket, SubscriptionPlan, TenantSubscription, UsageRecord, BillingAlert, Coupon, CustomerSuggestion, ReleaseNote, DocumentMetadata, MfaDevice, RecoveryCode, UserSecurityToken are used
+using Cobryx.Application.Webhooks.Entities; // Keep this as WebhookEvent is used
+using Cobryx.Domain.Entities.Invoicing; // Keep this as Invoice and InvoiceItem are used
+using Cobryx.Domain.Entities.Payments; // Keep this as Payment, PaymentAllocation, PaymentMethod are used
+using Cobryx.Domain.Entities.Lending; // Keep this as Loan is used
+using Cobryx.Domain.Interfaces; // Keep this as IUnitOfWork is used
+using Microsoft.EntityFrameworkCore.Metadata.Builders; // Added for IEntityTypeConfiguration and EntityTypeBuilder
 
 namespace Cobryx.Infrastructure.Persistence;
 
@@ -17,9 +21,19 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     private readonly ITenantProvider _tenantProvider;
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
         WriteIndented = false
     };
+
+    public class OutboxEventConfiguration : IEntityTypeConfiguration<OutboxEvent>
+    {
+        public void Configure(EntityTypeBuilder<OutboxEvent> builder)
+        {
+            builder.ToTable("OutboxEvents");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.ProcessedOnUtc);
+            builder.HasIndex(x => x.OccurredOnUtc);
+        }
+    }
 
     public CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider)
         : base(options)
@@ -35,26 +49,6 @@ public class CobryxDbContext : DbContext, IUnitOfWork
         return await base.SaveChangesAsync(cancellationToken);
     }
 
-    private void ProcessDomainEvents()
-    {
-        var domainEvents = ChangeTracker.Entries<BaseEntity>()
-            .Select(x => x.Entity)
-            .SelectMany(x =>
-            {
-                var events = x.DomainEvents.ToList();
-                x.ClearDomainEvents();
-                return events;
-            })
-            .ToList();
-
-        var outboxMessages = domainEvents.Select(domainEvent =>
-            new OutboxMessage(
-                domainEvent.GetType().Name,
-                JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), _jsonSerializerOptions)))
-            .ToList();
-
-        this.Set<OutboxMessage>().AddRange(outboxMessages);
-    }
 
     private void UpdateAuditFields()
     {
@@ -66,7 +60,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
             }
             else if (entry.State == EntityState.Modified)
             {
-                if (entry.Entity.Version == 0)
+                if (entry.Entity.Version == 0 && entry.Entity is not OutboxEvent)
                 {
                     entry.State = EntityState.Added;
                     entry.Entity.IncrementVersion();
@@ -84,11 +78,12 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Credit> Credits => Set<Credit>();
-    public DbSet<Installment> Installments => Set<Installment>();
+    public DbSet<Domain.Entities.Invoicing.Installment> Installments => Set<Domain.Entities.Invoicing.Installment>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SystemErrorLog> SystemErrorLogs => Set<SystemErrorLog>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -109,7 +104,8 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<MfaDevice> MfaDevices => Set<MfaDevice>();
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<UserSecurityToken> SecurityTokens => Set<UserSecurityToken>();
-    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
     // Lending Domain
@@ -150,6 +146,10 @@ public class CobryxDbContext : DbContext, IUnitOfWork
                         .Property<long>(nameof(BaseEntity.Version))
                         .IsConcurrencyToken();
                 }
+
+                // Ignore legacy shadow properties that cause SQLite issues
+                modelBuilder.Entity(entityType.ClrType).Ignore("RowVersion");
+                modelBuilder.Entity(entityType.ClrType).Ignore("xmin");
             }
 
             if (filterExpr != null && !entityType.IsOwned())
@@ -173,6 +173,27 @@ public class CobryxDbContext : DbContext, IUnitOfWork
 
         modelBuilder.Entity<Invoice>()
             .HasIndex(i => new { i.TenantId, i.Status });
+
+        modelBuilder.Entity<Invoice>()
+            .HasIndex(i => new { i.TenantId, i.CreatedAt });
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.TenantId, u.IsActive });
+
+        modelBuilder.Entity<Loan>()
+            .HasIndex(l => new { l.TenantId, l.IsDeleted });
+
+        modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Priority)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Category)
+            .HasConversion<string>();
 
         modelBuilder.Entity<SupportTicket>()
             .HasIndex(s => new { s.TenantId, s.Status });

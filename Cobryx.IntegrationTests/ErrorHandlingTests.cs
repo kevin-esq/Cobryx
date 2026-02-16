@@ -47,7 +47,7 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     {
         var command = new SignUpCommand("", "", "", "invalid-email", "short");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
@@ -59,23 +59,26 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         problemDetails.GetProperty("errorCode").GetString().Should().Be("VALIDATION.FAILED");
         problemDetails.GetProperty("numericCode").GetInt32().Should().Be(1001);
 
+        Console.WriteLine($"DEBUG: FULL JSON: {json}");
+
         var errors = problemDetails.GetProperty("errors");
-        errors.ValueKind.Should().Be(JsonValueKind.Object);
+        errors.ValueKind.Should().Be(JsonValueKind.Array);
 
-        var businessNameErrors = errors.GetProperty("BusinessName");
-        businessNameErrors.ValueKind.Should().Be(JsonValueKind.Array);
-        var firstError = businessNameErrors[0];
-        firstError.GetProperty("errorCode").GetString().Should().Be("VALIDATION.AUTH.BUSINESS_NAME.REQUIRED");
+        var businessNameError = errors.EnumerateArray().FirstOrDefault(e =>
+            e.TryGetProperty("field", out var f) && (f.GetString()?.Equals("businessName", StringComparison.OrdinalIgnoreCase) == true || f.GetString()?.Equals("BusinessName", StringComparison.OrdinalIgnoreCase) == true));
+        businessNameError.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        businessNameError.GetProperty("code").GetString().Should().Be("VALIDATION.AUTH.BUSINESS_NAME.REQUIRED");
 
-        var emailErrors = errors.GetProperty("Email");
-        emailErrors[0].GetProperty("errorCode").GetString().Should().Be("VALIDATION.AUTH.EMAIL.INVALID");
+        var emailError = errors.EnumerateArray().FirstOrDefault(e =>
+            e.TryGetProperty("field", out var f) && (f.GetString()?.Equals("email", StringComparison.OrdinalIgnoreCase) == true || f.GetString()?.Equals("Email", StringComparison.OrdinalIgnoreCase) == true));
+        emailError.GetProperty("code").GetString().Should().Be("VALIDATION.AUTH.EMAIL.INVALID");
     }
 
     [Fact]
     public async Task NoHumanReadableText_InValidationErrors()
     {
         var command = new SignUpCommand("", "", "", "invalid", "short");
-        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
 
         var json = await response.Content.ReadAsStringAsync();
 
@@ -89,12 +92,12 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
     public async Task DomainError_InvalidCredentials_ReturnsProblemDetails_WithAuthCode()
     {
         var email = $"existing_error_test_{Guid.NewGuid()}@example.com";
-        var signupResponse = await _client.PostAsJsonAsync("/api/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, "SecurePass123!@#"));
+        var signupResponse = await _client.PostAsJsonAsync("/api/v1/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, "SecurePass123!@#"));
         signupResponse.EnsureSuccessStatusCode();
 
         var command = new LoginCommand(email, "WrongPassword!");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/login", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 

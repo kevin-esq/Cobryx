@@ -10,8 +10,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("ALTER TABLE \"AuditLogs\" ALTER COLUMN \"OldValues\" TYPE jsonb USING \"OldValues\"::jsonb;");
-            migrationBuilder.Sql("ALTER TABLE \"AuditLogs\" ALTER COLUMN \"NewValues\" TYPE jsonb USING \"NewValues\"::jsonb;");
+            if (migrationBuilder.ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+            {
+                migrationBuilder.Sql("ALTER TABLE \"AuditLogs\" ALTER COLUMN \"OldValues\" TYPE jsonb USING \"OldValues\"::jsonb;");
+                migrationBuilder.Sql("ALTER TABLE \"AuditLogs\" ALTER COLUMN \"NewValues\" TYPE jsonb USING \"NewValues\"::jsonb;");
+            }
 
             migrationBuilder.AlterColumn<string>(
                 name: "EntityName",

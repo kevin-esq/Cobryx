@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
+using Cobryx.Infrastructure.Configuration;
 using nClam;
 
 namespace Cobryx.Infrastructure.HealthChecks;
@@ -18,10 +19,15 @@ public static class HealthCheckExtensions
             ?? throw new InvalidOperationException("S3 SecretKey is missing.");
         var s3ServiceUrl = configuration["Storage:S3:ServiceUrl"]
             ?? throw new InvalidOperationException("S3 ServiceUrl is missing.");
-        var bucketName = configuration["Storage:S3:BucketName"] ?? "documents";
+        var bucketName = configuration["Storage:S3:BucketName"]
+            ?? throw new InvalidOperationException("S3 BucketName is missing.");
 
-        var clamAvHost = configuration["Security:ClamAV:Host"] ?? "localhost";
-        var clamAvPort = int.Parse(configuration["Security:ClamAV:Port"] ?? "3310");
+        var clamAvSection = configuration.GetSection(ClamAvOptions.SectionName);
+        var clamAvHost = clamAvSection["Host"] ?? throw new InvalidOperationException("ClamAV Host is missing.");
+        var clamAvPort = int.TryParse(clamAvSection["Port"], out var port) ? port : 3310;
+
+        var redisConnectionString = configuration["Caching:Redis:ConnectionString"]
+            ?? throw new InvalidOperationException("Redis ConnectionString is missing.");
 
         services.AddHealthChecks()
             .AddNpgSql(dbConnectionString, name: "Database")
@@ -48,9 +54,8 @@ public static class HealthCheckExtensions
                     return HealthCheckResult.Unhealthy($"ClamAV Unreachable: {ex.Message}");
                 }
             })
-            .AddRedis(
-                configuration["Caching:Redis:ConnectionString"] ?? "localhost:6379",
-                name: "Redis");
+            .AddCheck("Redis", new RedisHealthCheck(redisConnectionString))
+            .AddCheck<OutboxHealthCheck>("Outbox");
 
         return services;
     }

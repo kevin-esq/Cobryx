@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Cobryx.Infrastructure.BackgroundJobs;
 
@@ -33,36 +34,45 @@ public class ProcessOutboxJob : BackgroundService
         {
             try
             {
-                await ProcessOutboxMessagesAsync(stoppingToken);
+                await RunAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing outbox messages.");
+                _logger.LogError(ex, "Error processing outbox events.");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
 
-    private async Task ProcessOutboxMessagesAsync(CancellationToken stoppingToken)
+    public async Task RunAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var messages = await dbContext.OutboxMessages
-            .Where(m => m.ProcessedAt == null)
-            .OrderBy(m => m.CreatedAt)
-            .Take(10)
-            .ToListAsync(stoppingToken);
+        var events = await dbContext.OutboxEvents
+            .Where(m => m.ProcessedOnUtc == null)
+            .OrderBy(m => m.OccurredOnUtc)
+            .ThenBy(m => m.Id)
+            .Take(20)
+            .ToListAsync(cancellationToken);
 
-        foreach (var message in messages)
+        foreach (var outboxEvent in events)
         {
             try
             {
-                _logger.LogInformation("Processing outbox message: {Type}", message.Type);
+                _logger.LogInformation("Processing outbox event: {Type} (CorrelationId: {CorrelationId})",
+                    outboxEvent.Type, outboxEvent.CorrelationId);
 
-                var domainEvent = DeserializeDomainEvent(message);
+                using var correlationContext = Serilog.Context.LogContext.PushProperty("CorrelationId", outboxEvent.CorrelationId);
+                System.Diagnostics.Activity.Current?.AddTag("CorrelationId", outboxEvent.CorrelationId);
+
+                var lag = (DateTime.UtcNow - outboxEvent.OccurredOnUtc).TotalSeconds;
+                var metrics = scope.ServiceProvider.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>();
+                metrics.OutboxProcessingLag.Record(lag, new KeyValuePair<string, object?>("Type", outboxEvent.Type));
+
+                var domainEvent = DeserializeDomainEvent(outboxEvent);
                 if (domainEvent != null)
                 {
                     var notificationType = typeof(Cobryx.Application.Common.Events.DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
@@ -70,34 +80,35 @@ public class ProcessOutboxJob : BackgroundService
 
                     if (notification != null)
                     {
-                        await mediator.Publish(notification, stoppingToken);
+                        await mediator.Publish(notification, cancellationToken);
                     }
                 }
 
-                message.MarkAsProcessed();
+                outboxEvent.MarkAsProcessed();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process outbox message {Id}", message.Id);
-                message.MarkAsFailed(ex.Message);
+                _logger.LogError(ex, "Failed to process outbox event {Id}", outboxEvent.Id);
+                outboxEvent.MarkAsFailed(ex.Message);
             }
         }
 
-        await dbContext.SaveChangesAsync(stoppingToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private IDomainEvent? DeserializeDomainEvent(OutboxMessage message)
+    private IDomainEvent? DeserializeDomainEvent(OutboxEvent outboxEvent)
     {
-        var type = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => a.GetTypes())
-            .FirstOrDefault(t => t.Name == message.Type && typeof(IDomainEvent).IsAssignableFrom(t));
-
-        if (type == null)
+        try
         {
-            _logger.LogWarning("Unknown domain event type: {Type}", message.Type);
+            return JsonConvert.DeserializeObject<IDomainEvent>(outboxEvent.Content, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deserializing outbox event {Id}", outboxEvent.Id);
             return null;
         }
-
-        return JsonSerializer.Deserialize(message.Content, type) as IDomainEvent;
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.Infrastructure.Persistence.Interceptors;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Cobryx.IntegrationTests;
 
@@ -29,7 +31,21 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
                 { "JwtSettings:Secret", "SuperSecretKeyForIntegrationTests1234567890!" },
                 { "JwtSettings:Issuer", "CobryxApi-Test" },
                 { "JwtSettings:Audience", "CobryxClient-Test" },
-                { "JwtSettings:ExpiryMinutes", "60" }
+                { "JwtSettings:ExpiryMinutes", "60" },
+                { "App:BaseUrl", "https://test.cobryx.com" },
+                { "App:AppUrl", "https://app-test.cobryx.com" },
+                { "App:DocsUrl", "https://docs-test.cobryx.com" },
+                { "Email:SmtpHost", "localhost" },
+                { "Email:SmtpPort", "25" },
+                { "Email:FromAddress", "noreply@test.cobryx.com" },
+                { "Stripe:SecretKey", "sk_test_123" },
+                { "Stripe:WebhookSecret", "whsec_test_123" },
+                { "Stripe:SuccessUrl", "https://test.cobryx.com/success" },
+                { "Stripe:CancelUrl", "https://test.cobryx.com/cancel" },
+                { "Storage:S3:AccessKey", "test-access-key" },
+                { "Storage:S3:SecretKey", "test-secret-key" },
+                { "Storage:S3:ServiceUrl", "https://localhost:9000" },
+                { "Storage:S3:BucketName", "documents-test" }
             });
         });
 
@@ -92,7 +108,7 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             {
                 options.AddInterceptors(
                     sp.GetRequiredService<AuditInterceptor>(),
-                    sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                    sp.GetRequiredService<OutboxInterceptor>());
                 options.UseSqlite(_connection);
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
@@ -102,6 +118,9 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             var tenantDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(ITenantProvider));
             if (tenantDescriptor != null) services.Remove(tenantDescriptor);
             services.AddSingleton<ITenantProvider, TestTenantProvider>();
+
+            services.RemoveAll<IDistributedCache>();
+            services.AddDistributedMemoryCache();
         });
     }
 

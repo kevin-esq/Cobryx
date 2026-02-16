@@ -56,6 +56,12 @@ public static class ErrorMapper
         _ when errorCode == DomainErrorCode.System.TooManyRequests => new(429, 1090),
         _ when errorCode == DomainErrorCode.System.InternalError => new(500, 1000),
 
+        _ when errorCode == DomainErrorCode.Subscription.NotFound => SubscriptionErrors.NotFound,
+        _ when errorCode == DomainErrorCode.Subscription.LimitReached => SubscriptionErrors.LimitReached,
+        _ when errorCode == DomainErrorCode.Subscription.Expired => SubscriptionErrors.Expired,
+        _ when errorCode == DomainErrorCode.Subscription.Blocked => SubscriptionErrors.Blocked,
+        _ when errorCode == DomainErrorCode.Subscription.DowngradeNotAllowed => SubscriptionErrors.DowngradeNotAllowed,
+
         _ => new(400, 1000)
     };
 }

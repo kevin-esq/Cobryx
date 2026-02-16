@@ -18,7 +18,7 @@ public class R2StorageProvider : IDocumentStorage
         var accessKey = configuration["Storage:S3:AccessKey"] ?? throw new SystemConfigurationException();
         var secretKey = configuration["Storage:S3:SecretKey"] ?? throw new SystemConfigurationException();
         var serviceUrl = configuration["Storage:S3:ServiceUrl"] ?? throw new SystemConfigurationException();
-        _bucketName = configuration["Storage:S3:BucketName"] ?? "documents";
+        _bucketName = configuration["Storage:S3:BucketName"] ?? throw new SystemConfigurationException();
 
         var config = new AmazonS3Config
         {

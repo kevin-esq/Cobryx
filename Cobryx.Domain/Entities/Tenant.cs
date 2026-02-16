@@ -27,7 +27,7 @@ public class Tenant : BaseEntity, IAggregateRoot
         Settings = null!;
     }
 
-    public Tenant(string businessName, string currency = "MXN")
+    public Tenant(string businessName, string currency = CobryxDefaults.Currency)
     {
         if (string.IsNullOrWhiteSpace(businessName))
             throw new DomainException(DomainErrorCode.Tenant.BusinessNameRequired);

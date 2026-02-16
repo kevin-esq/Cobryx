@@ -36,7 +36,7 @@ public class UpdateBusinessSettingsHandler : IRequestHandler<UpdateBusinessSetti
     public async Task<Result> Handle(UpdateBusinessSettingsCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
         if (tenant == null) return Result.Failure(DomainErrorCode.Tenant.NotFound);

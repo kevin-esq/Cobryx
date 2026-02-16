@@ -1,3 +1,4 @@
+using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
@@ -22,7 +23,7 @@ public class TenantMiddleware
 
         if (context.User.Identity?.IsAuthenticated == true)
         {
-            var claimTenantId = context.User.FindFirst("tenant_id")?.Value;
+            var claimTenantId = context.User.FindFirst(CobryxClaimTypes.TenantId)?.Value;
 
             if (context.Request.Headers.ContainsKey(TenantHeader) &&
                 context.Request.Headers[TenantHeader] != claimTenantId)
@@ -45,7 +46,7 @@ public class TenantMiddleware
             var path = context.Request.Path.Value?.ToLowerInvariant();
             if (path != null && (
                 path.Contains("/health") ||
-                path.Contains("/api/auth") ||
+                path.Contains("/auth") ||
                 path.StartsWith("/swagger") ||
                 path.StartsWith("/hangfire") ||
                 path == "/"))

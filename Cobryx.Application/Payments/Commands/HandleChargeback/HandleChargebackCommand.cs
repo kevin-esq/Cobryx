@@ -21,7 +21,7 @@ public class HandleChargebackHandler : IRequestHandler<HandleChargebackCommand, 
     public async Task<Result> Handle(HandleChargebackCommand request, CancellationToken cancellationToken)
     {
         var payment = await _paymentRepository.GetByIdAsync(request.PaymentId);
-        if (payment == null) return Result.Failure("Payment not found.");
+        if (payment == null) return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         try
         {

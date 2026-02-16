@@ -8,11 +8,13 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Domain.Common;
 using Microsoft.Extensions.Options;
-using Cobryx.Infrastructure.Observability;
+using Cobryx.Application.Common.Observability;
 using OpenTelemetry.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Asp.Versioning;
+using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,14 +74,16 @@ builder.Services.AddSwaggerGen(c =>
 
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
+    c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 
     var appXmlFile = "Cobryx.Application.xml";
     var appXmlPath = Path.Combine(AppContext.BaseDirectory, appXmlFile);
     if (File.Exists(appXmlPath))
     {
-        c.IncludeXmlComments(appXmlPath);
+        c.IncludeXmlComments(appXmlPath, includeControllerXmlComments: true);
     }
+
+    c.EnableAnnotations();
 });
 
 builder.Services.AddControllers(options =>
@@ -91,6 +95,10 @@ builder.Services.AddControllers(options =>
 .AddJsonOptions(json =>
 {
     json.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+})
+.ConfigureApiBehaviorOptions(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
 });
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
@@ -114,16 +122,16 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim("permissions", "customers:view"));
-    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim("permissions", "customers:create"));
-    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim("permissions", "credits:view"));
-    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim("permissions", "credits:create"));
-    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim("permissions", "payments:apply"));
-    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim("permissions", "tenant:manage"));
-    options.AddPolicy("EmailVerified", policy => policy.RequireClaim("email_verified", "true"));
+    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:view"));
+    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:create"));
+    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:view"));
+    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:create"));
+    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "payments:apply"));
+    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "tenant:manage"));
+    options.AddPolicy("EmailVerified", policy => policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true"));
     options.AddPolicy("AccountVerified", policy =>
-        policy.RequireClaim("email_verified", "true")
-              .RequireClaim("requires_onboarding", "false"));
+        policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true")
+              .RequireClaim(CobryxClaimTypes.RequiresOnboarding, "false"));
 });
 
 builder.Services.AddApiVersioning(options =>
@@ -131,7 +139,13 @@ builder.Services.AddApiVersioning(options =>
     options.DefaultApiVersion = new ApiVersion(1, 0);
     options.AssumeDefaultVersionWhenUnspecified = true;
     options.ReportApiVersions = true;
-    options.ApiVersionReader = new HeaderApiVersionReader("X-Api-Version");
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new HeaderApiVersionReader("X-Api-Version"),
+        new UrlSegmentApiVersionReader());
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
 });
 
 builder.Services.AddCors(options =>
@@ -157,6 +171,7 @@ if (enableSwagger)
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<Cobryx.Api.Middlewares.CorrelationIdMiddleware>();
 app.UseMiddleware<Cobryx.Infrastructure.Middleware.RequestLogContextMiddleware>();
 app.UseMiddleware<Cobryx.Infrastructure.Middleware.DynamicRateLimitingMiddleware>();
 app.UseRateLimiter();
@@ -186,6 +201,12 @@ app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
 
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    DashboardTitle = "Cobryx Jobs Manager",
+    Authorization = new[] { new Cobryx.Api.Infrastructure.HangfireDashboardFilter() }
+});
+
 // Cloud Run terminates TLS — no HTTPS redirect needed in container.
 
 app.MapControllers();
@@ -204,18 +225,29 @@ try
         var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
         var dbContext = scope.ServiceProvider.GetRequiredService<Cobryx.Infrastructure.Persistence.CobryxDbContext>();
 
-        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing") || Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
         {
-            await dbContext.Database.EnsureCreatedAsync();
-        }
-        else if (Environment.GetEnvironmentVariable("ENABLE_MIGRATION") == "true")
-        {
-            await dbContext.Database.MigrateAsync();
-            Log.Information("Database migration completed successfully");
+            if (dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                await dbContext.Database.EnsureCreatedAsync();
+                Log.Information("SQLite database created from model (skipping PG-specific migrations)");
+            }
+            else
+            {
+                await dbContext.Database.MigrateAsync();
+                Log.Information("Database migration completed successfully");
+            }
         }
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedPlansAsync(dbContext);
         Log.Information("Database seeding completed successfully");
+
+        // Register Recurring Jobs
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob>(
+            "process-outbox-events",
+            job => job.RunAsync(CancellationToken.None),
+            "*/10 * * * * *"); // Every 10 seconds
     }
 }
 catch (Exception ex)

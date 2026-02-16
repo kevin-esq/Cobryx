@@ -49,7 +49,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
             tenantId.Value,
             loan.CustomerId,
             request.PaymentMethodId,
-            new Money(request.Amount, "MXN"),
+            new Money(request.Amount, CobryxDefaults.Currency),
             request.PaidAt,
             request.Reference,
             request.Notes);

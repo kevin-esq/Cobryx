@@ -25,12 +25,39 @@ public class Permission : BaseEntity, IAggregateRoot
 
     public static class Constants
     {
-        public const string ViewCustomers = "customers:view";
-        public const string CreateCustomers = "customers:create";
-        public const string ViewCredits = "credits:view";
-        public const string CreateCredits = "credits:create";
-        public const string ApplyPayments = "payments:apply";
-        public const string ManageTenant = "tenant:manage";
-        public const string ManageUsers = "users:manage";
+        // Customers
+        public const string CustomersView = "customers.view";
+        public const string CustomersCreate = "customers.create";
+        public const string CustomersEdit = "customers.edit";
+        public const string CustomersDelete = "customers.delete";
+
+        // Invoices
+        public const string InvoicesView = "invoices.view";
+        public const string InvoicesCreate = "invoices.create";
+        public const string InvoicesCancel = "invoices.cancel";
+        public const string InvoicesExport = "invoices.export";
+
+        // Payments
+        public const string PaymentsView = "payments.view";
+        public const string PaymentsApply = "payments.apply";
+        public const string PaymentsRefund = "payments.refund";
+
+        // Loans (Lending)
+        public const string LoansView = "loans.view";
+        public const string LoansCreate = "loans.create";
+        public const string LoansDisburse = "loans.disburse";
+        public const string LoansManagePolicies = "loans.policies.manage";
+
+        // Tenant & Users
+        public const string TenantManage = "tenant.manage";
+        public const string TenantViewSettings = "tenant.settings.view";
+        public const string UsersView = "users.view";
+        public const string UsersManage = "users.manage";
+
+        // System & Audit
+        public const string AuditView = "audit.view";
+        public const string DashboardView = "dashboard.view";
+        public const string SubscriptionView = "subscription.view";
+        public const string SubscriptionManage = "subscription.manage";
     }
 }

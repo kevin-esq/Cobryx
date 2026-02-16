@@ -1,105 +1,94 @@
 # Cobryx API Dashboards
 
-> [!NOTE]
-> **Audience**: This document is intended for engineers, SREs, and security reviewers consuming Cobryx telemetry via Grafana.
-
-This document provides the canonical PromQL queries and layout recommendations for visualizing Cobryx API observability data in Grafana.
-
-## Core Philosophy
-- **One Request, One Outcome**: Each API request MUST emit exactly one business outcome. This is the source of truth for all throughput data.
-- **Codes over Text**: All visualizations use stable `OutcomeCode` or `ErrorCode` values.
-- **Strict Cardinality**: Data is filtered by the `CobryxModule` enum to prevent dashboard noise.
-- **Zero-Trust for Messages**: We do not visualize human-readable error messages.
+This document provides the canonical PromQL queries and layout recommendations for visualizing Cobryx API observability data in Grafana. Adherence to these panels ensures bank-grade monitoring and proactive incident detection.
 
 ---
 
-## 1. Global API Health Dashboard
+## 1. Global API Health (The Golden Signals)
 
-### Total Business Outcomes (Volume)
-Visualizes the throughput of the system by outcome. This panel represents **raw volume**.
+This row represents the high-level health of the entire system.
+
+### Global Success Rate
+**Goal**: Calculate the conversion of all business intents.
 ```promql
-sum by (code) (
-  rate(cobryx_business_outcomes_total[5m])
-)
+sum(rate(cobryx_business_outcomes_total{is_success="true"}[5m])) /
+sum(rate(cobryx_business_outcomes_total[5m]))
 ```
-**Recommended Visualization**: Time-series graph or Stacked Bar.  
-> [!NOTE]
-> Use this for throughput trends. For success/failure **rates**, use panels comparing outcomes vs errors or SLO alerts.
+**Visualization**: Gauge or Stat panel. Red if < 95%, Yellow if < 99%.
 
-### Domain Error Rate
-Identifies modules with high error cardinality.
+### P95 Latency by Outcome
+**Goal**: Identify slow "Happy Paths" vs "Error Paths".
 ```promql
-sum by (module) (
-  rate(cobryx_domain_errors_total[5m])
-)
-```
-**Recommended Visualization**: Pie Chart or Horizontal Bar.
-
-### Top 10 Errors (Numeric Code)
-Quickly identify recurring issues by stable ID.
-```promql
-topk(10, sum by (code, numeric_code) (
-  rate(cobryx_domain_errors_total[5m])
+histogram_quantile(0.95, sum by (le, code) (
+  rate(cobryx_api_latency_seconds_bucket[5m])
 ))
 ```
-**Recommended Visualization**: Table with `numeric_code` and `code`.
+**Visualization**: Time-series graph.
+
+### System "Dead Man's Switch"
+**Goal**: Detect if the API or telemetry exporter is down.
+```promql
+absent(cobryx_business_outcomes_total)
+```
+**Alert**: Critical if `1` (indicates no outcomes emitted in the last 5 minutes).
 
 ---
 
-## 2. Authentication & Security Dashboard
+## 2. Authentication & Security (Friction & Integrity)
 
-### Login Success Rate
-Specific focus on the `Auth` module.
-```promql
-sum by (code) (
-  rate(cobryx_business_outcomes_total{module="Auth", code=~"AUTH.LOGIN.*"}[5m])
-)
-```
-
-### Security Alert Funnel
-Tracks MFA requirements vs. successful verifications.
+### MFA/Passkey Conversion Ratio
+**Goal**: Detect usabilty friction or credential stuffing bots.
 ```promql
 sum by (code) (
   rate(cobryx_business_outcomes_total{module="Auth", code=~"AUTH.(MFA|FIDO2).*"}[5m])
 )
 ```
-> [!TIP]
-> Compare **MFA Initiated** vs. **MFA Verified** to detect friction in the user flow or potential credential stuffing/bypass attempts.
+**Visualization**: Stat panel (Conversion %). Low conversion between `INITIATED` and `VERIFIED` suggests a broken flow or high-volume bot testing.
+
+### Outcome Consistency Audit
+**Goal**: Ensure every API request follows the Outcome Code protocol.
+```promql
+sum(rate(http_requests_total[5m])) - sum(rate(cobryx_business_outcomes_total[5m]))
+```
+**Target**: Must be `0`. Any non-zero value indicates endpoints missing the `ObservabilityFilter`.
 
 ---
 
-## 3. Operations & Business Dashboard
+## 3. Business Funnels
 
 ### Customer Onboarding Funnel
-Tracks the journey from Signup to Verification to Onboarding.
 ```promql
 sum by (code) (
   rate(cobryx_business_outcomes_total{code=~"AUTH.(SIGNUP|EMAIL_VERIFIED)|TENANT.ONBOARDING.COMPLETED"}[1h])
 )
 ```
 
-### Financial Activity
-Transactions processed vs. failures.
+### Financial Success Volume
 ```promql
 sum by (code) (
-  rate(cobryx_business_outcomes_total{module="Financial"}[1h])
+  rate(cobryx_business_outcomes_total{module="Financial", is_success="true"}[1h])
 )
 ```
 
 ---
 
-## Grafana Variables
-To make these dashboards dynamic, use the following variables:
+## 4. Recommended Dashboard Layout
 
-| Name | Type | Query |
+To ensure readability under pressure (during incidents), use this three-tier layout:
+
+| Row | Content | Focus |
 | :--- | :--- | :--- |
-| `module` | Query | `label_values(cobryx_business_outcomes_total, module)` |
-| `code` | Query | `label_values(cobryx_business_outcomes_total{module="$module"}, code)` |
+| **Tier 1: Global Health** | Success Rate, Latency P95, Total Throughput | Is the system healthy? |
+| **Tier 2: Business Flow** | Onboarding Funnel, Financial Transactions, MFA Friction | Are users succeeding? |
+| **Tier 3: Technical Health** | Top 10 Errs (Numeric), 5xx Error Logs (Loki), TraceId Search | Why is it failing? |
 
 ---
 
-## Alerting Recommendations
-Use the following logic for SLI/SLO alerts:
+## 5. Alerting Recommendations
 
-1. **Systemic Failure**: `sum(rate(cobryx_domain_errors_total{code="SYSTEM.INTERNAL_ERROR"}[2m])) > 1`
-2. **Auth Failure Spike**: `sum(rate(cobryx_domain_errors_total{module="Auth"}[5m])) / sum(rate(cobryx_business_outcomes_total{module="Auth"}[5m])) > 0.1` (10% fail rate).
+| Alert | Logic | Severity |
+| :--- | :--- | :--- |
+| **Silent Death** | `absent(cobryx_business_outcomes_total)` | **CRITICAL** |
+| **Systemic Failure (5xx)** | `sum(rate(cobryx_domain_errors_total{code=~"SYSTEM.*"}[2m])) > 1` | **CRITICAL** |
+| **Auth Error Spike** | `(SuccessRate < 0.90)` in module Auth | **HIGH** |
+| **Business Friction** | `MFA_Initiated / MFA_Verified < 0.60` | **MEDIUM** |

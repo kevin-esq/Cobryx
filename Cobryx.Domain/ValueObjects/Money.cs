@@ -23,7 +23,7 @@ public record Money : ValueObject
         Currency = currency.ToUpperInvariant();
     }
 
-    public static Money Zero(string currency = "MXN") => new(0, currency);
+    public static Money Zero(string currency = CobryxDefaults.Currency) => new(0, currency);
 
     public static Money operator +(Money a, Money b)
     {

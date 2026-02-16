@@ -12,7 +12,7 @@ public record CreateSupportTicketCommand(
     string Title,
     string Description,
     SupportTicketPriority Priority,
-    string? Category) : IRequest<Result<Guid>>;
+    SupportTicketCategory Category) : IRequest<Result<Guid>>;
 
 public class CreateSupportTicketValidator : AbstractValidator<CreateSupportTicketCommand>
 {

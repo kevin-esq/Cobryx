@@ -69,6 +69,8 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         LegalStatus = LegalStatus.Active;
         RiskStatus = RiskStatus.OnTime;
         CollectionStage = CollectionStage.None;
+
+        AddDomainEvent(new Events.Lending.LoanCreatedEvent(Id, TenantId, CustomerId, DateTime.UtcNow));
     }
 
     public void Activate()

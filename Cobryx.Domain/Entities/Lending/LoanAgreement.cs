@@ -13,7 +13,7 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
     public Guid TenantId { get; private set; }
     public Guid CustomerId { get; private set; }
     public decimal PrincipalAmount { get; private set; }
-    public string Currency { get; private set; } = "MXN";
+    public string Currency { get; private set; } = CobryxDefaults.Currency;
     public Guid InterestPolicyId { get; private set; }
     public PaymentFrequency PaymentFrequency { get; private set; }
     public int NumberOfInstallments { get; private set; }
@@ -53,7 +53,7 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         bool isRecoverable = false,
         decimal? recoveryValue = null,
         int daysBetweenPayments = 0,
-        string currency = "MXN")
+        string currency = CobryxDefaults.Currency)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);

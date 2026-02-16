@@ -4,7 +4,8 @@ using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Cobryx.Infrastructure.Observability;
+using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Application.Common.Observability;
 using Serilog;
 
 namespace Cobryx.Api.Infrastructure;
@@ -38,6 +39,7 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         DomainErrorCode errorCode;
         Dictionary<string, object>? metadata = null;
+        IReadOnlyList<ValidationError>? structuredErrors = null;
 
         if (targetException is CobryxException cobryxEx)
         {
@@ -47,6 +49,10 @@ public class GlobalExceptionHandler : IExceptionHandler
         else if (targetException is FluentValidation.ValidationException validationEx)
         {
             errorCode = DomainErrorCode.System.ValidationFailed;
+            structuredErrors = validationEx.Errors
+                .Select(e => new ValidationError(e.PropertyName, e.ErrorCode, e.ErrorMessage))
+                .ToList();
+
             var errors = validationEx.Errors
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(
@@ -88,12 +94,16 @@ public class GlobalExceptionHandler : IExceptionHandler
         httpContext.Response.StatusCode = statusCode;
         httpContext.Response.ContentType = "application/json";
 
-        var rawErrors = metadata?.GetValueOrDefault("errors");
-        IReadOnlyList<Cobryx.Api.Contracts.V1.Common.ValidationError>? structuredErrors = rawErrors != null
-            ? new[] { new Cobryx.Api.Contracts.V1.Common.ValidationError("_global", "DOMAIN_ERROR", rawErrors.ToString() ?? string.Empty) }
-            : null;
+        if (structuredErrors == null)
+        {
+            var rawErrors = metadata?.GetValueOrDefault("errors");
+            if (rawErrors != null)
+            {
+                structuredErrors = new[] { new ValidationError("_global", "DOMAIN_ERROR", rawErrors.ToString() ?? string.Empty) };
+            }
+        }
 
-        var response = ApiResponseFactory.Error(
+        var response = Cobryx.Api.Contracts.V1.Common.ApiResponseFactory.Error(
             errorCode: errorCode.Value,
             numericCode: numericCode,
             errors: structuredErrors,

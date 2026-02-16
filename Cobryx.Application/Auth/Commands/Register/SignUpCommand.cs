@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Cobryx.Domain.Exceptions.Users;
 using Cobryx.Domain.Exceptions.System;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Auth.Commands.Register;
 
@@ -22,8 +23,9 @@ public record SignUpCommand(
     string Email,
     string Password,
     bool MarketingConsent = false,
-    string? TermsVersion = "v1.0",
-    string? CaptchaToken = null) : IRequest<Result<Guid>>;
+    string? TermsVersion = CobryxDefaults.TermsVersion,
+    string? CaptchaToken = null,
+    string? ReturnUrl = null) : IRequest<Result<Guid>>;
 
 public class SignUpValidator : AbstractValidator<SignUpCommand>
 {
@@ -86,7 +88,7 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
         if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
             throw new UserEmailAlreadyExistsException();
 
-        var ownerRole = await _roleRepository.GetByNameAsync("Owner", cancellationToken);
+        var ownerRole = await _roleRepository.GetByNameAsync(Role.Constants.Owner, cancellationToken);
         if (ownerRole == null) throw new SystemConfigurationException();
 
         var tenant = new Tenant(request.BusinessName);
@@ -94,7 +96,7 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
 
         var consent = new Cobryx.Domain.ValueObjects.LegalConsent(
             true,
-            request.TermsVersion ?? "v1.0",
+            request.TermsVersion ?? CobryxDefaults.TermsVersion,
             _httpContextService.GetIpAddress(),
             _httpContextService.GetUserAgent());
 
@@ -117,12 +119,25 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
         user.UpdateVerificationResend();
 
         await _userRepository.AddAsync(user, cancellationToken);
+
+        // Create TenantSubscription on Starter (free) plan
+        var dbContext = (DbContext)_unitOfWork;
+        var starterPlan = await dbContext.Set<SubscriptionPlan>()
+            .FirstOrDefaultAsync(p => p.Tier == PlanTier.Starter && p.IsActive, cancellationToken);
+
+        if (starterPlan != null)
+        {
+            var subscription = new TenantSubscription(tenant.Id, starterPlan.Id, DateTime.UtcNow);
+            dbContext.Set<TenantSubscription>().Add(subscription);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var baseUrl = request.ReturnUrl ?? _appOptions.AppUrl;
         await _emailService.SendEmailAsync(
             user.Email,
             "Verifica tu cuenta Cobryx",
-            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
+            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {baseUrl}/verify?token={tokenValue}",
             cancellationToken);
 
         return Result.Success(user.Id);
