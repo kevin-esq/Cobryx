@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.MultiTenancy;
@@ -27,7 +28,7 @@ public class CurrentUserProvider : ICurrentUserProvider
 
     public Guid? GetSessionId()
     {
-        var sessionIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sid");
+        var sessionIdStr = _httpContextAccessor.HttpContext?.User?.FindFirstValue(CobryxClaimTypes.SessionId);
 
         if (Guid.TryParse(sessionIdStr, out var sessionId))
         {

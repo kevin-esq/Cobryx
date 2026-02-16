@@ -63,7 +63,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var client = _factory.CreateClient();
 
         var command = new { Email = "not-an-email", Password = "123" };
-        var response = await client.PostAsJsonAsync("/api/auth/login", command);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
@@ -111,14 +111,14 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         var uniqueEmail = $"test-{Guid.NewGuid()}@example.com";
         var command = new { BusinessName = "Test Biz", Email = uniqueEmail, Password = "Password123!", FirstName = "Test", LastName = "User" };
-        var response = await client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/signup", command);
         var signupResult = await response.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<Guid>>();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"because signup should succeed. Response: {await response.Content.ReadAsStringAsync()}");
 
         await Task.Delay(100);
 
         recordedValue.Should().BeGreaterThan(0);
-        recordedCode.Should().Be("AUTH.SIGNUP.VERIFICATION_REQUIRED");
+        recordedCode.Should().Be("AUTH.USER.VERIFICATION_REQUIRED");
         recordedModule.Should().Be("Auth");
     }
 
@@ -150,7 +150,7 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
         var productPayload = new CreateProductRequest("Test Product", "Test Description", 100.00m, "MXN");
-        var response = await client.PostAsJsonAsync("/api/financial/products", productPayload);
+        var response = await client.PostAsJsonAsync("/api/v1/financial/products", productPayload);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"because the token should be valid and payload is correct. Body: {await response.Content.ReadAsStringAsync()}");
 

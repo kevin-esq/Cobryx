@@ -45,7 +45,7 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var email = $"success_test_{Guid.NewGuid()}@example.com";
         var command = new SignUpCommand("Success Corp", "Test", "User", email, "SecurePass123!@#");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/signup", command);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -53,7 +53,7 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var result = JsonSerializer.Deserialize<JsonElement>(json);
 
         result.GetProperty("success").GetBoolean().Should().BeTrue();
-        result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.SIGNUP.VERIFICATION_REQUIRED");
+        result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.USER.VERIFICATION_REQUIRED");
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
     {
         var email = $"login_test_{Guid.NewGuid()}@example.com";
         var signupCommand = new SignUpCommand("Login Corp", "Test", "User", email, "SecurePass123!@#");
-        await _client.PostAsJsonAsync("/api/auth/signup", signupCommand);
+        await _client.PostAsJsonAsync("/api/v1/auth/signup", signupCommand);
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -75,7 +75,7 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         }
 
         var loginCommand = new LoginCommand(email, "SecurePass123!@#");
-        var response = await _client.PostAsJsonAsync("/api/auth/login", loginCommand);
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginCommand);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -83,6 +83,6 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var result = JsonSerializer.Deserialize<JsonElement>(json);
 
         result.GetProperty("success").GetBoolean().Should().BeTrue();
-        result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.LOGIN.COMPLETED");
+        result.GetProperty("outcomeCode").GetString().Should().Be("AUTH.USER.LOGIN_SUCCESS");
     }
 }

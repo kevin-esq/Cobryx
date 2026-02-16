@@ -29,14 +29,14 @@ public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionComma
     public async Task<Result> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
 
-        if (subscription == null) return Result.Failure("Subscription not found.");
+        if (subscription == null) return Result.Failure(DomainErrorCode.Subscription.NotFound);
 
         if (subscription.Status == SubscriptionStatus.Cancelled)
-            return Result.Failure("Subscription is already cancelled.");
+            return Result.Failure(DomainErrorCode.Subscription.AlreadyCancelled);
 
         // Grace period logic: 7 days from now
         var gracePeriodEnd = DateTime.UtcNow.AddDays(7);

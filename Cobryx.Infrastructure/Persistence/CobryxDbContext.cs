@@ -184,6 +184,18 @@ public class CobryxDbContext : DbContext, IUnitOfWork
             .HasIndex(l => new { l.TenantId, l.IsDeleted });
 
         modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Priority)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
+            .Property(s => s.Category)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<SupportTicket>()
             .HasIndex(s => new { s.TenantId, s.Status });
 
         base.OnModelCreating(modelBuilder);

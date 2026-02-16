@@ -22,11 +22,19 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
             foreach (var table in tables)
             {
-                migrationBuilder.AddColumn<DateTime>(
-                    name: "DeletedAt",
-                    table: table,
-                    type: "timestamp with time zone",
-                    nullable: true);
+                if (migrationBuilder.ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
+                {
+                    // PostgreSQL supports ADD COLUMN IF NOT EXISTS
+                    migrationBuilder.Sql($"ALTER TABLE \"{table}\" ADD COLUMN IF NOT EXISTS \"DeletedAt\" timestamp with time zone;");
+                }
+                else
+                {
+                    migrationBuilder.AddColumn<DateTime>(
+                        name: "DeletedAt",
+                        table: table,
+                        type: "timestamp with time zone",
+                        nullable: true);
+                }
 
                 // For SQLite tests, we need to remove PG-specific concurrency columns 
                 // that might have been added by legacy migrations or designer files.

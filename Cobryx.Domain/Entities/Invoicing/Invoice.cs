@@ -41,7 +41,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         TotalPaid = null!;
     }
 
-    public Invoice(Guid tenantId, Guid customerId, string invoiceNumber, DateTime issueDate, DateTime dueDate, Guid? installmentId = null, string currency = "MXN")
+    public Invoice(Guid tenantId, Guid customerId, string invoiceNumber, DateTime issueDate, DateTime dueDate, Guid? installmentId = null, string currency = CobryxDefaults.Currency)
     {
         TenantId = tenantId;
         CustomerId = customerId;

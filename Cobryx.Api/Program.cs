@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Domain.Common;
 using Microsoft.Extensions.Options;
 using Cobryx.Application.Common.Observability;
 using OpenTelemetry.Metrics;
@@ -73,14 +74,16 @@ builder.Services.AddSwaggerGen(c =>
 
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
+    c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 
     var appXmlFile = "Cobryx.Application.xml";
     var appXmlPath = Path.Combine(AppContext.BaseDirectory, appXmlFile);
     if (File.Exists(appXmlPath))
     {
-        c.IncludeXmlComments(appXmlPath);
+        c.IncludeXmlComments(appXmlPath, includeControllerXmlComments: true);
     }
+
+    c.EnableAnnotations();
 });
 
 builder.Services.AddControllers(options =>
@@ -92,6 +95,10 @@ builder.Services.AddControllers(options =>
 .AddJsonOptions(json =>
 {
     json.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+})
+.ConfigureApiBehaviorOptions(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
 });
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
@@ -115,16 +122,16 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim("permissions", "customers:view"));
-    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim("permissions", "customers:create"));
-    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim("permissions", "credits:view"));
-    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim("permissions", "credits:create"));
-    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim("permissions", "payments:apply"));
-    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim("permissions", "tenant:manage"));
-    options.AddPolicy("EmailVerified", policy => policy.RequireClaim("email_verified", "true"));
+    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:view"));
+    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:create"));
+    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:view"));
+    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:create"));
+    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "payments:apply"));
+    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "tenant:manage"));
+    options.AddPolicy("EmailVerified", policy => policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true"));
     options.AddPolicy("AccountVerified", policy =>
-        policy.RequireClaim("email_verified", "true")
-              .RequireClaim("requires_onboarding", "false"));
+        policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true")
+              .RequireClaim(CobryxClaimTypes.RequiresOnboarding, "false"));
 });
 
 builder.Services.AddApiVersioning(options =>
@@ -132,7 +139,13 @@ builder.Services.AddApiVersioning(options =>
     options.DefaultApiVersion = new ApiVersion(1, 0);
     options.AssumeDefaultVersionWhenUnspecified = true;
     options.ReportApiVersions = true;
-    options.ApiVersionReader = new HeaderApiVersionReader("X-Api-Version");
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new HeaderApiVersionReader("X-Api-Version"),
+        new UrlSegmentApiVersionReader());
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
 });
 
 builder.Services.AddCors(options =>

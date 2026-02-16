@@ -2,8 +2,9 @@ using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Entities;
-using Microsoft.Extensions.Configuration;
+using Cobryx.Infrastructure.Configuration;
 using Cobryx.Domain.Common;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Security;
 
@@ -11,12 +12,13 @@ public class Fido2Service : IFido2Service
 {
     private readonly IFido2 _fido2;
 
-    public Fido2Service(IConfiguration configuration)
+    public Fido2Service(IOptions<Fido2Options> options)
     {
-        var origins = new HashSet<string> { configuration["Fido2:Origin"] ?? "http://localhost:3000" };
+        var config = options.Value;
+        var origins = new HashSet<string> { config.Origin };
         _fido2 = new Fido2(new Fido2Configuration
         {
-            ServerDomain = configuration["Fido2:ServerDomain"] ?? "localhost",
+            ServerDomain = config.ServerDomain,
             ServerName = "Cobryx",
             Origins = origins
         });

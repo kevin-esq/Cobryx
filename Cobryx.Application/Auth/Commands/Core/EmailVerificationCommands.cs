@@ -32,14 +32,14 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 
         if (user == null)
         {
-            return Result.Failure("AUTH.TOKEN.INVALID");
+            return Result.Failure(DomainErrorCode.Auth.InvalidToken);
         }
 
         var token = user.SecurityTokens.FirstOrDefault(t => t.TokenHash == tokenHash && t.Type == SecurityTokenType.EmailVerification);
 
         if (token is not { IsActive: true })
         {
-            return Result.Failure("AUTH.TOKEN.INVALID");
+            return Result.Failure(DomainErrorCode.Auth.InvalidToken);
         }
 
         token.Use();
@@ -53,7 +53,7 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 }
 
 
-public record ResendVerificationCommand(string Email, string? CaptchaToken = null) : IRequest<Result>;
+public record ResendVerificationCommand(string Email, string? CaptchaToken = null, string? ReturnUrl = null) : IRequest<Result>;
 
 public class ResendVerificationValidator : AbstractValidator<ResendVerificationCommand>
 {
@@ -124,10 +124,11 @@ public class ResendVerificationHandler : IRequestHandler<ResendVerificationComma
         await _userRepository.UpdateAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var baseUrl = request.ReturnUrl ?? _appOptions.AppUrl;
         await _emailService.SendEmailAsync(
             user.Email,
             "Verifica tu cuenta Cobryx",
-            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {_appOptions.AppUrl}/verify?token={tokenValue}",
+            $"Hola {user.FirstName}, por favor verifica tu cuenta haciendo clic aquí: {baseUrl}/verify?token={tokenValue}",
             cancellationToken);
 
         return Result.Success();

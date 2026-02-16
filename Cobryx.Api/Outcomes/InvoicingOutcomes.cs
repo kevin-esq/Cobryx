@@ -4,40 +4,40 @@ public static class InvoicingOutcomes
 {
     public static class Taxes
     {
-        private const string Prefix = "FINANCIAL.TAX";
-        public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
-        public const string Created = $"{Prefix}.CREATED";
-        public const string Deleted = $"{Prefix}.DELETED";
+        private const string Prefix = "BILLING.TAX";
+        public const string SearchCompleted = $"{Prefix}.SEARCH_SUCCESS";
+        public const string Created = $"{Prefix}.CREATE_SUCCESS";
+        public const string Deleted = $"{Prefix}.DELETE_SUCCESS";
 
         public const string ValidationFailed = $"{Prefix}.VALIDATION_FAILED";
-        public const string Conflict = $"{Prefix}.CONFLICT";
+        public const string Conflict = $"{Prefix}.CONFLICT_ERROR";
     }
 
     public static class PaymentMethods
     {
-        private const string Prefix = "FINANCIAL.PAYMENT_METHOD";
-        public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
-        public const string Created = $"{Prefix}.CREATED";
-        public const string Deleted = $"{Prefix}.DELETED";
+        private const string Prefix = "BILLING.PAYMENT_METHOD";
+        public const string SearchCompleted = $"{Prefix}.SEARCH_SUCCESS";
+        public const string Created = $"{Prefix}.CREATE_SUCCESS";
+        public const string Deleted = $"{Prefix}.DELETE_SUCCESS";
     }
 
     public static class Invoices
     {
-        private const string Prefix = "FINANCIAL.INVOICE";
-        public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
-        public const string Created = $"{Prefix}.CREATED";
-        public const string Issued = $"{Prefix}.ISSUED";
-        public const string Paid = $"{Prefix}.PAID";
-        public const string PaymentApplied = $"{Prefix}.PAYMENT_APPLIED";
-        public const string Cancelled = $"{Prefix}.CANCELLED";
+        private const string Prefix = "BILLING.INVOICE";
+        public const string SearchCompleted = $"{Prefix}.SEARCH_SUCCESS";
+        public const string Created = $"{Prefix}.CREATE_SUCCESS";
+        public const string Issued = $"{Prefix}.ISSUE_SUCCESS";
+        public const string Paid = $"{Prefix}.PAYMENT_SUCCESS";
+        public const string PaymentApplied = $"{Prefix}.ALLOCATION_SUCCESS";
+        public const string Cancelled = $"{Prefix}.CANCEL_SUCCESS";
     }
 
     public static class Payments
     {
-        private const string Prefix = "FINANCIAL.PAYMENT";
-        public const string Initiated = $"{Prefix}.INITIATED";
-        public const string Completed = $"{Prefix}.COMPLETED";
-        public const string Failed = $"{Prefix}.FAILED";
+        private const string Prefix = "BILLING.PAYMENT";
+        public const string Initiated = $"{Prefix}.INTENT_CREATED";
+        public const string Completed = $"{Prefix}.PROCESS_SUCCESS";
+        public const string Failed = $"{Prefix}.PROCESS_FAILED";
     }
 
     public static class Webhooks
