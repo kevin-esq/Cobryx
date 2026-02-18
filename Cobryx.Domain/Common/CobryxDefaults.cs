@@ -11,4 +11,5 @@ public static class CobryxDefaults
     public const string FallbackIpAddress = "0.0.0.0";
     public const string UnknownValue = "Unknown";
     public const string TermsVersion = "v1.0";
+    public const string DefaultPlanTier = "Free";
 }

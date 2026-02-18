@@ -47,10 +47,10 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
     public async Task<Result<AuthResult>> Handle(CompleteFido2AssertionCommand request, CancellationToken cancellationToken)
     {
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
-        if (userId == null) return Result.Failure<AuthResult>("Invalid or expired MFA token.");
+        if (userId == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<AuthResult>("User not found.");
+        if (user == null) return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Completing FIDO2 assertion for user: {Email}", user.Email);
 
@@ -61,7 +61,7 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         {
             _auditService.LogFailure("VerifyFido2", user.Id.ToString(), ipAddress, "Invalid passkey assertion");
             await _attemptService.IncrementAttemptsAsync(ipAddress);
-            return Result.Failure<AuthResult>("Invalid passkey assertion.");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidCredentials);
         }
 
         await _attemptService.ResetAttemptsAsync(ipAddress);

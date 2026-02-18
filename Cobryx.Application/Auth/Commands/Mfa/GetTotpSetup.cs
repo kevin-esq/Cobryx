@@ -32,10 +32,10 @@ public class GetTotpSetupHandler : IRequestHandler<GetTotpSetupQuery, Result<Tot
     public async Task<Result<TotpSetupResult>> Handle(GetTotpSetupQuery request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) return Result.Failure<TotpSetupResult>("User not authenticated.");
+        if (userId == null) return Result.Failure<TotpSetupResult>(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<TotpSetupResult>("User not found.");
+        if (user == null) return Result.Failure<TotpSetupResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Generating TOTP setup for user: {Email}", user.Email);
 

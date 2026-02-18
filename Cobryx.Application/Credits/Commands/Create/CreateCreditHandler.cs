@@ -28,7 +28,7 @@ public class CreateCreditHandler : IRequestHandler<CreateCreditCommand, Result<G
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
         {
-            return Result.Failure<Guid>("Tenant context is missing.");
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
         }
 
         var principal = new Money(request.Amount, request.Currency);

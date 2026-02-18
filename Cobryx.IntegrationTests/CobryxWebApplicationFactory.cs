@@ -93,10 +93,12 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddSingleton<ICaptchaService, MockCaptchaService>();
 
-            var attemptDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IAuthAttemptService));
-            if (attemptDescriptor != null) services.Remove(attemptDescriptor);
-
             services.AddSingleton<IAuthAttemptService, MockAuthAttemptService>();
+
+            var stripeDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IStripeService));
+            if (stripeDescriptor != null) services.Remove(stripeDescriptor);
+
+            services.AddSingleton<IStripeService, MockStripeService>();
 
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();

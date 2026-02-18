@@ -44,7 +44,7 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     /// Syncs subscription state from Stripe after checkout completion.
     /// Stripe is the source of truth for trial dates and subscription IDs.
     /// </summary>
-    public void SyncFromStripe(string stripeSubscriptionId, SubscriptionStatus status, DateTime? trialEnd, Guid planId)
+    public void SyncFromStripe(string stripeSubscriptionId, SubscriptionStatus status, DateTime? trialEnd, Guid planId, DateTime now)
     {
         StripeSubscriptionId = stripeSubscriptionId;
         PlanId = planId;
@@ -54,7 +54,7 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
             Status = SubscriptionStatus.Trial;
             TrialEndsAtUtc = trialEnd.Value;
             EndDate = trialEnd.Value;
-            AddDomainEvent(new SubscriptionTrialStartedEvent(TenantId, PlanId, trialEnd.Value, DateTime.UtcNow));
+            AddDomainEvent(new SubscriptionTrialStartedEvent(TenantId, PlanId, trialEnd.Value, now));
         }
         else if (status == SubscriptionStatus.Active)
         {
@@ -67,34 +67,38 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     }
 
     /// <summary>
-    /// Transitions from Trial/PastDue to Active after successful payment.
-    /// Called when Stripe sends invoice.paid.
+    /// Transitions the subscription to 'Active' status (Paid).
+    /// Typically called when Stripe confirms the first invoice payment or a renewal.
     /// </summary>
-    public void ActivateFromPayment()
+    public void ActivateFromPayment(DateTime now)
     {
-        if (Status == SubscriptionStatus.Active) return; // Idempotent
+        if (Status == SubscriptionStatus.Active) return;
 
         Status = SubscriptionStatus.Active;
         TrialEndsAtUtc = null;
         EndDate = null;
         CancelledAtUtc = null;
         GracePeriodEndsAtUtc = null;
-        AddDomainEvent(new SubscriptionActivatedEvent(TenantId, PlanId, DateTime.UtcNow));
+        AddDomainEvent(new SubscriptionActivatedEvent(TenantId, PlanId, now));
         UpdateTimestamp();
     }
 
     /// <summary>
-    /// Marks subscription as PastDue when Stripe payment fails.
+    /// Flags the subscription as 'PastDue' due to a transient payment failure.
+    /// Access is usually preserved during this state until Stripe retries succeed or fail finally.
     /// </summary>
-    public void HandlePaymentFailed()
+    public void HandlePaymentFailed(DateTime now)
     {
-        if (Status == SubscriptionStatus.PastDue) return; // Idempotent
+        if (Status == SubscriptionStatus.PastDue) return;
 
         Status = SubscriptionStatus.PastDue;
-        AddDomainEvent(new SubscriptionPaymentFailedEvent(TenantId, PlanId, DateTime.UtcNow));
+        AddDomainEvent(new SubscriptionPaymentFailedEvent(TenantId, PlanId, now));
         UpdateTimestamp();
     }
 
+    /// <summary>
+    /// Updates the subscription plan during a tier change.
+    /// </summary>
     public void UpdatePlan(SubscriptionPlan newPlan)
     {
         Plan = newPlan;
@@ -106,19 +110,27 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void ExecuteCancellation(DateTime gracePeriodEnd, CancellationReason? reason = null, string? feedback = null)
+    /// <summary>
+    /// Records an intentional cancellation by the user.
+    /// The subscription remains technically active until the end of the current billing cycle (Grace Period).
+    /// </summary>
+    public void ExecuteCancellation(DateTime gracePeriodEnd, DateTime now, CancellationReason? reason = null, string? feedback = null)
     {
-        if (Status == SubscriptionStatus.Cancelled) return; // Idempotent
+        if (Status == SubscriptionStatus.Cancelled) return;
 
         Status = SubscriptionStatus.Cancelled;
-        CancelledAtUtc = DateTime.UtcNow;
+        CancelledAtUtc = now;
         GracePeriodEndsAtUtc = gracePeriodEnd;
         CancellationReason = reason;
         CancellationFeedback = feedback;
-        AddDomainEvent(new SubscriptionCancelledEvent(TenantId, reason, DateTime.UtcNow));
+        AddDomainEvent(new SubscriptionCancelledEvent(TenantId, reason, now));
         UpdateTimestamp();
     }
 
+    /// <summary>
+    /// Hard termination of the subscription (Unpaid or Administrative).
+    /// Prevents all access to the application.
+    /// </summary>
     public void Terminate(DateTime endDate, CancellationReason? reason = null, string? feedback = null)
     {
         EndDate = endDate;
@@ -128,11 +140,15 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public bool IsActive(DateTime now) => Status == SubscriptionStatus.Active || (Status == SubscriptionStatus.Trial && (EndDate == null || EndDate > now));
+    /// <summary> Checks if the subscription is currently valid (Active or Trial) and not expired. </summary>
+    public bool IsActive(DateTime now) => (Status == SubscriptionStatus.Active || Status == SubscriptionStatus.Trial) && (EndDate == null || EndDate > now);
 
+    /// <summary> Checks if an active subscription has reached its expiration date without renewal. </summary>
     public bool IsExpired(DateTime now) => (Status == SubscriptionStatus.Active || Status == SubscriptionStatus.Trial) && EndDate != null && EndDate <= now;
 
+    /// <summary> Checks if the user is in the 'Cancelled' grace period awaiting final termination. </summary>
     public bool IsWithinGracePeriod(DateTime now) => Status == SubscriptionStatus.Cancelled && GracePeriodEndsAtUtc != null && GracePeriodEndsAtUtc > now;
 
+    /// <summary> Checks if the subscription is completely blocked from access. </summary>
     public bool IsBlocked(DateTime now) => Status == SubscriptionStatus.Terminated || (Status == SubscriptionStatus.Cancelled && (GracePeriodEndsAtUtc == null || GracePeriodEndsAtUtc <= now));
 }

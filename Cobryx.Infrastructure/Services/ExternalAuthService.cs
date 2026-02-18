@@ -22,8 +22,8 @@ public class ExternalAuthService : IExternalAuthService
         return provider switch
         {
             ExternalProvider.Google => await VerifyGoogleTokenAsync(token),
-            ExternalProvider.Microsoft => Result.Failure<ExternalUserProfile>("Microsoft login not implemented yet."),
-            _ => Result.Failure<ExternalUserProfile>("Unsupported provider.")
+            ExternalProvider.Microsoft => Result.Failure<ExternalUserProfile>(DomainErrorCode.Auth.ExternalLoginFailed),
+            _ => Result.Failure<ExternalUserProfile>(DomainErrorCode.Auth.ProviderNotSupported)
         };
     }
 
@@ -53,12 +53,12 @@ public class ExternalAuthService : IExternalAuthService
         catch (InvalidJwtException ex)
         {
             _logger.LogWarning(ex, "Invalid Google Token");
-            return Result.Failure<ExternalUserProfile>("Invalid Google Token.");
+            return Result.Failure<ExternalUserProfile>(DomainErrorCode.Auth.InvalidToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying Google Token");
-            return Result.Failure<ExternalUserProfile>("External authentication failed.");
+            return Result.Failure<ExternalUserProfile>(DomainErrorCode.Auth.ExternalLoginFailed);
         }
     }
 }

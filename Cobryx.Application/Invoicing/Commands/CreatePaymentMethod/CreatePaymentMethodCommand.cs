@@ -28,11 +28,11 @@ public class CreatePaymentMethodHandler : IRequestHandler<CreatePaymentMethodCom
     public async Task<Result<Guid>> Handle(CreatePaymentMethodCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         var existing = await _paymentMethodRepository.GetByCodeAsync(tenantId.Value, request.Code);
         if (existing != null)
-            return Result.Failure<Guid>($"Payment method with code {request.Code} already exists.");
+            return Result.Failure<Guid>(DomainErrorCode.Invoicing.PaymentMethodAlreadyExists);
 
         var paymentMethod = new PaymentMethod(
             tenantId.Value,

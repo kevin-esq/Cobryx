@@ -1,10 +1,12 @@
+using Cobryx.Domain.Common;
+
 namespace Cobryx.Api.Outcomes;
 
 public static class PaymentOutcomes
 {
     private const string Prefix = "BILLING.PAYMENT";
 
-    public const string Registered = $"{Prefix}.REGISTER_SUCCESS";
-    public const string Refunded = $"{Prefix}.REFUND_SUCCESS";
-    public const string SearchCompleted = $"{Prefix}.SEARCH_SUCCESS";
+    public static readonly Outcome Created = new($"{Prefix}.CREATED_SUCCESS", OutcomeCategory.Success, "Payment created successfully.");
+    public static readonly Outcome Processed = new($"{Prefix}.PROCESSED_SUCCESS", OutcomeCategory.Success, "Payment processed successfully.");
+    public static readonly Outcome SearchCompleted = new($"{Prefix}.SEARCH_SUCCESS", OutcomeCategory.Success, "Payment search completed.");
 }

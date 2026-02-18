@@ -1,15 +1,17 @@
+using Cobryx.Domain.Common;
+
 namespace Cobryx.Api.Outcomes;
 
 public static class CreditOutcomes
 {
     private const string Prefix = "CREDIT";
 
-    public const string Created = $"{Prefix}.CREATED";
-    public const string ScheduleGenerated = $"{Prefix}.SCHEDULE.GENERATED";
-    public const string Liquidated = $"{Prefix}.LIQUIDATED";
-    public const string SearchCompleted = $"{Prefix}.SEARCH.COMPLETED";
+    public static readonly Outcome Created = new($"{Prefix}.CREATED_SUCCESS", OutcomeCategory.Success, "Credit created successfully.");
+    public static readonly Outcome SearchCompleted = new($"{Prefix}.SEARCH_SUCCESS", OutcomeCategory.Success, "Credit search completed.");
+    public static readonly Outcome PaymentRegistered = new($"{Prefix}.PAYMENT_SUCCESS", OutcomeCategory.Success, "Credit payment registered.");
+    public static readonly Outcome InstallmentsGenerated = new($"{Prefix}.INSTALLMENTS_SUCCESS", OutcomeCategory.Success, "Credit installments generated.");
+    public static readonly Outcome LateFeesApplied = new($"{Prefix}.LATE_FEES_SUCCESS", OutcomeCategory.Success, "Late fees applied to credit.");
 
-    public const string ValidationFailed = $"{Prefix}.VALIDATION_FAILED";
-    public const string PolicyViolation = $"{Prefix}.POLICY_VIOLATION";
-    public const string Conflict = $"{Prefix}.CONFLICT";
+    public static readonly Outcome ValidationFailed = new($"{Prefix}.VALIDATION_FAILED", OutcomeCategory.BusinessError, "Credit validation failed.");
+    public static readonly Outcome Conflict = new($"{Prefix}.CONFLICT_ERROR", OutcomeCategory.BusinessError, "Credit conflict occurred.");
 }

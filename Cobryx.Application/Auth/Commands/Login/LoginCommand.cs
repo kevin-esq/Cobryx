@@ -77,7 +77,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 _logger.LogWarning("Login lockout: {Email} from {IP}. Backoff: {Backoff}s", request.Email, ipAddress, backoffSeconds);
 
                 await EnsureUniformTiming(startTime, 500, cancellationToken);
-                return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
+                return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidCredentials);
             }
 
             var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
@@ -94,7 +94,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                         _auditService.LogFailure("Login", user.Id.ToString(), ipAddress, "Email not verified");
                         await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
                         await EnsureUniformTiming(startTime, 500, cancellationToken);
-                        return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
+                        return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidCredentials);
                     }
                     needsRehash = _passwordHasher.IsHashOutdated(user.PasswordHash);
                 }
@@ -111,7 +111,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
                 await _attemptService.IncrementAttemptsAsync(ipAddress, request.Email);
 
                 await EnsureUniformTiming(startTime, 500, cancellationToken);
-                return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
+                return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidCredentials);
             }
 
             await _attemptService.ResetAttemptsAsync(ipAddress, request.Email);
@@ -145,7 +145,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
         {
             _logger.LogError(ex, "Login processing failed unexpectedly for {Email}", request.Email);
             await EnsureUniformTiming(startTime, 500, cancellationToken);
-            return Result.Failure<AuthResult>("AUTH.INVALID_CREDENTIALS");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidCredentials);
         }
     }
 

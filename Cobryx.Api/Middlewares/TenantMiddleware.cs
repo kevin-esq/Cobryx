@@ -1,3 +1,4 @@
+using Cobryx.Api.Common;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -43,13 +44,14 @@ public class TenantMiddleware
 
         if (string.IsNullOrEmpty(tenantId))
         {
-            var path = context.Request.Path.Value?.ToLowerInvariant();
+            var path = context.Request.Path.Value?.ToLower();
             if (path != null && (
-                path.Contains("/health") ||
-                path.Contains("/auth") ||
-                path.StartsWith("/swagger") ||
-                path.StartsWith("/hangfire") ||
-                path == "/"))
+                path.StartsWith(ApiEndpoints.Health) ||
+                path.StartsWith(ApiEndpoints.Auth) ||
+                path.StartsWith(ApiEndpoints.Webhooks) ||
+                path.StartsWith(ApiEndpoints.Swagger) ||
+                path.StartsWith(ApiEndpoints.Hangfire) ||
+                path == ApiEndpoints.Root))
             {
                 await _next(context);
                 return;

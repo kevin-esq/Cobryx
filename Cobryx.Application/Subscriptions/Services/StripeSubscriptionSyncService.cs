@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
@@ -8,23 +9,31 @@ using Microsoft.Extensions.Logging;
 namespace Cobryx.Application.Subscriptions.Services;
 
 /// <summary>
-/// Idempotent sync service for Stripe subscription webhook events.
-/// Handles out-of-order delivery, duplicates, and late arrivals.
-/// Stripe is the source of truth — never invent local state.
+/// Orchestrates the synchronization of subscription states between Stripe (Source of Truth) and the local database.
 /// </summary>
+/// <remarks>
+/// Design Principles:
+/// 1. Authoritative State: We never "calculate" the next state locally. We always fetch the latest subscription
+///    and price details from Stripe once a webhook event signals a change.
+/// 2. Idempotency: Uses the 'ProcessedStripeEvents' table to ensure every Stripe event ID is handled exactly once.
+/// 3. Cross-Provider Integrity: Detects database-level race conditions to support concurrent webhook deliveries.
+/// </remarks>
 public class StripeSubscriptionSyncService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStripeService _stripeService;
+    private readonly IClock _clock;
     private readonly ILogger<StripeSubscriptionSyncService> _logger;
 
     public StripeSubscriptionSyncService(
         IUnitOfWork unitOfWork,
         IStripeService stripeService,
+        IClock clock,
         ILogger<StripeSubscriptionSyncService> logger)
     {
         _unitOfWork = unitOfWork;
         _stripeService = stripeService;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -34,11 +43,13 @@ public class StripeSubscriptionSyncService
     /// Handles checkout.session.completed: store Stripe IDs and sync subscription state.
     /// </summary>
     public async Task HandleCheckoutCompletedAsync(
+        string stripeEventId,
         string stripeCustomerId,
         string stripeSubscriptionId,
         Guid tenantId,
         CancellationToken ct = default)
     {
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
         var subscription = await GetSubscriptionAsync(tenantId, ct);
         if (subscription == null)
         {
@@ -46,9 +57,77 @@ public class StripeSubscriptionSyncService
             return;
         }
 
-        // Store the Stripe Customer ID if not already set
+        // Store the Stripe Customer ID if not already set (Lazy association)
         if (string.IsNullOrWhiteSpace(subscription.StripeCustomerId))
             subscription.SetStripeCustomerId(stripeCustomerId);
+
+        await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.CheckoutSessionCompleted, ct);
+    }
+
+    /// <summary>
+    /// Handles invoice.paid: activate subscription after successful payment.
+    /// </summary>
+    public async Task HandleInvoicePaidAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
+    {
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
+        if (subscription == null)
+        {
+            _logger.LogWarning("No subscription found for Stripe SubscriptionId {StripeSubscriptionId} during invoice.paid", stripeSubscriptionId);
+            return;
+        }
+
+        await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.InvoicePaid, ct);
+    }
+
+    /// <summary>
+    /// Handles invoice.payment_failed: mark as PastDue.
+    /// </summary>
+    public async Task HandleInvoicePaymentFailedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
+    {
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
+        if (subscription == null) return;
+
+        await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.InvoicePaymentFailed, ct);
+    }
+
+    /// <summary>
+    /// Handles customer.subscription.updated: sync status from Stripe.
+    /// </summary>
+    public async Task HandleSubscriptionUpdatedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
+    {
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
+        if (subscription == null) return;
+
+        await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.SubscriptionUpdated, ct);
+    }
+
+    /// <summary>
+    /// Handles customer.subscription.deleted: cancel with grace period.
+    /// </summary>
+    public async Task HandleSubscriptionDeletedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
+    {
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
+        if (subscription == null) return;
+
+        await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.SubscriptionDeleted, ct);
+    }
+
+    /// <summary>
+    /// Executes the authoritative synchronization by fetching the latest state from Stripe.
+    /// This pattern gracefully handles delayed or out-of-order webhook delivery.
+    /// </summary>
+    private async Task SyncAuthoritativeStateAsync(
+        string stripeEventId,
+        string stripeSubscriptionId,
+        TenantSubscription subscription,
+        string eventType,
+        CancellationToken ct)
+    {
+        var oldStatus = subscription.Status;
 
         // Fetch current state from Stripe (source of truth)
         var stripeState = await _stripeService.GetSubscriptionStateAsync(stripeSubscriptionId, ct);
@@ -58,84 +137,21 @@ public class StripeSubscriptionSyncService
         var plan = await Db.Set<SubscriptionPlan>()
             .FirstOrDefaultAsync(p => p.StripePriceId == stripeState.PriceId, ct);
 
-        var planId = plan?.Id ?? subscription.PlanId;
+        var newPlanId = plan?.Id ?? subscription.PlanId;
 
-        subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, planId);
+        subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, newPlanId, _clock.UtcNow);
 
+        Db.Set<ProcessedStripeEvent>().Add(new ProcessedStripeEvent(stripeEventId, eventType, _clock.UtcNow));
         await _unitOfWork.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Checkout synced for Tenant {TenantId}: Status={Status}, SubscriptionId={StripeSubscriptionId}",
-            tenantId, status, stripeSubscriptionId);
-    }
+            "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",
+            subscription.TenantId, oldStatus, subscription.Status, eventType, stripeEventId);
 
-    /// <summary>
-    /// Handles invoice.paid: activate subscription after successful payment.
-    /// </summary>
-    public async Task HandleInvoicePaidAsync(string stripeSubscriptionId, CancellationToken ct = default)
-    {
-        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null)
+        if (subscription.Status == SubscriptionStatus.PastDue && oldStatus != SubscriptionStatus.PastDue)
         {
-            _logger.LogWarning("No subscription found for Stripe SubscriptionId {StripeSubscriptionId}", stripeSubscriptionId);
-            return;
+            _logger.LogWarning("Payment FAILED for Tenant {TenantId}. Subscription is now PastDue.", subscription.TenantId);
         }
-
-        subscription.ActivateFromPayment();
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        _logger.LogInformation("Subscription activated for Tenant {TenantId} via invoice.paid", subscription.TenantId);
-    }
-
-    /// <summary>
-    /// Handles invoice.payment_failed: mark as PastDue.
-    /// </summary>
-    public async Task HandleInvoicePaymentFailedAsync(string stripeSubscriptionId, CancellationToken ct = default)
-    {
-        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
-
-        subscription.HandlePaymentFailed();
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        _logger.LogWarning("Payment failed for Tenant {TenantId}, status set to PastDue", subscription.TenantId);
-    }
-
-    /// <summary>
-    /// Handles customer.subscription.updated: sync status from Stripe.
-    /// </summary>
-    public async Task HandleSubscriptionUpdatedAsync(string stripeSubscriptionId, CancellationToken ct = default)
-    {
-        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
-
-        var stripeState = await _stripeService.GetSubscriptionStateAsync(stripeSubscriptionId, ct);
-        var status = MapStripeStatus(stripeState.Status);
-
-        var plan = await Db.Set<SubscriptionPlan>()
-            .FirstOrDefaultAsync(p => p.StripePriceId == stripeState.PriceId, ct);
-
-        subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, plan?.Id ?? subscription.PlanId);
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        _logger.LogInformation("Subscription updated for Tenant {TenantId}: Status={Status}", subscription.TenantId, status);
-    }
-
-    /// <summary>
-    /// Handles customer.subscription.deleted: cancel with grace period.
-    /// </summary>
-    public async Task HandleSubscriptionDeletedAsync(string stripeSubscriptionId, CancellationToken ct = default)
-    {
-        var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
-
-        var gracePeriodEnd = DateTime.UtcNow.AddDays(7);
-        subscription.ExecuteCancellation(gracePeriodEnd, CancellationReason.Other);
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        _logger.LogInformation(
-            "Subscription deleted for Tenant {TenantId}, grace period until {GracePeriodEnd}",
-            subscription.TenantId, gracePeriodEnd);
     }
 
     private async Task<TenantSubscription?> GetSubscriptionAsync(Guid tenantId, CancellationToken ct)
@@ -150,13 +166,19 @@ public class StripeSubscriptionSyncService
             .FirstOrDefaultAsync(s => s.StripeSubscriptionId == stripeSubscriptionId, ct);
     }
 
+    private async Task<bool> IsAlreadyProcessedAsync(string eventId, CancellationToken ct)
+    {
+        return await Db.Set<ProcessedStripeEvent>()
+            .AnyAsync(e => e.StripeEventId == eventId, ct);
+    }
+
     private static SubscriptionStatus MapStripeStatus(string stripeStatus) => stripeStatus switch
     {
-        "trialing" => SubscriptionStatus.Trial,
-        "active" => SubscriptionStatus.Active,
-        "past_due" => SubscriptionStatus.PastDue,
-        "canceled" => SubscriptionStatus.Cancelled,
-        "unpaid" => SubscriptionStatus.PastDue,
+        StripeConstants.Statuses.Trialing => SubscriptionStatus.Trial,
+        StripeConstants.Statuses.Active => SubscriptionStatus.Active,
+        StripeConstants.Statuses.PastDue => SubscriptionStatus.PastDue,
+        StripeConstants.Statuses.Canceled => SubscriptionStatus.Cancelled,
+        StripeConstants.Statuses.Unpaid => SubscriptionStatus.PastDue,
         _ => SubscriptionStatus.Active
     };
 }

@@ -31,10 +31,10 @@ public class InitiateFido2RegistrationHandler : IRequestHandler<InitiateFido2Reg
     public async Task<Result<CredentialCreateOptions>> Handle(InitiateFido2RegistrationCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) return Result.Failure<CredentialCreateOptions>("User not authenticated.");
+        if (userId == null) return Result.Failure<CredentialCreateOptions>(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<CredentialCreateOptions>("User not found.");
+        if (user == null) return Result.Failure<CredentialCreateOptions>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Initiating FIDO2 registration for user: {Email}", user.Email);
 

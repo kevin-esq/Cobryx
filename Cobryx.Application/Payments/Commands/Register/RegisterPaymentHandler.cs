@@ -29,13 +29,13 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
         {
-            return Result.Failure<Guid>("Tenant context is missing.");
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
         }
 
         var credit = await _creditRepository.GetByIdAsync(request.CreditId);
         if (credit == null || credit.TenantId != tenantId.Value)
         {
-            return Result.Failure<Guid>("Credit not found.");
+            return Result.Failure<Guid>(DomainErrorCode.Credits.NotFound);
         }
 
         var amount = new Money(request.Amount, request.Currency);

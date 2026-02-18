@@ -44,24 +44,24 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
         var externalUser = externalUserResult.Value;
         if (externalUser == null)
         {
-            return Result.Failure<AuthResult>("Failed to retrieve user information from external provider.");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.ExternalLoginFailed);
         }
 
         var user = await _userRepository.GetByEmailAsync(externalUser.Email);
 
         if (user == null)
         {
-            return Result.Failure<AuthResult>("User does not exist. Please register first.");
+            return Result.Failure<AuthResult>(DomainErrorCode.User.NotRegistered);
         }
 
         if (!user.IsActive)
         {
-            return Result.Failure<AuthResult>("Your account is inactive.");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.AccountInactive);
         }
 
         if (!user.IsEmailVerified)
         {
-            return Result.Failure<AuthResult>("Please verify your email.");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.EmailNotVerified);
         }
 
         var ipAddress = _httpContextService.GetIpAddress() ?? CobryxDefaults.FallbackIpAddress;
