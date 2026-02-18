@@ -41,7 +41,7 @@ public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionComma
         // Grace period logic: 7 days from now
         var gracePeriodEnd = DateTime.UtcNow.AddDays(7);
 
-        subscription.ExecuteCancellation(gracePeriodEnd, request.Reason, request.Feedback);
+        subscription.ExecuteCancellation(gracePeriodEnd, DateTime.UtcNow, request.Reason, request.Feedback);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

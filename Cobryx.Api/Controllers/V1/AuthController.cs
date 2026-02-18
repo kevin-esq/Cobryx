@@ -198,9 +198,9 @@ public class AuthController : CobryxBaseController
 
         var finalResult = result.IsSuccess
             ? Result.Success(mappedResult!)
-            : Result.Failure<AuthResponseContract>(result.Error ?? AuthOutcomes.UnknownError);
+            : Result.Failure<AuthResponseContract>(result.Error!);
 
-        string? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginCompleted;
+        Outcome? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginCompleted;
         return HandleResult(finalResult, code);
     }
 
@@ -248,7 +248,7 @@ public class AuthController : CobryxBaseController
 
         var finalResult = result.IsSuccess
             ? Result.Success(mappedResult!)
-            : Result.Failure<AuthResponseContract>(result.Error ?? AuthOutcomes.UnknownError);
+            : Result.Failure<AuthResponseContract>(result.Error!);
 
         return HandleResult(finalResult, AuthOutcomes.TokenRotated);
     }

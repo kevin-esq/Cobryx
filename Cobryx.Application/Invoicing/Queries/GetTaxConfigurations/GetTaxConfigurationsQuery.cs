@@ -25,7 +25,7 @@ public class GetTaxConfigurationsHandler : IRequestHandler<GetTaxConfigurationsQ
     public async Task<Result<IReadOnlyList<TaxDto>>> Handle(GetTaxConfigurationsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<TaxDto>>("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<TaxDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var taxes = await _taxRepository.GetAllActiveAsync(tenantId.Value);
 

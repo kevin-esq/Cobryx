@@ -35,7 +35,7 @@ public class GetInvoicesHandler : IRequestHandler<GetInvoicesQuery, Result<IRead
     public async Task<Result<IReadOnlyList<InvoiceDto>>> Handle(GetInvoicesQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<InvoiceDto>>("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<InvoiceDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var invoices = await _invoiceRepository.GetAllAsync();
 

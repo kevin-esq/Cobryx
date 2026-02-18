@@ -1,38 +1,37 @@
-# Cobryx Engineering Coding Practices
+# Coding Standards
 
-> Canonical reference for all contributors. Every pull request must comply.
-> Last updated: 2026-02-13
+Canonical reference for coding conventions and domain modeling rules. Every pull request must comply.
+
+For error handling, API response patterns, and controller conventions, see [engineering-practices.md](engineering-practices.md).
 
 ---
 
 ## Table of Contents
 
-- [Cobryx Engineering Coding Practices](#cobryx-engineering-coding-practices)
+- [Coding Standards](#coding-standards)
   - [Table of Contents](#table-of-contents)
   - [1. Make the Domain Impossible to Break](#1-make-the-domain-impossible-to-break)
   - [2. Entities Protect Themselves](#2-entities-protect-themselves)
   - [3. Never Mix Infrastructure with Domain](#3-never-mix-infrastructure-with-domain)
-  - [4. Use Result Pattern for Expected Failures](#4-use-result-pattern-for-expected-failures)
-  - [5. Abstract Time with IClock](#5-abstract-time-with-iclock)
-  - [6. Use Value Objects](#6-use-value-objects)
-  - [7. Validate at the Boundary](#7-validate-at-the-boundary)
-  - [8. Keep Controllers Thin](#8-keep-controllers-thin)
-  - [9. Configuration Always via Options + ValidateOnStart](#9-configuration-always-via-options--validateonstart)
-  - [10. Structured Logging Only](#10-structured-logging-only)
-  - [11. Idempotency in Everything External](#11-idempotency-in-everything-external)
+  - [4. Abstract Time with IClock](#4-abstract-time-with-iclock)
+  - [5. Use Value Objects](#5-use-value-objects)
+  - [6. Validate at the Boundary](#6-validate-at-the-boundary)
+  - [7. Keep Controllers Thin](#7-keep-controllers-thin)
+  - [8. Configuration Always via Options + ValidateOnStart](#8-configuration-always-via-options--validateonstart)
+  - [9. Structured Logging Only](#9-structured-logging-only)
+  - [10. Idempotency in Everything External](#10-idempotency-in-everything-external)
     - [API-Level Idempotency](#api-level-idempotency)
-  - [12. Nullable Reference Types Always Enabled](#12-nullable-reference-types-always-enabled)
-  - [14. Clean Architecture Layer Rules](#14-clean-architecture-layer-rules)
-  - [15. Code Must Scream Intention](#15-code-must-scream-intention)
-  - [16. Null Coalescing Policy](#16-null-coalescing-policy)
+  - [11. Nullable Reference Types Always Enabled](#11-nullable-reference-types-always-enabled)
+  - [12. Code Must Scream Intention](#12-code-must-scream-intention)
+  - [13. Null Coalescing Policy](#13-null-coalescing-policy)
     - [Allowed: UI / Logging / Presentation Fallbacks](#allowed-ui--logging--presentation-fallbacks)
     - [Caution: Query Projections with Role Fallbacks](#caution-query-projections-with-role-fallbacks)
     - [Prohibited: Domain / Business Logic Defaults](#prohibited-domain--business-logic-defaults)
-  - [17. Magic Strings Policy](#17-magic-strings-policy)
+  - [14. Magic Strings Policy](#14-magic-strings-policy)
     - [Current Good Patterns (Keep Using)](#current-good-patterns-keep-using)
     - [Current Violations (Should Fix)](#current-violations-should-fix)
-  - [18. Domain Events Policy](#18-domain-events-policy)
-  - [19. Automated Enforcement \& Tooling](#19-automated-enforcement--tooling)
+  - [15. Domain Events Policy](#15-domain-events-policy)
+  - [16. Automated Enforcement and Tooling](#16-automated-enforcement-and-tooling)
     - [Support Tools:](#support-tools)
   - [Compliance Summary](#compliance-summary)
     - [Priority Fix Backlog](#priority-fix-backlog)
@@ -113,25 +112,13 @@ The Application layer must not reference Infrastructure directly:
 
 ---
 
-## 4. Use Result Pattern for Expected Failures
+---
 
-All commands and queries return `Result<T>` (from Concordia). Exceptions are reserved for truly unexpected situations.
-
-Always use typed error codes. Group errors logically within nested classes in `DomainErrorCode` for IDE discoverability and use the `Error` alias class for access:
-
-```csharp
-// CORRECT — Hierarchical, discoverable errors
-return Result.Failure<T>(Error.Customer.NotFound);
-
-// WRONG — Flat string codes or scattered constants
-return Result.Failure<T>("CUSTOMER_NOT_FOUND");
-```
-
-**Audit status:** COMPLIANT. Zero `throw new Exception()` found across the entire project. All commands/queries return `Result<T>` with hierarchical error codes grouped by module (e.g., `Error.Auth`, `Error.Customer`).
+> **Result Pattern, DomainErrorCode, and Outcome** are covered in [engineering-practices.md](engineering-practices.md).
 
 ---
 
-## 5. Abstract Time with IClock
+## 4. Abstract Time with IClock
 
 Never use `DateTime.UtcNow` directly. Use an `IClock` abstraction for testability.
 
@@ -173,7 +160,7 @@ public class SystemClock : IClock
 
 ---
 
-## 6. Use Value Objects
+## 5. Use Value Objects
 
 Wrap primitive types that carry domain meaning into Value Objects:
 
@@ -200,7 +187,7 @@ public Money Price { get; private set; }
 
 ---
 
-## 7. Validate at the Boundary
+## 6. Validate at the Boundary
 
 Validation happens at three levels. All three are mandatory:
 
@@ -219,7 +206,7 @@ Never trust controller validation alone. The domain must protect itself.
 
 ---
 
-## 8. Keep Controllers Thin
+## 7. Keep Controllers Thin
 
 Controllers should only:
 1. Extract request data
@@ -245,7 +232,7 @@ which is appropriate for a controller that dispatches to a sync service.
 
 ---
 
-## 9. Configuration Always via Options + ValidateOnStart
+## 8. Configuration Always via Options + ValidateOnStart
 
 Never read `IConfiguration` directly with string keys. Always use strongly-typed Options.
 
@@ -305,7 +292,7 @@ Services using raw `configuration["..."]` (violations):
 
 ---
 
-## 10. Structured Logging Only
+## 9. Structured Logging Only
 
 Always use message templates with named parameters. Never use string interpolation.
 
@@ -321,7 +308,7 @@ _logger.LogInformation("User {UserId} upgraded plan", userId);
 
 ---
 
-## 11. Idempotency in Everything External
+## 10. Idempotency in Everything External
 
 Any code that handles external events (webhooks, payment notifications, retries) must be idempotent:
 
@@ -348,7 +335,7 @@ handling. `TenantSubscription` state transitions include idempotent guards.
 
 ---
 
-## 12. Nullable Reference Types Always Enabled
+## 11. Nullable Reference Types Always Enabled
 
 Every `.csproj` must have:
 
@@ -375,34 +362,11 @@ In the domain, avoid `Guid.NewGuid()` as it causes index fragmentation in relati
 
 ---
 
-## 14. Clean Architecture Layer Rules
-
-```mermaid
-graph TD
-    API[API Layer] --> Application[Application Layer]
-    API --> Infrastructure[Infrastructure Layer]
-    Application --> Domain[Domain Layer]
-    Infrastructure --> Application
-    Infrastructure --> Domain
-```
-
-Rules:
-- Domain must never reference Application, Infrastructure, or API
-- Application must never reference Infrastructure or API
-- Domain entities must never depend on EF Core, Stripe SDK, or any infrastructure package
-
-**Audit status:** COMPLIANT.
-
-| Dependency check | Violations |
-|-----------------|------------|
-| Domain → Infrastructure | 0 |
-| Domain → External packages | 0 |
-| Application → Infrastructure | 0 |
-| Application → External SDKs | 0 |
+> **Clean Architecture layer rules and boundaries** are covered in [engineering-practices.md](engineering-practices.md).
 
 ---
 
-## 15. Code Must Scream Intention
+## 12. Code Must Scream Intention
 
 Method names must describe the business action, not the technical operation.
 
@@ -425,7 +389,7 @@ SyncFromStripe()
 
 ---
 
-## 16. Null Coalescing Policy
+## 13. Null Coalescing Policy
 
 The `??` operator is permitted, but its usage depends on the architectural layer:
 
@@ -474,7 +438,7 @@ Rule: In the Domain layer, null equals invalid state. It must throw, never silen
 
 ---
 
-## 17. Magic Strings Policy
+## 14. Magic Strings Policy
 
 ### Current Good Patterns (Keep Using)
 
@@ -498,9 +462,7 @@ an enum or a `const`. Prefer enums over strings for any value that controls beha
 
 ---
 
----
-
-## 18. Domain Events Policy
+## 15. Domain Events Policy
 
 Entities must never execute side effects (sending emails, calling external APIs, writing to disk) directly. Instead, they record intentions of change.
 
@@ -523,7 +485,7 @@ public void MarkAsPaid()
 
 ---
 
-## 19. Automated Enforcement & Tooling
+## 16. Automated Enforcement and Tooling
 
 Standardizing code is only half the battle; enforcement should be automated wherever possible.
 

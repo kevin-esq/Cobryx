@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Common;
@@ -21,19 +22,19 @@ public class CreateCheckoutSessionHandler : IRequestHandler<CreateCheckoutSessio
         IUnitOfWork unitOfWork,
         IStripeService stripeService,
         ITenantProvider tenantProvider,
-        ILogger<CreateCheckoutSessionHandler> _logger)
+        ILogger<CreateCheckoutSessionHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _stripeService = stripeService;
         _tenantProvider = tenantProvider;
-        this._logger = _logger;
+        _logger = logger;
     }
 
     public async Task<Result<string>> Handle(CreateCheckoutSessionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
         if (tenantId == null)
-            return Result.Failure<string>("SUBSCRIPTION.TENANT_NOT_FOUND");
+            return Result.Failure<string>(DomainErrorCode.Tenant.ContextMissing);
 
         var dbContext = (DbContext)_unitOfWork;
 
@@ -41,16 +42,16 @@ public class CreateCheckoutSessionHandler : IRequestHandler<CreateCheckoutSessio
             .FirstOrDefaultAsync(p => p.Id == request.PlanId && p.IsActive, cancellationToken);
 
         if (plan == null)
-            return Result.Failure<string>("SUBSCRIPTION.PLAN_NOT_FOUND");
+            return Result.Failure<string>(DomainErrorCode.Subscription.PlanNotFound);
 
         if (string.IsNullOrWhiteSpace(plan.StripePriceId))
-            return Result.Failure<string>("SUBSCRIPTION.PLAN_NOT_BILLABLE");
+            return Result.Failure<string>(DomainErrorCode.Subscription.PlanNotBillable);
 
         var subscription = await dbContext.Set<TenantSubscription>()
             .FirstOrDefaultAsync(s => s.TenantId == tenantId.Value, cancellationToken);
 
         if (subscription == null)
-            return Result.Failure<string>("SUBSCRIPTION.NOT_FOUND");
+            return Result.Failure<string>(DomainErrorCode.Subscription.NotFound);
 
         // Use stored StripeCustomerId or create a new one
         if (string.IsNullOrWhiteSpace(subscription.StripeCustomerId))

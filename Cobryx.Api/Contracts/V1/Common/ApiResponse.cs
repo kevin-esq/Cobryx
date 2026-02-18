@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using Cobryx.Domain.Common;
 
 namespace Cobryx.Api.Contracts.V1.Common;
 
@@ -70,8 +71,9 @@ public class ApiSuccessResponse<T> : ApiResponse
 
 /// <summary>
 /// Structured validation error for field-level API error reporting.
+/// The frontend translates codes — messages are internal-only (logs/debugging).
 /// </summary>
-public record ValidationError(string Field, string Code, string Message)
+public record ValidationError(string Field, string Code, string? Message = null)
 {
     /// <summary>The request field that caused the error.</summary>
     /// <example>email</example>
@@ -79,14 +81,13 @@ public record ValidationError(string Field, string Code, string Message)
     public string Field { get; init; } = Field;
 
     /// <summary>A machine-readable error code.</summary>
-    /// <example>INVALID_FORMAT</example>
+    /// <example>VALIDATION.CUSTOMER.EMAIL.INVALID_FORMAT</example>
     [JsonPropertyName("code")]
     public string Code { get; init; } = Code;
 
-    /// <summary>A human-readable explanation of the error.</summary>
-    /// <example>The email address provided is not a valid format.</example>
-    [JsonPropertyName("message")]
-    public string Message { get; init; } = Message;
+    /// <summary>Internal-only message for logging and debugging. Never serialized to the client.</summary>
+    [JsonIgnore]
+    public string? Message { get; init; } = Message;
 }
 
 /// <summary>
@@ -130,21 +131,21 @@ public class ApiErrorResponse : ApiResponse
 /// </summary>
 public static class ApiResponseFactory
 {
-    public static ApiSuccessResponse<T> Success<T>(T data, string? outcomeCode = null)
+    public static ApiSuccessResponse<T> Success<T>(T data, Outcome? outcomeCode = null)
     {
         return new ApiSuccessResponse<T>
         {
             Data = data,
-            OutcomeCode = outcomeCode
+            OutcomeCode = outcomeCode?.Value
         };
     }
 
-    public static ApiSuccessResponse Success(string? outcomeCode = null)
+    public static ApiSuccessResponse Success(Outcome? outcomeCode = null)
     {
         return new ApiSuccessResponse
         {
             Data = null,
-            OutcomeCode = outcomeCode
+            OutcomeCode = outcomeCode?.Value
         };
     }
 
@@ -153,12 +154,12 @@ public static class ApiResponseFactory
         int? numericCode = null,
         IReadOnlyList<ValidationError>? errors = null,
         string? traceId = null,
-        string? outcomeCode = null)
+        Outcome? outcomeCode = null)
     {
         var response = new ApiErrorResponse
         {
             ErrorCode = errorCode,
-            OutcomeCode = outcomeCode,
+            OutcomeCode = outcomeCode?.Value,
             NumericCode = numericCode,
             Errors = errors,
             TraceId = traceId

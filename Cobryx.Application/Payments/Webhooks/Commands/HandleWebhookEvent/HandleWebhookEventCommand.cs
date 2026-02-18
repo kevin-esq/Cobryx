@@ -1,5 +1,7 @@
+using Cobryx.Application.Payments.Webhooks.Common;
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Application.Webhooks.Interfaces;
+using Cobryx.Application.Payments.Webhooks.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
 using Concordia;
@@ -50,9 +52,9 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
         var parser = _parsers.FirstOrDefault(p => p.Provider.Equals(webhookEvent.Provider, StringComparison.OrdinalIgnoreCase));
         if (parser == null)
         {
-            webhookEvent.MarkAsFailed($"No parser found for provider: {webhookEvent.Provider}");
+            webhookEvent.MarkAsFailed(DomainErrorCode.Webhooks.ParserNotFound);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Failure($"No parser found for provider: {webhookEvent.Provider}");
+            return Result.Failure(DomainErrorCode.Webhooks.ParserNotFound);
         }
 
         webhookEvent.StartProcessing();
@@ -92,8 +94,8 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
 
         return parseResult.InternalEventType switch
         {
-            "ChargeRefunded" => await HandleRefundAsync(parseResult, data, ct),
-            "ChargeDisputeCreated" => await HandleChargebackAsync(parseResult, ct),
+            WebhookConstants.InternalEvents.ChargeRefunded => await HandleRefundAsync(parseResult, data, ct),
+            WebhookConstants.InternalEvents.ChargeDisputeCreated => await HandleChargebackAsync(parseResult, ct),
             _ => await HandleUnknownEventAsync(parseResult)
         };
     }
@@ -105,7 +107,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
 
         var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
         if (payment == null)
-            return Result.Failure($"Payment with reference {parseResult.ExternalTransactionId} not found.");
+            return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         decimal amount = data.GetProperty("amount_refunded").GetInt64() / 100m;
         string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
@@ -121,7 +123,7 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
 
         var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
         if (payment == null)
-            return Result.Failure($"Payment with reference {parseResult.ExternalTransactionId} not found.");
+            return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         var command = new HandleChargebackCommand(payment.Id);
         return await _sender.Send(command, ct);
@@ -130,6 +132,6 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
     private Task<Result> HandleUnknownEventAsync(WebhookParseResult parseResult)
     {
         _logger.LogWarning("Translation for event type {InternalEventType} not implemented.", parseResult.InternalEventType);
-        return Task.FromResult(Result.Failure($"Translation for {parseResult.InternalEventType} not implemented."));
+        return Task.FromResult(Result.Failure(DomainErrorCode.System.NotAllowed));
     }
 }

@@ -18,7 +18,7 @@ public abstract class CobryxBaseController : ControllerBase
         Sender = sender;
     }
 
-    protected IActionResult HandleResult<T>(Result<T> result, string? outcomeCode = null, int? successStatusCode = null)
+    protected IActionResult HandleResult<T>(Result<T> result, Outcome? outcomeCode = null, int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
@@ -40,7 +40,7 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult HandleResult(Result result, string? outcomeCode = null, int? successStatusCode = null)
+    protected IActionResult HandleResult(Result result, Outcome? outcomeCode = null, int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
@@ -62,12 +62,12 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult Success<T>(T data, string? outcomeCode = null)
+    protected IActionResult Success<T>(T data, Outcome? outcomeCode = null)
     {
         return Ok(ApiResponseFactory.Success(data, outcomeCode));
     }
 
-    protected IActionResult HandleDeleteResult(Result result, string? outcomeCode = null)
+    protected IActionResult HandleDeleteResult(Result result, Outcome? outcomeCode = null)
     {
         if (result.IsSuccess)
         {
@@ -85,12 +85,12 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult CreatedResult<T>(string uri, T data, string? outcomeCode = null)
+    protected IActionResult CreatedResult<T>(string uri, T data, Outcome? outcomeCode = null)
     {
         return Created(uri, ApiResponseFactory.Success(data, outcomeCode));
     }
 
-    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, string? outcomeCode = null)
+    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, Outcome? outcomeCode = null)
     {
         return HandleResult(result, outcomeCode, 201);
     }
@@ -104,16 +104,17 @@ public abstract class CobryxBaseController : ControllerBase
         return defaultStatusCode;
     }
 
-    private string GetFailureOutcomeCode(string? successOutcomeCode)
+    private Outcome GetFailureOutcomeCode(Outcome? successOutcome)
     {
-        if (string.IsNullOrEmpty(successOutcomeCode)) return "SYSTEM.OPERATION.FAILED";
+        if (successOutcome == null) return Outcome.FromExternal("SYSTEM.OPERATION.FAILED");
 
-        var lastDot = successOutcomeCode.LastIndexOf('.');
+        var val = successOutcome.Value;
+        var lastDot = val.LastIndexOf('.');
         if (lastDot > 0)
         {
-            return successOutcomeCode.Substring(0, lastDot) + ".FAILED";
+            return Outcome.FromExternal(val.Substring(0, lastDot) + ".FAILED");
         }
 
-        return $"{successOutcomeCode}.FAILED";
+        return Outcome.FromExternal($"{val}.FAILED");
     }
 }

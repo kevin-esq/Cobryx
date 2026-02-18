@@ -22,7 +22,7 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
         {
-            return Result.Failure<Guid>("Tenant context is missing.");
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
         }
 
         var product = new Product(

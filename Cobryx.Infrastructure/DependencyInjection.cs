@@ -25,6 +25,7 @@ using System.Text;
 using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Security;
 using Cobryx.Application.Webhooks.Interfaces;
+using Cobryx.Application.Payments.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Webhooks.Stripe;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -77,7 +78,6 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
-        services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
         services.AddHostedService<BackgroundJobs.ProcessOutboxJob>();
         services.AddTransient<IEmailService, SmtpEmailService>();

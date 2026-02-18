@@ -46,15 +46,15 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
     public async Task<Result<AuthResult>> Handle(VerifyTotpLoginCommand request, CancellationToken cancellationToken)
     {
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
-        if (userId == null) return Result.Failure<AuthResult>("Invalid or expired MFA token.");
+        if (userId == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<AuthResult>("User not found.");
+        if (user == null) return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Verifying TOTP for user: {Email}", user.Email);
 
         var totpDevice = user.MfaDevices.FirstOrDefault(d => d.Type == Domain.Entities.MfaDeviceType.Totp && d.IsVerified);
-        if (totpDevice == null) return Result.Failure<AuthResult>("No TOTP device configured.");
+        if (totpDevice == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.MfaNotConfigured);
 
         bool isValid = _mfaService.VerifyCode(totpDevice.Secret, request.Code);
         if (!isValid)
@@ -73,7 +73,7 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         {
             _auditService.LogFailure("VerifyTotp", user.Id.ToString(), ipAddress, "Invalid code");
             await _attemptService.IncrementAttemptsAsync(ipAddress);
-            return Result.Failure<AuthResult>("Invalid verification code.");
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidMfaCode);
         }
 
         await _attemptService.ResetAttemptsAsync(ipAddress);

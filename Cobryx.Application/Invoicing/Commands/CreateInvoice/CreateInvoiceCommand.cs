@@ -46,13 +46,13 @@ public class CreateInvoiceHandler : IRequestHandler<CreateInvoiceCommand, Result
     public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>("Tenant context missing.");
+        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         await _subscriptionEnforcement.EnsureWithinInvoicesLimitAsync(tenantId.Value, cancellationToken);
 
         var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
         if (customer == null || customer.TenantId != tenantId.Value)
-            return Result.Failure<Guid>("Customer not found.");
+            return Result.Failure<Guid>(DomainErrorCode.Customer.NotFound);
 
         var defaultTax = await _taxRepository.GetDefaultAsync(tenantId.Value);
         var invoiceNumber = await _invoiceNumberService.GenerateNextNumberAsync(tenantId.Value);

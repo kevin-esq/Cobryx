@@ -34,17 +34,17 @@ public class EnableMfaHandler : IRequestHandler<EnableMfaCommand, Result<List<st
     public async Task<Result<List<string>>> Handle(EnableMfaCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) return Result.Failure<List<string>>("User not authenticated.");
+        if (userId == null) return Result.Failure<List<string>>(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<List<string>>("User not found.");
+        if (user == null) return Result.Failure<List<string>>(DomainErrorCode.User.NotFound);
 
-        if (user.IsMfaEnabled) return Result.Failure<List<string>>("MFA is already enabled.");
+        if (user.IsMfaEnabled) return Result.Failure<List<string>>(DomainErrorCode.Auth.MfaAlreadyEnabled);
 
         _logger.LogInformation("Enabling MFA for user: {Email}", user.Email);
 
         bool isValid = _mfaService.VerifyCode(request.Secret, request.Code);
-        if (!isValid) return Result.Failure<List<string>>("Invalid verification code.");
+        if (!isValid) return Result.Failure<List<string>>(DomainErrorCode.Auth.InvalidMfaCode);
 
         var device = new MfaDevice(user.Id, "Default Authenticator", MfaDeviceType.Totp, request.Secret);
         device.Verify();

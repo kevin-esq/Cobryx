@@ -49,7 +49,7 @@ public class CreateSupportTicketHandler : IRequestHandler<CreateSupportTicketCom
 
         if (tenantId == null || userId == null)
         {
-            return Result.Failure<Guid>("TENANT.CONTEXT_MISSING");
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
         }
 
         var ticket = new SupportTicket(

@@ -30,6 +30,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode InvalidMfaCode = new("AUTH.MFA.INVALID_CODE");
         public static readonly DomainErrorCode AccountInactive = new("AUTH.ACCOUNT_INACTIVE");
         public static readonly DomainErrorCode ExternalLoginFailed = new("AUTH.EXTERNAL_LOGIN_FAILED");
+        public static readonly DomainErrorCode ProviderNotSupported = new("AUTH.PROVIDER_NOT_SUPPORTED");
         public static readonly DomainErrorCode AccountLocked = new("AUTH.ACCOUNT_LOCKED");
         public static readonly DomainErrorCode EmailNotVerified = new("AUTH.EMAIL_NOT_VERIFIED");
         public static readonly DomainErrorCode InvalidCredentials = new("AUTH.INVALID_CREDENTIALS");
@@ -38,6 +39,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TokenExpired = new("AUTH.TOKEN.EXPIRED");
         public static readonly DomainErrorCode SessionRevoked = new("AUTH.SESSION.REVOKED");
         public static readonly DomainErrorCode TokenNotActive = new("AUTH.TOKEN.NOT_ACTIVE");
+        public static readonly DomainErrorCode MfaNotConfigured = new("AUTH.MFA.NOT_CONFIGURED");
     }
 
     public static class User
@@ -144,6 +146,8 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TaxNameRequired = new("DOMAIN.TAX.NAME_REQUIRED");
         public static readonly DomainErrorCode TaxRateNegative = new("DOMAIN.TAX.RATE_NEGATIVE");
         public static readonly DomainErrorCode TaxDeleteDefaultForbidden = new("DOMAIN.TAX.DELETE_DEFAULT_FORBIDDEN");
+        public static readonly DomainErrorCode TaxConfigurationNotFound = new("DOMAIN.TAX_CONFIGURATION.NOT_FOUND");
+        public static readonly DomainErrorCode PaymentMethodAlreadyExists = new("DOMAIN.PAYMENT_METHOD.ALREADY_EXISTS");
     }
 
     public static class Credits
@@ -197,6 +201,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode PlanNotFound = new("DOMAIN.SUBSCRIPTION.PLAN_NOT_FOUND");
         public static readonly DomainErrorCode AlreadyCancelled = new("DOMAIN.SUBSCRIPTION.ALREADY_CANCELLED");
         public static readonly DomainErrorCode DowngradeNotAllowed = new("DOMAIN.SUBSCRIPTION.DOWNGRADE_FORBIDDEN");
+        public static readonly DomainErrorCode PlanNotBillable = new("DOMAIN.SUBSCRIPTION.PLAN_NOT_BILLABLE");
     }
 
     public static class Support
@@ -219,6 +224,12 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode EventNotFound = new("DOMAIN.WEBHOOK.NOT_FOUND");
         public static readonly DomainErrorCode InvalidDataFormat = new("DOMAIN.WEBHOOK.INVALID_DATA_FORMAT");
         public static readonly DomainErrorCode MissingTransactionId = new("DOMAIN.WEBHOOK.MISSING_TRANSACTION_ID");
+        public static readonly DomainErrorCode ParserNotFound = new("DOMAIN.WEBHOOK.PARSER_NOT_FOUND");
+    }
+
+    public static class Stripe
+    {
+        public static readonly DomainErrorCode NoStripeCustomer = new("DOMAIN.STRIPE.NO_STRIPE_CUSTOMER");
     }
 
     public static class System
@@ -226,6 +237,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode InternalError = new("SYSTEM.INTERNAL_ERROR");
         public static readonly DomainErrorCode TooManyRequests = new("SYSTEM.TOO_MANY_REQUESTS");
         public static readonly DomainErrorCode ValidationFailed = new("VALIDATION.FAILED");
+        public static readonly DomainErrorCode NotAllowed = new("SYSTEM.NOT_ALLOWED");
     }
 
     internal static DomainErrorCode From(string value) => new(value);

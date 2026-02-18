@@ -80,7 +80,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         _diagnosticContext.Set("NumericCode", numericCode);
         _diagnosticContext.Set("OutcomeCode", outcomeCode);
         _metrics.RecordError(errorCode.Value, numericCode);
-        _metrics.RecordOutcome(outcomeCode);
+        _metrics.RecordOutcome(outcomeCode.Value);
 
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
@@ -99,7 +99,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             var rawErrors = metadata?.GetValueOrDefault("errors");
             if (rawErrors != null)
             {
-                structuredErrors = new[] { new ValidationError("_global", "DOMAIN_ERROR", rawErrors.ToString() ?? string.Empty) };
+                structuredErrors = new[] { new ValidationError("_global", ValidationCodes.DomainError, rawErrors.ToString() ?? string.Empty) };
             }
         }
 
@@ -114,12 +114,26 @@ public class GlobalExceptionHandler : IExceptionHandler
         return true;
     }
 
-    private static string GetFailedOutcomeCode(string errorCode)
+    private async ValueTask HandleDefaultException(HttpContext context, Exception exception, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(errorCode)) return "SYSTEM.FAILED";
-        if (errorCode.EndsWith(".FAILED")) return errorCode;
+        var outcome = Outcome.FromExternal("SYSTEM.FAILED", OutcomeCategory.Critical);
+        var response = Cobryx.Api.Contracts.V1.Common.ApiResponseFactory.Error(outcomeCode: outcome);
+
+        _logger.LogError(exception, "Unhandled system exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(response, ct);
+    }
+
+    private static Outcome GetFailedOutcomeCode(string errorCode)
+    {
+        const string SystemFailed = "SYSTEM.FAILED";
+        const string FailedSuffix = ".FAILED";
+
+        if (string.IsNullOrEmpty(errorCode)) return Outcome.FromExternal(SystemFailed, OutcomeCategory.Critical);
+        if (errorCode.EndsWith(FailedSuffix)) return Outcome.FromExternal(errorCode, OutcomeCategory.BusinessError);
 
         var parts = errorCode.Split('.');
-        return $"{parts[0]}.FAILED";
+        return Outcome.FromExternal($"{parts[0]}{FailedSuffix}", OutcomeCategory.BusinessError);
     }
 }

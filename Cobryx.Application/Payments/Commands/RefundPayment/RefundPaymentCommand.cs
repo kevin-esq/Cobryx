@@ -37,7 +37,7 @@ public class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, Result
         }
         catch (DomainException ex)
         {
-            return Result.Failure(ex.Message);
+            return Result.Failure(ex.ErrorCode);
         }
     }
 }

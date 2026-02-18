@@ -44,10 +44,10 @@ public class UpgradeSubscriptionHandler : IRequestHandler<UpgradeSubscriptionCom
         // Validate plan capacity (Downgrade rejection logic)
         var usage = await _usageMetering.GetUsageSnapshotAsync(tenantId.Value, cancellationToken);
         if (usage.InvoicesCount > newPlan.MaxInvoices)
-            return Result.Failure($"Cannot downgrade to {newPlan.Name}. Current invoice count ({usage.InvoicesCount}) exceeds the new limit ({newPlan.MaxInvoices}).");
+            return Result.Failure(DomainErrorCode.Subscription.DowngradeNotAllowed);
 
         if (usage.ActiveUsersCount > newPlan.MaxUsers)
-            return Result.Failure($"Cannot downgrade to {newPlan.Name}. Current active user count ({usage.ActiveUsersCount}) exceeds the new limit ({newPlan.MaxUsers}).");
+            return Result.Failure(DomainErrorCode.Subscription.DowngradeNotAllowed);
 
         subscription.UpdatePlan(newPlan);
         

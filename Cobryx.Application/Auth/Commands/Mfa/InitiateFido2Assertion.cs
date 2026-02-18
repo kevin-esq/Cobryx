@@ -31,10 +31,10 @@ public class InitiateFido2AssertionHandler : IRequestHandler<InitiateFido2Assert
     public async Task<Result<AssertionOptions>> Handle(InitiateFido2AssertionCommand request, CancellationToken cancellationToken)
     {
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
-        if (userId == null) return Result.Failure<AssertionOptions>("Invalid or expired MFA token.");
+        if (userId == null) return Result.Failure<AssertionOptions>(DomainErrorCode.Auth.InvalidToken);
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return Result.Failure<AssertionOptions>("User not found.");
+        if (user == null) return Result.Failure<AssertionOptions>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Initiating FIDO2 assertion for user: {Email}", user.Email);
 

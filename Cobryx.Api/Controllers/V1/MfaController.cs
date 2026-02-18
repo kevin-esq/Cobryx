@@ -136,7 +136,7 @@ public class MfaController : CobryxBaseController
         {
             return BadRequest(ApiResponseFactory.Error(
                 errorCode: AuthOutcomes.Fido2InvalidPayload,
-                errors: new[] { new Cobryx.Api.Contracts.V1.Common.ValidationError("registrationData", "INVALID_PAYLOAD", "Invalid passkey registration payload. One or more binary attributes are malformed.") }));
+                errors: new[] { new ValidationError("registrationData", ValidationCodes.InvalidPayload, "Invalid passkey registration payload. One or more binary attributes are malformed.") }));
         }
 
         var command = new CompleteFido2RegistrationCommand(request.DeviceName, response, options);
@@ -187,7 +187,7 @@ public class MfaController : CobryxBaseController
         {
             return BadRequest(ApiResponseFactory.Error(
                 errorCode: AuthOutcomes.Fido2InvalidPayload,
-                errors: new[] { new Cobryx.Api.Contracts.V1.Common.ValidationError("verificationData", "INVALID_PAYLOAD", "Invalid passkey verification payload. Check binary encoding.") }));
+                errors: new[] { new ValidationError("verificationData", ValidationCodes.InvalidPayload, "Invalid passkey verification payload. Check binary encoding.") }));
         }
 
         var command = new CompleteFido2AssertionCommand(request.PersistenceToken, response, optionsData);

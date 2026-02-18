@@ -1,4 +1,4 @@
-namespace Cobryx.Application.Webhooks.Interfaces;
+namespace Cobryx.Application.Payments.Webhooks.Interfaces;
 
 public record WebhookParseResult(
     string InternalEventType,
@@ -8,5 +8,5 @@ public record WebhookParseResult(
 public interface IWebhookParser
 {
     string Provider { get; }
-    Task<WebhookParseResult> ParseAsync(string json);
+    Task<WebhookParseResult> ParseAsync(string json, string? signature = null);
 }
