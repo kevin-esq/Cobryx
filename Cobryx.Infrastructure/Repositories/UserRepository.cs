@@ -55,4 +55,28 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .Where(u => u.TenantId == tenantId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<(IEnumerable<User> Items, int TotalCount)> GetByTenantPagedAsync(Guid tenantId, int page, int pageSize, CancellationToken ct = default)
+    {
+        pageSize = Math.Min(pageSize, 100);
+        var query = _dbSet
+            .Include(u => u.Role)
+            .Where(u => u.TenantId == tenantId);
+
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, totalCount);
+    }
+
+    public async Task<int> CountAdminsInTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        return await _dbSet
+            .Where(u => u.TenantId == tenantId && u.Role.Name == Role.Constants.Admin)
+            .CountAsync(ct);
+    }
 }

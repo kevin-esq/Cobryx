@@ -18,14 +18,15 @@ public class TenantInvitationConfiguration : IEntityTypeConfiguration<TenantInvi
             .IsRequired()
             .HasMaxLength(256);
 
-        // CTO Adjustment: Ensure one invitation per email per tenant.
-        // We allow re-inviting once the old one is no longer Pending if needed,
-        // but for simplicity and strict safety, we'll start with a hard unique constraint on the pair.
-        // If they want to re-invite, the system should update the existing pending one.
+        // We allow multiple Accepted/Revoked/Expired invitations, but only one Pending.
         builder.HasIndex(x => new { x.TenantId, x.Email })
+            .HasFilter("[Status] = 0") // 0 = Pending
             .IsUnique();
             
         builder.HasIndex(x => x.TokenHash)
             .IsUnique();
+
+        builder.HasIndex(x => new { x.Status, x.ExpiresAt })
+            .HasDatabaseName("IX_TenantInvitation_Status_ExpiresAt");
     }
 }

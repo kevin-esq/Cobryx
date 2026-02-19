@@ -19,6 +19,17 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> PasswordResets { get; }
     public Counter<long> OutboxJobsProcessed { get; }
 
+    // Invitation Metrics
+    public Counter<long> InvitationsCreated { get; }
+    public Counter<long> InvitationsAccepted { get; }
+    public Counter<long> InvitationsExpired { get; }
+    public Counter<long> InvitationsRejected { get; }
+    public Counter<long> InvitationsReplayAttempts { get; }
+
+    // Cleanup Metrics
+    public Counter<long> CleanupInvitationsDeleted { get; }
+    public Counter<long> CleanupInvitationsExpired { get; }
+
     // Monetization Metrics
     public Counter<long> SubscriptionLimitReached { get; }
     public Counter<long> SubscriptionUpgrades { get; }
@@ -83,6 +94,16 @@ public sealed class CobryxMetrics : IDisposable
 
         OutboxProcessingLag = _meter.CreateHistogram<double>("outbox_processing_lag_seconds", unit: "s", description: "Lag between event occurrence and processing");
         CommandDuration = _meter.CreateHistogram<double>("command_duration_seconds", unit: "s", description: "Duration of business commands");
+
+        // Invitations
+        InvitationsCreated = _meter.CreateCounter<long>("invitations_created_total", description: "Total invitations sent");
+        InvitationsAccepted = _meter.CreateCounter<long>("invitations_accepted_total", description: "Total invitations accepted");
+        InvitationsExpired = _meter.CreateCounter<long>("invitations_expired_total", description: "Total invitations expired");
+        InvitationsRejected = _meter.CreateCounter<long>("invitations_rejected_total", description: "Total enrollment attempts rejected (invalid token/mismatch)");
+        InvitationsReplayAttempts = _meter.CreateCounter<long>("invitations_replay_attempts_total", description: "Total attempts to use an already accepted/expired token");
+
+        CleanupInvitationsDeleted = _meter.CreateCounter<long>("cleanup_invitations_deleted_total", description: "Total old invitations hard-deleted by cleanup job");
+        CleanupInvitationsExpired = _meter.CreateCounter<long>("cleanup_invitations_expired_total", description: "Total stale invitations marked as expired by cleanup job");
     }
 
     public void RecordOutcome(string outcomeCode)

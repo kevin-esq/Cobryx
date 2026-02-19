@@ -44,6 +44,8 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode EmailMismatch = new("AUTH.EMAIL_MISMATCH");
         public static readonly DomainErrorCode InvitationNotFound = new("AUTH.INVITATION_NOT_FOUND");
         public static readonly DomainErrorCode InvalidState = new("AUTH.INVALID_STATE");
+        public static readonly DomainErrorCode RoleNotFound = new("AUTH.ROLE_NOT_FOUND");
+        public static readonly DomainErrorCode Forbidden = new("AUTH.FORBIDDEN");
     }
 
     public static class User

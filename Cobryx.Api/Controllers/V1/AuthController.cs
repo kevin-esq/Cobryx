@@ -17,6 +17,9 @@ using Cobryx.Application.Tenants.Common;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -79,6 +82,7 @@ public class AuthController : CobryxBaseController
     /// <param name="request">Enrollment details including the secure invitation token.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("enroll")]
+    [EnableRateLimiting("auth")]
     [AllowAnonymous]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 201)]

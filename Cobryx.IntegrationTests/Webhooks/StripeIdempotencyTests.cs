@@ -42,7 +42,7 @@ public class StripeIdempotencyTests : IClassFixture<CobryxWebApplicationFactory>
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, tenantId);
         dbContext.Tenants.Add(tenant);
 
-        var plan = new SubscriptionPlan("Pro", "Pro Plan", new Money(499, "MXN"), 500, 10, PlanTier.Pro, 14, "price_test");
+        var plan = new SubscriptionPlan("Pro", "Pro Plan", new Money(499, "MXN"), 500, 10, 500, PlanTier.Pro, 14, "price_test");
         typeof(SubscriptionPlan).GetProperty("Id")!.SetValue(plan, planId);
         dbContext.SubscriptionPlans.Add(plan);
 

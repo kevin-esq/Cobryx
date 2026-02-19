@@ -63,7 +63,7 @@ public class StripeWebhookResilienceTests : IClassFixture<CobryxWebApplicationFa
             var tenant = new Tenant("Race Tenant", "race@test.com");
             db.Tenants.Add(tenant);
             
-            var plan = new SubscriptionPlan("Pro", "Pro", new Money(100, "MXN"), 100, 10, Cobryx.Domain.Enums.PlanTier.Pro, 0, "price_test");
+            var plan = new SubscriptionPlan("Pro", "Pro", new Money(100, "MXN"), 100, 10, 100, Cobryx.Domain.Enums.PlanTier.Pro, 0, "price_test");
             db.SubscriptionPlans.Add(plan);
             
             var sub = new TenantSubscription(tenant.Id, plan.Id, DateTime.UtcNow);
