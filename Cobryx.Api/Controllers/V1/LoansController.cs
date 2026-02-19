@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Cobryx.Api.Contracts.V1.Common;
 using Cobryx.Api.Contracts.V1.Lending;
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Domain.Entities.Lending.Enums;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
@@ -31,7 +32,6 @@ public class LoansController : CobryxBaseController
     /// Creates a new loan agreement, generates a tentative amortization schedule, and activates the credit line.
     /// </summary>
     /// <param name="request">The loan configuration including principal amount (Decimal, 2-digit precision) and terms.</param>
-    /// <param name="idempotencyKey">Informational only — replay protection is not yet enforced. Pass a UUID to prepare for future deduplication.</param>
     /// <remarks>
     /// Financial Precision:
     /// - 'Amount' should be provided in the native currency unit (ISO-4217).
@@ -48,6 +48,7 @@ public class LoansController : CobryxBaseController
     /// <response code="400">Invalid request parameters or malformed JSON.</response>
     /// <response code="422">Business rule violation (e.g., policy invalid or status not allowed).</response>
     [HttpPost]
+    [Idempotent]
     [Authorize(Policy = "CanCreateCredits")]
     [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
@@ -55,8 +56,7 @@ public class LoansController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> Create(
-        [FromBody] CreateLoanRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
+        [FromBody] CreateLoanRequest request)
     {
         // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Lending.Commands.CreateLoan.CreateLoanCommand(
@@ -134,7 +134,6 @@ public class LoansController : CobryxBaseController
     /// </summary>
     /// <param name="id">Unique identifier of the target loan.</param>
     /// <param name="request">Payment details (Amount in native currency unit [ISO-4217], Payment Date, and References).</param>
-    /// <param name="idempotencyKey">Informational only — replay protection is not yet enforced. Pass a UUID to prepare for future deduplication.</param>
     /// <remarks>
     /// Amounts are applied according to the loan's 'PaymentApplicationPolicy' (typically Principal -> Interest -> Fees).
     ///
@@ -148,6 +147,7 @@ public class LoansController : CobryxBaseController
     /// <response code="404">Target loan not found.</response>
     /// <response code="422">Business rule violation (e.g., payment date in the future or closed loan).</response>
     [HttpPost("{id}/payments")]
+    [Idempotent]
     [Authorize(Policy = "CanApplyPayments")]
     [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
@@ -157,8 +157,7 @@ public class LoansController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> RegisterPayment(
         Guid id,
-        [FromBody] LoanPaymentRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
+        [FromBody] LoanPaymentRequest request)
     {
         // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Lending.Commands.RegisterPayment.RegisterPaymentCommand(

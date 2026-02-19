@@ -18,6 +18,7 @@ public record MyProfileDto(
     string? AvatarUrl,
     string PreferredLanguage,
     string Timezone,
+    List<string> Permissions,
     DateTime CreatedAt);
 
 public record GetMyProfileQuery(Guid UserId) : IRequest<Result<MyProfileDto>>;
@@ -36,6 +37,7 @@ public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, Result<MyP
         var user = await _userRepository.Query()
             .AsNoTracking()
             .Include(u => u.Role)
+                .ThenInclude(r => r!.Permissions)
             .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
@@ -53,6 +55,7 @@ public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, Result<MyP
             user.Profile?.AvatarUrl,
             user.Profile?.PreferredLanguage ?? CobryxDefaults.Locale,
             user.Profile?.Timezone ?? CobryxDefaults.Timezone,
+            user.Role?.Permissions.Select(p => p.Name).ToList() ?? new List<string>(),
             user.CreatedAt));
     }
 }

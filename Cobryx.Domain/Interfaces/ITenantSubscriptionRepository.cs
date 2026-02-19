@@ -5,4 +5,5 @@ namespace Cobryx.Domain.Interfaces;
 public interface ITenantSubscriptionRepository : IRepository<TenantSubscription>
 {
     Task<TenantSubscription?> GetByTenantIdAsync(Guid tenantId, CancellationToken ct = default);
+    Task<TenantSubscription?> GetByTenantIdWithLockAsync(Guid tenantId, CancellationToken ct = default);
 }

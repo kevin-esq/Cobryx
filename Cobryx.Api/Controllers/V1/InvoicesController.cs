@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Cobryx.Api.Contracts.V1.Common;
 using Cobryx.Api.Contracts.V1.Financial;
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Common.Attributes;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -77,6 +78,7 @@ public class InvoicesController : CobryxBaseController
     /// <response code="400">Invalid parameters or malformed request.</response>
     /// <response code="422">Business rule violation (e.g., inactive customer or blocked billing).</response>
     [HttpPost]
+    [Idempotent]
     [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]

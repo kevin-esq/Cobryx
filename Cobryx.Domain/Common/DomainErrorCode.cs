@@ -205,6 +205,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode PlanNotFound = new("DOMAIN.SUBSCRIPTION.PLAN_NOT_FOUND");
         public static readonly DomainErrorCode AlreadyCancelled = new("DOMAIN.SUBSCRIPTION.ALREADY_CANCELLED");
         public static readonly DomainErrorCode DowngradeNotAllowed = new("DOMAIN.SUBSCRIPTION.DOWNGRADE_FORBIDDEN");
+        public static readonly DomainErrorCode NotActiveInStripe = new("DOMAIN.SUBSCRIPTION.NOT_ACTIVE_IN_STRIPE");
         public static readonly DomainErrorCode PlanNotBillable = new("DOMAIN.SUBSCRIPTION.PLAN_NOT_BILLABLE");
     }
 
