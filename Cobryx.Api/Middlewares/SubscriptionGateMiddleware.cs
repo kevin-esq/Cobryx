@@ -1,0 +1,213 @@
+using System.Text.Json;
+using Cobryx.Api.Common;
+using Cobryx.Api.Infrastructure;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Observability;
+using Cobryx.Domain.Common;
+using Cobryx.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace Cobryx.Api.Middlewares;
+
+/// <summary>
+/// Validates the tenant's subscription status on mutation requests.
+/// Runs after TenantMiddleware. Blocks write operations for expired or terminated subscriptions.
+/// Read-only (GET/HEAD/OPTIONS) requests pass through unless decorated with [RequiresActiveSubscription].
+/// Endpoints decorated with [AllowExpiredSubscription] bypass this gate.
+/// </summary>
+public class SubscriptionGateMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<SubscriptionGateMiddleware> _logger;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
+    private const string CacheKeyPrefix = "subscription_access:";
+
+    public SubscriptionGateMiddleware(RequestDelegate next, ILogger<SubscriptionGateMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
+    public async Task InvokeAsync(
+        HttpContext context,
+        ITenantSubscriptionRepository subscriptionRepository,
+        ICacheService cacheService,
+        CobryxMetrics metrics,
+        IClock clock)
+    {
+        // 1. Skip non-mutation methods unless explicitly gated
+        var isReadOnly = HttpMethods.IsGet(context.Request.Method) ||
+                         HttpMethods.IsHead(context.Request.Method) ||
+                         HttpMethods.IsOptions(context.Request.Method);
+
+        if (isReadOnly)
+        {
+            // Check if this specific endpoint requires active subscription even for reads
+            var ep = context.GetEndpoint();
+            if (ep?.Metadata.GetMetadata<RequiresActiveSubscriptionAttribute>() == null)
+            {
+                await _next(context);
+                return;
+            }
+        }
+
+        // 2. Skip unauthenticated paths
+        var path = context.Request.Path.Value?.ToLower();
+        if (path != null && (
+            path.StartsWith(ApiEndpoints.Health) ||
+            path.StartsWith(ApiEndpoints.Auth) ||
+            path.StartsWith(ApiEndpoints.Webhooks) ||
+            path.StartsWith(ApiEndpoints.Swagger) ||
+            path.StartsWith(ApiEndpoints.Hangfire) ||
+            path == ApiEndpoints.Root))
+        {
+            await _next(context);
+            return;
+        }
+
+        // 3. Skip endpoints marked with [AllowExpiredSubscription]
+        var endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<AllowExpiredSubscriptionAttribute>() != null)
+        {
+            await _next(context);
+            return;
+        }
+
+        // 4. Extract tenant ID from context (set by TenantMiddleware from JWT claims)
+        if (!context.Items.TryGetValue("Cache_TenantId", out var tenantIdObj) ||
+            tenantIdObj is not Guid tenantId ||
+            tenantId == Guid.Empty)
+        {
+            // No tenant context — let other middleware/auth handle this
+            await _next(context);
+            return;
+        }
+
+        // 5. Check subscription status — cache first, DB fallback
+        var now = clock.UtcNow;
+        var isBlocked = await IsSubscriptionBlocked(tenantId, now, subscriptionRepository, cacheService, metrics);
+
+        if (isBlocked == true)
+        {
+            metrics.SubscriptionGateBlocked.Add(1,
+                new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()));
+
+            _logger.LogWarning("Subscription gate blocked mutation for tenant {TenantId}", tenantId);
+
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var response = new
+            {
+                success = false,
+                errorCode = DomainErrorCode.Subscription.Blocked.ToString(),
+                message = "Your subscription does not allow this operation. Please upgrade or renew your plan."
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            return;
+        }
+
+        // isBlocked == null means both Redis AND DB failed
+        // For billing/upgrade endpoints: already handled above via attribute
+        // For everything else: fail-closed (reject) to prevent unauthorized access
+        if (isBlocked == null)
+        {
+            _logger.LogError("Subscription gate: unable to verify subscription for tenant {TenantId}. Failing closed.", tenantId);
+
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.ContentType = "application/json";
+
+            var response = new
+            {
+                success = false,
+                errorCode = DomainErrorCode.System.ServiceUnavailable.ToString(),
+                message = "Unable to verify subscription status. Please try again."
+            };
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            return;
+        }
+
+        await _next(context);
+    }
+
+    /// <summary>
+    /// Returns true if blocked, false if allowed, null if unable to determine.
+    /// </summary>
+    private async Task<bool?> IsSubscriptionBlocked(
+        Guid tenantId,
+        DateTime now,
+        ITenantSubscriptionRepository subscriptionRepository,
+        ICacheService cacheService,
+        CobryxMetrics metrics)
+    {
+        var cacheKey = $"{CacheKeyPrefix}{tenantId}";
+
+        // Try cache first (fail-open on Redis error)
+        try
+        {
+            var cached = await cacheService.GetAsync<SubscriptionAccessEntry>(cacheKey);
+            if (cached != null)
+            {
+                // Stale guard: reject entries older than TTL (clock drift / frozen cache)
+                if ((now - cached.CheckedAtUtc) > CacheTtl)
+                {
+                    _logger.LogInformation("Stale cache entry for tenant {TenantId}, falling through to DB", tenantId);
+                }
+                else
+                {
+                    metrics.SubscriptionGateCacheHits.Add(1);
+                    return cached.IsBlocked;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Redis unavailable for subscription gate, falling back to DB");
+        }
+
+        metrics.SubscriptionGateCacheMisses.Add(1);
+
+        // DB fallback
+        try
+        {
+            var subscription = await subscriptionRepository.GetByTenantIdAsync(tenantId);
+
+            if (subscription == null)
+            {
+                // No subscription record — block by default
+                await TryCacheResult(cacheService, cacheKey, true, now);
+                return true;
+            }
+
+            var blocked = subscription.IsBlocked(now);
+
+            await TryCacheResult(cacheService, cacheKey, blocked, now);
+            return blocked;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DB unavailable for subscription gate. Cannot verify tenant {TenantId}", tenantId);
+            return null; // Both Redis and DB failed
+        }
+    }
+
+    private async Task TryCacheResult(ICacheService cacheService, string cacheKey, bool blocked, DateTime checkedAt)
+    {
+        try
+        {
+            await cacheService.SetAsync(cacheKey, new SubscriptionAccessEntry(blocked, checkedAt), CacheTtl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to cache subscription status");
+        }
+    }
+
+    /// <summary>
+    /// Wrapper record to distinguish cache-miss (null) from cached false.
+    /// Includes CheckedAtUtc for stale-guard validation.
+    /// </summary>
+    private sealed record SubscriptionAccessEntry(bool IsBlocked, DateTime CheckedAtUtc);
+}

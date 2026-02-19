@@ -177,6 +177,7 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Domain.Services.DocumentService>();
         services.AddScoped<IDocumentStorage, R2StorageProvider>();
         services.AddScoped<IVirusScanner, Services.Security.ClamAvScanner>();
+        services.AddSingleton<Services.Security.ScannerCircuitBreaker>();
 
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();

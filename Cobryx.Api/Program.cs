@@ -103,6 +103,11 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
 
+// Document scan services
+builder.Services.AddSingleton<Cobryx.Application.Documents.Services.FileSignatureValidator>();
+builder.Services.AddScoped<Cobryx.Application.Documents.Commands.ScanDocument.ScanDocumentHandler>();
+builder.Services.AddScoped<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocumentsJob>();
+
 builder.Services
     .AddApplicationServices()
     .AddInfrastructureServices(builder.Configuration);
@@ -200,6 +205,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
+app.UseMiddleware<Cobryx.Api.Middlewares.SubscriptionGateMiddleware>();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
@@ -248,6 +254,11 @@ try
             "process-outbox-events",
             job => job.RunAsync(CancellationToken.None),
             "*/10 * * * * *"); // Every 10 seconds
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocumentsJob>(
+            "cleanup-stale-documents",
+            job => job.RunAsync(CancellationToken.None),
+            "*/5 * * * *"); // Every 5 minutes
     }
 }
 catch (Exception ex)
