@@ -12,4 +12,7 @@ public class AppOptions
 
     [Required, Url]
     public string DocsUrl { get; set; } = "https://docs.api.cobryx.com.mx";
+
+    [Required]
+    public string JwtSecret { get; set; } = string.Empty;
 }

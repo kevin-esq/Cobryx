@@ -13,6 +13,7 @@ using Cobryx.Api.Outcomes;
 using Cobryx.Api.Infrastructure;
 using Cobryx.Application.Common.Attributes;
 using Cobryx.Api.Contracts.V1.Identity;
+using Cobryx.Application.Tenants.Common;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -64,6 +65,37 @@ public class AuthController : CobryxBaseController
 
         var result = await Sender.Send(command, cancellationToken);
         return HandleCreatedResult("/api/v1/auth/login", result, AuthOutcomes.SignupVerificationRequired);
+    }
+
+    /// <summary>
+    /// Enrolls an invited user into their tenant.
+    /// </summary>
+    /// <remarks>
+    /// Consumes an invitation token and creates a user account.
+    /// Possible Outcomes:
+    /// - TENANT.INVITATION.ENROLL_SUCCESS: User enrolled and email automatically verified.
+    /// - AUTH.ENROLL.FAILED: Invalid token or email mismatch.
+    /// </remarks>
+    /// <param name="request">Enrollment details including the secure invitation token.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("enroll")]
+    [AllowAnonymous]
+    [SkipOnboardingCheck]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 201)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 402)]
+    public async Task<IActionResult> Enroll([FromBody] EnrollRequest request, CancellationToken cancellationToken)
+    {
+        var command = new Cobryx.Application.Auth.Commands.Enroll.EnrollUserCommand(
+            request.Token,
+            request.Email,
+            request.FirstName,
+            request.LastName,
+            request.Password,
+            request.MarketingConsent);
+
+        var result = await Sender.Send(command, cancellationToken);
+        return HandleResult(result, InvitationOutcomes.EnrollSuccess);
     }
 
     /// <summary>

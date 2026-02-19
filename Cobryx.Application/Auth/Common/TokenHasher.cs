@@ -10,4 +10,11 @@ public static class TokenHasher
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToBase64String(bytes);
     }
+
+    public static string GetHmacHash(string token, string secret)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(hash);
+    }
 }
