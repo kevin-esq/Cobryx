@@ -1,0 +1,98 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Lending;
+using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Common;
+using Concordia;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cobryx.Application.Tenants.Commands.SeedDemoData;
+
+public record SeedDemoDataCommand : IRequest<Result>;
+
+public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantProvider _tenantProvider;
+    private readonly IClock _clock;
+
+    public SeedDemoDataHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider, IClock clock)
+    {
+        _unitOfWork = unitOfWork;
+        _tenantProvider = tenantProvider;
+        _clock = clock;
+    }
+
+    public async Task<Result> Handle(SeedDemoDataCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
+        var dbContext = (DbContext)_unitOfWork;
+
+        // 1. Check if demo data already exists to avoid duplicates
+        var alreadyHasDemo = await dbContext.Set<Loan>().AnyAsync(l => l.TenantId == tenantId && l.IsDemo, cancellationToken);
+        if (alreadyHasDemo) return Result.Success();
+
+        // 2. Create Demo Customer
+        var customer = new Customer(
+            tenantId, 
+            "Demo", 
+            "Global Corp", 
+            "+525500000000", 
+            null, 
+            null);
+        
+        dbContext.Set<Customer>().Add(customer);
+
+        // 3. Create Demo Loan Agreement
+        var agreement = new LoanAgreement(
+            tenantId,
+            customer.Id,
+            500000,
+            Guid.NewGuid(), // Interest Policy
+            PaymentFrequency.Monthly,
+            12,
+            _clock.UtcNow.AddDays(-60),
+            _clock.UtcNow.AddDays(-30),
+            LoanOrigin.CashLoan);
+        
+        dbContext.Set<LoanAgreement>().Add(agreement);
+
+        // 4. Create Demo Loans
+        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", 250000, isDemo: true);
+        activeLoan.Activate();
+        
+        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", 100000, isDemo: true);
+        overdueLoan.Activate();
+        
+        dbContext.Set<Loan>().AddRange(activeLoan, overdueLoan);
+
+        // 5. Create Demo Payments
+        var paymentMethod = await dbContext.Set<PaymentMethod>()
+            .FirstOrDefaultAsync(pm => pm.TenantId == tenantId, cancellationToken);
+        
+        if (paymentMethod != null)
+        {
+            var payment = new Payment(
+                tenantId, 
+                customer.Id, 
+                paymentMethod.Id, 
+                new Money(15000, "MXN"), 
+                _clock.UtcNow.AddDays(-5), 
+                "DEMO-REF-001", 
+                "Demo Payment Success",
+                isDemo: true);
+            
+            payment.Initiate();
+            payment.Complete();
+            dbContext.Set<Payment>().Add(payment);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+}

@@ -1,5 +1,7 @@
 using Asp.Versioning;
 using Cobryx.Application.Dashboard;
+using Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
+using Cobryx.Application.Dashboard.Common;
 using Cobryx.Infrastructure.Caching;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Api.Contracts.V1.Common;
@@ -61,6 +63,18 @@ public class DashboardController : CobryxBaseController
             await _cacheService.SetAsync(cacheKey, result.Value!, TimeSpan.FromMinutes(5));
         }
 
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Retrieves the onboarding status for the current tenant.
+    /// Tracks setup progress and value-realization signals.
+    /// </summary>
+    [HttpGet("onboarding-status")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<OnboardingStatusDto>), 200)]
+    public async Task<IActionResult> GetOnboardingStatus()
+    {
+        var result = await Sender.Send(new GetOnboardingStatusQuery());
         return HandleResult(result);
     }
 }

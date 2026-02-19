@@ -86,6 +86,10 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
 
         await _tenantRepository.UpdateAsync(tenant, cancellationToken);
         await _userRepository.UpdateAsync(user, cancellationToken);
+
+        // Telemetry Trigger
+        tenant.TriggerOnboardingMilestone("ESTABLISHING_FOUNDATION");
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
