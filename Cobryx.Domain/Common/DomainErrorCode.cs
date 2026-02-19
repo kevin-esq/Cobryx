@@ -40,6 +40,10 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode SessionRevoked = new("AUTH.SESSION.REVOKED");
         public static readonly DomainErrorCode TokenNotActive = new("AUTH.TOKEN.NOT_ACTIVE");
         public static readonly DomainErrorCode MfaNotConfigured = new("AUTH.MFA.NOT_CONFIGURED");
+        public static readonly DomainErrorCode InvalidRole = new("AUTH.INVALID_ROLE");
+        public static readonly DomainErrorCode EmailMismatch = new("AUTH.EMAIL_MISMATCH");
+        public static readonly DomainErrorCode InvitationNotFound = new("AUTH.INVITATION_NOT_FOUND");
+        public static readonly DomainErrorCode InvalidState = new("AUTH.INVALID_STATE");
     }
 
     public static class User
@@ -47,6 +51,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode NotFound = new("USER.NOT_FOUND");
         public static readonly DomainErrorCode NotRegistered = new("USER.NOT_REGISTERED");
         public static readonly DomainErrorCode EmailAlreadyExists = new("USER.EMAIL_ALREADY_EXISTS");
+        public static readonly DomainErrorCode AlreadyExists = new("USER.ALREADY_EXISTS");
         public static readonly DomainErrorCode TenantIdRequired = new("DOMAIN.USER.TENANT_ID_REQUIRED");
         public static readonly DomainErrorCode FirstNameRequired = new("DOMAIN.USER.FIRST_NAME_REQUIRED");
         public static readonly DomainErrorCode LastNameRequired = new("DOMAIN.USER.LAST_NAME_REQUIRED");

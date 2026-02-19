@@ -108,6 +108,7 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
     public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+    public DbSet<TenantInvitation> TenantInvitations => Set<TenantInvitation>();
 
     // Lending Domain
     public DbSet<Domain.Entities.Lending.Loan> Loans => Set<Domain.Entities.Lending.Loan>();
