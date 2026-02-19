@@ -11,6 +11,7 @@ using Cobryx.Api.Contracts.V1.Common;
 using Concordia;
 using Cobryx.Api.Outcomes;
 using Cobryx.Api.Infrastructure;
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Api.Contracts.V1.Identity;
 using Cobryx.Domain.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -45,6 +46,7 @@ public class AuthController : CobryxBaseController
     /// <param name="request">The registration details including business name and optional return URL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("signup")]
+    [Idempotent]
     [AllowAnonymous]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 201)]

@@ -6,6 +6,7 @@ using Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;
 using Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
 using Cobryx.Application.Subscriptions.Commands.CreatePortalSession;
 using Cobryx.Application.Subscriptions.Commands.CreateCheckoutSession;
+using Cobryx.Application.Subscriptions.Commands.SyncSubscription;
 using Cobryx.Domain.Common;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
@@ -116,5 +117,27 @@ public class SubscriptionController : CobryxBaseController
             : Result.Failure<CheckoutUrlResponse>(result.Error!);
 
         return HandleResult(mappedResult, SubscriptionOutcomes.PortalCreated);
+    }
+
+    /// <summary>
+    /// Forced authoritative synchronization of the tenant's subscription state from Stripe.
+    /// Use this as a recovery mechanism if webhooks are delayed or missed.
+    /// </summary>
+    /// <remarks>
+    /// Access Policy: Restricted to users with 'CanManageTenant' administrative permissions.
+    /// Implementation: Performs a tenant-level row lock (FOR UPDATE) to prevent concurrency issues.
+    ///
+    /// Possible Outcomes:
+    /// - BILLING.SUBSCRIPTION.SYNC_SUCCESS: Local state updated from Stripe.
+    /// </remarks>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    [HttpPost("sync")]
+    [Authorize(Policy = "CanManageTenant")]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    public async Task<IActionResult> Sync(CancellationToken ct)
+    {
+        var result = await Sender.Send(new SyncSubscriptionCommand(), ct);
+        return HandleResult(result, SubscriptionOutcomes.SyncAuthoritative);
     }
 }

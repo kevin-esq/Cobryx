@@ -123,7 +123,7 @@ public class StripeSubscriptionSyncService
     /// Executes the authoritative synchronization by fetching the latest state from Stripe.
     /// This pattern gracefully handles delayed or out-of-order webhook delivery.
     /// </summary>
-    private async Task SyncAuthoritativeStateAsync(
+    public async Task SyncAuthoritativeStateAsync(
         string stripeEventId,
         string stripeSubscriptionId,
         TenantSubscription subscription,

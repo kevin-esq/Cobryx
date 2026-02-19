@@ -7,6 +7,7 @@ public static class SubscriptionOutcomes
     private const string Prefix = "BILLING.SUBSCRIPTION";
 
     public static readonly Outcome Status = new($"{Prefix}.STATUS_CHECK_SUCCESS", OutcomeCategory.Success, "Subscription status retrieved successfully.");
+    public static readonly Outcome SyncAuthoritative = new($"{Prefix}.SYNC_SUCCESS", OutcomeCategory.Success, "Subscription synchronization successful.");
     public static readonly Outcome CheckoutCreated = new($"{Prefix}.CHECKOUT_CREATE_SUCCESS", OutcomeCategory.Success, "Checkout session created successfully.");
     public static readonly Outcome CheckoutFailed = new($"{Prefix}.CHECKOUT_CREATE_FAILED", OutcomeCategory.BusinessError, "Checkout session creation failed.");
     public static readonly Outcome PortalCreated = new($"{Prefix}.PORTAL_CREATE_SUCCESS", OutcomeCategory.Success, "Customer portal session created successfully.");

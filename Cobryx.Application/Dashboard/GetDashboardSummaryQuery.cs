@@ -84,7 +84,7 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
 
         var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
         var collections = await dbContext.Set<Domain.Entities.Payments.Payment>()
-            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.CreatedAt >= thirtyDaysAgo)
+            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.PaymentDate >= thirtyDaysAgo && p.Status == Domain.Enums.PaymentStatus.Completed)
             .SumAsync(p => p.Amount.Amount, cancellationToken);
 
         var summary = new DashboardSummaryDto
