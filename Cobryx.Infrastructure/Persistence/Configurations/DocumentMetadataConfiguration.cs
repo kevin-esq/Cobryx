@@ -1,4 +1,5 @@
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,5 +17,14 @@ public class DocumentMetadataConfiguration : IEntityTypeConfiguration<DocumentMe
         builder.Property(d => d.FileName).IsRequired().HasMaxLength(255);
         builder.Property(d => d.BlobPath).IsRequired().HasMaxLength(1000);
         builder.Property(d => d.MimeType).IsRequired().HasMaxLength(100);
+
+        builder.Property(d => d.ScanStatus)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(ScanStatus.PendingScan);
+
+        builder.Property(d => d.ScannedAtUtc);
+        builder.Property(d => d.ScanFailureReason).HasMaxLength(500);
     }
 }

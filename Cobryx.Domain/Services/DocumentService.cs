@@ -23,7 +23,8 @@ public class DocumentService
         Stream fileStream,
         string fileName,
         string contentType,
-        Guid uploadedBy)
+        Guid uploadedBy,
+        DateTime createdAtUtc)
     {
         if (fileStream.Length > MaxFileSize)
         {
@@ -46,6 +47,7 @@ public class DocumentService
             blobPath,
             fileStream.Length,
             contentType,
-            uploadedBy);
+            uploadedBy,
+            createdAtUtc);
     }
 }

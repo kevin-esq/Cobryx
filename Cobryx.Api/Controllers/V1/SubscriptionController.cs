@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Cobryx.Api.Infrastructure;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -75,6 +76,7 @@ public class SubscriptionController : CobryxBaseController
     /// <param name="request">Plan details and redirect URLs.</param>
     /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
     [HttpPost("checkout")]
+    [AllowExpiredSubscription]
     [ProducesResponseType(typeof(ApiSuccessResponse<CheckoutUrlResponse>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> CreateCheckout([FromBody] CreateCheckoutSessionRequest request, CancellationToken ct)
@@ -101,6 +103,7 @@ public class SubscriptionController : CobryxBaseController
     /// <param name="request">The return URL after the user leaves the portal.</param>
     /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
     [HttpPost("portal")]
+    [AllowExpiredSubscription]
     [ProducesResponseType(typeof(ApiSuccessResponse<CheckoutUrlResponse>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> CreatePortal([FromBody] CreatePortalSessionRequest request, CancellationToken ct)

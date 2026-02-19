@@ -24,6 +24,18 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> SubscriptionUpgrades { get; }
     public Counter<long> SubscriptionDowngradeRejected { get; }
 
+    // Subscription Gate Metrics
+    public Counter<long> SubscriptionGateBlocked { get; }
+    public Counter<long> SubscriptionGateCacheHits { get; }
+    public Counter<long> SubscriptionGateCacheMisses { get; }
+
+    // Document Scan Metrics
+    public Counter<long> DocumentsScanTotal { get; }
+    public Counter<long> DocumentsInfectedTotal { get; }
+    public Counter<long> DocumentsScanFailTotal { get; }
+    public Histogram<double> DocumentsScanLatency { get; }
+    public Counter<long> ScannerCircuitBreakerTrips { get; }
+
     // Performance & Scaling Metrics
     public Counter<long> UsageCacheHits { get; }
     public Counter<long> UsageCacheMisses { get; }
@@ -52,6 +64,18 @@ public sealed class CobryxMetrics : IDisposable
         SubscriptionLimitReached = _meter.CreateCounter<long>("subscription_limit_reached_total", description: "Total hits to a plan limit");
         SubscriptionUpgrades = _meter.CreateCounter<long>("subscription_upgrade_total", description: "Total subscription upgrades");
         SubscriptionDowngradeRejected = _meter.CreateCounter<long>("subscription_downgrade_rejected_total", description: "Total rejected downgrades due to usage");
+
+        // Subscription Gate
+        SubscriptionGateBlocked = _meter.CreateCounter<long>("subscription_gate_blocked_total", description: "Total requests blocked by subscription gate");
+        SubscriptionGateCacheHits = _meter.CreateCounter<long>("subscription_gate_cache_hit_total", description: "Cache hits for subscription status lookups");
+        SubscriptionGateCacheMisses = _meter.CreateCounter<long>("subscription_gate_cache_miss_total", description: "Cache misses for subscription status lookups");
+
+        // Document Scanning
+        DocumentsScanTotal = _meter.CreateCounter<long>("documents_scan_total", description: "Total document scans completed");
+        DocumentsInfectedTotal = _meter.CreateCounter<long>("documents_infected_total", description: "Total infected documents detected");
+        DocumentsScanFailTotal = _meter.CreateCounter<long>("documents_scan_fail_total", description: "Total document scan failures");
+        DocumentsScanLatency = _meter.CreateHistogram<double>("documents_scan_latency_seconds", unit: "s", description: "Duration of virus scans");
+        ScannerCircuitBreakerTrips = _meter.CreateCounter<long>("scanner_circuit_breaker_trips_total", description: "Total times the scanner circuit breaker rejected a request");
 
         // Scaling
         UsageCacheHits = _meter.CreateCounter<long>("usage_cache_hit_total", description: "Total cache hits for usage snapshots");

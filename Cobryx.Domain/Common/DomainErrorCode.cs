@@ -116,6 +116,10 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode VerificationFailed = new("DOMAIN.DOCUMENT.VERIFICATION_FAILED");
         public static readonly DomainErrorCode FileSizeExceeded = new("DOMAIN.DOCUMENT.SIZE_EXCEEDED");
         public static readonly DomainErrorCode VirusDetected = new("DOMAIN.DOCUMENT.VIRUS_DETECTED");
+        public static readonly DomainErrorCode ScanInProgress = new("DOMAIN.DOCUMENT.SCAN_IN_PROGRESS");
+        public static readonly DomainErrorCode InvalidFileType = new("DOMAIN.DOCUMENT.INVALID_FILE_TYPE");
+        public static readonly DomainErrorCode SuspiciousArchive = new("DOMAIN.DOCUMENT.SUSPICIOUS_ARCHIVE");
+        public static readonly DomainErrorCode ScannerUnavailable = new("DOMAIN.DOCUMENT.SCANNER_UNAVAILABLE");
     }
 
     public static class Invoicing
@@ -238,6 +242,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TooManyRequests = new("SYSTEM.TOO_MANY_REQUESTS");
         public static readonly DomainErrorCode ValidationFailed = new("VALIDATION.FAILED");
         public static readonly DomainErrorCode NotAllowed = new("SYSTEM.NOT_ALLOWED");
+        public static readonly DomainErrorCode ServiceUnavailable = new("SYSTEM.SERVICE_UNAVAILABLE");
     }
 
     internal static DomainErrorCode From(string value) => new(value);

@@ -23,17 +23,20 @@ public class StripeSubscriptionSyncService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IStripeService _stripeService;
     private readonly IClock _clock;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<StripeSubscriptionSyncService> _logger;
 
     public StripeSubscriptionSyncService(
         IUnitOfWork unitOfWork,
         IStripeService stripeService,
         IClock clock,
+        ICacheService cacheService,
         ILogger<StripeSubscriptionSyncService> logger)
     {
         _unitOfWork = unitOfWork;
         _stripeService = stripeService;
         _clock = clock;
+        _cacheService = cacheService;
         _logger = logger;
     }
 
@@ -143,6 +146,16 @@ public class StripeSubscriptionSyncService
 
         Db.Set<ProcessedStripeEvent>().Add(new ProcessedStripeEvent(stripeEventId, eventType, _clock.UtcNow));
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // Bust subscription gate cache immediately after state change
+        try
+        {
+            await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}");
+        }
+        catch (Exception cacheEx)
+        {
+            _logger.LogWarning(cacheEx, "Failed to invalidate subscription cache for Tenant {TenantId}", subscription.TenantId);
+        }
 
         _logger.LogInformation(
             "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",

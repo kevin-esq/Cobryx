@@ -1,4 +1,5 @@
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Enums;
 
 namespace Cobryx.Domain.Entities;
 
@@ -12,6 +13,9 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
     public long FileSize { get; private set; }
     public string MimeType { get; private set; }
     public Guid UploadedBy { get; private set; }
+    public ScanStatus ScanStatus { get; private set; }
+    public DateTime? ScannedAtUtc { get; private set; }
+    public string? ScanFailureReason { get; private set; }
 
     private DocumentMetadata()
     {
@@ -29,7 +33,8 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
         string blobPath,
         long fileSize,
         string mimeType,
-        Guid uploadedBy)
+        Guid uploadedBy,
+        DateTime createdAtUtc)
     {
         TenantId = tenantId;
         EntityId = entityId;
@@ -39,5 +44,40 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
         FileSize = fileSize;
         MimeType = mimeType;
         UploadedBy = uploadedBy;
+        ScanStatus = ScanStatus.PendingScan;
+
+        AddDomainEvent(new Events.Documents.DocumentUploadedEvent(
+            Id, tenantId, fileName, blobPath, createdAtUtc));
+    }
+
+    public void MarkAsClean(DateTime scannedAt)
+    {
+        ScanStatus = ScanStatus.Clean;
+        ScannedAtUtc = scannedAt;
+        ScanFailureReason = null;
+    }
+
+    public void MarkAsInfected(DateTime scannedAt)
+    {
+        ScanStatus = ScanStatus.Infected;
+        ScannedAtUtc = scannedAt;
+        ScanFailureReason = null;
+    }
+
+    public void MarkScanFailed(string reason, DateTime scannedAt)
+    {
+        ScanStatus = ScanStatus.ScanFailed;
+        ScannedAtUtc = scannedAt;
+        ScanFailureReason = reason;
+    }
+
+    /// <summary>
+    /// Resets to PendingScan for retry. Only valid from ScanFailed state.
+    /// </summary>
+    public void ResetForRetry()
+    {
+        if (ScanStatus != ScanStatus.ScanFailed) return;
+        ScanStatus = ScanStatus.PendingScan;
+        ScanFailureReason = null;
     }
 }
