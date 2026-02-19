@@ -100,3 +100,35 @@ public record PlanDto(
     /// <example>14</example>
     public int TrialDays { get; init; } = TrialDays;
 }
+
+/// <summary>
+/// Detailed breakdown of usage for a specific plan resource.
+/// </summary>
+public record SubscriptionResourceUsageDto(
+    int Used,
+    int Limit,
+    int Remaining,
+    bool IsNearLimit
+);
+
+/// <summary>
+/// Flags representing the features unlocked by the current plan.
+/// Using explicit booleans rather than enums to ensure long-term API stability.
+/// </summary>
+public record PlanCapabilitiesDto(
+    bool Lending,
+    bool AdvancedReporting,
+    bool WhiteLabeling
+);
+
+/// <summary>
+/// UX-oriented intelligence about the current subscription to drive conversion and transparency.
+/// </summary>
+public record SubscriptionIntelligenceDto(
+    string Status,
+    string PlanName,
+    string Tier,
+    Dictionary<string, SubscriptionResourceUsageDto> Usage,
+    PlanCapabilitiesDto Capabilities,
+    bool UpgradeRecommended
+);

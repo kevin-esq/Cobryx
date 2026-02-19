@@ -67,6 +67,24 @@ public class SubscriptionController : CobryxBaseController
     }
 
     /// <summary>
+    /// Retrieves advanced plan intelligence including resource usage snapshots,
+    /// capability flags, and upgrade recommendations to drive conversion UX.
+    /// </summary>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - BILLING.SUBSCRIPTION.INTELLIGENCE_FETCH_SUCCESS: Intelligence retrieved successfully.
+    /// </remarks>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    [HttpGet("intelligence")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<SubscriptionIntelligenceDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    public async Task<IActionResult> GetIntelligence(CancellationToken ct)
+    {
+        var result = await Sender.Send(new Cobryx.Application.Subscriptions.Queries.GetSubscriptionIntelligence.GetSubscriptionIntelligenceQuery(), ct);
+        return HandleResult(result, SubscriptionOutcomes.Intelligence);
+    }
+
+    /// <summary>
     /// Initiates a Stripe Checkout session for plan upgrade or initial purchase.
     /// </summary>
     /// <remarks>
