@@ -260,6 +260,11 @@ try
             "cleanup-stale-documents",
             job => job.RunAsync(CancellationToken.None),
             "*/5 * * * *"); // Every 5 minutes
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.InvitationCleanupJob>(
+            "invitation-cleanup",
+            job => job.RunAsync(CancellationToken.None),
+            "*/10 * * * *"); // Every 10 minutes
     }
 }
 catch (Exception ex)

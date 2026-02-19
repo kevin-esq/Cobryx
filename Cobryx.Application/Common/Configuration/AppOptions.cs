@@ -15,4 +15,15 @@ public class AppOptions
 
     [Required]
     public string JwtSecret { get; set; } = string.Empty;
+
+    [Required]
+    public string InvitationTokenSecret { get; set; } = string.Empty;
+
+    public string? OldInvitationTokenSecret { get; set; }
+
+    public int InvitationTokenTTLHours { get; set; } = 72;
+
+    public int MaxInvitationCleanupBatchSize { get; set; } = 500;
+
+    public int MinEnrollmentResponseTimeMs { get; set; } = 0;
 }

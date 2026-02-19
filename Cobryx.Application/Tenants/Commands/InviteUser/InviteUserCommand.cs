@@ -2,6 +2,7 @@ using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Application.Tenants.Common;
 using Cobryx.Domain.Common;
@@ -35,6 +36,7 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IEmailService _emailService;
+    private readonly CobryxMetrics _metrics;
     private readonly AppOptions _appOptions;
     private readonly ILogger<InviteUserHandler> _logger;
 
@@ -44,6 +46,7 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IEmailService emailService,
+        CobryxMetrics metrics,
         IOptions<AppOptions> appOptions,
         ILogger<InviteUserHandler> logger)
     {
@@ -52,6 +55,7 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _emailService = emailService;
+        _metrics = metrics;
         _appOptions = appOptions.Value;
         _logger = logger;
     }
@@ -78,22 +82,18 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         var dbContext = (DbContext)_unitOfWork;
         var normalizedEmail = request.Email.ToLowerInvariant();
         var existingInvite = await dbContext.Set<TenantInvitation>()
-            .FirstOrDefaultAsync(x => x.TenantId == tenantId.Value && x.Email == normalizedEmail, ct);
+            .FirstOrDefaultAsync(x => x.TenantId == tenantId.Value && x.Email == normalizedEmail && x.Status == InvitationStatus.Pending, ct);
 
-        string rawToken = Guid.NewGuid().ToString("N");
-        string tokenHash = TokenHasher.GetHmacHash(rawToken, _appOptions.JwtSecret);
-        var expiresAt = DateTime.UtcNow.AddDays(3);
+        string rawToken = TokenHasher.GenerateSecureToken();
+        string tokenHash = TokenHasher.GetHmacHash(rawToken, _appOptions.InvitationTokenSecret);
+        var expiresAt = DateTime.UtcNow.AddHours(_appOptions.InvitationTokenTTLHours);
 
         if (existingInvite != null)
         {
-            if (existingInvite.Status == InvitationStatus.Accepted)
-            {
-                 return Result.Failure<Guid>(DomainErrorCode.User.AlreadyExists);
-            }
-            
-            // Remove old pending/expired/revoked invitation to replace it
+            // Replace old pending invitation
             dbContext.Set<TenantInvitation>().Remove(existingInvite);
             await _unitOfWork.SaveChangesAsync(ct);
+            _logger.LogInformation("[AUDIT] Replacing pending invitation for {Email} in Tenant {TenantId}", request.Email, tenantId.Value);
         }
 
         var invitation = new TenantInvitation(request.Email, tenantId.Value, role.Id, tokenHash, expiresAt);
@@ -109,7 +109,9 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
             $"Has sido invitado a unirse a un equipo en Cobryx. Haz clic aquí para configurar tu cuenta: <a href='{inviteUrl}'>{inviteUrl}</a>",
             ct);
 
-        _logger.LogInformation("Invitation sent to {Email} for Tenant {TenantId}", request.Email, tenantId.Value);
+        _metrics.InvitationsCreated.Add(1);
+        _logger.LogInformation("[AUDIT] Invitation created: ID {Id}, Email {Email}, Tenant {TenantId}, Role {Role}", 
+            invitation.Id, request.Email, tenantId.Value, request.RoleName);
 
         return Result.Success(invitation.Id);
     }

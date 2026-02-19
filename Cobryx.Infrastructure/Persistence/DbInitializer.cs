@@ -121,14 +121,14 @@ public class DbInitializer
         var plans = new[]
         {
             new SubscriptionPlan("Starter", "Free forever — get started with Cobryx",
-                new Money(0, CobryxDefaults.Currency), 50, 1,
-                PlanTier.Starter, trialDays: 0),
+                new Money(0, CobryxDefaults.Currency), maxInvoices: 50, maxUsers: 1, maxLoans: 50,
+                tier: PlanTier.Starter, trialDays: 0),
             new SubscriptionPlan("Pro", "Scale your lending business",
-                new Money(299, CobryxDefaults.Currency), 500, 3,
-                PlanTier.Pro, trialDays: 14),
+                new Money(299, CobryxDefaults.Currency), maxInvoices: 500, maxUsers: 3, maxLoans: 500,
+                tier: PlanTier.Pro, trialDays: 14),
             new SubscriptionPlan("Business", "Full power for growing teams",
-                new Money(799, CobryxDefaults.Currency), 999999, 10,
-                PlanTier.Business, trialDays: 14),
+                new Money(799, CobryxDefaults.Currency), maxInvoices: 999999, maxUsers: 10, maxLoans: 999999,
+                tier: PlanTier.Business, trialDays: 14),
         };
 
         await dbContext.SubscriptionPlans.AddRangeAsync(plans);
