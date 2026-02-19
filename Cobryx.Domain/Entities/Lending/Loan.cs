@@ -27,6 +27,7 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
     public int DaysInArrears { get; private set; }
     public DateTime? NextPaymentDueDate { get; private set; }
     public DateTime? ClosedAt { get; private set; }
+    public bool IsDemo { get; private set; }
 
     public virtual LoanAgreement Agreement { get; private set; } = null!;
 
@@ -43,7 +44,8 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         Guid customerId,
         Guid loanAgreementId,
         string loanNumber,
-        decimal principalAmount)
+        decimal principalAmount,
+        bool isDemo = false)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
@@ -60,6 +62,7 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         LoanNumber = loanNumber;
         OriginalPrincipal = principalAmount;
         CurrentPrincipalBalance = principalAmount;
+        IsDemo = isDemo;
         CurrentInterestBalance = 0;
         CurrentLateFeeBalance = 0;
         TotalPaid = 0;

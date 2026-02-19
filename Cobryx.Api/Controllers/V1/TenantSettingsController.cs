@@ -2,6 +2,7 @@ using Asp.Versioning;
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Tenants.Commands.UpdateBusinessSettings;
 using Cobryx.Application.Tenants.Commands.UpdateTenantSettings;
+using Cobryx.Application.Tenants.Commands.SeedDemoData;
 using Cobryx.Application.Tenants.Queries.GetBusinessSettings;
 using Cobryx.Application.Tenants.Queries.GetTenantSettings;
 using Concordia;
@@ -105,5 +106,17 @@ public class TenantSettingsController : CobryxBaseController
     {
         var result = await Sender.Send(request);
         return HandleResult(result, TenantOutcomes.SettingsUpdated);
+    }
+
+    /// <summary>
+    /// Seeds the current tenant with demonstration data (Mock Loans/Payments).
+    /// Used to reduce Time-To-Wow for new accounts.
+    /// </summary>
+    [HttpPost("demo-seed")]
+    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse), 200)]
+    public async Task<IActionResult> SeedDemoData()
+    {
+        var result = await Sender.Send(new SeedDemoDataCommand());
+        return HandleResult(result);
     }
 }

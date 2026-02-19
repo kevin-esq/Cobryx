@@ -79,4 +79,12 @@ public class Tenant : BaseEntity, IAggregateRoot
         OnboardingStatus = TenantOnboardingStatus.Completed;
         UpdateTimestamp();
     }
+
+    public void TriggerOnboardingMilestone(string milestoneCode)
+    {
+        AddDomainEvent(new Cobryx.Domain.Events.Onboarding.OnboardingMilestoneReachedEvent(
+            Id, 
+            milestoneCode, 
+            DateTime.UtcNow));
+    }
 }

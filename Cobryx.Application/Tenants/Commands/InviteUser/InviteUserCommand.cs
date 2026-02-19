@@ -113,6 +113,15 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         _logger.LogInformation("[AUDIT] Invitation created: ID {Id}, Email {Email}, Tenant {TenantId}, Role {Role}", 
             invitation.Id, request.Email, tenantId.Value, request.RoleName);
 
+        // Telemetry Trigger: Building Team
+        var db = (DbContext)_unitOfWork;
+        var usersCount = await db.Set<User>().CountAsync(u => u.TenantId == tenantId.Value, ct);
+        if (usersCount == 1) // Only for first invite (owner is usually already there but maybe not counted yet as User entity)
+        {
+            var tenant = await db.Set<Tenant>().FirstAsync(t => t.Id == tenantId.Value, ct);
+            tenant.TriggerOnboardingMilestone("BUILDING_TEAM");
+        }
+
         return Result.Success(invitation.Id);
     }
 }

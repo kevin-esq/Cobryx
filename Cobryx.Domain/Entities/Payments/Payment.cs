@@ -18,6 +18,7 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
     public Money RefundedAmount { get; private set; }
     public Money RefundableAmount => new Money(Amount.Amount - RefundedAmount.Amount, Amount.Currency);
     public bool IsFullyRefunded => RefundedAmount.Amount >= Amount.Amount;
+    public bool IsDemo { get; private set; }
 
     private readonly List<PaymentAllocation> _allocations = new();
     public IReadOnlyCollection<PaymentAllocation> Allocations => _allocations.AsReadOnly();
@@ -31,7 +32,7 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         RefundedAmount = null!;
     }
 
-    public Payment(Guid tenantId, Guid customerId, Guid paymentMethodId, Money amount, DateTime paymentDate, string? reference = null, string? notes = null)
+    public Payment(Guid tenantId, Guid customerId, Guid paymentMethodId, Money amount, DateTime paymentDate, string? reference = null, string? notes = null, bool isDemo = false)
     {
         TenantId = tenantId;
         CustomerId = customerId;
@@ -42,6 +43,7 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         Notes = notes;
         Status = PaymentStatus.Pending;
         RefundedAmount = Money.Zero(amount.Currency);
+        IsDemo = isDemo;
     }
 
     public void Initiate()

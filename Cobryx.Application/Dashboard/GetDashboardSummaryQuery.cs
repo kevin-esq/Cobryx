@@ -12,32 +12,52 @@ namespace Cobryx.Application.Dashboard;
 public record DashboardSummaryDto
 {
     /// <summary>Total number of loans currently in active/performing status.</summary>
-    /// <example>124</example>
     public int ActiveLoansCount { get; init; }
 
     /// <summary>The aggregated outstanding principal across all active loans.</summary>
-    /// <example>2540000.50</example>
     public decimal TotalPrincipalBalance { get; init; }
 
     /// <summary>Number of loans that have at least one overdue installment.</summary>
-    /// <example>12</example>
     public int OverdueLoansCount { get; init; }
 
     /// <summary>Total amount of principal, interest, and fees currently past due.</summary>
-    /// <example>45200.00</example>
     public decimal TotalArrearsAmount { get; init; }
 
     /// <summary>Total number of customers registered for the tenant.</summary>
-    /// <example>382</example>
     public int ActiveCustomersCount { get; init; }
 
     /// <summary>Total collections (payments received) in the last 30 calendar days.</summary>
-    /// <example>185200.00</example>
     public decimal CollectionsLast30Days { get; init; }
+
+    /// <summary>Collection Efficiency percentage (Collected vs Expected in last 30 days).</summary>
+    public decimal CollectionEfficiency { get; init; }
+
+    /// <summary>Portfolio Yield percentage (Interest Income vs Principal Disbursed).</summary>
+    public decimal PortfolioYield { get; init; }
+
+    /// <summary>Overdue Risk percentage (Percentage of loans currently past due).</summary>
+    public decimal OverdueRisk { get; init; }
+
+    /// <summary>Flag to indicate if a 'Getting Started' empty state should be shown.</summary>
+    public bool ShowGettingStarted { get; init; }
+
+    /// <summary>Flag to indicate if the displayed data is from a demonstration seed.</summary>
+    public bool IsDemoData { get; init; }
+
+    /// <summary>Psychographic summary signals to create urgency or highlight success.</summary>
+    public List<ImpactSignalDto> ImpactSignals { get; init; } = new();
 
     /// <summary>Breakdown of loan counts by their internal risk/performance status.</summary>
     public List<RiskDistributionDto> RiskDistribution { get; init; } = new();
 }
+
+/// <summary>
+/// Represents a semantic signal about the business impact of a metric.
+/// </summary>
+public record ImpactSignalDto(
+    string Code,
+    string Level // Success, Info, Warning, Critical
+);
 
 /// <summary>
 /// Represents a count of loans categorized by a specific risk or status label.
@@ -74,6 +94,7 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
         var tenantId = _tenantProvider.GetTenantId();
         var dbContext = (DbContext)_unitOfWork;
 
+        // 1. Fetch Core Data
         var loans = await dbContext.Set<Domain.Entities.Lending.Loan>()
             .Where(l => l.TenantId == tenantId && !l.IsDeleted && l.Status != Domain.Entities.Lending.Enums.LoanStatus.Closed)
             .ToListAsync(cancellationToken);
@@ -83,18 +104,68 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
             .CountAsync(cancellationToken);
 
         var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-        var collections = await dbContext.Set<Domain.Entities.Payments.Payment>()
+        var collectionsLast30d = await dbContext.Set<Domain.Entities.Payments.Payment>()
             .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.PaymentDate >= thirtyDaysAgo && p.Status == Domain.Enums.PaymentStatus.Completed)
             .SumAsync(p => p.Amount.Amount, cancellationToken);
 
+        // 2. Advanced KPI: Expected Collections (Simplified for current model)
+        // In a real system, we would join with Installments schedule. 
+        // For this v1, we'll use (TotalArrears + Scheduled) approx.
+        var totalPrincipalDisbursed = await dbContext.Set<Domain.Entities.Lending.Loan>()
+            .Where(l => l.TenantId == tenantId && !l.IsDeleted)
+            .SumAsync(l => l.OriginalPrincipal, cancellationToken);
+
+        // 3. Calculation Logic
+        var activeLoans = loans.Where(l => l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active).ToList();
+        var totalPrincipalBalance = loans.Sum(l => l.CurrentPrincipalBalance);
+        var overdueCount = loans.Count(l => l.DaysInArrears > 0);
+        
+        // Overdue Risk: (Overdue Count / Total Active)
+        var overdueRisk = activeLoans.Any() 
+            ? (decimal)overdueCount / activeLoans.Count * 100 
+            : 0;
+
+        // Collection Efficiency (Dummy target for demo: collections vs total arrears)
+        var totalArrears = loans.Sum(l => l.CurrentInterestBalance + l.CurrentLateFeeBalance);
+        var collectionEfficiency = (totalArrears + collectionsLast30d) > 0 
+            ? (collectionsLast30d / (totalArrears + collectionsLast30d)) * 100 
+            : 100;
+
+        // Portfolio Yield (Interest vs Principal)
+        var portfolioYield = totalPrincipalDisbursed > 0 
+            ? (loans.Sum(l => l.CurrentInterestBalance) / totalPrincipalDisbursed) * 100 
+            : 0;
+
+        // 4. Impact Signals (Psychographic logic)
+        var signals = new List<ImpactSignalDto>();
+
+        if (overdueRisk > 15)
+            signals.Add(new ImpactSignalDto("CASHFLOW_AT_RISK", "Critical"));
+        else if (overdueRisk > 5)
+            signals.Add(new ImpactSignalDto("COLLECTIONS_LAGGING", "Warning"));
+
+        if (portfolioYield > 10)
+            signals.Add(new ImpactSignalDto("YIELD_EXCELLENT", "Success"));
+        else if (portfolioYield < 3 && totalPrincipalDisbursed > 0)
+            signals.Add(new ImpactSignalDto("YIELD_UNREALIZED", "Info"));
+
+        if (collectionEfficiency < 80)
+            signals.Add(new ImpactSignalDto("EFFICIENCY_LOW", "Warning"));
+
         var summary = new DashboardSummaryDto
         {
-            ActiveLoansCount = loans.Count(l => l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active),
-            TotalPrincipalBalance = loans.Sum(l => l.CurrentPrincipalBalance),
-            OverdueLoansCount = loans.Count(l => l.DaysInArrears > 0),
-            TotalArrearsAmount = loans.Sum(l => l.CurrentInterestBalance + l.CurrentLateFeeBalance),
+            ActiveLoansCount = activeLoans.Count,
+            TotalPrincipalBalance = totalPrincipalBalance,
+            OverdueLoansCount = overdueCount,
+            TotalArrearsAmount = totalArrears,
             ActiveCustomersCount = customersCount,
-            CollectionsLast30Days = collections,
+            CollectionsLast30Days = collectionsLast30d,
+            CollectionEfficiency = Math.Round(collectionEfficiency, 2),
+            PortfolioYield = Math.Round(portfolioYield, 2),
+            OverdueRisk = Math.Round(overdueRisk, 2),
+            ShowGettingStarted = !loans.Any(),
+            IsDemoData = loans.Any(l => l.IsDemo),
+            ImpactSignals = signals,
             RiskDistribution = loans
                 .GroupBy(l => l.RiskStatus)
                 .Select(g => new RiskDistributionDto(g.Key.ToString(), g.Count()))
