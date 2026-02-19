@@ -5,7 +5,8 @@ public record UsageSnapshot(
     int ActiveUsersCount,
     int ActiveLoansCount,
     int MaxInvoices,
-    int MaxUsers);
+    int MaxUsers,
+    int MaxLoans);
 
 public interface IUsageMeteringService
 {

@@ -91,6 +91,7 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<Cobryx.Api.Infrastructure.SessionValidationFilter>();
     options.Filters.Add<Cobryx.Api.Infrastructure.Observability.ObservabilityFilter>();
     options.Filters.Add<Cobryx.Api.Infrastructure.IdempotencyKeyFilter>();
+    options.Filters.Add<Cobryx.Api.Infrastructure.PlanGatingFilter>();
 })
 .AddJsonOptions(json =>
 {

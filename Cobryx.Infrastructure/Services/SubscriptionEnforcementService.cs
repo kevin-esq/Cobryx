@@ -52,7 +52,7 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
         await EnsureSubscriptionActiveAsync(tenantId, ct);
 
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId, ct);
-        if (usage.ActiveLoansCount >= 999999) // Placeholder if no loan limit defined in plan yet
+        if (usage.ActiveLoansCount >= usage.MaxLoans)
         {
             _metrics.SubscriptionLimitReached.Add(1, new KeyValuePair<string, object?>("Resource", "Loans"), new KeyValuePair<string, object?>("TenantId", tenantId));
             throw SubscriptionLimitExceededException.LimitReached("Loans");

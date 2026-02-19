@@ -11,6 +11,7 @@ public class SubscriptionPlan : BaseEntity, IAggregateRoot
     public Money Price { get; private set; }
     public int MaxInvoices { get; private set; }
     public int MaxUsers { get; private set; }
+    public int MaxLoans { get; private set; }
     public bool IsActive { get; private set; }
 
     // Stripe integration
@@ -25,7 +26,7 @@ public class SubscriptionPlan : BaseEntity, IAggregateRoot
         Price = null!;
     }
 
-    public SubscriptionPlan(string name, string description, Money price, int maxInvoices, int maxUsers,
+    public SubscriptionPlan(string name, string description, Money price, int maxInvoices, int maxUsers, int maxLoans = 0,
         PlanTier tier = PlanTier.Free, int trialDays = 0, string? stripePriceId = null)
     {
         Name = name;
@@ -33,6 +34,7 @@ public class SubscriptionPlan : BaseEntity, IAggregateRoot
         Price = price;
         MaxInvoices = maxInvoices;
         MaxUsers = maxUsers;
+        MaxLoans = maxLoans;
         IsActive = true;
         Tier = tier;
         TrialDays = trialDays;
