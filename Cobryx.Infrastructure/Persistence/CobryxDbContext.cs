@@ -81,6 +81,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<Domain.Entities.Invoicing.Installment> Installments => Set<Domain.Entities.Invoicing.Installment>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+    public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -111,6 +112,9 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<TenantInvitation> TenantInvitations => Set<TenantInvitation>();
     public DbSet<TenantGrowthMetrics> TenantGrowthMetrics => Set<TenantGrowthMetrics>();
     public DbSet<TenantMRRHistory> TenantMRRHistory => Set<TenantMRRHistory>();
+    public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
+    public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
 
     // Lending Domain
     public DbSet<Domain.Entities.Lending.Loan> Loans => Set<Domain.Entities.Lending.Loan>();

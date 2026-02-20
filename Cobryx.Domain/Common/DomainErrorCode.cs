@@ -253,6 +253,15 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode ServiceUnavailable = new("SYSTEM.SERVICE_UNAVAILABLE");
     }
 
+    public static class PaymentLink
+    {
+        public static readonly DomainErrorCode NotFound = new("DOMAIN.PAYMENT_LINK.NOT_FOUND");
+        public static readonly DomainErrorCode Expired = new("DOMAIN.PAYMENT_LINK.EXPIRED");
+        public static readonly DomainErrorCode AlreadyPaid = new("DOMAIN.PAYMENT_LINK.ALREADY_PAID");
+        public static readonly DomainErrorCode LimitReached = new("DOMAIN.PAYMENT_LINK.LIMIT_REACHED");
+        public static readonly DomainErrorCode InvalidStatus = new("DOMAIN.PAYMENT_LINK.INVALID_STATUS");
+    }
+
     internal static DomainErrorCode From(string value) => new(value);
 }
 

@@ -105,7 +105,6 @@ public class StripeService : IStripeService
         var firstItem = subscription.Items?.Data?.FirstOrDefault();
         var priceId = firstItem?.Price?.Id ?? string.Empty;
 
-        // In Stripe .NET SDK v50, CurrentPeriodEnd is on SubscriptionItem, not Subscription
         var currentPeriodEnd = firstItem?.CurrentPeriodEnd ?? DateTime.UtcNow.AddMonths(1);
 
         return new StripeSubscriptionState(
@@ -114,5 +113,38 @@ public class StripeService : IStripeService
             priceId,
             subscription.TrialEnd,
             currentPeriodEnd);
+    }
+
+    public async Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(
+        Domain.ValueObjects.Money amount,
+        Dictionary<string, string> metadata,
+        CancellationToken ct = default)
+    {
+        var service = new PaymentIntentService();
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(amount.Amount * 100), // Convert to cents
+            Currency = amount.Currency.ToLowerInvariant(),
+            Metadata = metadata,
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            {
+                Enabled = true,
+            }
+        };
+
+        var intent = await service.CreateAsync(options, cancellationToken: ct);
+
+        _logger.LogInformation(
+            "Stripe PaymentIntent created: {IntentId} for {Amount} {Currency}",
+            intent.Id, amount.Amount, amount.Currency);
+
+        return (intent.Id, intent.ClientSecret);
+    }
+
+    public async Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default)
+    {
+        var service = new PaymentIntentService();
+        var intent = await service.GetAsync(paymentIntentId, cancellationToken: ct);
+        return intent.ClientSecret;
     }
 }

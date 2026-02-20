@@ -13,6 +13,13 @@ public interface IStripeService
     Task<string> CreateBillingPortalSessionAsync(string stripeCustomerId, string? returnUrl = null, CancellationToken ct = default);
 
     Task<StripeSubscriptionState> GetSubscriptionStateAsync(string stripeSubscriptionId, CancellationToken ct = default);
+
+    Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(
+        Money amount,
+        Dictionary<string, string> metadata,
+        CancellationToken ct = default);
+
+    Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default);
 }
 
 /// <summary>

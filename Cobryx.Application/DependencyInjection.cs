@@ -1,11 +1,11 @@
-using Cobryx.Domain.DomainServices;
-using Cobryx.Domain.Interfaces;
+using System.Reflection;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Credits.Interfaces;
+using Cobryx.Application.Credits.Services;
+using Cobryx.Application.Auth.Interfaces;
 using Cobryx.Application.Auth.Services;
-using Concordia;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 
 namespace Cobryx.Application;
 
@@ -20,9 +20,10 @@ public static class DependencyInjection
 
         services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<Payments.Services.PaymentLinkReconciliationService>();
+        services.AddScoped<Accounting.Services.FinancialPostingEngine>();
 
         services.AddValidatorsFromAssembly(assembly);
-
 
         return services;
     }

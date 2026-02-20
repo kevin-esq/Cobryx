@@ -17,4 +17,7 @@ public class StripeOptions
 
     [Required, Url]
     public string CancelUrl { get; set; } = string.Empty;
+
+    [Required, MinLength(32)]
+    public string PaymentLinkSecret { get; set; } = string.Empty;
 }
