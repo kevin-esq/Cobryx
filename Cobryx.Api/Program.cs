@@ -33,6 +33,7 @@ builder.Services.AddOpenTelemetry()
     {
         metrics.AddMeter(CobryxMetrics.MeterName);
         metrics.AddAspNetCoreInstrumentation();
+        metrics.AddPrometheusExporter();
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -167,6 +168,22 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.Use((context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/metrics"))
+    {
+        var metricsKey = builder.Configuration["METRICS_SECRET_KEY"];
+        if (string.IsNullOrEmpty(metricsKey) || context.Request.Headers["X-Metrics-Key"] != metricsKey)
+        {
+            context.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        }
+    }
+    return next();
+});
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
+
 var enableSwagger = app.Environment.IsDevelopment()
     || builder.Configuration.GetValue<bool>("ENABLE_SWAGGER");
 
@@ -223,6 +240,8 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false
 });
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 try
 {

@@ -45,7 +45,7 @@ public class ObservabilityFilter : IAsyncActionFilter
 
         if (string.IsNullOrEmpty(outcomeCode))
         {
-            if (executedContext.Exception != null || (executedContext.Result is ObjectResult or && or.StatusCode >= 400) || (executedContext.Result is StatusCodeResult sr && sr.StatusCode >= 400))
+            if (executedContext.Exception != null || (executedContext.Result is ObjectResult orRes && orRes.StatusCode >= 400) || (executedContext.Result is StatusCodeResult scRes && scRes.StatusCode >= 400))
             {
                 outcomeCode = !string.IsNullOrEmpty(errorCode) ? GetFailedOutcomeCode(errorCode) : "SYSTEM.OPERATION.FAILED";
             }
@@ -55,8 +55,18 @@ public class ObservabilityFilter : IAsyncActionFilter
             }
         }
 
+        var tier = context.HttpContext.Items["Cache_TenantTier"] as string;
+        var isSuccess = executedContext.Exception == null &&
+                        (executedContext.Result is not ObjectResult objRes || objRes.StatusCode is null or < 400);
+
+        var status = (executedContext.Result as ObjectResult)?.StatusCode ??
+                     (executedContext.Result is StatusCodeResult statRes ? statRes.StatusCode : 200);
+
         _diagnosticContext.Set("OutcomeCode", outcomeCode);
-        _metrics.RecordOutcome(outcomeCode);
+        _diagnosticContext.Set("Tier", tier ?? "unknown");
+        _diagnosticContext.Set("StatusCode", status);
+
+        _metrics.RecordOutcome(outcomeCode, isSuccess, tier, status.ToString());
 
         if (!string.IsNullOrEmpty(errorCode))
         {

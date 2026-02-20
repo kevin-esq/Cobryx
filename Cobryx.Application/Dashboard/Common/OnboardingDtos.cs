@@ -7,7 +7,8 @@ public record OnboardingStatusDto(
     bool FirstPaymentRegistered,
     bool HasSeenValueHabit,
     int ProgressPercentage,
-    OnboardingMilestone CurrentMilestone
+    OnboardingMilestone CurrentMilestone,
+    bool IsDemoProgress
 );
 
 public record OnboardingContextDto(

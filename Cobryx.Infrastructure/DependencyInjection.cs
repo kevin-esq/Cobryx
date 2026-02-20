@@ -1,9 +1,12 @@
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.Infrastructure.BackgroundJobs;
 using Cobryx.Infrastructure.Configuration;
 using Amazon.S3;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Infrastructure.Persistence.Interceptors;
+using Cobryx.Infrastructure.Observability;
 using Cobryx.Infrastructure.Repositories;
+using Cobryx.Infrastructure.Repositories.Lending;
 using Cobryx.Infrastructure.MultiTenancy;
 using Cobryx.Infrastructure.Middleware;
 using Cobryx.Infrastructure.Services;
@@ -34,7 +37,6 @@ using Cobryx.Infrastructure.Security.Authorization;
 
 using Cobryx.Domain.Interfaces.Lending;
 using Cobryx.Domain.DomainServices.Lending;
-using Cobryx.Infrastructure.Repositories.Lending;
 
 namespace Cobryx.Infrastructure;
 
@@ -100,6 +102,7 @@ public static class DependencyInjection
 
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<OutboxInterceptor>();
+        services.AddScoped<DbMetricsInterceptor>();
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
@@ -109,30 +112,35 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
         {
-            KeepAlive = 30,
-            CommandTimeout = 300,
+            KeepAlive = 30, // Prevent silent terminations by Supabase
+            CommandTimeout = 30, // Faster failure for hanging queries
             Pooling = true,
-            MinPoolSize = 0,
-            MaxPoolSize = 100
+            MinPoolSize = 5, // Reduce cold start latency
+            MaxPoolSize = 35, // Balanced for API + Hangfire load
+            ConnectionLifetime = 300, // Recycle connections every 5 minutes
+            ConnectionIdleLifetime = 60, // Clean up idle connections quickly
+            Timeout = 15 // Fail fast if pool is exhausted
         };
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>
         {
             options.AddInterceptors(
                 sp.GetRequiredService<AuditInterceptor>(),
-                sp.GetRequiredService<OutboxInterceptor>());
+                sp.GetRequiredService<OutboxInterceptor>(),
+                sp.GetRequiredService<DbMetricsInterceptor>());
 
             options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
             {
                 npgsqlOptions.EnableRetryOnFailure(
                     maxRetryCount: 5,
-                    maxRetryDelay: TimeSpan.FromSeconds(30),
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
                     errorCodesToAdd: null);
 
                 npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             });
         });
 
+        services.AddScoped<ICobryxDbContext>(sp => sp.GetRequiredService<CobryxDbContext>());
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CobryxDbContext>());
 
         services.AddScoped<ICustomerRepository, CustomerRepository>();
@@ -196,6 +204,8 @@ public static class DependencyInjection
                 sp.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>()));
         services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
         services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IGrowthIntelligenceService, Cobryx.Infrastructure.Services.Growth.GrowthIntelligenceService>();
+        services.AddScoped<ConversionDropOffJob>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
@@ -217,7 +227,14 @@ public static class DependencyInjection
                 });
         });
 
-        services.AddHangfireServer();
+        services.AddHangfireServer(options =>
+        {
+            // Limit workers to ensure we don't exhaust the DB connection pool (MaxPoolSize=35)
+            // Even under high CPU, we cap at 10 to leave overhead for the API.
+            options.WorkerCount = Math.Min(10, Environment.ProcessorCount * 2);
+        });
+
+        services.AddHostedService<HangfireMetricsExporter>();
 
         var jwtConfig = configuration.GetSection(Configuration.JwtOptions.SectionName).Get<Configuration.JwtOptions>()
             ?? throw new InvalidOperationException("JwtSettings configuration is missing.");

@@ -26,7 +26,6 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var dbContext = (DbContext)_unitOfWork;
 
-        // 1. Fetch State Context
         var tenant = await dbContext.Set<Domain.Entities.Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
         
@@ -43,13 +42,10 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
             activeLoansCount,
             usersCount,
             paymentsCount,
-            activeLoansCount > 0 // Simplified habit detection
+            activeLoansCount > 0
         );
-
-        // 2. Decision Logic (Priority Based)
         
-        // Priority 1: Business Profile
-        if (tenant == null || string.IsNullOrEmpty(tenant.TaxId))
+        if (tenant == null || tenant.TaxId == null || string.IsNullOrEmpty(tenant.TaxId.Value))
         {
             return Result.Success(new NextBestActionDto(
                 OnboardingAction.CompleteBusinessProfile,
@@ -58,7 +54,6 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
                 context));
         }
 
-        // Priority 2: Team Collaboration (At least one invite)
         if (usersCount <= 1)
         {
             return Result.Success(new NextBestActionDto(
@@ -68,7 +63,6 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
                 context));
         }
 
-        // Priority 3: Asset Creation (First Loan)
         if (activeLoansCount == 0)
         {
             return Result.Success(new NextBestActionDto(
@@ -78,7 +72,6 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
                 context));
         }
 
-        // Priority 4: Cashflow Realization (First Payment)
         if (paymentsCount == 0)
         {
             return Result.Success(new NextBestActionDto(
@@ -88,7 +81,6 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
                 context));
         }
 
-        // Default: Optimization / Regular usage
         return Result.Success(new NextBestActionDto(
             OnboardingAction.ViewDashboard,
             OnboardingReason.NoDashboardData,

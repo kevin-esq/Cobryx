@@ -19,6 +19,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public bool IsActive { get; private set; }
     public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public BusinessSettings Settings { get; private set; }
+    public TenantGrowthMetrics? GrowthMetrics { get; private set; }
 
     private Tenant()
     {

@@ -80,7 +80,7 @@ public class GlobalExceptionHandler : IExceptionHandler
         _diagnosticContext.Set("NumericCode", numericCode);
         _diagnosticContext.Set("OutcomeCode", outcomeCode);
         _metrics.RecordError(errorCode.Value, numericCode);
-        _metrics.RecordOutcome(outcomeCode.Value);
+        _metrics.RecordOutcome(outcomeCode.Value, false, httpContext.Items["Cache_TenantTier"] as string, statusCode.ToString());
 
         if (statusCode == StatusCodes.Status500InternalServerError)
         {

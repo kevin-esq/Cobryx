@@ -98,17 +98,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                 type: "timestamp with time zone",
                 nullable: true);
 
-            migrationBuilder.AlterColumn<int>(
-                name: "Status",
-                table: "CustomerSuggestions",
-                type: "integer",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: 0,
-                oldClrType: typeof(string),
-                oldType: "character varying(50)",
-                oldMaxLength: 50,
-                oldNullable: true);
+            migrationBuilder.Sql("ALTER TABLE \"CustomerSuggestions\" ALTER COLUMN \"Status\" TYPE integer USING (CASE WHEN \"Status\" IS NULL OR \"Status\" = '' THEN 0 ELSE \"Status\"::integer END);");
+            migrationBuilder.Sql("ALTER TABLE \"CustomerSuggestions\" ALTER COLUMN \"Status\" SET NOT NULL;");
+            migrationBuilder.Sql("ALTER TABLE \"CustomerSuggestions\" ALTER COLUMN \"Status\" SET DEFAULT 0;");
 
             migrationBuilder.CreateTable(
                 name: "ProcessedStripeEvents",

@@ -20,7 +20,7 @@ public class TenantInvitationConfiguration : IEntityTypeConfiguration<TenantInvi
 
         // We allow multiple Accepted/Revoked/Expired invitations, but only one Pending.
         builder.HasIndex(x => new { x.TenantId, x.Email })
-            .HasFilter("[Status] = 0") // 0 = Pending
+            .HasFilter("\"Status\" = 0") // 0 = Pending
             .IsUnique();
             
         builder.HasIndex(x => x.TokenHash)
