@@ -14,9 +14,6 @@ public class AppOptions
     public string DocsUrl { get; set; } = "https://docs.api.cobryx.com.mx";
 
     [Required]
-    public string JwtSecret { get; set; } = string.Empty;
-
-    [Required]
     public string InvitationTokenSecret { get; set; } = string.Empty;
 
     public string? OldInvitationTokenSecret { get; set; }

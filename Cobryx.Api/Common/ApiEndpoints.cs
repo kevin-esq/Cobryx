@@ -10,5 +10,7 @@ public static class ApiEndpoints
     public const string Webhooks = "/webhooks";
     public const string Swagger = "/swagger";
     public const string Hangfire = "/hangfire";
+    public const string Metrics = "/metrics";
+    public const string Ping = "/ping";
     public const string Root = "/";
 }

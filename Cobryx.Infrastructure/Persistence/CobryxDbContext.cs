@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Cobryx.Infrastructure.Persistence;
 
-public class CobryxDbContext : DbContext, IUnitOfWork
+public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
 {
     private readonly ITenantProvider _tenantProvider;
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -109,6 +109,8 @@ public class CobryxDbContext : DbContext, IUnitOfWork
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
     public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
     public DbSet<TenantInvitation> TenantInvitations => Set<TenantInvitation>();
+    public DbSet<TenantGrowthMetrics> TenantGrowthMetrics => Set<TenantGrowthMetrics>();
+    public DbSet<TenantMRRHistory> TenantMRRHistory => Set<TenantMRRHistory>();
 
     // Lending Domain
     public DbSet<Domain.Entities.Lending.Loan> Loans => Set<Domain.Entities.Lending.Loan>();

@@ -51,6 +51,8 @@ public class TenantMiddleware
                 path.StartsWith(ApiEndpoints.Webhooks) ||
                 path.StartsWith(ApiEndpoints.Swagger) ||
                 path.StartsWith(ApiEndpoints.Hangfire) ||
+                path.StartsWith(ApiEndpoints.Metrics) ||
+                path.StartsWith(ApiEndpoints.Ping) ||
                 path == ApiEndpoints.Root))
             {
                 await _next(context);

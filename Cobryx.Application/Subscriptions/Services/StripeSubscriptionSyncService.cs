@@ -24,6 +24,7 @@ public class StripeSubscriptionSyncService
     private readonly IStripeService _stripeService;
     private readonly IClock _clock;
     private readonly ICacheService _cacheService;
+    private readonly IGrowthIntelligenceService _growthService;
     private readonly ILogger<StripeSubscriptionSyncService> _logger;
 
     public StripeSubscriptionSyncService(
@@ -31,12 +32,14 @@ public class StripeSubscriptionSyncService
         IStripeService stripeService,
         IClock clock,
         ICacheService cacheService,
+        IGrowthIntelligenceService growthService,
         ILogger<StripeSubscriptionSyncService> logger)
     {
         _unitOfWork = unitOfWork;
         _stripeService = stripeService;
         _clock = clock;
         _cacheService = cacheService;
+        _growthService = growthService;
         _logger = logger;
     }
 
@@ -161,9 +164,33 @@ public class StripeSubscriptionSyncService
             "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",
             subscription.TenantId, oldStatus, subscription.Status, eventType, stripeEventId);
 
-        if (subscription.Status == SubscriptionStatus.PastDue && oldStatus != SubscriptionStatus.PastDue)
+        // Determine MRR Transaction
+        var mrrChangeType = MRRChangeType.None;
+        var newMrr = plan?.Price.Amount ?? 0;
+
+        if (subscription.Status == SubscriptionStatus.Active)
         {
-            _logger.LogWarning("Payment FAILED for Tenant {TenantId}. Subscription is now PastDue.", subscription.TenantId);
+            if (oldStatus == SubscriptionStatus.Trial || oldStatus == SubscriptionStatus.Active)
+            {
+                if (plan != null && plan.Id != subscription.PlanId)
+                {
+                    mrrChangeType = newMrr > subscription.Plan.Price.Amount ? MRRChangeType.Expansion : MRRChangeType.Contraction;
+                }
+                else if (oldStatus == SubscriptionStatus.Trial)
+                {
+                    mrrChangeType = MRRChangeType.New;
+                }
+            }
+        }
+        else if (subscription.Status == SubscriptionStatus.Cancelled && oldStatus != SubscriptionStatus.Cancelled)
+        {
+            mrrChangeType = MRRChangeType.Churn;
+            newMrr = 0;
+        }
+
+        if (mrrChangeType != MRRChangeType.None)
+        {
+            await _growthService.RecordMRRTransitionAsync(subscription.TenantId, newMrr, mrrChangeType, eventType);
         }
     }
 

@@ -43,6 +43,7 @@ public class PlanGatingFilter : IAsyncActionFilter
             var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, context.HttpContext.RequestAborted);
             if (subscription == null || !IsFeatureSupported(subscription.Plan.Tier, featureAttr.Feature))
             {
+                RecordFeatureBlocked(context, tenantId.Value, featureAttr.Feature);
                 context.Result = new ObjectResult(new { error = $"Plan Upgrade Required: Feature '{featureAttr.Feature}' is not available on your current plan." })
                 {
                     StatusCode = 403
@@ -72,6 +73,9 @@ public class PlanGatingFilter : IAsyncActionFilter
             }
             catch (Exception ex) when (ex.GetType().Name.Contains("SubscriptionLimitExceededException"))
             {
+                var metrics = context.HttpContext.RequestServices.GetRequiredService<IGrowthIntelligenceService>();
+                metrics.RecordFeatureActivation(tenantId.Value, $"LIMIT_HIT.{limitAttr.LimitType}");
+
                 context.Result = new ObjectResult(new { error = ex.Message })
                 {
                     StatusCode = 402 // Payment Required - Standard for billing limits
@@ -90,4 +94,10 @@ public class PlanGatingFilter : IAsyncActionFilter
         PlanFeature.WhiteLabeling => tier >= PlanTier.Business,
         _ => false
     };
+
+    private void RecordFeatureBlocked(ActionExecutingContext context, Guid tenantId, PlanFeature feature)
+    {
+        var metrics = context.HttpContext.RequestServices.GetRequiredService<IGrowthIntelligenceService>();
+        metrics.RecordFeatureActivation(tenantId, $"FEATURE_BLOCKED.{feature}");
+    }
 }

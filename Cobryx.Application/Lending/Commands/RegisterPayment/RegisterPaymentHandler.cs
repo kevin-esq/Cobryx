@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.Entities;
 using Cobryx.Domain.Entities.Lending;
 using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
@@ -7,6 +8,7 @@ using Cobryx.Domain.Interfaces.Lending;
 using Cobryx.Domain.Exceptions;
 using Cobryx.Domain.ValueObjects;
 using Concordia;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Lending.Commands.RegisterPayment;
 
@@ -17,19 +19,25 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
     private readonly IPaymentApplicationPolicyRepository _policyRepository;
     private readonly IPaymentApplicationService _paymentAppService;
     private readonly ITenantProvider _tenantProvider;
+    private readonly ISender _sender;
+    private readonly IUnitOfWork _unitOfWork;
 
     public RegisterPaymentHandler(
         ILoanRepository loanRepository,
         IPaymentRepository paymentRepository,
         IPaymentApplicationPolicyRepository policyRepository,
         IPaymentApplicationService paymentAppService,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        ISender sender,
+        IUnitOfWork unitOfWork)
     {
         _loanRepository = loanRepository;
         _paymentRepository = paymentRepository;
         _policyRepository = policyRepository;
         _paymentAppService = paymentAppService;
         _tenantProvider = tenantProvider;
+        _sender = sender;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<PaymentResultDto>> Handle(RegisterPaymentCommand request, CancellationToken ct)
@@ -61,6 +69,19 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         loan.UpdateRiskStatus();
         await _paymentRepository.AddAsync(payment, ct);
         await _loanRepository.UpdateAsync(loan, ct);
+
+        // Telemetry: Value Realization
+        var db = (DbContext)_unitOfWork;
+        var paymentsCount = await db.Set<Payment>()
+            .CountAsync(p => p.TenantId == tenantId.Value && p.Status == Domain.Enums.PaymentStatus.Completed && !p.IsDemo, ct);
+
+        if (paymentsCount == 1) // First real payment
+        {
+            var tenant = await db.Set<Tenant>().FirstAsync(t => t.Id == tenantId.Value, ct);
+            tenant.TriggerOnboardingMilestone("REALIZING_VALUE");
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
 
         var excessCredit = allocations
             .Where(a => a.InstallmentId == null)

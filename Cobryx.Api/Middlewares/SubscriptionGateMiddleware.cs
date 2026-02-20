@@ -59,6 +59,8 @@ public class SubscriptionGateMiddleware
             path.StartsWith(ApiEndpoints.Webhooks) ||
             path.StartsWith(ApiEndpoints.Swagger) ||
             path.StartsWith(ApiEndpoints.Hangfire) ||
+            path.StartsWith(ApiEndpoints.Metrics) ||
+            path.StartsWith(ApiEndpoints.Ping) ||
             path == ApiEndpoints.Root))
         {
             await _next(context);
@@ -85,7 +87,13 @@ public class SubscriptionGateMiddleware
 
         // 5. Check subscription status — cache first, DB fallback
         var now = clock.UtcNow;
-        var isBlocked = await IsSubscriptionBlocked(tenantId, now, subscriptionRepository, cacheService, metrics);
+        var accessInfo = await GetSubscriptionAccessInfo(tenantId, now, subscriptionRepository, cacheService, metrics);
+        var isBlocked = accessInfo?.IsBlocked;
+
+        if (accessInfo != null)
+        {
+            context.Items["Cache_TenantTier"] = accessInfo.Tier;
+        }
 
         if (isBlocked == true)
         {
@@ -133,9 +141,9 @@ public class SubscriptionGateMiddleware
     }
 
     /// <summary>
-    /// Returns true if blocked, false if allowed, null if unable to determine.
+    /// Returns access info if determined, null if unable to determine (DB/Redis down).
     /// </summary>
-    private async Task<bool?> IsSubscriptionBlocked(
+    private async Task<SubscriptionAccessEntry?> GetSubscriptionAccessInfo(
         Guid tenantId,
         DateTime now,
         ITenantSubscriptionRepository subscriptionRepository,
@@ -158,7 +166,7 @@ public class SubscriptionGateMiddleware
                 else
                 {
                     metrics.SubscriptionGateCacheHits.Add(1);
-                    return cached.IsBlocked;
+                    return cached;
                 }
             }
         }
@@ -169,7 +177,6 @@ public class SubscriptionGateMiddleware
 
         metrics.SubscriptionGateCacheMisses.Add(1);
 
-        // DB fallback
         try
         {
             var subscription = await subscriptionRepository.GetByTenantIdAsync(tenantId);
@@ -177,14 +184,17 @@ public class SubscriptionGateMiddleware
             if (subscription == null)
             {
                 // No subscription record — block by default
-                await TryCacheResult(cacheService, cacheKey, true, now);
-                return true;
+                var entry = new SubscriptionAccessEntry(true, "unknown", now);
+                await TryCacheResult(cacheService, cacheKey, entry);
+                return entry;
             }
 
             var blocked = subscription.IsBlocked(now);
+            var tier = subscription.Plan?.Tier.ToString() ?? "unknown";
+            var result = new SubscriptionAccessEntry(blocked, tier, now);
 
-            await TryCacheResult(cacheService, cacheKey, blocked, now);
-            return blocked;
+            await TryCacheResult(cacheService, cacheKey, result);
+            return result;
         }
         catch (Exception ex)
         {
@@ -193,11 +203,11 @@ public class SubscriptionGateMiddleware
         }
     }
 
-    private async Task TryCacheResult(ICacheService cacheService, string cacheKey, bool blocked, DateTime checkedAt)
+    private async Task TryCacheResult(ICacheService cacheService, string cacheKey, SubscriptionAccessEntry entry)
     {
         try
         {
-            await cacheService.SetAsync(cacheKey, new SubscriptionAccessEntry(blocked, checkedAt), CacheTtl);
+            await cacheService.SetAsync(cacheKey, entry, CacheTtl);
         }
         catch (Exception ex)
         {
@@ -209,5 +219,5 @@ public class SubscriptionGateMiddleware
     /// Wrapper record to distinguish cache-miss (null) from cached false.
     /// Includes CheckedAtUtc for stale-guard validation.
     /// </summary>
-    private sealed record SubscriptionAccessEntry(bool IsBlocked, DateTime CheckedAtUtc);
+    private sealed record SubscriptionAccessEntry(bool IsBlocked, string Tier, DateTime CheckedAtUtc);
 }

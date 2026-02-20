@@ -131,6 +131,11 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
             dbContext.Set<TenantSubscription>().Add(subscription);
         }
 
+        // Initialize Growth Metrics
+        var growthMetrics = new TenantGrowthMetrics(tenant.Id, DateTime.UtcNow);
+        growthMetrics.RecordTrialStart(DateTime.UtcNow, starterPlan?.TrialDays ?? 14);
+        dbContext.Set<TenantGrowthMetrics>().Add(growthMetrics);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var baseUrl = request.ReturnUrl ?? _appOptions.AppUrl;

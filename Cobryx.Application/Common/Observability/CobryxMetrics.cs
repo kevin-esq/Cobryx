@@ -12,6 +12,7 @@ public sealed class CobryxMetrics : IDisposable
     private readonly Meter _meter;
 
     public Counter<long> BusinessOutcomes { get; }
+    public Counter<long> CobryxOutcomeTotal { get; }
     public Counter<long> DomainErrors { get; }
     public Counter<long> LoginSuccesses { get; }
     public Counter<long> LoginFailures { get; }
@@ -53,6 +54,50 @@ public sealed class CobryxMetrics : IDisposable
     public Histogram<double> OutboxProcessingLag { get; }
     public Histogram<double> CommandDuration { get; }
 
+    // Database Infrastructure Metrics
+    public Histogram<double> DbCommandDuration { get; }
+    public Counter<long> DbRetryTotal { get; }
+    public Counter<long> DbPoolExhaustionTotal { get; }
+    public Counter<long> DbCommandTimeoutTotal { get; }
+    public UpDownCounter<long> ConcurrentDbCommands { get; }
+
+    // Hangfire Infrastructure Metrics (Observable)
+    public ObservableGauge<long> HangfireActiveWorkers { get; }
+    public ObservableGauge<long> HangfireQueueLength { get; }
+    public ObservableGauge<long> HangfireFailedJobs { get; }
+    public ObservableGauge<long> HangfireDeletedJobs { get; }
+    public Histogram<double> HangfireQueueLatency { get; }
+    public Histogram<double> TimeToWow { get; }
+    public Counter<long> FeatureActivation { get; }
+    public Counter<long> OnboardingAbandoned { get; }
+    public Counter<long> TrialExpiredNoWow { get; }
+    public Counter<long> SlowActivation { get; }
+    public Histogram<double> TimeToExpansion { get; }
+    public ObservableGauge<double> RevenueConcentration { get; }
+
+    private static Func<long> _activeWorkersProvider = () => 0;
+    private static Func<long> _queueLengthProvider = () => 0;
+    private static Func<long> _failedJobsProvider = () => 0;
+    private static Func<long> _deletedJobsProvider = () => 0;
+    private static Func<double> _revenueConcentrationProvider = () => 0;
+
+    public static void RegisterHangfireProviders(
+        Func<long> activeWorkers,
+        Func<long> queueLength,
+        Func<long> failedJobs,
+        Func<long> deletedJobs)
+    {
+        _activeWorkersProvider = activeWorkers;
+        _queueLengthProvider = queueLength;
+        _failedJobsProvider = failedJobs;
+        _deletedJobsProvider = deletedJobs;
+    }
+
+    public static void RegisterRevenueConcentrationProvider(Func<double> provider)
+    {
+        _revenueConcentrationProvider = provider;
+    }
+
     public CobryxMetrics()
     {
         _meter = new Meter(MeterName, "1.0.0");
@@ -60,6 +105,10 @@ public sealed class CobryxMetrics : IDisposable
         BusinessOutcomes = _meter.CreateCounter<long>(
             "cobryx_business_outcomes_total",
             description: "Total number of successful business outcomes");
+
+        CobryxOutcomeTotal = _meter.CreateCounter<long>(
+            "cobryx_outcome_total",
+            description: "Total number of business outcomes taged by code, success and tier");
 
         DomainErrors = _meter.CreateCounter<long>(
             "cobryx_domain_errors_total",
@@ -104,14 +153,59 @@ public sealed class CobryxMetrics : IDisposable
 
         CleanupInvitationsDeleted = _meter.CreateCounter<long>("cleanup_invitations_deleted_total", description: "Total old invitations hard-deleted by cleanup job");
         CleanupInvitationsExpired = _meter.CreateCounter<long>("cleanup_invitations_expired_total", description: "Total stale invitations marked as expired by cleanup job");
+
+        // Database Infrastructure
+        DbCommandDuration = _meter.CreateHistogram<double>("db_command_duration_seconds", unit: "s", description: "Duration of database commands");
+        DbRetryTotal = _meter.CreateCounter<long>("db_retry_total", description: "Total number of transient database error retries");
+        DbPoolExhaustionTotal = _meter.CreateCounter<long>("db_pool_exhaustion_total", description: "Total number of connection pool exhaustion events");
+        DbCommandTimeoutTotal = _meter.CreateCounter<long>("db_command_timeout_total", description: "Total number of database command timeouts");
+        ConcurrentDbCommands = _meter.CreateUpDownCounter<long>("db_concurrent_commands", description: "Number of database commands currently executing");
+
+        // Hangfire Infrastructure
+        HangfireQueueLatency = _meter.CreateHistogram<double>("hangfire_queue_latency_seconds", unit: "s", description: "Time background jobs spend in queue");
+
+        HangfireActiveWorkers = _meter.CreateObservableGauge<long>("hangfire_active_workers",
+            () => _activeWorkersProvider(), description: "Number of active Hangfire workers");
+
+        HangfireQueueLength = _meter.CreateObservableGauge<long>("hangfire_queue_length",
+            () => _queueLengthProvider(), description: "Number of jobs waiting in Hangfire queues");
+
+        HangfireFailedJobs = _meter.CreateObservableGauge<long>("hangfire_failed_jobs_total",
+            () => _failedJobsProvider(), description: "Total number of failed background jobs");
+
+        HangfireDeletedJobs = _meter.CreateObservableGauge<long>("hangfire_deleted_jobs_total",
+            () => _deletedJobsProvider(), description: "Total number of deleted background jobs");
+
+        TimeToWow = _meter.CreateHistogram<double>("cobryx_time_to_wow_seconds", unit: "s", description: "Time from tenant creation to first value realization (Wow)");
+        FeatureActivation = _meter.CreateCounter<long>("cobryx_feature_activation_total", description: "Intensity of feature usage across tiers");
+        OnboardingAbandoned = _meter.CreateCounter<long>("cobryx_onboarding_abandoned_total", description: "Total tenants that abandoned onboarding");
+        TrialExpiredNoWow = _meter.CreateCounter<long>("cobryx_trial_expired_no_wow_total", description: "Total trials that expired without any Wow event");
+        SlowActivation = _meter.CreateCounter<long>("cobryx_slow_activation_total", description: "Total tenants that took >24h to reach Wow moment");
+
+        TimeToExpansion = _meter.CreateHistogram<double>("cobryx_time_to_expansion_seconds", unit: "s", description: "Time from first payment to first plan expansion");
+
+        RevenueConcentration = _meter.CreateObservableGauge<double>("cobryx_revenue_concentration_percent",
+            () => _revenueConcentrationProvider(), unit: "%", description: "Percentage of total MRR coming from the Top 10% of tenants");
     }
 
-    public void RecordOutcome(string outcomeCode)
+    public void RecordOutcome(string outcomeCode, bool success, string? tier = null, string? httpStatus = null)
     {
         var module = GetModule(outcomeCode);
-        BusinessOutcomes.Add(1,
+
+        // Legacy metric
+        if (success)
+        {
+            BusinessOutcomes.Add(1,
+                new KeyValuePair<string, object?>("code", outcomeCode),
+                new KeyValuePair<string, object?>("module", module.ToString()));
+        }
+
+        // Tier-aware business metric
+        CobryxOutcomeTotal.Add(1,
             new KeyValuePair<string, object?>("code", outcomeCode),
-            new KeyValuePair<string, object?>("module", module.ToString()));
+            new KeyValuePair<string, object?>("success", success.ToString().ToLowerInvariant()),
+            new KeyValuePair<string, object?>("tier", tier ?? "unknown"),
+            new KeyValuePair<string, object?>("status", httpStatus ?? "0"));
     }
 
     public void RecordError(string errorCode, int? numericCode = null)
@@ -121,6 +215,25 @@ public sealed class CobryxMetrics : IDisposable
             new KeyValuePair<string, object?>("code", errorCode),
             new KeyValuePair<string, object?>("module", module.ToString()),
             new KeyValuePair<string, object?>("numeric_code", numericCode));
+    }
+
+    public void RecordTimeToWow(double seconds, string outcomeCode)
+    {
+        TimeToWow.Record(seconds, new KeyValuePair<string, object?>("code", outcomeCode));
+    }
+
+    public void RecordFeatureActivation(string featureName)
+    {
+        FeatureActivation.Add(1, new KeyValuePair<string, object?>("feature", featureName));
+    }
+
+    public void RecordOnboardingAbandoned() => OnboardingAbandoned.Add(1);
+    public void RecordTrialExpiredNoWow() => TrialExpiredNoWow.Add(1);
+    public void RecordSlowActivation() => SlowActivation.Add(1);
+
+    public void RecordTimeToExpansion(double seconds)
+    {
+        TimeToExpansion.Record(seconds);
     }
 
     private static CobryxModule GetModule(string code)

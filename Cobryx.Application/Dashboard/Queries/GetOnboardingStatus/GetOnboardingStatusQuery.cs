@@ -25,36 +25,39 @@ public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQue
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var dbContext = (DbContext)_unitOfWork;
 
-        // 1. Business Profile Completion
         var tenant = await dbContext.Set<Domain.Entities.Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
         
-        var businessCompleted = tenant != null && !string.IsNullOrEmpty(tenant.TaxId);
-
-        // 2. First User Invited (other than owner)
+        var businessCompleted = tenant != null && tenant.TaxId != null && !string.IsNullOrEmpty(tenant.TaxId.Value);
         var usersCount = await dbContext.Set<Domain.Entities.User>()
             .CountAsync(u => u.TenantId == tenantId, cancellationToken);
         var firstUserInvited = usersCount > 1;
 
-        // 3. First Loan Created
-        var firstLoanCreated = await dbContext.Set<Domain.Entities.Lending.Loan>()
-            .AnyAsync(l => l.TenantId == tenantId && !l.IsDeleted, cancellationToken);
+        var loans = await dbContext.Set<Domain.Entities.Lending.Loan>()
+            .Where(l => l.TenantId == tenantId && !l.IsDeleted)
+            .ToListAsync(cancellationToken);
 
-        // 4. First Payment Registered
-        var firstPaymentRegistered = await dbContext.Set<Domain.Entities.Payments.Payment>()
-            .AnyAsync(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == Domain.Enums.PaymentStatus.Completed, cancellationToken);
+        var firstLoanCreated = loans.Any(l => !l.IsDemo);
+        var hasDemoLoans = loans.Any(l => l.IsDemo);
 
-        // 5. Habit: Seen Dashboard with Data
+        var payments = await dbContext.Set<Domain.Entities.Payments.Payment>()
+            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == Domain.Enums.PaymentStatus.Completed)
+            .ToListAsync(cancellationToken);
+
+        var firstPaymentRegistered = payments.Any(p => !p.IsDemo);
+        var hasDemoPayments = payments.Any(p => p.IsDemo);
+
         var hasSeenValueHabit = firstLoanCreated;
 
-        // 6. Progress & Milestone Algorithm
         var score = 0;
         var milestone = OnboardingMilestone.EstablishingFoundation;
 
         if (businessCompleted) score += 20;
         if (firstUserInvited) score += 20;
-        if (firstLoanCreated) score += 30;
-        if (firstPaymentRegistered) score += 30;
+        if (firstLoanCreated || hasDemoLoans) score += 30;
+        if (firstPaymentRegistered || hasDemoPayments) score += 30;
+
+        var isDemoProgress = (hasDemoLoans || hasDemoPayments) && !firstLoanCreated && !firstPaymentRegistered;
 
         milestone = score switch
         {
@@ -72,7 +75,8 @@ public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQue
             firstPaymentRegistered,
             hasSeenValueHabit,
             score,
-            milestone
+            milestone,
+            isDemoProgress
         ));
     }
 }
