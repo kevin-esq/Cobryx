@@ -284,6 +284,16 @@ try
             "invitation-cleanup",
             job => job.RunAsync(CancellationToken.None),
             "*/10 * * * *"); // Every 10 minutes
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.ExpirePaymentLinksJob>(
+            "payment-link-expiration",
+            job => job.RunAsync(CancellationToken.None),
+            "*/15 * * * *"); // Every 15 minutes
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.PaymentReminderJob>(
+            "payment-collections-reminders",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily);
     }
 }
 catch (Exception ex)

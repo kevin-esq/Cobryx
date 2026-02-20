@@ -24,3 +24,4 @@ public enum DiscountType { Flat, Percentage }
 public enum CancellationReason { Price, MissingFeatures, Bugs, BetterAlternative, Other }
 public enum SecurityTokenType { EmailVerification, PasswordReset }
 public enum PlanTier { Free, Starter, Pro, Business }
+public enum PaymentLinkStatus { Draft, Active, Processing, RequiresAction, Paid, Expired, Cancelled, Failed }
