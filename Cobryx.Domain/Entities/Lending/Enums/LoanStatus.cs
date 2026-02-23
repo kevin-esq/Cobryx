@@ -2,10 +2,12 @@ namespace Cobryx.Domain.Entities.Lending.Enums;
 
 public enum LoanStatus
 {
-    Pending = 1,
+    Draft = 1,
     Active = 2,
     Closed = 3,
-    Defaulted = 4
+    Cancelled = 4,
+    WrittenOff = 5,
+    Disputed = 6
 }
 
 public enum LegalStatus
@@ -13,7 +15,9 @@ public enum LegalStatus
     Active = 1,
     Restructured = 2,
     Defaulted = 3,
-    Closed = 4
+    Closed = 4,
+    InLegal = 5,
+    PaymentPlanActive = 6
 }
 
 /// <summary>

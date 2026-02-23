@@ -47,7 +47,7 @@ public class GetLoanScheduleHandler : IRequestHandler<GetLoanScheduleQuery, Resu
                 i.TotalAmount,
                 i.PrincipalPaid,
                 i.InterestPaid,
-                i.LateFeesPaid,
+                i.LateFeePaid,
                 i.TotalPaid,
                 i.RemainingAmount,
                 i.Status,

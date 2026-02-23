@@ -5,6 +5,8 @@ using Cobryx.Domain.Enums;
 using Cobryx.Domain.Exceptions;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Events.Payments;
+using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Lending;
 
 namespace Cobryx.Domain.Entities.Payments;
 
@@ -26,6 +28,9 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
     public string? StripePaymentIntentId { get; private set; }
     public DateTime? LastReminderSentAt { get; private set; }
     public int ReminderCount { get; private set; }
+
+    public virtual Customer Customer { get; private set; } = null!;
+    public virtual Cobryx.Domain.Entities.Lending.Loan? Loan { get; private set; }
 
     private PaymentLink() { }
 
@@ -78,14 +83,17 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
             return false;
         }
 
-        var isValid = TokenHash == ComputeHmac(rawToken, serverSecret);
-        
+        var currentHash = ComputeHmac(rawToken, serverSecret);
+        var isValid = CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(TokenHash),
+            Encoding.UTF8.GetBytes(currentHash));
+
         if (!isValid)
         {
             AttemptCount++;
             if (AttemptCount >= MaxAttempts)
                 Status = PaymentLinkStatus.Failed;
-            
+
             UpdateTimestamp();
         }
 
@@ -118,7 +126,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
 
         PaidAmount = amount;
         Status = PaymentLinkStatus.Paid;
-        
+
         // Finalize
         UpdateTimestamp();
     }
@@ -128,6 +136,15 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         if (Status == PaymentLinkStatus.Active || Status == PaymentLinkStatus.Processing)
         {
             Status = PaymentLinkStatus.Expired;
+            UpdateTimestamp();
+        }
+    }
+
+    public void ResetToActive()
+    {
+        if (Status == PaymentLinkStatus.Processing)
+        {
+            Status = PaymentLinkStatus.Active;
             UpdateTimestamp();
         }
     }
@@ -144,7 +161,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         // Composite Key: secret + salt
         var key = Encoding.UTF8.GetBytes(serverSecret + Salt);
         using var hmac = new HMACSHA256(key);
-        
+
         var bytes = Encoding.UTF8.GetBytes(rawToken);
         var hash = hmac.ComputeHash(bytes);
         return Convert.ToBase64String(hash);

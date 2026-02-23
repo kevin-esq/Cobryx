@@ -33,7 +33,7 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
 
         var tenantId = tenantProvider.GetTenantId().GetValueOrDefault();
 
-        var customer = new Customer(tenantId, "Test", "User", "5551234", null, null);
+        var customer = new Customer(tenantId, "Test", "User", "5551234", "test@example.com", null, null);
         await customerRepo.AddAsync(customer);
 
         var paymentMethod = new PaymentMethod(tenantId, "Cash", "CASH");

@@ -27,7 +27,7 @@ public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQue
 
         var tenant = await dbContext.Set<Domain.Entities.Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
-        
+
         var businessCompleted = tenant != null && tenant.TaxId != null && !string.IsNullOrEmpty(tenant.TaxId.Value);
         var usersCount = await dbContext.Set<Domain.Entities.User>()
             .CountAsync(u => u.TenantId == tenantId, cancellationToken);

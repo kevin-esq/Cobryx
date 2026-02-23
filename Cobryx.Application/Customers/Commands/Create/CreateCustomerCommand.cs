@@ -9,6 +9,7 @@ public record CreateCustomerCommand(
     string FirstName,
     string LastName,
     string Phone,
+    string Email,
     Address? Address = null,
     IdentityDocument? Document = null
 ) : IRequest<Result<Guid>>;

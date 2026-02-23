@@ -28,7 +28,7 @@ public class GetPendingInvitationsHandler : IRequestHandler<GetPendingInvitation
         if (!tenantId.HasValue) return Result.Failure<List<InvitationDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var dbContext = (DbContext)_unitOfWork;
-        
+
         var invitations = await dbContext.Set<TenantInvitation>()
             .Where(x => x.TenantId == tenantId.Value && x.Status == InvitationStatus.Pending)
             .OrderByDescending(x => x.CreatedAt)

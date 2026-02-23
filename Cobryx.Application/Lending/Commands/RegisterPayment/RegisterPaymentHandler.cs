@@ -66,7 +66,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
 
         loan.RecordPaymentApplied(request.Amount, request.PaidAt);
         loan.RecalculateBalances();
-        loan.UpdateRiskStatus();
+        loan.UpdateFinancialRiskStatus(DateTime.UtcNow);
         await _paymentRepository.AddAsync(payment, ct);
         await _loanRepository.UpdateAsync(loan, ct);
 

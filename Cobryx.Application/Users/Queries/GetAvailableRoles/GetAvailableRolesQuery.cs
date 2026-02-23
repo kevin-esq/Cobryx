@@ -18,7 +18,7 @@ public class GetAvailableRolesHandler : IRequestHandler<GetAvailableRolesQuery, 
     public async Task<IEnumerable<RoleDto>> Handle(GetAvailableRolesQuery request, CancellationToken ct)
     {
         var roles = await _roleRepository.GetAllAsync(ct);
-        
+
         // Exclude Owner from basic role listing for enterprise safety
         return roles
             .Where(r => r.Name != Cobryx.Domain.Entities.Role.Constants.Owner)

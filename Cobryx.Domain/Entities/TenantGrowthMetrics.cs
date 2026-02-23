@@ -10,7 +10,7 @@ namespace Cobryx.Domain.Entities;
 public class TenantGrowthMetrics
 {
     public Guid TenantId { get; private set; }
-    
+
     /// <summary>
     /// When the tenant was originally created.
     /// </summary>
@@ -86,7 +86,7 @@ public class TenantGrowthMetrics
     /// Cumulative revenue lost due to plan downgrades.
     /// </summary>
     public decimal NetContractionRevenue { get; private set; }
-    
+
     /// <summary>
     /// Total cumulative revenue from this tenant.
     /// </summary>
@@ -169,7 +169,7 @@ public class TenantGrowthMetrics
         if (changeType == MRRChangeType.Expansion && delta > 0)
         {
             NetExpansionRevenue += delta;
-            
+
             if (FirstExpansionAt == null && FirstPaidAt != null)
             {
                 FirstExpansionAt = now;
@@ -183,7 +183,7 @@ public class TenantGrowthMetrics
 
         CurrentMRR = newMrr;
         LifetimeRevenue += Math.Max(0, delta); // Simple approximation for lifetime
-        
+
         IsChurned = newMrr == 0 && changeType == MRRChangeType.Churn;
         if (IsChurned)
         {
@@ -196,7 +196,7 @@ public class TenantGrowthMetrics
     public void UpdateEngagement(int score)
     {
         EngagementScore = Math.Clamp(score, 0, 100);
-        
+
         // Map score to categorical risk
         ChurnRisk = EngagementScore switch
         {

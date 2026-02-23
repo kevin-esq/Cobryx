@@ -1,4 +1,5 @@
 using Cobryx.Application.Payments.Webhooks.Common;
+using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Payments.Webhooks.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Infrastructure.Configuration;

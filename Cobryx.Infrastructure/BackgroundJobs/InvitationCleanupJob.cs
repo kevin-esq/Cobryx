@@ -69,7 +69,7 @@ public class InvitationCleanupJob
 
         // 2. Batch Delete: Non-Pending > 30 days old
         var retentionThreshold = now.AddDays(-30);
-        
+
         var sqlDelete = @"
             SELECT * FROM ""TenantInvitations"" 
             WHERE ""Status"" != 0 AND ""CreatedAt"" < @p0

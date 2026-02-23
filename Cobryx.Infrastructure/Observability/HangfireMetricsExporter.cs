@@ -11,7 +11,7 @@ public class HangfireMetricsExporter : BackgroundService
 {
     private readonly ILogger<HangfireMetricsExporter> _logger;
     private readonly JobStorage _jobStorage;
-    
+
     // We store the latest stats to serve them to the ObservableGauges
     // Using simple counters to avoid type resolution issues for now
     private static long _activeWorkers;
@@ -25,10 +25,10 @@ public class HangfireMetricsExporter : BackgroundService
     {
         _logger = logger;
         _jobStorage = jobStorage;
-        
+
         // Register our static providers with the Application layer metrics
         CobryxMetrics.RegisterHangfireProviders(
-            activeWorkers: () => _activeWorkers, 
+            activeWorkers: () => _activeWorkers,
             queueLength: () => _queueLength,
             failedJobs: () => _failedJobs,
             deletedJobs: () => _deletedJobs
@@ -45,7 +45,7 @@ public class HangfireMetricsExporter : BackgroundService
             {
                 var monitoringApi = _jobStorage.GetMonitoringApi();
                 var statistics = monitoringApi.GetStatistics();
-                
+
                 _activeWorkers = statistics.Servers;
                 _queueLength = statistics.Enqueued;
                 _failedJobs = statistics.Failed;

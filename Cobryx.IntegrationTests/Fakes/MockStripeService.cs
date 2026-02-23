@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
+using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.IntegrationTests.Fakes;
 
@@ -42,5 +43,20 @@ public class MockStripeService : IStripeService
             "price_fake_123",
             null,
             _clock.UtcNow.AddMonths(1)));
+    }
+
+    public Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(Money amount, Dictionary<string, string> metadata, CancellationToken ct = default)
+    {
+        return Task.FromResult(("pi_fake_123", "secret_fake_123"));
+    }
+
+    public Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default)
+    {
+        return Task.FromResult("secret_fake_123");
+    }
+
+    public Task<string> GetPaymentIntentStatusAsync(string paymentIntentId, CancellationToken ct = default)
+    {
+        return Task.FromResult("requires_payment_method");
     }
 }

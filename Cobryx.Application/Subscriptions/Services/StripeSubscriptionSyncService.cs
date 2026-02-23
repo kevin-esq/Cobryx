@@ -145,53 +145,67 @@ public class StripeSubscriptionSyncService
 
         var newPlanId = plan?.Id ?? subscription.PlanId;
 
-        subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, newPlanId, _clock.UtcNow);
-
-        Db.Set<ProcessedStripeEvent>().Add(new ProcessedStripeEvent(stripeEventId, eventType, _clock.UtcNow));
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // Bust subscription gate cache immediately after state change
+        using var transaction = await Db.Database.BeginTransactionAsync(ct);
         try
         {
-            await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}");
-        }
-        catch (Exception cacheEx)
-        {
-            _logger.LogWarning(cacheEx, "Failed to invalidate subscription cache for Tenant {TenantId}", subscription.TenantId);
-        }
+            subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, newPlanId, _clock.UtcNow);
 
-        _logger.LogInformation(
-            "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",
-            subscription.TenantId, oldStatus, subscription.Status, eventType, stripeEventId);
+            Db.Set<ProcessedStripeEvent>().Add(new ProcessedStripeEvent(stripeEventId, eventType, _clock.UtcNow));
+            await _unitOfWork.SaveChangesAsync(ct);
 
-        // Determine MRR Transaction
-        var mrrChangeType = MRRChangeType.None;
-        var newMrr = plan?.Price.Amount ?? 0;
-
-        if (subscription.Status == SubscriptionStatus.Active)
-        {
-            if (oldStatus == SubscriptionStatus.Trial || oldStatus == SubscriptionStatus.Active)
+            // Bust subscription gate cache immediately after state change
+            try
             {
-                if (plan != null && plan.Id != subscription.PlanId)
+                await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}");
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Failed to invalidate subscription cache for Tenant {TenantId}", subscription.TenantId);
+            }
+
+            _logger.LogInformation(
+                "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",
+                subscription.TenantId, oldStatus, subscription.Status, eventType, stripeEventId);
+
+            // Determine MRR Transaction
+            var mrrChangeType = MRRChangeType.None;
+            var newMrr = plan?.Price.Amount ?? 0;
+
+            if (subscription.Status == SubscriptionStatus.Active)
+            {
+                if (oldStatus == SubscriptionStatus.Trial || oldStatus == SubscriptionStatus.Active)
                 {
-                    mrrChangeType = newMrr > subscription.Plan.Price.Amount ? MRRChangeType.Expansion : MRRChangeType.Contraction;
-                }
-                else if (oldStatus == SubscriptionStatus.Trial)
-                {
-                    mrrChangeType = MRRChangeType.New;
+                    if (plan != null && plan.Id != subscription.PlanId)
+                    {
+                        mrrChangeType = newMrr > subscription.Plan.Price.Amount ? MRRChangeType.Expansion : MRRChangeType.Contraction;
+                    }
+                    else if (oldStatus == SubscriptionStatus.Trial)
+                    {
+                        mrrChangeType = MRRChangeType.New;
+                    }
                 }
             }
+            else if (subscription.Status == SubscriptionStatus.Cancelled && oldStatus != SubscriptionStatus.Cancelled)
+            {
+                mrrChangeType = MRRChangeType.Churn;
+                newMrr = 0;
+            }
+
+            if (mrrChangeType != MRRChangeType.None)
+            {
+                await _growthService.RecordMRRTransitionAsync(subscription.TenantId, newMrr, mrrChangeType, eventType);
+            }
+
+            await transaction.CommitAsync(ct);
         }
-        else if (subscription.Status == SubscriptionStatus.Cancelled && oldStatus != SubscriptionStatus.Cancelled)
+        catch (Exception ex)
         {
-            mrrChangeType = MRRChangeType.Churn;
-            newMrr = 0;
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(ex, "Failed to sync authoritative state for Subscription {StripeSubscriptionId}. Rollback occurred.", stripeSubscriptionId);
+            throw;
         }
 
-        if (mrrChangeType != MRRChangeType.None)
-        {
-            await _growthService.RecordMRRTransitionAsync(subscription.TenantId, newMrr, mrrChangeType, eventType);
-        }
+        // Bust subscription gate cache immediately after state change (Outside transaction to allow partial success of cache invalidation)
     }
 
     private async Task<TenantSubscription?> GetSubscriptionAsync(Guid tenantId, CancellationToken ct)

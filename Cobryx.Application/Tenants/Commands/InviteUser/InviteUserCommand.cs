@@ -98,7 +98,7 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
 
         var invitation = new TenantInvitation(request.Email, tenantId.Value, role.Id, tokenHash, expiresAt);
         dbContext.Set<TenantInvitation>().Add(invitation);
-        
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         // 4. Send Email
@@ -110,7 +110,7 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
             ct);
 
         _metrics.InvitationsCreated.Add(1);
-        _logger.LogInformation("[AUDIT] Invitation created: ID {Id}, Email {Email}, Tenant {TenantId}, Role {Role}", 
+        _logger.LogInformation("[AUDIT] Invitation created: ID {Id}, Email {Email}, Tenant {TenantId}, Role {Role}",
             invitation.Id, request.Email, tenantId.Value, request.RoleName);
 
         // Telemetry Trigger: Building Team

@@ -30,6 +30,6 @@ public record Outcome(string Value, OutcomeCategory Category, string? Descriptio
     /// Creates an outcome from an external source.
     /// Use sparingly for codes not defined in our system.
     /// </summary>
-    public static Outcome FromExternal(string value, OutcomeCategory category = OutcomeCategory.BusinessError, string? source = null) 
+    public static Outcome FromExternal(string value, OutcomeCategory category = OutcomeCategory.BusinessError, string? source = null)
         => new(value, category, $"External code from {source ?? "unknown source"}");
 }

@@ -28,9 +28,9 @@ public class FinancialPostingEngine
     /// Handles deterministic split between Principal, Interest and Fees.
     /// </summary>
     public async Task<Guid> PostLoanPaymentAsync(
-        Loan loan, 
-        decimal amount, 
-        string reference, 
+        Loan loan,
+        decimal amount,
+        string reference,
         CancellationToken ct = default)
     {
         _logger.LogInformation("Posting payment of {Amount} for Loan {LoanId}", amount, loan.Id);
@@ -44,9 +44,9 @@ public class FinancialPostingEngine
 
         // 3. Create Atomic Journal (LedgerTransaction)
         var transaction = new LedgerTransaction(
-            loan.TenantId, 
-            $"Loan Payment - {reference}", 
-            loan.Id.ToString());
+            loan.TenantId,
+            $"Loan Payment - {reference}",
+            $"PAY-{reference}");
 
         // Debit CASH (Asset Increases)
         transaction.AddEntry(accounts.CashAccountId, amount, 0);
@@ -73,14 +73,18 @@ public class FinancialPostingEngine
         transaction.Post();
 
         _context.LedgerTransactions.Add(transaction);
-        
+
         _logger.LogInformation(
-            "Financial Posting Finished: Principal: {P}, Interest: {I}, Fees: {F}", 
+            "Financial Posting Finished: Principal: {P}, Interest: {I}, Fees: {F}",
             split.PrincipalAmount, split.InterestAmount, split.FeeAmount);
 
         return transaction.Id;
     }
 
+    /// <summary>
+    /// Creates a Mirror Reversal for an existing transaction.
+    /// Used for Refunds, Chargebacks, and Storno entries.
+    /// </summary>
     /// <summary>
     /// Creates a Mirror Reversal for an existing transaction.
     /// Used for Refunds, Chargebacks, and Storno entries.
@@ -95,12 +99,71 @@ public class FinancialPostingEngine
             throw new DomainException(DomainErrorCode.Common.GeneralError);
 
         var reversal = LedgerTransaction.CreateReversal(original, $"REVERSAL: {reason}");
-        
+
         _context.LedgerTransactions.Add(reversal);
-        
+
         _logger.LogInformation("Posted Mirror Reversal for Transaction {OriginalId}", originalTransactionId);
-        
+
         return reversal.Id;
+    }
+
+    /// <summary>
+    /// Records a Charge-Off in the Ledger.
+    /// Moves the balance from Accounts Receivable (Asset) to Loss Expense (Expense).
+    /// </summary>
+    public async Task<Guid> PostChargeOffAsync(Loan loan, string reason, CancellationToken ct = default)
+    {
+        var accounts = await GetTenantSystemAccountsAsync(loan.TenantId, ct);
+        var totalOutstanding = loan.CurrentPrincipalBalance + loan.CurrentInterestBalance + loan.CurrentLateFeeBalance;
+
+        if (totalOutstanding <= 0) return Guid.Empty;
+
+        var transaction = new LedgerTransaction(
+            loan.TenantId,
+            $"CHARGE-OFF ({loan.LoanNumber}): {reason}",
+            $"CHG-{loan.Id}");
+
+        // Debit LOSS EXPENSE (Expense Increases)
+        transaction.AddEntry(accounts.LossExpenseId, totalOutstanding, 0);
+
+        // Credit A/R (Assets Decrease)
+        transaction.AddEntry(accounts.PrincipalAccountId, 0, loan.CurrentPrincipalBalance);
+        if (loan.CurrentInterestBalance > 0)
+            transaction.AddEntry(accounts.InterestAccountId, 0, loan.CurrentInterestBalance);
+        if (loan.CurrentLateFeeBalance > 0)
+            transaction.AddEntry(accounts.FeeAccountId, 0, loan.CurrentLateFeeBalance);
+
+        transaction.Post();
+        _context.LedgerTransactions.Add(transaction);
+
+        _logger.LogWarning("Financial Charge-Off Posted for Loan {LoanId}. Amount: {Amount}", loan.Id, totalOutstanding);
+        return transaction.Id;
+    }
+
+    /// <summary>
+    /// Records a payment received AFTER a loan has been charged off.
+    /// Recorded as Recovery Income (Revenue) instead of reducing A/R.
+    /// </summary>
+    public async Task<Guid> PostRecoveryAsync(Loan loan, decimal amount, string reference, CancellationToken ct = default)
+    {
+        var accounts = await GetTenantSystemAccountsAsync(loan.TenantId, ct);
+
+        var transaction = new LedgerTransaction(
+            loan.TenantId,
+            $"RECOVERY: {reference}",
+            $"REC-{reference}");
+
+        // Debit CASH (Asset Increases)
+        transaction.AddEntry(accounts.CashAccountId, amount, 0);
+
+        // Credit RECOVERY INCOME (Revenue Increases)
+        transaction.AddEntry(accounts.RecoveryIncomeId, 0, amount);
+
+        transaction.Post();
+        _context.LedgerTransactions.Add(transaction);
+
+        _logger.LogInformation("Recovery Payment Posted for Loan {LoanId}. Amount: {Amount}", loan.Id, amount);
+        return transaction.Id;
     }
 
     private async Task<TenantAccounts> GetTenantSystemAccountsAsync(Guid tenantId, CancellationToken ct)
@@ -114,14 +177,16 @@ public class FinancialPostingEngine
             CashAccountId: accounts.First(a => a.Code == "1010").Id,
             PrincipalAccountId: accounts.First(a => a.Code == "1210").Id,
             InterestAccountId: accounts.First(a => a.Code == "4010").Id,
-            FeeAccountId: accounts.First(a => a.Code == "4020").Id
+            FeeAccountId: accounts.First(a => a.Code == "4020").Id,
+            LossExpenseId: accounts.First(a => a.Code == "5010").Id,
+            RecoveryIncomeId: accounts.First(a => a.Code == "4030").Id
         );
     }
 
     private PaymentSplit CalculatePaymentSplit(Loan loan, decimal amount)
     {
         var remaining = amount;
-        
+
         // 1. Pay Fees first
         var feePayment = Math.Min(remaining, loan.CurrentLateFeeBalance);
         remaining -= feePayment;
@@ -132,7 +197,7 @@ public class FinancialPostingEngine
 
         // 3. Pay Principal last
         var principalPayment = Math.Min(remaining, loan.CurrentPrincipalBalance);
-        
+
         // Note: In an overpayment scenario, the extra remains in "remaining" 
         // and would typically go to Unearned Revenue or Suspense. 
         // For MVP we assume standard payment.
@@ -141,13 +206,15 @@ public class FinancialPostingEngine
     }
 
     private record TenantAccounts(
-        Guid CashAccountId, 
-        Guid PrincipalAccountId, 
-        Guid InterestAccountId, 
-        Guid FeeAccountId);
+        Guid CashAccountId,
+        Guid PrincipalAccountId,
+        Guid InterestAccountId,
+        Guid FeeAccountId,
+        Guid LossExpenseId,
+        Guid RecoveryIncomeId);
 
     private record PaymentSplit(
-        decimal PrincipalAmount, 
-        decimal InterestAmount, 
+        decimal PrincipalAmount,
+        decimal InterestAmount,
         decimal FeeAmount);
 }

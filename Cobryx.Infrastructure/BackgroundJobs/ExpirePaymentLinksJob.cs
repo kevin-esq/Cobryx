@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ public class ExpirePaymentLinksJob
 
         // 1. Find Active/Processing links that are past due
         var toExpire = await db.Set<PaymentLink>()
-            .Where(l => (l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing) 
+            .Where(l => (l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing)
                         && l.ExpiresAt < now)
             .OrderBy(l => l.ExpiresAt)
             .Take(100) // Batch processing

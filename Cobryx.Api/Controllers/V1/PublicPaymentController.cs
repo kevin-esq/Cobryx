@@ -1,11 +1,10 @@
 using Asp.Versioning;
 using Cobryx.Application.Payments.Queries.GetPaymentLinkByToken;
 using Cobryx.Application.Payments.Commands.InitializePaymentLink;
-using Cobryx.Api.Outcomes;
+using Cobryx.Domain.Common;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -29,7 +28,7 @@ public class PublicPaymentController : CobryxBaseController
     public async Task<IActionResult> GetDetails(string token)
     {
         var result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
-        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.READ"));
+        return HandleResult((Result<PaymentLinkDto>)result, Outcome.FromExternal("PORTAL.PAYMENT.READ"));
     }
 
     /// <summary>
@@ -39,7 +38,7 @@ public class PublicPaymentController : CobryxBaseController
     public async Task<IActionResult> Initialize(string token)
     {
         var result = await Sender.Send(new InitializePaymentLinkCommand(token));
-        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.INITIALIZE"));
+        return HandleResult((Result<string>)result, Outcome.FromExternal("PORTAL.PAYMENT.INITIALIZE"));
     }
 
     /// <summary>
@@ -49,9 +48,9 @@ public class PublicPaymentController : CobryxBaseController
     public async Task<IActionResult> GetStatus(string token)
     {
         var result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
-        
+
         // We can create a specialized query for just status later if needed for perf,
         // but for MVP this is secure and functional.
-        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.STATUS"));
+        return HandleResult((Result<PaymentLinkDto>)result, Outcome.FromExternal("PORTAL.PAYMENT.STATUS"));
     }
 }

@@ -25,6 +25,9 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
     public decimal TotalPaid { get; private set; }
     public DateTime? LastPaymentDate { get; private set; }
     public int DaysInArrears { get; private set; }
+    public int FinancialDaysPastDue { get; private set; }
+    public decimal ArrearsAmount { get; private set; }
+    public FinancialStatus FinancialStatus { get; private set; }
     public DateTime? NextPaymentDueDate { get; private set; }
     public DateTime? ClosedAt { get; private set; }
     public bool IsDemo { get; private set; }
@@ -68,17 +71,20 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         TotalPaid = 0;
         DaysInArrears = 0;
 
-        Status = LoanStatus.Pending;
+        Status = LoanStatus.Draft;
         LegalStatus = LegalStatus.Active;
         RiskStatus = RiskStatus.OnTime;
+        FinancialStatus = FinancialStatus.Current;
         CollectionStage = CollectionStage.None;
+        ArrearsAmount = 0;
+        FinancialDaysPastDue = 0;
 
         AddDomainEvent(new Events.Lending.LoanCreatedEvent(Id, TenantId, CustomerId, DateTime.UtcNow));
     }
 
     public void Activate()
     {
-        if (Status != LoanStatus.Pending)
+        if (Status != LoanStatus.Draft)
             return;
 
         Status = LoanStatus.Active;
@@ -136,43 +142,79 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void UpdateRiskStatus()
+    public void UpdateFinancialRiskStatus(DateTime today)
     {
-        var today = DateTime.UtcNow.Date;
-
-        var oldestOverdue = _installments
-            .Where(i => i.Status != InstallmentStatus.Paid && i.DueDate < today)
+        // Bank-Grade DPD: Today - Oldest Unpaid Installment DueDate
+        var oldestDelinquent = _installments
+            .Where(i => i.Status != InstallmentStatus.Paid && i.DueDate < today.Date)
             .OrderBy(i => i.DueDate)
             .FirstOrDefault();
 
-        if (oldestOverdue == null)
+        if (oldestDelinquent == null)
         {
-            DaysInArrears = 0;
-            RiskStatus = RiskStatus.OnTime;
-            CollectionStage = CollectionStage.None;
+            FinancialDaysPastDue = 0;
+            FinancialStatus = FinancialStatus.Current;
+            ArrearsAmount = 0;
         }
         else
         {
-            DaysInArrears = (int)(today - oldestOverdue.DueDate).TotalDays;
+            FinancialDaysPastDue = (int)(today.Date - oldestDelinquent.DueDate.Date).TotalDays;
+            ArrearsAmount = _installments
+                .Where(i => i.DueDate <= today.Date)
+                .Sum(i => (i.PrincipalAmount + i.InterestAmount + i.LateFeeAmount) -
+                          (i.PrincipalPaid + i.InterestPaid + i.LateFeePaid));
 
-            RiskStatus = DaysInArrears switch
+            FinancialStatus = FinancialDaysPastDue switch
             {
-                <= 0 => RiskStatus.OnTime,
-                <= 30 => RiskStatus.Late,
-                <= 60 => RiskStatus.SevereLate,
-                _ => RiskStatus.Critical
-            };
-
-            CollectionStage = RiskStatus switch
-            {
-                RiskStatus.OnTime => CollectionStage.None,
-                RiskStatus.Late => CollectionStage.Friendly,
-                RiskStatus.SevereLate => CollectionStage.Hard,
-                RiskStatus.Critical => CollectionStage.Legal,
-                _ => CollectionStage.None
+                <= 3 => FinancialStatus.Current,
+                <= 30 => FinancialStatus.Late,
+                <= 90 => FinancialStatus.Delinquent,
+                <= 180 => FinancialStatus.Default,
+                _ => FinancialStatus == FinancialStatus.Recovered ? FinancialStatus.Recovered : FinancialStatus.ChargedOff
             };
         }
 
+        // Keep legacy RiskStatus synced for UI compatibility
+        DaysInArrears = FinancialDaysPastDue;
+        RiskStatus = FinancialStatus switch
+        {
+            FinancialStatus.Current => RiskStatus.OnTime,
+            FinancialStatus.Late => RiskStatus.Late,
+            FinancialStatus.Delinquent => RiskStatus.SevereLate,
+            _ => RiskStatus.Critical
+        };
+
+        CollectionStage = RiskStatus switch
+        {
+            RiskStatus.OnTime => CollectionStage.None,
+            RiskStatus.Late => CollectionStage.Friendly,
+            RiskStatus.SevereLate => CollectionStage.Hard,
+            RiskStatus.Critical => CollectionStage.Legal,
+            _ => CollectionStage.None
+        };
+
+        UpdateTimestamp();
+    }
+
+    public void MarkAsChargedOff()
+    {
+        if (FinancialStatus == FinancialStatus.ChargedOff) return;
+
+        FinancialStatus = FinancialStatus.ChargedOff;
+
+        // Note: Default policy: Auto-close contractual status when charged off.
+        // In bank-level real, this might be optional.
+        Status = LoanStatus.Closed;
+        LegalStatus = LegalStatus.Defaulted;
+
+        UpdateTimestamp();
+    }
+
+    public void MarkAsRecovered()
+    {
+        if (FinancialStatus != FinancialStatus.ChargedOff) return;
+
+        FinancialStatus = FinancialStatus.Recovered;
         UpdateTimestamp();
     }
 
@@ -189,7 +231,8 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void MarkAsDefaulted()
     {
-        Status = LoanStatus.Defaulted;
+        // Now handled by FinancialStatus/LegalStatus
+        FinancialStatus = FinancialStatus.Default;
         LegalStatus = LegalStatus.Defaulted;
         UpdateTimestamp();
     }

@@ -45,7 +45,7 @@ public class UsersController : CobryxBaseController
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleRequest request)
     {
         var result = await Sender.Send(new UpdateUserRoleCommand(id, request.RoleId));
-        
+
         if (result.IsFailure)
         {
             return BadRequest(result.Error);

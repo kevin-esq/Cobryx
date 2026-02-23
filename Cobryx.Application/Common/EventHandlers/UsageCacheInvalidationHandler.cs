@@ -7,7 +7,7 @@ using Concordia;
 
 namespace Cobryx.Application.Common.EventHandlers;
 
-public class UsageCacheInvalidationHandler : 
+public class UsageCacheInvalidationHandler :
     INotificationHandler<DomainEventNotification<InvoiceIssuedEvent>>,
     INotificationHandler<DomainEventNotification<UserRegisteredEvent>>,
     INotificationHandler<DomainEventNotification<LoanCreatedEvent>>

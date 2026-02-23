@@ -1,5 +1,6 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Exceptions;
 
 namespace Cobryx.Domain.Entities;
 
@@ -10,6 +11,7 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public string LastName { get; private set; }
     public string FullName => $"{FirstName} {LastName}";
     public string Phone { get; private set; }
+    public string Email { get; private set; }
     public Address? Address { get; private set; }
     public IdentityDocument? Document { get; private set; }
     public string? Notes { get; private set; }
@@ -19,46 +21,50 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public virtual ICollection<Credit> Credits { get; private set; } = new List<Credit>();
 
-
-    private Customer()
+    public Customer()
     {
         FirstName = null!;
         LastName = null!;
         Phone = null!;
+        Email = null!;
     }
 
-    public Customer(Guid tenantId, string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
+    public Customer(Guid tenantId, string firstName, string lastName, string phone, string email, Address? address, IdentityDocument? document)
     {
         if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
         if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
         if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
         if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
+        if (string.IsNullOrWhiteSpace(email)) throw new DomainException(DomainErrorCode.Customer.EmailRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
         LastName = lastName;
         Phone = phone;
+        Email = email;
         Address = address;
         Document = document;
         TrustScore = 80;
         IsActive = true;
     }
 
-    public void UpdateProfile(string firstName, string lastName, string phone, Address? address, string? photoUrl)
+    public void UpdateProfile(string firstName, string lastName, string phone, string email, Address? address, string? photoUrl)
     {
-        UpdateDetails(firstName, lastName, phone, address, Document);
+        UpdateDetails(firstName, lastName, phone, email, address, Document);
         PhotoUrl = photoUrl;
     }
 
-    public void UpdateDetails(string firstName, string lastName, string phone, Address? address, IdentityDocument? document)
+    public void UpdateDetails(string firstName, string lastName, string phone, string email, Address? address, IdentityDocument? document)
     {
         if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
         if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
         if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
+        if (string.IsNullOrWhiteSpace(email)) throw new DomainException(DomainErrorCode.Customer.EmailRequired);
 
         FirstName = firstName;
         LastName = lastName;
         Phone = phone;
+        Email = email;
         Address = address;
         Document = document;
         UpdateTimestamp();

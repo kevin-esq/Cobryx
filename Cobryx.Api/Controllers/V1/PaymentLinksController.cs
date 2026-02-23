@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Cobryx.Application.Payments.Commands.CreatePaymentLink;
-using Cobryx.Api.Outcomes;
+using Cobryx.Domain.Common;
 using Concordia;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +27,7 @@ public class PaymentLinksController : CobryxBaseController
     public async Task<IActionResult> Create([FromBody] CreatePaymentLinkCommand command)
     {
         var result = await Sender.Send(command);
-        
+
         // Note: Success returns the RAW token which the tenant should 
         // immediately send to the customer (via email/SMS).
         return HandleResult(result, Outcome.FromExternal("PAYMENT_LINK.CREATE"));

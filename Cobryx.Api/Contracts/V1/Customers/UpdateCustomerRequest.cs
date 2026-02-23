@@ -8,6 +8,7 @@ public record UpdateCustomerRequest(
     string FirstName,
     string LastName,
     string Phone,
+    string Email,
     AddressContract? Address = null,
     IdentityDocumentContract? Document = null
 )
@@ -23,6 +24,10 @@ public record UpdateCustomerRequest(
     /// <summary>Customer's primary contact phone number.</summary>
     /// <example>+525512345678</example>
     public string Phone { get; init; } = Phone;
+
+    /// <summary>Customer's primary contact email address.</summary>
+    /// <example>jane.smith@example.com</example>
+    public string Email { get; init; } = Email;
 
     /// <summary>Optional physical address details.</summary>
     public AddressContract? Address { get; init; } = Address;

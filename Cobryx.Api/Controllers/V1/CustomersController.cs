@@ -80,6 +80,7 @@ public class CustomersController : CobryxBaseController
             request.FirstName,
             request.LastName,
             request.Phone,
+            request.Email,
             address,
             document);
 
@@ -219,6 +220,7 @@ public class CustomersController : CobryxBaseController
             request.FirstName,
             request.LastName,
             request.Phone,
+            request.Email,
             address,
             document);
 

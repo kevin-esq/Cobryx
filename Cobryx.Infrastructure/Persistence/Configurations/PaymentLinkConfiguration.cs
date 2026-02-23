@@ -10,14 +10,19 @@ public class PaymentLinkConfiguration : IEntityTypeConfiguration<PaymentLink>
     {
         builder.HasIndex(p => p.TenantId);
         builder.HasIndex(p => p.CustomerId);
-        
+
         // Fintech hardening: Unique hash index to prevent token collisions
         builder.HasIndex(p => p.TokenHash).IsUnique();
-        
+
         // Idempotency: Unified unique index for external references per tenant
         builder.HasIndex(p => new { p.TenantId, p.ExternalReference })
             .IsUnique()
             .HasFilter("\"ExternalReference\" IS NOT NULL");
+
+        // Stripe Hardening: Prevent multiple links from sharing the same intent
+        builder.HasIndex(p => p.StripePaymentIntentId)
+            .IsUnique()
+            .HasFilter("\"StripePaymentIntentId\" IS NOT NULL");
 
         builder.OwnsOne(p => p.AmountSnapshot, m =>
         {

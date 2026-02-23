@@ -11,8 +11,10 @@ using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Domain.Entities.Invoicing;
 using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Entities.Lending;
+using Cobryx.Domain.Entities.Accounting;
 using Cobryx.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cobryx.Infrastructure.Persistence;
 
@@ -47,6 +49,11 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     {
         UpdateAuditFields();
         return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted, CancellationToken ct = default)
+    {
+        return await Database.BeginTransactionAsync(isolationLevel, ct);
     }
 
 
@@ -115,6 +122,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
     public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<FinancialStatusAudit> FinancialStatusAudits => Set<FinancialStatusAudit>();
 
     // Lending Domain
     public DbSet<Domain.Entities.Lending.Loan> Loans => Set<Domain.Entities.Lending.Loan>();

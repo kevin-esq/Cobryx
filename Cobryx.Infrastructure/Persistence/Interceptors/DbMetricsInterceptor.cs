@@ -16,8 +16,8 @@ public class DbMetricsInterceptor : DbCommandInterceptor
     }
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(
-        DbCommand command, 
-        CommandEventData eventData, 
+        DbCommand command,
+        CommandEventData eventData,
         InterceptionResult<DbDataReader> result)
     {
         _metrics.ConcurrentDbCommands.Add(1);
@@ -25,9 +25,9 @@ public class DbMetricsInterceptor : DbCommandInterceptor
     }
 
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
-        DbCommand command, 
-        CommandEventData eventData, 
-        InterceptionResult<DbDataReader> result, 
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<DbDataReader> result,
         CancellationToken cancellationToken = default)
     {
         _metrics.ConcurrentDbCommands.Add(1);
@@ -35,8 +35,8 @@ public class DbMetricsInterceptor : DbCommandInterceptor
     }
 
     public override DbDataReader ReaderExecuted(
-        DbCommand command, 
-        CommandExecutedEventData eventData, 
+        DbCommand command,
+        CommandExecutedEventData eventData,
         DbDataReader result)
     {
         _metrics.ConcurrentDbCommands.Add(-1);
@@ -45,9 +45,9 @@ public class DbMetricsInterceptor : DbCommandInterceptor
     }
 
     public override ValueTask<DbDataReader> ReaderExecutedAsync(
-        DbCommand command, 
-        CommandExecutedEventData eventData, 
-        DbDataReader result, 
+        DbCommand command,
+        CommandExecutedEventData eventData,
+        DbDataReader result,
         CancellationToken cancellationToken = default)
     {
         _metrics.ConcurrentDbCommands.Add(-1);
@@ -78,7 +78,7 @@ public class DbMetricsInterceptor : DbCommandInterceptor
             {
                 _metrics.DbPoolExhaustionTotal.Add(1);
             }
-            
+
             // Detect Command Timeout
             if (nex.InnerException is System.TimeoutException || nex.IsTransient)
             {
@@ -88,7 +88,7 @@ public class DbMetricsInterceptor : DbCommandInterceptor
 
             if (nex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase))
             {
-                 _metrics.DbCommandTimeoutTotal.Add(1);
+                _metrics.DbCommandTimeoutTotal.Add(1);
             }
         }
     }

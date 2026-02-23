@@ -35,7 +35,7 @@ public class StartupValidationTests : IClassFixture<WebApplicationFactory<Progra
         // Act & Assert
         // ValidateOnStart causes the exception during host build (Server creation)
         Action act = () => { var client = builder.CreateClient(); };
-        
+
         act.Should().Throw<OptionsValidationException>()
            .WithMessage("*DataAnnotation validation failed for 'JwtOptions'*");
     }
