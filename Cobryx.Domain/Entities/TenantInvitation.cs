@@ -13,7 +13,7 @@ public class TenantInvitation : BaseEntity, IAggregateRoot
     public InvitationStatus Status { get; private set; }
 
     // Required for EF Core
-    private TenantInvitation() 
+    private TenantInvitation()
     {
         Email = null!;
         TokenHash = null!;

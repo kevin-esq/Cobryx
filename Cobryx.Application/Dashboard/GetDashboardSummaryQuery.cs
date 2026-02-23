@@ -119,21 +119,21 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
         var activeLoans = loans.Where(l => l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active).ToList();
         var totalPrincipalBalance = loans.Sum(l => l.CurrentPrincipalBalance);
         var overdueCount = loans.Count(l => l.DaysInArrears > 0);
-        
+
         // Overdue Risk: (Overdue Count / Total Active)
-        var overdueRisk = activeLoans.Any() 
-            ? (decimal)overdueCount / activeLoans.Count * 100 
+        var overdueRisk = activeLoans.Any()
+            ? (decimal)overdueCount / activeLoans.Count * 100
             : 0;
 
         // Collection Efficiency (Dummy target for demo: collections vs total arrears)
         var totalArrears = loans.Sum(l => l.CurrentInterestBalance + l.CurrentLateFeeBalance);
-        var collectionEfficiency = (totalArrears + collectionsLast30d) > 0 
-            ? (collectionsLast30d / (totalArrears + collectionsLast30d)) * 100 
+        var collectionEfficiency = (totalArrears + collectionsLast30d) > 0
+            ? (collectionsLast30d / (totalArrears + collectionsLast30d)) * 100
             : 100;
 
         // Portfolio Yield (Interest vs Principal)
-        var portfolioYield = totalPrincipalDisbursed > 0 
-            ? (loans.Sum(l => l.CurrentInterestBalance) / totalPrincipalDisbursed) * 100 
+        var portfolioYield = totalPrincipalDisbursed > 0
+            ? (loans.Sum(l => l.CurrentInterestBalance) / totalPrincipalDisbursed) * 100
             : 0;
 
         // 4. Impact Signals (Psychographic logic)

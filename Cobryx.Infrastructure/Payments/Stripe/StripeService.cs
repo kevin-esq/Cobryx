@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -146,5 +147,12 @@ public class StripeService : IStripeService
         var service = new PaymentIntentService();
         var intent = await service.GetAsync(paymentIntentId, cancellationToken: ct);
         return intent.ClientSecret;
+    }
+
+    public async Task<string> GetPaymentIntentStatusAsync(string paymentIntentId, CancellationToken ct = default)
+    {
+        var service = new PaymentIntentService();
+        var intent = await service.GetAsync(paymentIntentId, cancellationToken: ct);
+        return intent.Status;
     }
 }

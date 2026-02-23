@@ -5,6 +5,7 @@ using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Entities.Lending;
 using Cobryx.Domain.Entities.Accounting;
 using Cobryx.Application.Webhooks.Entities;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cobryx.Application.Common.Interfaces;
 
@@ -18,9 +19,10 @@ public interface ICobryxDbContext
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<TenantGrowthMetrics> TenantGrowthMetrics { get; }
     DbSet<TenantMRRHistory> TenantMRRHistory { get; }
-    
+
     // Lending
     DbSet<Domain.Entities.Lending.Loan> Loans { get; }
+    DbSet<FinancialStatusAudit> FinancialStatusAudits { get; }
 
     // Payments & Accounting
     DbSet<Payment> Payments { get; }
@@ -28,7 +30,8 @@ public interface ICobryxDbContext
     DbSet<LedgerAccount> LedgerAccounts { get; }
     DbSet<LedgerTransaction> LedgerTransactions { get; }
     DbSet<LedgerEntry> LedgerEntries { get; }
-    
+
     DbSet<TEntity> Set<TEntity>() where TEntity : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    Task<IDbContextTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted, CancellationToken ct = default);
 }

@@ -19,9 +19,12 @@ public class LedgerTransactionConfiguration : IEntityTypeConfiguration<LedgerTra
         builder.Property(x => x.ReferenceId)
             .HasMaxLength(100);
 
-        builder.Property(x => x.Status)
-            .HasConversion<string>()
-            .HasMaxLength(20);
+
+        builder.Property(x => x.IsPosted)
+            .IsRequired();
+
+        builder.Property(x => x.IsReversal)
+            .IsRequired();
 
         builder.HasMany(x => x.Entries)
             .WithOne()
@@ -29,7 +32,9 @@ public class LedgerTransactionConfiguration : IEntityTypeConfiguration<LedgerTra
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(x => x.TenantId);
-        builder.HasIndex(x => x.ReferenceId);
-        builder.HasIndex(x => x.Timestamp);
+        builder.HasIndex(x => new { x.TenantId, x.ReferenceId })
+            .IsUnique()
+            .HasFilter("\"ReferenceId\" IS NOT NULL");
+        builder.HasIndex(x => x.CreatedAt);
     }
 }

@@ -38,7 +38,7 @@ public class LoanInstallmentConfiguration : IEntityTypeConfiguration<Installment
             .HasPrecision(18, 2)
             .IsRequired();
 
-        builder.Property(x => x.LateFeesPaid)
+        builder.Property(x => x.LateFeePaid)
             .HasPrecision(18, 2)
             .IsRequired();
 

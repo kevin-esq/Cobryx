@@ -6,7 +6,7 @@ using Cobryx.Domain.Enums;
 using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Configuration;
 using System.Security.Cryptography;
 
 namespace Cobryx.Application.Payments.Commands.CreatePaymentLink;
@@ -25,7 +25,7 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
     private readonly StripeOptions _stripeOptions;
 
     public CreatePaymentLinkHandler(
-        ICobryxDbContext context, 
+        ICobryxDbContext context,
         ITenantProvider tenantProvider,
         IOptions<StripeOptions> stripeOptions)
     {
@@ -43,14 +43,14 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         // 1. Validate Customer
         var customer = await _context.Customers
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.TenantId == tenantId, ct);
-        
+
         if (customer == null)
             return Result.Failure<string>(DomainErrorCode.Customer.NotFound);
 
         // 2. Validate Loan (if provided)
         if (request.LoanId.HasValue)
         {
-            var loanExists = await _context.Credits
+            var loanExists = await _context.Loans
                 .AnyAsync(l => l.Id == request.LoanId && l.TenantId == tenantId, ct);
             if (!loanExists)
                 return Result.Failure<string>(DomainErrorCode.Loans.NotFound);
@@ -61,7 +61,7 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         {
             var existingLink = await _context.PaymentLinks
                 .FirstOrDefaultAsync(pl => pl.TenantId == tenantId && pl.ExternalReference == request.ExternalReference && pl.Status == PaymentLinkStatus.Active, ct);
-            
+
             if (existingLink != null)
             {
                 // Re-hashing is the only way to get a new raw token if needed, 

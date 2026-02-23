@@ -28,9 +28,9 @@ public class ConversionDropOffJob
     {
         // 0. Recalculate Engagement Scores for all active tenants
         var growthService = _context as IGrowthIntelligenceService; // This is a bit hacky if not registered, but let's assume implementation detail
-        // Better: inject IGrowthIntelligenceService
-        // I will use the injected metrics directly where possible since I cannot easily change the constructor here without checking DI
-        
+                                                                    // Better: inject IGrowthIntelligenceService
+                                                                    // I will use the injected metrics directly where possible since I cannot easily change the constructor here without checking DI
+
         var now = DateTime.UtcNow;
         var dayAgo = now.AddDays(-1);
         var threeDaysAgo = now.AddDays(-3);
@@ -83,7 +83,7 @@ public class ConversionDropOffJob
         var highRiskCount = await _context.TenantGrowthMetrics
             .Where(x => !x.IsChurned && x.EngagementScore < 20)
             .CountAsync();
-            
+
         if (highRiskCount > 0)
         {
             _metrics.FeatureActivation.Add(highRiskCount, new KeyValuePair<string, object?>("feature", "CHURN_RISK.HIGH"));

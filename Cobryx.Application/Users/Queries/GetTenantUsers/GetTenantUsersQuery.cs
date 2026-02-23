@@ -22,11 +22,11 @@ public class GetTenantUsersHandler : IRequestHandler<GetTenantUsersQuery, PagedL
     public async Task<PagedList<UserListDto>> Handle(GetTenantUsersQuery request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
-        
+
         var (users, totalCount) = await _userRepository.GetByTenantPagedAsync(
-            tenantId, 
-            request.Page, 
-            request.PageSize, 
+            tenantId,
+            request.Page,
+            request.PageSize,
             ct);
 
         var dtos = users.Select(u => new UserListDto(

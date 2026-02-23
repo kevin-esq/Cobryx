@@ -36,6 +36,7 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
             request.FirstName,
             request.LastName,
             request.Phone,
+            request.Email,
             request.Address,
             request.Document
         );

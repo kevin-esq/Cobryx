@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Authorization;
 using Cobryx.Infrastructure.Security.Authorization;
 
 using Cobryx.Domain.Interfaces.Lending;
+using Cobryx.Domain.DomainServices;
 using Cobryx.Domain.DomainServices.Lending;
 
 namespace Cobryx.Infrastructure;
@@ -160,8 +161,8 @@ public static class DependencyInjection
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
 
         // Stripe Billing
-        services.AddOptions<Configuration.StripeOptions>()
-            .Bind(configuration.GetSection(Configuration.StripeOptions.SectionName))
+        services.AddOptions<Cobryx.Application.Common.Configuration.StripeOptions>()
+            .Bind(configuration.GetSection(Cobryx.Application.Common.Configuration.StripeOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<IStripeService, Payments.Stripe.StripeService>();
@@ -178,6 +179,7 @@ public static class DependencyInjection
 
         // Lending Domain Services
         services.AddScoped<IAmortizationService, AmortizationService>();
+        services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
 
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();

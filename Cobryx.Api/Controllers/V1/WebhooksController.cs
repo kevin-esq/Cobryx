@@ -6,6 +6,7 @@ using Cobryx.Application.Subscriptions.Services;
 using Cobryx.Domain.Common;
 using Cobryx.Infrastructure.Configuration;
 using Concordia;
+using Cobryx.Application.Common.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;

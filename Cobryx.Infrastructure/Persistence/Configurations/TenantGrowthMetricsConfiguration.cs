@@ -14,7 +14,7 @@ public class TenantGrowthMetricsConfiguration : IEntityTypeConfiguration<TenantG
 
         builder.Property(x => x.WowOutcomeCode)
             .HasMaxLength(100);
-        
+
         builder.Property(x => x.CurrentMRR).HasPrecision(18, 2);
         builder.Property(x => x.NetExpansionRevenue).HasPrecision(18, 2);
         builder.Property(x => x.NetContractionRevenue).HasPrecision(18, 2);

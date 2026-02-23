@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Cobryx.Infrastructure.Configuration;
+namespace Cobryx.Application.Common.Configuration;
 
 public class StripeOptions
 {

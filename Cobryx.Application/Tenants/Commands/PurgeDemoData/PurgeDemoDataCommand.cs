@@ -30,7 +30,7 @@ public class PurgeDemoDataHandler : IRequestHandler<PurgeDemoDataCommand, Result
         var demoLoans = await dbContext.Set<Loan>()
             .Where(l => l.TenantId == tenantId && l.IsDemo)
             .ToListAsync(cancellationToken);
-        
+
         if (demoLoans.Any())
         {
             dbContext.Set<Loan>().RemoveRange(demoLoans);
@@ -39,7 +39,7 @@ public class PurgeDemoDataHandler : IRequestHandler<PurgeDemoDataCommand, Result
         var demoPayments = await dbContext.Set<Payment>()
             .Where(p => p.TenantId == tenantId && p.IsDemo)
             .ToListAsync(cancellationToken);
-        
+
         if (demoPayments.Any())
         {
             dbContext.Set<Payment>().RemoveRange(demoPayments);

@@ -34,7 +34,7 @@ public class StripeWebhookResilienceTests : IClassFixture<CobryxWebApplicationFa
     {
         // Arrange
         var stripeEventId = "evt_race_" + Guid.NewGuid();
-        
+
         var json = @"{
   ""id"": ""{{EVENT_ID}}"",
   ""object"": ""event"",
@@ -56,16 +56,16 @@ public class StripeWebhookResilienceTests : IClassFixture<CobryxWebApplicationFa
   },
   ""type"": ""customer.subscription.updated""
 }".Replace("{{EVENT_ID}}", stripeEventId);
-        
+
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
             var tenant = new Tenant("Race Tenant", "race@test.com");
             db.Tenants.Add(tenant);
-            
+
             var plan = new SubscriptionPlan("Pro", "Pro", new Money(100, "MXN"), 100, 10, 100, Cobryx.Domain.Enums.PlanTier.Pro, 0, "price_test");
             db.SubscriptionPlans.Add(plan);
-            
+
             var sub = new TenantSubscription(tenant.Id, plan.Id, DateTime.UtcNow);
             typeof(TenantSubscription).GetProperty("StripeSubscriptionId")!.SetValue(sub, "sub_test_race");
             typeof(TenantSubscription).GetProperty("StripeCustomerId")!.SetValue(sub, "cus_test");
@@ -98,10 +98,10 @@ public class StripeWebhookResilienceTests : IClassFixture<CobryxWebApplicationFa
         // Arrange
         var stripeEventId = "evt_fail_" + Guid.NewGuid();
         var json = @"{ ""id"": """ + stripeEventId + @""", ""object"": ""event"", ""type"": ""customer.subscription.updated"" }";
-        
+
         // Act
         var response = await SendWebhookAsync(json);
-        
+
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var error = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
@@ -112,15 +112,15 @@ public class StripeWebhookResilienceTests : IClassFixture<CobryxWebApplicationFa
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/webhooks/stripe");
         request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-        
+
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var signedPayload = $"{timestamp}.{json}";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(WebhookSecret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signedPayload));
         var signature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-        
+
         request.Headers.Add("Stripe-Signature", $"t={timestamp},v1={signature}");
-        
+
         return await _client.SendAsync(request);
     }
 }

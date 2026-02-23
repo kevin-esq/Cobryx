@@ -1,6 +1,12 @@
+using Concordia;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Cobryx.Infrastructure.Configuration;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Common;
+using Cobryx.Domain.Enums;
+using Cobryx.Domain.Exceptions;
+using Cobryx.Application.Common.Configuration;
 
 namespace Cobryx.Application.Payments.Commands.InitializePaymentLink;
 
@@ -11,15 +17,18 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
     private readonly ICobryxDbContext _context;
     private readonly IStripeService _stripeService;
     private readonly StripeOptions _stripeOptions;
+    private readonly ILogger<InitializePaymentLinkHandler> _logger;
 
     public InitializePaymentLinkHandler(
-        ICobryxDbContext context, 
+        ICobryxDbContext context,
         IStripeService stripeService,
-        IOptions<StripeOptions> stripeOptions)
+        IOptions<StripeOptions> stripeOptions,
+        ILogger<InitializePaymentLinkHandler> logger)
     {
         _context = context;
         _stripeService = stripeService;
         _stripeOptions = stripeOptions.Value;
+        _logger = logger;
     }
 
     public async Task<Result<string>> Handle(InitializePaymentLinkCommand request, CancellationToken ct)
@@ -52,15 +61,24 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         // 4. Return existing secret if already processing (Intent Reuse)
         if (link.Status == PaymentLinkStatus.Processing && !string.IsNullOrEmpty(link.StripePaymentIntentId))
         {
-            try 
+            try
             {
-                var secret = await _stripeService.GetPaymentIntentClientSecretAsync(link.StripePaymentIntentId, ct);
-                return Result.Success(secret);
+                var status = await _stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
+                // BANK-GRADE: Only reuse if it's still payable
+                if (status is "requires_payment_method" or "requires_confirmation" or "requires_action" or "processing")
+                {
+                    var secret = await _stripeService.GetPaymentIntentClientSecretAsync(link.StripePaymentIntentId, ct);
+                    return Result.Success(secret);
+                }
+
+                _logger.LogWarning("Existing Intent {IntentId} has status {Status}. Generating fresh intent.",
+                    link.StripePaymentIntentId, status);
+                // Fallback: Create new intent if original is no longer payable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve existing client secret for Intent {IntentId}", link.StripePaymentIntentId);
-                // Fallback: Create new intent if original is lost/invalid
+                _logger.LogError(ex, "Failed to verify existing intent {IntentId}. Falling back to new intent.",
+                    link.StripePaymentIntentId);
             }
         }
 
@@ -81,7 +99,7 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
 
         // 4. Update Link State
         link.MarkAsProcessing(intentId);
-        
+
         await _context.SaveChangesAsync(ct);
 
         return Result.Success(clientSecret);

@@ -13,7 +13,7 @@ namespace Cobryx.Application.Common.Growth;
 /// Unifies domain events into specific Growth and Conversion signals.
 /// Bridges the gap between core business actions and persistent growth intelligence.
 /// </summary>
-public class GrowthIntelligenceEventHandler : 
+public class GrowthIntelligenceEventHandler :
     INotificationHandler<DomainEventNotification<LoanCreatedEvent>>,
     INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>,
     INotificationHandler<DomainEventNotification<OnboardingMilestoneReachedEvent>>
@@ -43,7 +43,7 @@ public class GrowthIntelligenceEventHandler :
         {
             await _growthService.MarkOnboardingCompletedAsync(notification.DomainEvent.TenantId);
         }
-        
+
         // Track milestone activation heatmap
         _growthService.RecordFeatureActivation(notification.DomainEvent.TenantId, notification.DomainEvent.MilestoneCode);
     }

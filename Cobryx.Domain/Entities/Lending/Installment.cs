@@ -17,9 +17,10 @@ public class Installment : BaseEntity
     public decimal TotalAmount => PrincipalAmount + InterestAmount;
     public decimal PrincipalPaid { get; private set; }
     public decimal InterestPaid { get; private set; }
-    public decimal LateFeesPaid { get; private set; }
-    public decimal TotalPaid => PrincipalPaid + InterestPaid + LateFeesPaid;
-    public decimal RemainingAmount => TotalAmount - PrincipalPaid - InterestPaid;
+    public decimal LateFeeAmount { get; private set; }
+    public decimal LateFeePaid { get; private set; }
+    public decimal TotalPaid => PrincipalPaid + InterestPaid + LateFeePaid;
+    public decimal RemainingAmount => TotalAmount + LateFeeAmount - TotalPaid;
     public InstallmentStatus Status { get; private set; }
     public DateTime? PaidAt { get; private set; }
 
@@ -46,7 +47,8 @@ public class Installment : BaseEntity
         InterestAmount = interestAmount;
         PrincipalPaid = 0;
         InterestPaid = 0;
-        LateFeesPaid = 0;
+        LateFeeAmount = 0;
+        LateFeePaid = 0;
         Status = InstallmentStatus.Pending;
     }
 
@@ -83,7 +85,7 @@ public class Installment : BaseEntity
 
             case PaymentApplicationType.LateFees:
                 applied = amount;
-                LateFeesPaid += applied;
+                LateFeePaid += applied;
                 break;
         }
 

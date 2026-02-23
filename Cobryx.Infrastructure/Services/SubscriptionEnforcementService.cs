@@ -26,7 +26,7 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
     public async Task EnsureWithinInvoicesLimitAsync(Guid tenantId, CancellationToken ct = default)
     {
         await EnsureSubscriptionActiveAsync(tenantId, ct);
-        
+
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId, ct);
         if (usage.InvoicesCount >= usage.MaxInvoices)
         {

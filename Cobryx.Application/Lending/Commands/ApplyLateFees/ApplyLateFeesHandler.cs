@@ -82,7 +82,7 @@ public class ApplyLateFeesHandler : IRequestHandler<ApplyLateFeesCommand, Result
 
             if (loanUpdated)
             {
-                loan.UpdateRiskStatus();
+                loan.UpdateFinancialRiskStatus(DateTime.UtcNow);
                 await _loanRepository.UpdateAsync(loan, ct);
                 affectedLoans++;
             }

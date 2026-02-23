@@ -14,7 +14,7 @@ public class PermissionRequirementHandler : AuthorizationHandler<PermissionRequi
     }
 
     protected override async Task HandleRequirementAsync(
-        AuthorizationHandlerContext context, 
+        AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
         var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier);

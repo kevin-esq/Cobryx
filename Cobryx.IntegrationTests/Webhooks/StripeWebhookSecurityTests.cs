@@ -33,7 +33,7 @@ public class StripeWebhookSecurityTests : IClassFixture<CobryxWebApplicationFact
             var body = await response.Content.ReadAsStringAsync();
             throw new Xunit.Sdk.XunitException($"Expected 400, got {response.StatusCode}. Body: {body}");
         }
-        
+
         var content = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         content!.ErrorCode.Should().Be(WebhookOutcomes.InvalidSignature);
     }
@@ -55,7 +55,7 @@ public class StripeWebhookSecurityTests : IClassFixture<CobryxWebApplicationFact
             var body = await response.Content.ReadAsStringAsync();
             throw new Xunit.Sdk.XunitException($"Expected 400, got {response.StatusCode}. Body: {body}");
         }
-        
+
         var content = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         content!.ErrorCode.Should().Be(WebhookOutcomes.InvalidSignature);
     }

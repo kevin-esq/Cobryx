@@ -28,13 +28,13 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
 
         var tenant = await dbContext.Set<Domain.Entities.Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
-        
+
         var usersCount = await dbContext.Set<Domain.Entities.User>()
             .CountAsync(u => u.TenantId == tenantId, cancellationToken);
-            
+
         var activeLoansCount = await dbContext.Set<Domain.Entities.Lending.Loan>()
             .CountAsync(l => l.TenantId == tenantId && !l.IsDeleted, cancellationToken);
-            
+
         var paymentsCount = await dbContext.Set<Domain.Entities.Payments.Payment>()
             .CountAsync(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == Domain.Enums.PaymentStatus.Completed, cancellationToken);
 
@@ -44,7 +44,7 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
             paymentsCount,
             activeLoansCount > 0
         );
-        
+
         if (tenant == null || tenant.TaxId == null || string.IsNullOrEmpty(tenant.TaxId.Value))
         {
             return Result.Success(new NextBestActionDto(

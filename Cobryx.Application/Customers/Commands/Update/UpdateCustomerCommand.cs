@@ -13,6 +13,7 @@ public record UpdateCustomerCommand(
     string FirstName,
     string LastName,
     string Phone,
+    string Email,
     Address? Address = null,
     IdentityDocument? Document = null) : IRequest<Result>;
 
@@ -52,6 +53,7 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             request.FirstName,
             request.LastName,
             request.Phone,
+            request.Email,
             request.Address,
             request.Document);
 

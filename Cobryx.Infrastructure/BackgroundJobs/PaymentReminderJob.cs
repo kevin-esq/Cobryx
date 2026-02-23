@@ -4,6 +4,7 @@ using Cobryx.Domain.Entities.Lending;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Entities.Lending.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -42,7 +43,7 @@ public class PaymentReminderJob
         var activeLinks = await db.Set<PaymentLink>()
             .Include(l => l.Customer)
             .Where(l => l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing)
-            .Where(l => l.ReminderCount < 4) 
+            .Where(l => l.ReminderCount < 4)
             .Where(l => l.LastReminderSentAt == null || l.LastReminderSentAt < now.AddHours(-24))
             .ToListAsync(ct);
 
@@ -50,12 +51,29 @@ public class PaymentReminderJob
 
         foreach (var link in activeLinks)
         {
-            // 2. Stop Gaps: No reminders for Closed loans (Prevent customer harassment)
+            // 2. Stop Gaps: Bank-Grade policy enforcement
             if (link.LoanId.HasValue)
             {
                 var loan = await db.Set<Loan>().FindAsync(new object[] { link.LoanId.Value }, ct);
-                if (loan == null || loan.Status == LoanStatus.Closed) 
-                    continue; 
+
+                // Stop if loan is functionally dead
+                if (loan == null ||
+                    loan.Status == LoanStatus.Closed ||
+                    loan.Status == LoanStatus.Cancelled ||
+                    loan.Status == LoanStatus.WrittenOff ||
+                    loan.Status == LoanStatus.Disputed)
+                    continue;
+
+                // Stop if loan is in a specialized protection state
+                if (loan.LegalStatus == LegalStatus.Restructured ||
+                    loan.LegalStatus == LegalStatus.InLegal ||
+                    loan.LegalStatus == LegalStatus.PaymentPlanActive)
+                    continue;
+
+                // Stop if risk indicates no further automated action
+                if (loan.FinancialStatus == FinancialStatus.ChargedOff ||
+                    loan.FinancialStatus == FinancialStatus.Recovered)
+                    continue;
             }
 
             // 3. Bucket Logic (Deterministic dispatch based on link age and expiry)
@@ -70,7 +88,7 @@ public class PaymentReminderJob
 
     private bool ShouldSendReminder(PaymentLink link, DateTime now)
     {
-        var daysSinceCreation = (now - link.CreatedAtUtc).TotalDays;
+        var daysSinceCreation = (now - link.CreatedAt).TotalDays;
         var daysUntilExpiry = (link.ExpiresAt - now).TotalDays;
 
         // Bucket 1: 3 days before expiry (Friendly proactive heads-up)
@@ -90,12 +108,12 @@ public class PaymentReminderJob
 
     private async Task ProcessReminderAsync(PaymentLink link, CancellationToken ct)
     {
-        try 
+        try
         {
             // Note: In production, URL construction would pull from configuration
             // and use the bipartite token format: {Salt}.{ShortHash}
             var paymentUrl = $"https://pay.cobryx.com/l/{link.Salt}.{link.TokenHash.Substring(0, 8)}";
-            
+
             var subject = $"Payment Reminder: Action Required for {link.Customer.FirstName}";
             var body = $@"Hello {link.Customer.FirstName},
             
@@ -109,7 +127,7 @@ Thank you,
 The Cobryx Team";
 
             await _emailService.SendEmailAsync(link.Customer.Email, subject, body, ct);
-            
+
             link.RecordReminderSent();
             _logger.LogInformation("Collections Reminder sent for Link {LinkId}. Sequence: {Count}", link.Id, link.ReminderCount);
         }

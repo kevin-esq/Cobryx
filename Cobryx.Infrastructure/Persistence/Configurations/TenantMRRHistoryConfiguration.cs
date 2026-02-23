@@ -10,7 +10,7 @@ public class TenantMRRHistoryConfiguration : IEntityTypeConfiguration<TenantMRRH
     {
         builder.ToTable("TenantMRRHistory");
         builder.HasKey(x => x.Id);
-        
+
         builder.Property(x => x.MRR).HasPrecision(18, 2);
         builder.Property(x => x.ChangeType).HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.Reason).HasMaxLength(200);

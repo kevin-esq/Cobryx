@@ -22,7 +22,7 @@ public class TenantInvitationConfiguration : IEntityTypeConfiguration<TenantInvi
         builder.HasIndex(x => new { x.TenantId, x.Email })
             .HasFilter("\"Status\" = 0") // 0 = Pending
             .IsUnique();
-            
+
         builder.HasIndex(x => x.TokenHash)
             .IsUnique();
 

@@ -52,7 +52,7 @@ public class StripeIdempotencyTests : IClassFixture<CobryxWebApplicationFactory>
 
         // Act - First call
         await syncService.HandleCheckoutCompletedAsync(stripeEventId, stripeCustomerId, stripeSubscriptionId, tenantId);
-        
+
         // Assert - Event recorded
         var processedEvent = await dbContext.ProcessedStripeEvents.FirstOrDefaultAsync(e => e.StripeEventId == stripeEventId);
         processedEvent.Should().NotBeNull();
@@ -65,7 +65,7 @@ public class StripeIdempotencyTests : IClassFixture<CobryxWebApplicationFactory>
         // Assert - Should not have changed or crashed
         var processedEventAfter = await dbContext.ProcessedStripeEvents.FirstOrDefaultAsync(e => e.StripeEventId == stripeEventId);
         processedEventAfter!.ProcessedAtUtc.Should().Be(initialProcessedAt);
-        
+
         // Verify only one event exists
         var count = await dbContext.ProcessedStripeEvents.CountAsync(e => e.StripeEventId == stripeEventId);
         count.Should().Be(1);

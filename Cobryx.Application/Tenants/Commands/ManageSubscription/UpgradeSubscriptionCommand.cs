@@ -50,7 +50,7 @@ public class UpgradeSubscriptionHandler : IRequestHandler<UpgradeSubscriptionCom
             return Result.Failure(DomainErrorCode.Subscription.DowngradeNotAllowed);
 
         subscription.UpdatePlan(newPlan);
-        
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

@@ -70,12 +70,12 @@ public class EnrollUserHandler : IRequestHandler<EnrollUserCommand, Result<Guid>
     {
         var sw = Stopwatch.StartNew();
         var dbContext = (DbContext)_unitOfWork;
-        
+
         var secret = _appOptions.InvitationTokenSecret;
         var oldSecret = _appOptions.OldInvitationTokenSecret;
-        
+
         var currentHash = TokenHasher.GetHmacHash(request.Token, secret);
-        
+
         var secondaryHash = !string.IsNullOrEmpty(oldSecret)
             ? TokenHasher.GetHmacHash(request.Token, oldSecret)
             : TokenHasher.GetHmacHash(request.Token, "CONSTANT_COST_PADDING_SECRET");
@@ -106,7 +106,7 @@ public class EnrollUserHandler : IRequestHandler<EnrollUserCommand, Result<Guid>
             try
             {
                 await _enforcementService.EnsureWithinUsersLimitAsync(invitation.TenantId, ct);
-                
+
                 if (await _userRepository.ExistsByEmailAsync(request.Email, ct))
                 {
                     result = Result.Failure<Guid>(DomainErrorCode.User.AlreadyExists);
@@ -130,7 +130,7 @@ public class EnrollUserHandler : IRequestHandler<EnrollUserCommand, Result<Guid>
 
                     user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
                     user.CreateProfile();
-                    user.VerifyEmail(); 
+                    user.VerifyEmail();
 
                     await _userRepository.AddAsync(user, ct);
                     invitation.Accept();

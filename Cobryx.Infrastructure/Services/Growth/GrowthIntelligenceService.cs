@@ -24,11 +24,11 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
     public async Task RecordWowAsync(Guid tenantId, string outcomeCode)
     {
         var metrics = await GetOrCreateMetricsAsync(tenantId);
-        
+
         if (metrics.RecordWow(outcomeCode, DateTime.UtcNow))
         {
             await _context.SaveChangesAsync(default);
-            
+
             // Record to Prometheus
             if (metrics.TTWSeconds.HasValue)
             {
@@ -63,7 +63,7 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
         var metrics = await GetOrCreateMetricsAsync(tenantId);
         metrics.MarkConvertedToPaid(DateTime.UtcNow);
         await _context.SaveChangesAsync(default);
-        
+
         // Signal conversion to Prometheus
         _metrics.SubscriptionUpgrades.Add(1, new KeyValuePair<string, object?>("tier", "paid"));
     }
@@ -78,14 +78,14 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
     public async Task RecordMRRTransitionAsync(Guid tenantId, decimal newMrr, MRRChangeType changeType, string? reason = null)
     {
         var metrics = await GetOrCreateMetricsAsync(tenantId);
-        
+
         // Record the history snapshot
         var history = new TenantMRRHistory(tenantId, newMrr, changeType, reason);
         _context.Set<TenantMRRHistory>().Add(history);
 
         // Update the current metrics
         metrics.RecordMRRTransition(newMrr, changeType);
-        
+
         await _context.SaveChangesAsync(default);
 
         // Emit signal to Prometheus
@@ -107,7 +107,7 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
             // - Wow Achievement
             // - Paid status
             int score = 0;
-            
+
             var daysSinceLastActivity = (now - tenant.LastActivityAt).TotalDays;
             if (daysSinceLastActivity < 1) score += 40;
             else if (daysSinceLastActivity < 3) score += 20;

@@ -1,9 +1,7 @@
 using System.Reflection;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Credits.Interfaces;
-using Cobryx.Application.Credits.Services;
-using Cobryx.Application.Auth.Interfaces;
 using Cobryx.Application.Auth.Services;
+using Concordia;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,15 +13,20 @@ public static class DependencyInjection
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        services.AddConcordiaCoreServices();
+        // Standard Concordia (Mediator) & Validation
         services.AddConcordiaHandlers();
-
-        services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<Payments.Services.PaymentLinkReconciliationService>();
-        services.AddScoped<Accounting.Services.FinancialPostingEngine>();
+        services.AddScoped<IMediator, Mediator>();
+        services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
 
         services.AddValidatorsFromAssembly(assembly);
+
+        // Core Business Services
+        services.AddScoped<IAuthService, AuthService>();
+
+        // Fintech & Payments Engine
+        services.AddScoped<Payments.Services.PaymentLinkReconciliationService>();
+        services.AddScoped<Accounting.Services.FinancialPostingEngine>();
+        services.AddScoped<Lending.Services.FinancialStateEngine>();
 
         return services;
     }

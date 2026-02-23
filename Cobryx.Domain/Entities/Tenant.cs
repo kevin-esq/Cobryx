@@ -18,6 +18,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
     public TenantOnboardingStatus OnboardingStatus { get; private set; }
+    public string? StripeAccountId { get; private set; }
     public BusinessSettings Settings { get; private set; }
     public TenantGrowthMetrics? GrowthMetrics { get; private set; }
 
@@ -84,8 +85,17 @@ public class Tenant : BaseEntity, IAggregateRoot
     public void TriggerOnboardingMilestone(string milestoneCode)
     {
         AddDomainEvent(new Cobryx.Domain.Events.Onboarding.OnboardingMilestoneReachedEvent(
-            Id, 
-            milestoneCode, 
+            Id,
+            milestoneCode,
             DateTime.UtcNow));
+    }
+
+    public void SetStripeAccountId(string stripeAccountId)
+    {
+        if (string.IsNullOrWhiteSpace(stripeAccountId))
+            throw new ArgumentException("StripeAccountId cannot be empty", nameof(stripeAccountId));
+
+        StripeAccountId = stripeAccountId;
+        UpdateTimestamp();
     }
 }

@@ -13,10 +13,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
         {
             var tables = new[]
             {
-                "AuditLogs", "Credits", "Customers", "Payments", "Products", "Tenants", "Users", 
+                "AuditLogs", "Credits", "Customers", "Payments", "Products", "Tenants", "Users",
                 "Installments", "Roles", "Permissions", "SubscriptionPlans", "TenantSubscriptions",
-                "Coupons", "BillingAlerts", "CustomerSuggestions", "TaxConfigurations", 
-                "RecoveryCodes", "RefreshTokens", "ReleaseNotes", "Documents", 
+                "Coupons", "BillingAlerts", "CustomerSuggestions", "TaxConfigurations",
+                "RecoveryCodes", "RefreshTokens", "ReleaseNotes", "Documents",
                 "SupportTickets", "SystemErrorLogs", "Invoices", "InvoiceItems"
             };
 
@@ -53,10 +53,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
         {
             var tables = new[]
             {
-                "AuditLogs", "Credits", "Customers", "Payments", "Products", "Tenants", "Users", 
+                "AuditLogs", "Credits", "Customers", "Payments", "Products", "Tenants", "Users",
                 "Installments", "Roles", "Permissions", "SubscriptionPlans", "TenantSubscriptions",
-                "Coupons", "BillingAlerts", "CustomerSuggestions", "TaxConfigurations", 
-                "RecoveryCodes", "RefreshTokens", "ReleaseNotes", "Documents", 
+                "Coupons", "BillingAlerts", "CustomerSuggestions", "TaxConfigurations",
+                "RecoveryCodes", "RefreshTokens", "ReleaseNotes", "Documents",
                 "SupportTickets", "SystemErrorLogs", "Invoices", "InvoiceItems"
             };
 

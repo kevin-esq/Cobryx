@@ -1,3 +1,5 @@
+using Cobryx.Domain.ValueObjects;
+
 namespace Cobryx.Application.Common.Interfaces;
 
 /// <summary>
@@ -20,6 +22,8 @@ public interface IStripeService
         CancellationToken ct = default);
 
     Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default);
+
+    Task<string> GetPaymentIntentStatusAsync(string paymentIntentId, CancellationToken ct = default);
 }
 
 /// <summary>

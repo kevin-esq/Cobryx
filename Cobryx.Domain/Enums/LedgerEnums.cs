@@ -31,12 +31,12 @@ public enum PaymentAllocationPolicy
     /// Default: Pay off interest first, then penalties, then principal.
     /// </summary>
     InterestFirst,
-    
+
     /// <summary>
     /// Pay off principal first (rare in consumer lending, but common in some corporate deals).
     /// </summary>
     PrincipalFirst,
-    
+
     /// <summary>
     /// Distribute proportionally across all pending components.
     /// </summary>

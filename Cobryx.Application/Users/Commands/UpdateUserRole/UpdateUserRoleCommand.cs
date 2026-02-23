@@ -73,7 +73,7 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
         // 4. Execution
         var oldRoleName = targetRole?.Name ?? "Unknown";
         targetUser.UpdateRole(newRole.Id);
-        targetUser.IncrementPermissionVersion(); 
+        targetUser.IncrementPermissionVersion();
 
         await _unitOfWork.SaveChangesAsync(ct);
 
