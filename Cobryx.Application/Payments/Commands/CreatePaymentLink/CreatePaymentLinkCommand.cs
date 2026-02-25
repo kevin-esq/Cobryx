@@ -40,6 +40,13 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         if (tenantId == null || tenantId == Guid.Empty)
             return Result.Failure<string>(DomainErrorCode.Common.UnauthorizedContext);
 
+        // 0. BANK-GRADE: Stripe Connect Runtime Resilience
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+        if (tenant == null || tenant.IsPaymentRestricted)
+        {
+            return Result.Failure<string>(DomainErrorCode.Common.GeneralError); // "Payments are currently restricted for this business."
+        }
+
         // 1. Validate Customer
         var customer = await _context.Customers
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.TenantId == tenantId, ct);

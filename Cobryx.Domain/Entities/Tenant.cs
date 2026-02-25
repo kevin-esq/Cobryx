@@ -1,6 +1,7 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Domain.Enums;
+using Cobryx.Domain.Events;
 
 namespace Cobryx.Domain.Entities;
 
@@ -19,6 +20,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public bool IsActive { get; private set; }
     public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public string? StripeAccountId { get; private set; }
+    public TenantConnectCapability ConnectCapabilities { get; private set; } = TenantConnectCapability.NotStarted();
     public BusinessSettings Settings { get; private set; }
     public TenantGrowthMetrics? GrowthMetrics { get; private set; }
 
@@ -98,4 +100,25 @@ public class Tenant : BaseEntity, IAggregateRoot
         StripeAccountId = stripeAccountId;
         UpdateTimestamp();
     }
+
+    public void UpdateConnectStatus(bool charges, bool payouts, bool detailsSubmitted)
+    {
+        ConnectCapabilities = new TenantConnectCapability(charges, payouts, detailsSubmitted);
+        UpdateTimestamp();
+    }
+
+    public bool IsConnectActive =>
+        !string.IsNullOrEmpty(StripeAccountId) &&
+        ConnectCapabilities.ChargesEnabled &&
+        ConnectCapabilities.PayoutsEnabled &&
+        ConnectCapabilities.DetailsSubmitted;
+
+    /// <summary>
+    /// Financial Guard Rail: If critical requirements are missing in Stripe,
+    /// we restrict new financial operations to prevent failed UX.
+    /// </summary>
+    public bool IsPaymentRestricted =>
+        string.IsNullOrEmpty(StripeAccountId) ||
+        !ConnectCapabilities.ChargesEnabled ||
+        !ConnectCapabilities.DetailsSubmitted;
 }

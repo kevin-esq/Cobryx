@@ -58,6 +58,15 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus);
         }
 
+        // 4. Connect Guard: Block if tenant is halfway through onboarding or restricted
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
+        if (tenant == null) return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
+
+        if (!tenant.IsConnectActive && !string.IsNullOrEmpty(tenant.StripeAccountId))
+        {
+            return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus); // TODO: Specific Connect Error
+        }
+
         // 4. Return existing secret if already processing (Intent Reuse)
         if (link.Status == PaymentLinkStatus.Processing && !string.IsNullOrEmpty(link.StripePaymentIntentId))
         {
@@ -92,9 +101,18 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             { "source", "cobryx_payment_link" }
         };
 
+        decimal? appFee = null;
+        if (tenant.IsConnectActive)
+        {
+            // BANK-GRADE: Calculate application fee (e.g., 1.5%)
+            appFee = Math.Round(link.AmountSnapshot.Amount * 0.015m, 2);
+        }
+
         var (intentId, clientSecret) = await _stripeService.CreatePaymentIntentAsync(
             link.AmountSnapshot,
             metadata,
+            tenant.IsConnectActive ? tenant.StripeAccountId : null,
+            appFee,
             ct);
 
         // 4. Update Link State

@@ -31,6 +31,7 @@ public class FinancialPostingEngine
         Loan loan,
         decimal amount,
         string reference,
+        decimal? platformFee = null,
         CancellationToken ct = default)
     {
         _logger.LogInformation("Posting payment of {Amount} for Loan {LoanId}", amount, loan.Id);
@@ -46,7 +47,8 @@ public class FinancialPostingEngine
         var transaction = new LedgerTransaction(
             loan.TenantId,
             $"Loan Payment - {reference}",
-            $"PAY-{reference}");
+            $"PAY-{reference}",
+            loan.Id);
 
         // Debit CASH (Asset Increases)
         transaction.AddEntry(accounts.CashAccountId, amount, 0);
@@ -74,9 +76,29 @@ public class FinancialPostingEngine
 
         _context.LedgerTransactions.Add(transaction);
 
+        // 5. Dual-Ledger: Record Platform Fee Revenue (if applicable)
+        if (platformFee.HasValue && platformFee.Value > 0)
+        {
+            var platformAccounts = await GetTenantSystemAccountsAsync(CobryxDefaults.PlatformTenantId, ct);
+
+            var platformTx = new LedgerTransaction(
+                CobryxDefaults.PlatformTenantId,
+                $"Platform Fee - {reference} (Tenant: {loan.TenantId})",
+                $"FEE-{reference}");
+
+            // Debit Platform Receivable (Asset Increases)
+            platformTx.AddEntry(platformAccounts.CashAccountId, platformFee.Value, 0);
+
+            // Credit Fee Revenue (Revenue Increases)
+            platformTx.AddEntry(platformAccounts.FeeAccountId, 0, platformFee.Value);
+
+            platformTx.Post();
+            _context.LedgerTransactions.Add(platformTx);
+        }
+
         _logger.LogInformation(
-            "Financial Posting Finished: Principal: {P}, Interest: {I}, Fees: {F}",
-            split.PrincipalAmount, split.InterestAmount, split.FeeAmount);
+            "Financial Posting Finished: Principal: {P}, Interest: {I}, Fees: {F}, Platform Fee: {PF}",
+            split.PrincipalAmount, split.InterestAmount, split.FeeAmount, platformFee ?? 0);
 
         return transaction.Id;
     }
@@ -89,7 +111,7 @@ public class FinancialPostingEngine
     /// Creates a Mirror Reversal for an existing transaction.
     /// Used for Refunds, Chargebacks, and Storno entries.
     /// </summary>
-    public async Task<Guid> PostReversalAsync(Guid originalTransactionId, string reason, CancellationToken ct = default)
+    public async Task<Guid> PostReversalAsync(Guid originalTransactionId, decimal amount, string reason, CancellationToken ct = default)
     {
         var original = await _context.LedgerTransactions
             .Include(t => t.Entries)
@@ -98,11 +120,49 @@ public class FinancialPostingEngine
         if (original == null)
             throw new DomainException(DomainErrorCode.Common.GeneralError);
 
-        var reversal = LedgerTransaction.CreateReversal(original, $"REVERSAL: {reason}");
+        // 1. Drift Protection: How much has been reversed already?
+        var existingReversals = await _context.LedgerTransactions
+            .Where(t => t.OriginalTransactionId == originalTransactionId && t.IsPosted)
+            .Include(t => t.Entries)
+            .ToListAsync(ct);
 
+        var alreadyReversed = existingReversals.Sum(t => t.Entries.Sum(e => Math.Abs(e.Debit)));
+        var originalTotal = original.Entries.Sum(e => Math.Abs(e.Debit));
+        var remainingReversibleAmount = Math.Max(0, originalTotal - alreadyReversed);
+
+        if (amount > remainingReversibleAmount + 0.01m)
+        {
+            _logger.LogWarning("Over-reversal blocked for Transaction {Id}. Requested: {Requested}, Remaining: {Remaining}",
+                originalTransactionId, amount, remainingReversibleAmount);
+            throw new DomainException(DomainErrorCode.Common.GeneralError); // "Refund exceeds remaining balance"
+        }
+
+        var reversal = LedgerTransaction.CreatePartialReversal(original, amount, $"REVERSAL: {reason}");
         _context.LedgerTransactions.Add(reversal);
 
-        _logger.LogInformation("Posted Mirror Reversal for Transaction {OriginalId}", originalTransactionId);
+        // 2. Dual-Ledger: Reverse Platform Fee if applicable
+        if (original.ReferenceId?.StartsWith("PAY-") == true)
+        {
+            var feeRef = original.ReferenceId.Replace("PAY-", "FEE-");
+            var platformTx = await _context.LedgerTransactions
+                .Include(t => t.Entries)
+                .FirstOrDefaultAsync(t => t.ReferenceId == feeRef && t.TenantId == CobryxDefaults.PlatformTenantId, ct);
+
+            if (platformTx != null)
+            {
+                // Reverse the platform fee proportionally
+                var platformTotal = platformTx.Entries.Sum(e => Math.Abs(e.Debit));
+                var ratio = amount / originalTotal;
+                var platformRefundAmount = Math.Round(platformTotal * ratio, 2);
+
+                var platformReversal = LedgerTransaction.CreatePartialReversal(platformTx, platformRefundAmount, $"REVERSAL (FEE): {reason}");
+                _context.LedgerTransactions.Add(platformReversal);
+
+                _logger.LogInformation("Posted Proportional Platform Fee Reversal: {Amount}", platformRefundAmount);
+            }
+        }
+
+        _logger.LogInformation("Posted Proportional Reversal for Transaction {OriginalId}. Amount: {Amount}", originalTransactionId, amount);
 
         return reversal.Id;
     }
@@ -121,7 +181,8 @@ public class FinancialPostingEngine
         var transaction = new LedgerTransaction(
             loan.TenantId,
             $"CHARGE-OFF ({loan.LoanNumber}): {reason}",
-            $"CHG-{loan.Id}");
+            $"CHG-{loan.Id}",
+            loan.Id);
 
         // Debit LOSS EXPENSE (Expense Increases)
         transaction.AddEntry(accounts.LossExpenseId, totalOutstanding, 0);
@@ -151,7 +212,8 @@ public class FinancialPostingEngine
         var transaction = new LedgerTransaction(
             loan.TenantId,
             $"RECOVERY: {reference}",
-            $"REC-{reference}");
+            $"REC-{reference}",
+            loan.Id);
 
         // Debit CASH (Asset Increases)
         transaction.AddEntry(accounts.CashAccountId, amount, 0);

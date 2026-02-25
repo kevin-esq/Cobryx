@@ -208,6 +208,9 @@ public static class DependencyInjection
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IGrowthIntelligenceService, Cobryx.Infrastructure.Services.Growth.GrowthIntelligenceService>();
         services.AddScoped<ConversionDropOffJob>();
+        services.AddScoped<ExpirePaymentLinksJob>();
+        services.AddScoped<TenantConnectSyncJob>();
+        services.AddScoped<FinancialReconciliationJob>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

@@ -3,6 +3,7 @@ using System;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260223205625_AddSprint11ConnectAndHardening")]
+    partial class AddSprint11ConnectAndHardening
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2480,9 +2483,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("ProcessedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("StripeAccountId")
-                        .HasColumnType("text");
-
                     b.Property<string>("StripeEventId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -2502,7 +2502,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StripeEventId", "StripeAccountId")
+                    b.HasIndex("StripeEventId")
                         .IsUnique();
 
                     b.ToTable("ProcessedStripeEvents");

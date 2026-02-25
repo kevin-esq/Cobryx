@@ -10,6 +10,9 @@ public class ProcessedStripeEvent : BaseEntity, IAggregateRoot
     /// <summary>The unique ID delivered by Stripe (e.g., evt_123).</summary>
     public string StripeEventId { get; private set; } = default!;
 
+    /// <summary>The Connected Account ID (null for platform events).</summary>
+    public string? StripeAccountId { get; private set; }
+
     /// <summary>The type of the event (e.g., customer.subscription.updated).</summary>
     public string EventType { get; private set; } = default!;
 
@@ -18,10 +21,11 @@ public class ProcessedStripeEvent : BaseEntity, IAggregateRoot
 
     private ProcessedStripeEvent() { }
 
-    public ProcessedStripeEvent(string stripeEventId, string eventType, DateTime processedAtUtc)
+    public ProcessedStripeEvent(string stripeEventId, string eventType, DateTime processedAtUtc, string? stripeAccountId = null)
     {
         StripeEventId = stripeEventId;
         EventType = eventType;
         ProcessedAtUtc = processedAtUtc;
+        StripeAccountId = stripeAccountId;
     }
 }

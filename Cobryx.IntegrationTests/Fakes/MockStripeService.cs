@@ -45,9 +45,29 @@ public class MockStripeService : IStripeService
             _clock.UtcNow.AddMonths(1)));
     }
 
-    public Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(Money amount, Dictionary<string, string> metadata, CancellationToken ct = default)
+    public Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(
+        Money amount,
+        Dictionary<string, string> metadata,
+        string? destinationAccountId = null,
+        decimal? applicationFeeAmount = null,
+        CancellationToken ct = default)
     {
         return Task.FromResult(("pi_fake_123", "secret_fake_123"));
+    }
+
+    public Task<string> CreateConnectOnboardingLinkAsync(string stripeAccountId, string returnUrl, string refreshUrl, CancellationToken ct = default)
+    {
+        return Task.FromResult("https://connect.stripe.com/fake_onboarding");
+    }
+
+    public Task<string> CreateConnectAccountAsync(string email, string businessName, CancellationToken ct = default)
+    {
+        return Task.FromResult("acct_fake_123");
+    }
+
+    public Task<(bool ChargesEnabled, bool PayoutsEnabled, bool DetailsSubmitted)> GetConnectAccountStatusAsync(string stripeAccountId, CancellationToken ct = default)
+    {
+        return Task.FromResult((true, true, true));
     }
 
     public Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default)

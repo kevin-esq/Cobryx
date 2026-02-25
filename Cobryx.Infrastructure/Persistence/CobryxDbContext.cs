@@ -215,7 +215,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
             .HasIndex(s => new { s.TenantId, s.Status });
 
         modelBuilder.Entity<ProcessedStripeEvent>()
-            .HasIndex(e => e.StripeEventId)
+            .HasIndex(e => new { e.StripeEventId, e.StripeAccountId })
             .IsUnique();
 
         base.OnModelCreating(modelBuilder);
