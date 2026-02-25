@@ -58,6 +58,14 @@ public class PaymentLinkReconciliationService
             return;
         }
 
+        // 1.5 BANK-GRADE: Transversal Suspension Guard
+        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
+        if (tenant == null || tenant.IsPaymentRestricted)
+        {
+            _logger.LogWarning("PaymentLink {LinkId} reconciliation BLOCKED. Tenant {TenantId} is restricted or suspended.", link.Id, link.TenantId);
+            return;
+        }
+
         // 2. Use an explicit transaction for absolute financial integrity (RepeatableRead to prevent race anomalies)
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try
@@ -156,6 +164,17 @@ public class PaymentLinkReconciliationService
         // 1. Find the PaymentLink to get context (Tenant, Loan)
         var link = await _context.PaymentLinks
             .FirstOrDefaultAsync(l => l.StripePaymentIntentId == paymentIntentId, ct);
+
+        // 1.5 BANK-GRADE: Transversal Suspension Guard (for Refund)
+        if (link != null)
+        {
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
+            if (tenant == null || tenant.IsPaymentRestricted)
+            {
+                _logger.LogWarning("Refund for Intent {IntentId} BLOCKED. Tenant {TenantId} is restricted or suspended.", paymentIntentId, link.TenantId);
+                return;
+            }
+        }
 
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try

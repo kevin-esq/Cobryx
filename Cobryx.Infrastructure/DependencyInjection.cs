@@ -88,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<IHttpContextService, Services.HttpContextService>();
         services.AddScoped<ICookieService, CookieService>();
         services.AddScoped<IAuditLogQueryService, Services.AuditLogQueryService>();
+        services.AddScoped<IAlertingService, ProductionAlertingService>();
 
         var cachingConfig = configuration.GetSection(Configuration.CachingOptions.SectionName).Get<Configuration.CachingOptions>()
             ?? throw new InvalidOperationException("Caching configuration is missing.");
@@ -211,6 +212,7 @@ public static class DependencyInjection
         services.AddScoped<ExpirePaymentLinksJob>();
         services.AddScoped<TenantConnectSyncJob>();
         services.AddScoped<FinancialReconciliationJob>();
+        services.AddScoped<CheckSystemHealthJob>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

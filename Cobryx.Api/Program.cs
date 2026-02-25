@@ -135,6 +135,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:create"));
     options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "payments:apply"));
     options.AddPolicy("CanManageTenant", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "tenant:manage"));
+    options.AddPolicy("PlatformAdmin", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "platform:admin"));
     options.AddPolicy("EmailVerified", policy => policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true"));
     options.AddPolicy("AccountVerified", policy =>
         policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true")
@@ -305,6 +306,11 @@ try
             "payment-collections-reminders",
             job => job.RunAsync(CancellationToken.None),
             Cron.Daily);
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.CheckSystemHealthJob>(
+            "system-health-check",
+            job => job.RunAsync(CancellationToken.None),
+            "*/15 * * * *"); // Every 15 minutes
     }
 }
 catch (Exception ex)

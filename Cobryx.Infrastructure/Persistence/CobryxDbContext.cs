@@ -119,6 +119,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<TenantInvitation> TenantInvitations => Set<TenantInvitation>();
     public DbSet<TenantGrowthMetrics> TenantGrowthMetrics => Set<TenantGrowthMetrics>();
     public DbSet<TenantMRRHistory> TenantMRRHistory => Set<TenantMRRHistory>();
+    public DbSet<AdminActionAudit> AdminActionAudits => Set<AdminActionAudit>();
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
     public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();

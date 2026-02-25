@@ -53,10 +53,24 @@ public class StripeWebhookParser : IWebhookParser
             StripeConstants.Events.InvoicePaymentFailed => HandleInvoicePaymentFailed(stripeEvent),
             StripeConstants.Events.SubscriptionUpdated => HandleSubscriptionUpdated(stripeEvent),
             StripeConstants.Events.SubscriptionDeleted => HandleSubscriptionDeleted(stripeEvent),
+            StripeConstants.Events.PayoutPaid => HandlePayoutPaid(stripeEvent),
+            StripeConstants.Events.PayoutFailed => HandlePayoutFailed(stripeEvent),
             _ => throw new NotSupportedException($"Stripe event type {stripeEvent.Type} is not supported.")
         };
 
         return Task.FromResult(result);
+    }
+
+    private WebhookParseResult HandlePayoutPaid(Event e)
+    {
+        var payout = e.Data.Object as Payout;
+        return new WebhookParseResult(WebhookConstants.InternalEvents.PayoutPaid, payout!, payout!.Id);
+    }
+
+    private WebhookParseResult HandlePayoutFailed(Event e)
+    {
+        var payout = e.Data.Object as Payout;
+        return new WebhookParseResult(WebhookConstants.InternalEvents.PayoutFailed, payout!, payout!.Id);
     }
 
     private WebhookParseResult HandlePaymentIntentSucceeded(Event e)

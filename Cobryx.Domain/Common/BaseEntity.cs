@@ -15,7 +15,7 @@ public abstract class BaseEntity
     public long Version { get; private set; }
 
     public string? Tags { get; private set; }
-    public string? MetadataJson { get; private set; }
+    public string? MetadataJson { get; protected set; }
     public string? InternalNotes { get; private set; }
 
     protected BaseEntity()
