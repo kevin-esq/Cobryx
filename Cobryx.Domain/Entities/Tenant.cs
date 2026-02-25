@@ -18,6 +18,7 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? Industry { get; private set; }
     public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
+    public TenantStatus Status { get; private set; }
     public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public string? StripeAccountId { get; private set; }
     public TenantConnectCapability ConnectCapabilities { get; private set; } = TenantConnectCapability.NotStarted();
@@ -39,6 +40,7 @@ public class Tenant : BaseEntity, IAggregateRoot
         BusinessName = businessName;
         Currency = currency;
         IsActive = true;
+        Status = TenantStatus.Active;
         OnboardingStatus = TenantOnboardingStatus.Pending;
         Settings = BusinessSettings.Default();
     }
@@ -118,7 +120,22 @@ public class Tenant : BaseEntity, IAggregateRoot
     /// we restrict new financial operations to prevent failed UX.
     /// </summary>
     public bool IsPaymentRestricted =>
+        IsSuspended ||
         string.IsNullOrEmpty(StripeAccountId) ||
         !ConnectCapabilities.ChargesEnabled ||
         !ConnectCapabilities.DetailsSubmitted;
+
+    public void Suspend()
+    {
+        Status = TenantStatus.Suspended;
+        UpdateTimestamp();
+    }
+
+    public void Activate()
+    {
+        Status = TenantStatus.Active;
+        UpdateTimestamp();
+    }
+
+    public bool IsSuspended => Status == TenantStatus.Suspended;
 }

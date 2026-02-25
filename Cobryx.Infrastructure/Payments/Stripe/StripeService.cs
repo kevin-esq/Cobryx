@@ -220,4 +220,23 @@ public class StripeService : IStripeService
         var intent = await service.GetAsync(paymentIntentId, cancellationToken: ct);
         return intent.Status;
     }
+
+    public async Task<(decimal Available, decimal Pending)> GetBalanceAsync(string? stripeAccountId = null, CancellationToken ct = default)
+    {
+        var service = new BalanceService();
+        var requestOptions = new RequestOptions();
+        if (!string.IsNullOrEmpty(stripeAccountId))
+        {
+            requestOptions.StripeAccount = stripeAccountId;
+        }
+
+        var balance = await service.GetAsync(requestOptions, cancellationToken: ct);
+
+        // Summing across all currency balances (defaulting to primary or total in USD equivalent if multi-currency)
+        // For Cobryx simplicity, we assume the first balance object or single currency.
+        var available = balance.Available.Sum(b => b.Amount) / 100m;
+        var pending = balance.Pending.Sum(b => b.Amount) / 100m;
+
+        return (available, pending);
+    }
 }

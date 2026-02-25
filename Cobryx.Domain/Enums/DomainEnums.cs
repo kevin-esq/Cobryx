@@ -25,3 +25,4 @@ public enum CancellationReason { Price, MissingFeatures, Bugs, BetterAlternative
 public enum SecurityTokenType { EmailVerification, PasswordReset }
 public enum PlanTier { Free, Starter, Pro, Business }
 public enum PaymentLinkStatus { Draft, Active, Processing, RequiresAction, Paid, Expired, Cancelled, Failed, ManualReview }
+public enum TenantStatus { Active, Suspended, Archived }

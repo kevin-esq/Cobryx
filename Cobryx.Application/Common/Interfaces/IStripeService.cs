@@ -32,6 +32,8 @@ public interface IStripeService
     Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default);
 
     Task<string> GetPaymentIntentStatusAsync(string paymentIntentId, CancellationToken ct = default);
+
+    Task<(decimal Available, decimal Pending)> GetBalanceAsync(string? stripeAccountId = null, CancellationToken ct = default);
 }
 
 /// <summary>

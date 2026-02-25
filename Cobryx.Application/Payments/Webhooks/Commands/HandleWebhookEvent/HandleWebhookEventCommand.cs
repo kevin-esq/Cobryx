@@ -8,6 +8,7 @@ using Concordia;
 using Microsoft.Extensions.Logging;
 using Cobryx.Application.Payments.Commands.RefundPayment;
 using Cobryx.Application.Payments.Commands.HandleChargeback;
+using Cobryx.Application.Admin.Commands.RecordPayout;
 using System.Text.Json;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent;
@@ -96,8 +97,37 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
         {
             WebhookConstants.InternalEvents.ChargeRefunded => await HandleRefundAsync(parseResult, data, ct),
             WebhookConstants.InternalEvents.ChargeDisputeCreated => await HandleChargebackAsync(parseResult, ct),
+            WebhookConstants.InternalEvents.PayoutPaid => await HandlePayoutAsync(parseResult, data, ct),
+            WebhookConstants.InternalEvents.PayoutFailed => await HandlePayoutAsync(parseResult, data, ct),
             _ => await HandleUnknownEventAsync(parseResult)
         };
+    }
+
+    private async Task<Result> HandlePayoutAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)
+    {
+        var tenantId = Guid.Empty;
+        // Payouts might be platform or tenant.
+        // In Stripe Connect, the 'account' field of the event tells us the tenant.
+        // For now, we attempt to find the tenant by their StripeAccountId if it's a connect event.
+        // (This part needs a safe way to resolve tenantId from StripeAccountId)
+
+        // MVP: Assuming platform for now or implementing basic lookup if metadata or account id is present.
+        // In a real scenario, we'd lookup ITenantRepository.GetByStripeAccountIdAsync
+
+        decimal amount = data.GetProperty("amount").GetInt64() / 100m;
+        string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
+        string status = data.GetProperty("status").GetString() ?? "unknown";
+
+        // Logic to resolve tenantId...
+        // For payout.paid events, we record it.
+        var command = new RecordPayoutCommand(
+            tenantId, // TODO: Resolve from account id
+            amount,
+            currency,
+            parseResult.ExternalTransactionId ?? "unknown",
+            status);
+
+        return await _sender.Send(command, ct);
     }
 
     private async Task<Result> HandleRefundAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)

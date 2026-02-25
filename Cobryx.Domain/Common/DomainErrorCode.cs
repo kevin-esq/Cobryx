@@ -95,6 +95,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TenantIdRequired = new("DOMAIN.TENANT_ID_REQUIRED");
         public static readonly DomainErrorCode EntityNameRequired = new("DOMAIN.ENTITY_NAME_REQUIRED");
         public static readonly DomainErrorCode InvalidAmount = new("DOMAIN.INVALID_AMOUNT");
+        public static readonly DomainErrorCode ReasonRequired = new("COMMON.REASON_REQUIRED");
     }
 
     public static class ValueObjects
@@ -242,6 +243,12 @@ public sealed record DomainErrorCode
     public static class Stripe
     {
         public static readonly DomainErrorCode NoStripeCustomer = new("DOMAIN.STRIPE.NO_STRIPE_CUSTOMER");
+    }
+
+    public static class Accounting
+    {
+        public static readonly DomainErrorCode TransactionNotFound = new("ACCOUNTING.TRANSACTION_NOT_FOUND");
+        public static readonly DomainErrorCode CannotReverseReversal = new("ACCOUNTING.CANNOT_REVERSE_REVERSAL");
     }
 
     public static class System

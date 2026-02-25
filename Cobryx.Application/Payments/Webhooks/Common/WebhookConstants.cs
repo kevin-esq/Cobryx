@@ -16,5 +16,7 @@ public static class WebhookConstants
         public const string SubscriptionDeleted = "SubscriptionDeleted";
         public const string ChargeRefunded = "ChargeRefunded";
         public const string ChargeDisputeCreated = "ChargeDisputeCreated";
+        public const string PayoutPaid = "PayoutPaid";
+        public const string PayoutFailed = "PayoutFailed";
     }
 }

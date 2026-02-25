@@ -19,6 +19,7 @@ public interface ICobryxDbContext
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<TenantGrowthMetrics> TenantGrowthMetrics { get; }
     DbSet<TenantMRRHistory> TenantMRRHistory { get; }
+    DbSet<AdminActionAudit> AdminActionAudits { get; }
 
     // Lending
     DbSet<Domain.Entities.Lending.Loan> Loans { get; }
