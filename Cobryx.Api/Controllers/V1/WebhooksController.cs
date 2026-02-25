@@ -102,6 +102,10 @@ public class WebhooksController : CobryxBaseController
                     await HandleSubscriptionDeleted(stripeEvent, ct);
                     break;
 
+                case StripeConstants.Events.AccountUpdated:
+                    await HandleAccountUpdated(stripeEvent, ct);
+                    break;
+
                 default:
                     _logger.LogInformation("Unhandled Stripe event type: {EventType}", stripeEvent.Type);
                     break;
@@ -114,7 +118,8 @@ public class WebhooksController : CobryxBaseController
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing Stripe webhook {EventId}", stripeEvent?.Id ?? "unknown");
+            _logger.LogError(ex, "Error processing Stripe webhook {EventId} (Account: {Account})",
+                stripeEvent?.Id ?? "unknown", stripeEvent?.Account ?? "platform");
             return StatusCode(500, ApiResponseFactory.Error(WebhookOutcomes.ProcessingFailed));
         }
 
@@ -177,7 +182,14 @@ public class WebhooksController : CobryxBaseController
         if (intent == null) return;
 
         var amount = new Domain.ValueObjects.Money(intent.Amount / 100m, intent.Currency.ToUpperInvariant());
-        await _reconciliationService.HandlePaymentSuccessAsync(intent.Id, amount, ct);
+
+        decimal? appFee = null;
+        if (intent.ApplicationFeeAmount.HasValue)
+        {
+            appFee = intent.ApplicationFeeAmount.Value / 100m;
+        }
+
+        await _reconciliationService.HandlePaymentSuccessAsync(intent.Id, amount, appFee, ct);
     }
 
     private async Task HandleChargeRefunded(Event stripeEvent, CancellationToken ct)
@@ -187,5 +199,21 @@ public class WebhooksController : CobryxBaseController
 
         var amount = new Domain.ValueObjects.Money(charge.AmountRefunded / 100m, charge.Currency.ToUpperInvariant());
         await _reconciliationService.HandleRefundAsync(charge.PaymentIntentId, amount, ct);
+    }
+
+    private async Task HandleAccountUpdated(Event stripeEvent, CancellationToken ct)
+    {
+        var account = stripeEvent.Data.Object as Stripe.Account;
+        if (account == null) return;
+
+        _logger.LogInformation("Processing account.updated for Stripe Account: {AccountId}", account.Id);
+
+        // We need DB context to update the tenant
+        // Since we are in a controller, we use the inherited Sender property.
+        await Sender.Send(new Application.Tenants.Commands.UpdateTenantConnectCapabilities.UpdateTenantConnectCapabilitiesCommand(
+            account.Id,
+            account.ChargesEnabled,
+            account.PayoutsEnabled,
+            account.DetailsSubmitted), ct);
     }
 }

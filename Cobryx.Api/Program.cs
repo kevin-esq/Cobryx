@@ -267,6 +267,7 @@ try
 
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedPlansAsync(dbContext);
+        await Cobryx.Infrastructure.Persistence.DbInitializer.SeedPlatformTenantAsync(dbContext);
         Log.Information("Database seeding completed successfully");
 
         // Register Recurring Jobs
@@ -274,6 +275,16 @@ try
             "process-outbox-events",
             job => job.RunAsync(CancellationToken.None),
             "*/10 * * * * *"); // Every 10 seconds
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
+            "stripe-connect-sync",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Hourly);
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.FinancialReconciliationJob>(
+            "financial-reconciliation-recovery",
+            job => job.RunAsync(CancellationToken.None),
+            "*/30 * * * *"); // Every 30 minutes
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocumentsJob>(
             "cleanup-stale-documents",

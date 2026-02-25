@@ -1,9 +1,11 @@
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Entities;
+using Cobryx.Domain.Entities.Accounting;
 using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Domain.Entities.Invoicing;
 
 namespace Cobryx.Infrastructure.Persistence;
 
@@ -132,6 +134,44 @@ public class DbInitializer
         };
 
         await dbContext.SubscriptionPlans.AddRangeAsync(plans);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public static async Task SeedPlatformTenantAsync(CobryxDbContext dbContext)
+    {
+        // 1. Ensure Platform Tenant exists
+        var platformId = CobryxDefaults.PlatformTenantId;
+        var platformTenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == platformId);
+
+        if (platformTenant == null)
+        {
+            platformTenant = new Tenant("Cobryx Platform", CobryxDefaults.Currency);
+            // We force the ID via reflection since it's a fixed constant
+            typeof(Tenant).GetProperty("Id")!.SetValue(platformTenant, platformId);
+            dbContext.Tenants.Add(platformTenant);
+        }
+
+        // 2. Ensure System Accounts for Platform
+        var accounts = new[]
+        {
+            new { Code = "1010", Name = "Platform Cash", Type = LedgerAccountType.Asset },
+            new { Code = "1210", Name = "Platform Receivables", Type = LedgerAccountType.Asset },
+            new { Code = "4010", Name = "Platform Interest Income", Type = LedgerAccountType.Revenue },
+            new { Code = "4020", Name = "Platform Fee Revenue", Type = LedgerAccountType.Revenue },
+            new { Code = "5010", Name = "Platform Loss Expense", Type = LedgerAccountType.Expense },
+            new { Code = "4030", Name = "Platform Recovery Income", Type = LedgerAccountType.Revenue }
+        };
+
+        foreach (var accData in accounts)
+        {
+            var exists = await dbContext.LedgerAccounts.AnyAsync(a => a.TenantId == platformId && a.Code == accData.Code);
+            if (!exists)
+            {
+                var acc = new LedgerAccount(platformId, accData.Code, accData.Name, accData.Type, CobryxDefaults.Currency, true);
+                dbContext.LedgerAccounts.Add(acc);
+            }
+        }
+
         await dbContext.SaveChangesAsync();
     }
 }

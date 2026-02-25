@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
+using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
 using Microsoft.Extensions.Logging;
@@ -117,8 +118,10 @@ public class StripeService : IStripeService
     }
 
     public async Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(
-        Domain.ValueObjects.Money amount,
+        Money amount,
         Dictionary<string, string> metadata,
+        string? destinationAccountId = null,
+        decimal? applicationFeeAmount = null,
         CancellationToken ct = default)
     {
         var service = new PaymentIntentService();
@@ -133,13 +136,75 @@ public class StripeService : IStripeService
             }
         };
 
+        if (!string.IsNullOrEmpty(destinationAccountId))
+        {
+            options.TransferData = new PaymentIntentTransferDataOptions
+            {
+                Destination = destinationAccountId,
+            };
+
+            if (applicationFeeAmount.HasValue)
+            {
+                options.ApplicationFeeAmount = (long)(applicationFeeAmount.Value * 100);
+            }
+        }
+
         var intent = await service.CreateAsync(options, cancellationToken: ct);
 
         _logger.LogInformation(
-            "Stripe PaymentIntent created: {IntentId} for {Amount} {Currency}",
-            intent.Id, amount.Amount, amount.Currency);
+            "Stripe PaymentIntent created: {IntentId} for {Amount} {Currency} (Connect: {IsConnect})",
+            intent.Id, amount.Amount, amount.Currency, !string.IsNullOrEmpty(destinationAccountId));
 
         return (intent.Id, intent.ClientSecret);
+    }
+
+    public async Task<string> CreateConnectOnboardingLinkAsync(string stripeAccountId, string returnUrl, string refreshUrl, CancellationToken ct = default)
+    {
+        var service = new AccountLinkService();
+        var options = new AccountLinkCreateOptions
+        {
+            Account = stripeAccountId,
+            RefreshUrl = refreshUrl,
+            ReturnUrl = returnUrl,
+            Type = "account_onboarding",
+        };
+
+        var link = await service.CreateAsync(options, cancellationToken: ct);
+        return link.Url;
+    }
+
+    public async Task<string> CreateConnectAccountAsync(string email, string businessName, CancellationToken ct = default)
+    {
+        var service = new AccountService();
+        var options = new AccountCreateOptions
+        {
+            Type = "express",
+            Email = email,
+            BusinessProfile = new AccountBusinessProfileOptions
+            {
+                Name = businessName,
+            },
+            Capabilities = new AccountCapabilitiesOptions
+            {
+                CardPayments = new AccountCapabilitiesCardPaymentsOptions { Requested = true },
+                Transfers = new AccountCapabilitiesTransfersOptions { Requested = true },
+            }
+        };
+
+        var account = await service.CreateAsync(options, cancellationToken: ct);
+        return account.Id;
+    }
+
+    public async Task<(bool ChargesEnabled, bool PayoutsEnabled, bool DetailsSubmitted)> GetConnectAccountStatusAsync(string stripeAccountId, CancellationToken ct = default)
+    {
+        var service = new AccountService();
+        var account = await service.GetAsync(stripeAccountId, cancellationToken: ct);
+
+        return (
+            account.ChargesEnabled,
+            account.PayoutsEnabled,
+            account.DetailsSubmitted
+        );
     }
 
     public async Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default)

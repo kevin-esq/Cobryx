@@ -12,4 +12,5 @@ public static class CobryxDefaults
     public const string UnknownValue = "Unknown";
     public const string TermsVersion = "v1.0";
     public const string DefaultPlanTier = "Free";
+    public static readonly Guid PlatformTenantId = new("00000000-0000-0000-0000-000000000001");
 }

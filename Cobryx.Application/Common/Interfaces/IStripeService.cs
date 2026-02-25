@@ -19,7 +19,15 @@ public interface IStripeService
     Task<(string PaymentIntentId, string ClientSecret)> CreatePaymentIntentAsync(
         Money amount,
         Dictionary<string, string> metadata,
+        string? destinationAccountId = null,
+        decimal? applicationFeeAmount = null,
         CancellationToken ct = default);
+
+    Task<string> CreateConnectOnboardingLinkAsync(string stripeAccountId, string returnUrl, string refreshUrl, CancellationToken ct = default);
+
+    Task<string> CreateConnectAccountAsync(string email, string businessName, CancellationToken ct = default);
+
+    Task<(bool ChargesEnabled, bool PayoutsEnabled, bool DetailsSubmitted)> GetConnectAccountStatusAsync(string stripeAccountId, CancellationToken ct = default);
 
     Task<string> GetPaymentIntentClientSecretAsync(string paymentIntentId, CancellationToken ct = default);
 

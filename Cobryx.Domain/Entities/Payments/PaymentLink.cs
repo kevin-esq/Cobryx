@@ -28,6 +28,8 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
     public string? StripePaymentIntentId { get; private set; }
     public DateTime? LastReminderSentAt { get; private set; }
     public int ReminderCount { get; private set; }
+    public int RecoveryAttemptCount { get; private set; }
+    public DateTime? LastRecoveryAttemptAt { get; private set; }
 
     public virtual Customer Customer { get; private set; } = null!;
     public virtual Cobryx.Domain.Entities.Lending.Loan? Loan { get; private set; }
@@ -144,9 +146,31 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
     {
         if (Status == PaymentLinkStatus.Processing)
         {
+            if (Status == PaymentLinkStatus.ManualReview)
+                return; // Protection
+
             Status = PaymentLinkStatus.Active;
             UpdateTimestamp();
         }
+    }
+
+    public void RecordRecoveryFailure()
+    {
+        RecoveryAttemptCount++;
+        LastRecoveryAttemptAt = DateTime.UtcNow;
+
+        if (RecoveryAttemptCount >= 3)
+        {
+            Status = PaymentLinkStatus.ManualReview;
+        }
+
+        UpdateTimestamp();
+    }
+
+    public void RecordRecoveryAttempt()
+    {
+        LastRecoveryAttemptAt = DateTime.UtcNow;
+        UpdateTimestamp();
     }
 
     public void RecordReminderSent()

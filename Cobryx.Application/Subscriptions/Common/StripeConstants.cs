@@ -15,6 +15,7 @@ public static class StripeConstants
         public const string PaymentIntentSucceeded = "payment_intent.succeeded";
         public const string PaymentIntentFailed = "payment_intent.payment_failed";
         public const string ChargeRefunded = "charge.refunded";
+        public const string AccountUpdated = "account.updated";
         public const string ManualSyncRequested = "manual.sync.requested";
     }
 

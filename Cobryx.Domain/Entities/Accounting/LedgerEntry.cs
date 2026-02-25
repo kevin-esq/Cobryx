@@ -24,4 +24,14 @@ public class LedgerEntry : BaseEntity, ITenantEntity
         Debit = debit;
         Credit = credit;
     }
+
+    internal void AdjustDebit(decimal delta)
+    {
+        Debit += delta;
+    }
+
+    internal void AdjustCredit(decimal delta)
+    {
+        Credit += delta;
+    }
 }

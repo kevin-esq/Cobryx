@@ -16,6 +16,13 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             s.Property(x => x.MinimumPaymentAmount).HasPrecision(18, 2);
         });
 
+        builder.OwnsOne(t => t.ConnectCapabilities, c =>
+        {
+            c.Property(x => x.ChargesEnabled).HasColumnName("Connect_ChargesEnabled");
+            c.Property(x => x.PayoutsEnabled).HasColumnName("Connect_PayoutsEnabled");
+            c.Property(x => x.DetailsSubmitted).HasColumnName("Connect_DetailsSubmitted");
+        });
+
         builder.Property(t => t.TaxId)
             .HasConversion(t => t == null ? null : t.Value, v => v == null ? null : (TaxId)v)
             .HasMaxLength(13);
