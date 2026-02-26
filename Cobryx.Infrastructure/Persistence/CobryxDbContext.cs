@@ -82,7 +82,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Cobryx.Domain.Entities.Customer> Customers => Set<Cobryx.Domain.Entities.Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Credit> Credits => Set<Credit>();
     public DbSet<Domain.Entities.Invoicing.Installment> Installments => Set<Domain.Entities.Invoicing.Installment>();

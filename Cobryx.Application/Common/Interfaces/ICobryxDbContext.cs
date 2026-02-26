@@ -14,7 +14,7 @@ public interface ICobryxDbContext
     DbSet<Tenant> Tenants { get; }
     DbSet<User> Users { get; }
     DbSet<PaymentLink> PaymentLinks { get; }
-    DbSet<Customer> Customers { get; }
+    DbSet<Cobryx.Domain.Entities.Customer> Customers { get; }
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<TenantGrowthMetrics> TenantGrowthMetrics { get; }

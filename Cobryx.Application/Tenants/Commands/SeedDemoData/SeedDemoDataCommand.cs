@@ -37,7 +37,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
         if (alreadyHasDemo) return Result.Success();
 
         // 2. Create Demo Customer
-        var customer = new Customer(
+        var customer = new Cobryx.Domain.Entities.Customer(
             tenantId,
             "Demo",
             "Global Corp",
@@ -46,7 +46,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
             null,
             null);
 
-        dbContext.Set<Customer>().Add(customer);
+        dbContext.Set<Cobryx.Domain.Entities.Customer>().Add(customer);
 
         // 3. Create Demo Loan Agreement
         var agreement = new LoanAgreement(

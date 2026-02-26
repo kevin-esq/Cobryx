@@ -30,6 +30,11 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
     public int ReminderCount { get; private set; }
     public int RecoveryAttemptCount { get; private set; }
     public DateTime? LastRecoveryAttemptAt { get; private set; }
+    public DateTime? NextRecoveryAttemptAt { get; private set; }
+    public DateTime? RecoveryDeadline { get; private set; }
+    public int MaxRecoveryAttempts { get; private set; } = 5;
+    public string? RecoveryFailureReason { get; private set; }
+    public bool RecoveryInProgress { get; private set; }
 
     public virtual Customer Customer { get; private set; } = null!;
     public virtual Cobryx.Domain.Entities.Lending.Loan? Loan { get; private set; }
@@ -60,6 +65,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         Status = PaymentLinkStatus.Active;
         AttemptCount = 0;
         Salt = Guid.NewGuid().ToString("N");
+        RecoveryDeadline = DateTime.UtcNow.AddDays(14);
 
         // Note: Raw token is hashed immediately and not stored
         SetToken(rawToken, serverSecret);
@@ -154,21 +160,66 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         }
     }
 
-    public void RecordRecoveryFailure()
+    public void RecordRecoveryFailure(string reason)
     {
         RecoveryAttemptCount++;
         LastRecoveryAttemptAt = DateTime.UtcNow;
+        RecoveryFailureReason = reason;
 
-        if (RecoveryAttemptCount >= 3)
+        // Dunning Matrix: 1h, 8h, 24h, 3d, 7d
+        var baseNextAttempt = RecoveryAttemptCount switch
+        {
+            1 => DateTime.UtcNow.AddHours(1),
+            2 => DateTime.UtcNow.AddHours(8),
+            3 => DateTime.UtcNow.AddHours(24),
+            4 => DateTime.UtcNow.AddDays(3),
+            5 => DateTime.UtcNow.AddDays(7),
+            _ => (DateTime?)null
+        };
+
+        if (baseNextAttempt.HasValue)
+        {
+            // Apply deterministic jitter (±10%) based on Id to prevent synchronized peaks
+            var seed = BitConverter.ToInt32(Id.ToByteArray(), 0);
+            var random = new Random(seed + RecoveryAttemptCount);
+            var jitterFactor = (random.NextDouble() * 0.2) - 0.1; // -10% to +10%
+
+            var interval = baseNextAttempt.Value - DateTime.UtcNow;
+            NextRecoveryAttemptAt = baseNextAttempt.Value.AddTicks((long)(interval.Ticks * jitterFactor));
+        }
+        else
+        {
+            NextRecoveryAttemptAt = null;
+        }
+
+        if (RecoveryAttemptCount > MaxRecoveryAttempts || (RecoveryDeadline.HasValue && DateTime.UtcNow > RecoveryDeadline))
         {
             Status = PaymentLinkStatus.ManualReview;
+            NextRecoveryAttemptAt = null;
         }
 
         UpdateTimestamp();
     }
 
+    public bool TryAcquireRecoveryLock()
+    {
+        if (RecoveryInProgress || Status == PaymentLinkStatus.Paid || Status == PaymentLinkStatus.ManualReview)
+            return false;
+
+        RecoveryInProgress = true;
+        UpdateTimestamp();
+        return true;
+    }
+
+    public void ReleaseRecoveryLock()
+    {
+        RecoveryInProgress = false;
+        UpdateTimestamp();
+    }
+
     public void RecordRecoveryAttempt()
     {
+        RecoveryAttemptCount++;
         LastRecoveryAttemptAt = DateTime.UtcNow;
         UpdateTimestamp();
     }

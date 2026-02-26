@@ -16,6 +16,10 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public IdentityDocument? Document { get; private set; }
     public string? Notes { get; private set; }
     public int TrustScore { get; private set; }
+    public string? StripeCustomerId { get; private set; }
+    public string? DefaultPaymentMethodId { get; private set; }
+    public bool HasSavedPaymentMethod { get; private set; }
+    public bool AutoPayEnabled { get; private set; }
     public string? PhotoUrl { get; private set; }
     public bool IsActive { get; private set; }
 
@@ -46,6 +50,33 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
         Document = document;
         TrustScore = 80;
         IsActive = true;
+        AutoPayEnabled = false;
+        HasSavedPaymentMethod = false;
+    }
+
+    public void SetStripeCustomerId(string customerId)
+    {
+        if (string.IsNullOrWhiteSpace(customerId))
+            throw new DomainException(DomainErrorCode.Common.ReasonRequired); // Reuse or use specific error
+
+        StripeCustomerId = customerId;
+        UpdateTimestamp();
+    }
+
+    public void SetDefaultPaymentMethod(string paymentMethodId)
+    {
+        if (string.IsNullOrWhiteSpace(paymentMethodId))
+            throw new DomainException(DomainErrorCode.Common.ReasonRequired);
+
+        DefaultPaymentMethodId = paymentMethodId;
+        HasSavedPaymentMethod = true;
+        UpdateTimestamp();
+    }
+
+    public void ToggleAutoPay(bool enabled)
+    {
+        AutoPayEnabled = enabled;
+        UpdateTimestamp();
     }
 
     public void UpdateProfile(string firstName, string lastName, string phone, string email, Address? address, string? photoUrl)

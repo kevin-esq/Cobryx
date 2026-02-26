@@ -79,4 +79,40 @@ public class MockStripeService : IStripeService
     {
         return Task.FromResult("requires_payment_method");
     }
+
+    public Task<(decimal Available, decimal Pending)> GetBalanceAsync(string? stripeAccountId = null, CancellationToken ct = default)
+    {
+        return Task.FromResult((1000m, 500m));
+    }
+
+    public Task<string> CreateSetupIntentAsync(string customerId, CancellationToken ct = default)
+    {
+        return Task.FromResult("seti_fake_123");
+    }
+
+    public Task AttachPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task<List<StripePaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct = default)
+    {
+        return Task.FromResult(new List<StripePaymentMethodDto>
+        {
+            new StripePaymentMethodDto("pm_fake_123", "visa", "4242", (short)12, (short)2025, true)
+        });
+    }
+
+    public Task<string> ChargeSavedPaymentMethodAsync(
+        string customerId,
+        string paymentMethodId,
+        decimal amount,
+        string currency,
+        string description,
+        string? stripeAccountId = null,
+        string? idempotencyKey = null,
+        CancellationToken ct = default)
+    {
+        return Task.FromResult("pi_fake_recovery_123");
+    }
 }

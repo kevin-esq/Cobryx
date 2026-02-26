@@ -299,7 +299,7 @@ public class PaymentLinkReconciliationService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to recover stuck link {LinkId}. Recording failure.", link.Id);
-                link.RecordRecoveryFailure();
+                link.RecordRecoveryFailure("stuck_link_recovery_exception");
                 await _context.SaveChangesAsync(ct);
             }
         }

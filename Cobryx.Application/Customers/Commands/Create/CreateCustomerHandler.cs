@@ -31,7 +31,7 @@ public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Resu
             throw new DuplicateCustomerException();
         }
 
-        var customer = new Customer(
+        var customer = new Cobryx.Domain.Entities.Customer(
             tenantId,
             request.FirstName,
             request.LastName,

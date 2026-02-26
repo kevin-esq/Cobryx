@@ -218,6 +218,13 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
+    public void MarkAsDisputed()
+    {
+        if (Status == LoanStatus.Disputed) return;
+        Status = LoanStatus.Disputed;
+        UpdateTimestamp();
+    }
+
     public void MarkAsClosed()
     {
         if (Status == LoanStatus.Closed)
