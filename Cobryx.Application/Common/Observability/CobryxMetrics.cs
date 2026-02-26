@@ -19,6 +19,9 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> TokenRefreshes { get; }
     public Counter<long> PasswordResets { get; }
     public Counter<long> OutboxJobsProcessed { get; }
+    public Counter<long> RecoveryAttemptTotal { get; }
+    public Counter<double> RecoveryRevenueTotal { get; }
+    public Counter<long> RecoveryDisputeStopTotal { get; }
 
     // Invitation Metrics
     public Counter<long> InvitationsCreated { get; }
@@ -119,6 +122,9 @@ public sealed class CobryxMetrics : IDisposable
         TokenRefreshes = _meter.CreateCounter<long>("auth_token_refresh_total", description: "Total number of token refresh operations");
         PasswordResets = _meter.CreateCounter<long>("auth_password_reset_total", description: "Total number of password resets requested");
         OutboxJobsProcessed = _meter.CreateCounter<long>("outbox_jobs_processed_total", description: "Total number of outbox jobs processed");
+        RecoveryAttemptTotal = _meter.CreateCounter<long>("cobryx_recovery_attempt_total", description: "Total number of recovery attempts tagged by attempt number and outcome");
+        RecoveryRevenueTotal = _meter.CreateCounter<double>("cobryx_recovery_revenue_total", unit: "$", description: "Total revenue successfully recovered by the dunning engine");
+        RecoveryDisputeStopTotal = _meter.CreateCounter<long>("cobryx_recovery_dispute_stop_total", description: "Total recovery attempts aborted due to active disputes");
 
         // Monetization
         SubscriptionLimitReached = _meter.CreateCounter<long>("subscription_limit_reached_total", description: "Total hits to a plan limit");
@@ -206,6 +212,24 @@ public sealed class CobryxMetrics : IDisposable
             new KeyValuePair<string, object?>("success", success.ToString().ToLowerInvariant()),
             new KeyValuePair<string, object?>("tier", tier ?? "unknown"),
             new KeyValuePair<string, object?>("status", httpStatus ?? "0"));
+    }
+
+    public void RecordRecoveryAttempt(int attemptNumber, string outcome, string? reason = null)
+    {
+        RecoveryAttemptTotal.Add(1,
+            new KeyValuePair<string, object?>("attempt", attemptNumber),
+            new KeyValuePair<string, object?>("outcome", outcome),
+            new KeyValuePair<string, object?>("reason", reason ?? "none"));
+    }
+
+    public void RecordRecoveryRevenue(double amount, string currency)
+    {
+        RecoveryRevenueTotal.Add(amount, new KeyValuePair<string, object?>("currency", currency));
+    }
+
+    public void RecordRecoveryDisputeStop(Guid customerId)
+    {
+        RecoveryDisputeStopTotal.Add(1, new KeyValuePair<string, object?>("customer_id", customerId.ToString()));
     }
 
     public void RecordError(string errorCode, int? numericCode = null)

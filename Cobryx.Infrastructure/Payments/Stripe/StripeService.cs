@@ -239,4 +239,86 @@ public class StripeService : IStripeService
 
         return (available, pending);
     }
+
+    public async Task<string> CreateSetupIntentAsync(string customerId, CancellationToken ct = default)
+    {
+        var service = new SetupIntentService();
+        var intent = await service.CreateAsync(new SetupIntentCreateOptions
+        {
+            Customer = customerId,
+            PaymentMethodTypes = new List<string> { "card" },
+            Usage = "off_session", // Critical for AutoPay/Scheduled charges
+        }, cancellationToken: ct);
+
+        return intent.ClientSecret;
+    }
+
+    public async Task AttachPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct = default)
+    {
+        var service = new PaymentMethodService();
+        await service.AttachAsync(paymentMethodId, new PaymentMethodAttachOptions
+        {
+            Customer = customerId,
+        }, cancellationToken: ct);
+
+        // Optional: Update customer to make this the default if needed,
+        // but normally we handle 'default' logic in the Application layer.
+    }
+
+    public async Task<List<StripePaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct = default)
+    {
+        var service = new PaymentMethodService();
+        var options = new PaymentMethodListOptions
+        {
+            Customer = customerId,
+            Type = "card",
+        };
+
+        var paymentMethods = await service.ListAsync(options, cancellationToken: ct);
+
+        return paymentMethods.Select(pm => new StripePaymentMethodDto(
+            Id: pm.Id,
+            Brand: pm.Card.Brand,
+            Last4: pm.Card.Last4,
+            ExpMonth: (short)pm.Card.ExpMonth,
+            ExpYear: (short)pm.Card.ExpYear,
+            IsDefault: false // Handled by comparing with Customer entity in App layer
+        )).ToList();
+    }
+
+    public async Task<string> ChargeSavedPaymentMethodAsync(
+        string customerId,
+        string paymentMethodId,
+        decimal amount,
+        string currency,
+        string description,
+        string? stripeAccountId = null,
+        string? idempotencyKey = null,
+        CancellationToken ct = default)
+    {
+        var service = new PaymentIntentService();
+        var options = new PaymentIntentCreateOptions
+        {
+            Amount = (long)(amount * 100),
+            Currency = currency.ToLowerInvariant(),
+            Customer = customerId,
+            PaymentMethod = paymentMethodId,
+            Confirm = true,
+            OffSession = true, // KEY: Charge without user intervention
+            Description = description,
+        };
+
+        var requestOptions = new RequestOptions
+        {
+            IdempotencyKey = idempotencyKey
+        };
+
+        if (!string.IsNullOrEmpty(stripeAccountId))
+        {
+            requestOptions.StripeAccount = stripeAccountId;
+        }
+
+        var intent = await service.CreateAsync(options, requestOptions, cancellationToken: ct);
+        return intent.Id;
+    }
 }

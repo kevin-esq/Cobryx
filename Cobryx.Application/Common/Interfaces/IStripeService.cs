@@ -34,7 +34,31 @@ public interface IStripeService
     Task<string> GetPaymentIntentStatusAsync(string paymentIntentId, CancellationToken ct = default);
 
     Task<(decimal Available, decimal Pending)> GetBalanceAsync(string? stripeAccountId = null, CancellationToken ct = default);
+
+    Task<string> CreateSetupIntentAsync(string customerId, CancellationToken ct = default);
+
+    Task AttachPaymentMethodAsync(string customerId, string paymentMethodId, CancellationToken ct = default);
+
+    Task<List<StripePaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct = default);
+
+    Task<string> ChargeSavedPaymentMethodAsync(
+        string customerId,
+        string paymentMethodId,
+        decimal amount,
+        string currency,
+        string description,
+        string? stripeAccountId = null,
+        string? idempotencyKey = null,
+        CancellationToken ct = default);
 }
+
+public record StripePaymentMethodDto(
+    string Id,
+    string Brand,
+    string Last4,
+    short ExpMonth,
+    short ExpYear,
+    bool IsDefault);
 
 /// <summary>
 /// Represents the current state of a Stripe subscription, used for sync.

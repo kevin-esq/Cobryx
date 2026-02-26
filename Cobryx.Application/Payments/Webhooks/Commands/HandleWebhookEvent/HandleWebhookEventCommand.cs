@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Cobryx.Application.Payments.Commands.RefundPayment;
 using Cobryx.Application.Payments.Commands.HandleChargeback;
 using Cobryx.Application.Admin.Commands.RecordPayout;
+using Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
 using System.Text.Json;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent;
@@ -99,6 +100,8 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
             WebhookConstants.InternalEvents.ChargeDisputeCreated => await HandleChargebackAsync(parseResult, ct),
             WebhookConstants.InternalEvents.PayoutPaid => await HandlePayoutAsync(parseResult, data, ct),
             WebhookConstants.InternalEvents.PayoutFailed => await HandlePayoutAsync(parseResult, data, ct),
+            WebhookConstants.InternalEvents.PaymentFailed => await _sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
+            WebhookConstants.InternalEvents.InvoicePaymentFailed => await _sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
             _ => await HandleUnknownEventAsync(parseResult)
         };
     }
