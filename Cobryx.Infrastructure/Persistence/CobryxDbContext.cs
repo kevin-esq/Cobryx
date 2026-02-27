@@ -116,6 +116,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
     public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+    public DbSet<ReconciliationAudit> ReconciliationAudits => Set<ReconciliationAudit>();
     public DbSet<TenantInvitation> TenantInvitations => Set<TenantInvitation>();
     public DbSet<TenantGrowthMetrics> TenantGrowthMetrics => Set<TenantGrowthMetrics>();
     public DbSet<TenantMRRHistory> TenantMRRHistory => Set<TenantMRRHistory>();
@@ -214,6 +215,12 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
 
         modelBuilder.Entity<SupportTicket>()
             .HasIndex(s => new { s.TenantId, s.Status });
+
+        modelBuilder.Entity<ReconciliationAudit>()
+            .HasIndex(a => new { a.TenantId, a.RunId });
+
+        modelBuilder.Entity<ReconciliationAudit>()
+            .HasIndex(a => new { a.TenantId, a.ToUtc });
 
         modelBuilder.Entity<ProcessedStripeEvent>()
             .HasIndex(e => new { e.StripeEventId, e.StripeAccountId })

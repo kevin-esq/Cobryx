@@ -294,6 +294,7 @@ public class StripeService : IStripeService
         string description,
         string? stripeAccountId = null,
         string? idempotencyKey = null,
+        string? lastCursor = null,
         CancellationToken ct = default)
     {
         var service = new PaymentIntentService();
@@ -320,5 +321,86 @@ public class StripeService : IStripeService
 
         var intent = await service.CreateAsync(options, requestOptions, cancellationToken: ct);
         return intent.Id;
+    }
+
+    public async Task<List<StripePaymentIntentDto>> ListPaymentIntentsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
+        CancellationToken ct = default)
+    {
+        var service = new PaymentIntentService();
+        var options = new PaymentIntentListOptions
+        {
+            Created = new DateRangeOptions
+            {
+                GreaterThanOrEqual = from,
+                LessThanOrEqual = to
+            },
+            Limit = 100,
+            StartingAfter = startingAfter
+        };
+
+        var requestOptions = new RequestOptions();
+        if (!string.IsNullOrEmpty(stripeAccountId))
+        {
+            requestOptions.StripeAccount = stripeAccountId;
+        }
+
+        var intents = await service.ListAsync(options, requestOptions, cancellationToken: ct);
+
+        return intents.Data.Select(i => new StripePaymentIntentDto(
+            i.Id,
+            i.Amount,
+            i.Currency,
+            i.Status,
+            i.Created,
+            i.Metadata ?? new Dictionary<string, string>()
+        )).ToList();
+    }
+
+    public async Task<List<StripeBalanceTransactionDto>> ListBalanceTransactionsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
+        CancellationToken ct = default)
+    {
+        var service = new BalanceTransactionService();
+        var options = new BalanceTransactionListOptions
+        {
+            Created = new DateRangeOptions
+            {
+                GreaterThanOrEqual = from,
+                LessThanOrEqual = to
+            },
+            Limit = 100,
+            StartingAfter = startingAfter,
+            Expand = new List<string> { "data.source" } // To get source metadata/details if reachable
+        };
+
+        var requestOptions = new RequestOptions();
+        if (!string.IsNullOrEmpty(stripeAccountId))
+        {
+            requestOptions.StripeAccount = stripeAccountId;
+        }
+
+        var transactions = await service.ListAsync(options, requestOptions, cancellationToken: ct);
+
+        return transactions.Data.Select(t => new StripeBalanceTransactionDto(
+            t.Id,
+            t.Amount,
+            t.Fee,
+            t.Net,
+            t.Currency,
+            t.Type,
+            t.ReportingCategory,
+            t.Status,
+            t.Created,
+            t.AvailableOn,
+            t.SourceId,
+            new Dictionary<string, string>() // Metadata is usually on the source object, not the BT itself
+        )).ToList();
     }
 }

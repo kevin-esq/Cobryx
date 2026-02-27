@@ -78,6 +78,17 @@ public sealed class CobryxMetrics : IDisposable
     public Histogram<double> TimeToExpansion { get; }
     public ObservableGauge<double> RevenueConcentration { get; }
 
+    // Institutional Reconciliation & Integrity Metrics
+    public Counter<long> ReconciliationDriftTotal { get; }
+    public Counter<long> ReconciliationAutoRepairedTotal { get; }
+    public Counter<long> SettlementDriftTotal { get; }
+    public Counter<long> FeeMismatchTotal { get; }
+    public Counter<long> PayoutMismatchTotal { get; }
+    public Counter<long> LedgerIntegrityFailureTotal { get; }
+    public Counter<long> CircuitBreakerTrippedTotal { get; }
+    public Counter<long> ReplayEntriesScannedTotal { get; }
+    public Histogram<double> ReplayDuration { get; }
+
     private static Func<long> _activeWorkersProvider = () => 0;
     private static Func<long> _queueLengthProvider = () => 0;
     private static Func<long> _failedJobsProvider = () => 0;
@@ -192,6 +203,17 @@ public sealed class CobryxMetrics : IDisposable
 
         RevenueConcentration = _meter.CreateObservableGauge<double>("cobryx_revenue_concentration_percent",
             () => _revenueConcentrationProvider(), unit: "%", description: "Percentage of total MRR coming from the Top 10% of tenants");
+
+        // Institutional Reconciliation & Integrity
+        ReconciliationDriftTotal = _meter.CreateCounter<long>("reconciliation_drift_detected_total", description: "Total number of reconciliation drifts detected");
+        ReconciliationAutoRepairedTotal = _meter.CreateCounter<long>("reconciliation_auto_repaired_total", description: "Total number of drifts auto-repaired");
+        SettlementDriftTotal = _meter.CreateCounter<long>("reconciliation_settlement_drift_total", description: "Total number of settlement-specific drifts");
+        FeeMismatchTotal = _meter.CreateCounter<long>("reconciliation_fee_mismatch_total", description: "Total number of Stripe fee mismatches");
+        PayoutMismatchTotal = _meter.CreateCounter<long>("reconciliation_payout_mismatch_total", description: "Total number of Stripe payout mismatches");
+        LedgerIntegrityFailureTotal = _meter.CreateCounter<long>("ledger_integrity_failure_total", description: "Total number of ledger journal integrity failures");
+        CircuitBreakerTrippedTotal = _meter.CreateCounter<long>("financial_circuit_breaker_tripped_total", description: "Total number of times a financial circuit breaker was tripped");
+        ReplayEntriesScannedTotal = _meter.CreateCounter<long>("ledger_replay_entries_scanned_total", description: "Total number of ledger entries scanned during integrity checks");
+        ReplayDuration = _meter.CreateHistogram<double>("ledger_replay_duration_seconds", unit: "s", description: "Duration of ledger integrity replay runs");
     }
 
     public void RecordOutcome(string outcomeCode, bool success, string? tier = null, string? httpStatus = null)

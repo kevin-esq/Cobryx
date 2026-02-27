@@ -26,7 +26,9 @@ public static class DependencyInjection
         // Fintech & Payments Engine
         services.AddScoped<Payments.Services.PaymentLinkReconciliationService>();
         services.AddScoped<Accounting.Services.FinancialPostingEngine>();
+        services.AddScoped<Accounting.Services.ReconciliationEngine>();
         services.AddScoped<Lending.Services.FinancialStateEngine>();
+        services.AddScoped<ILedgerIntegrityService, Accounting.Services.LedgerIntegrityService>();
 
         return services;
     }
