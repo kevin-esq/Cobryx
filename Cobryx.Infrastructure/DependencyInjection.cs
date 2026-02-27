@@ -167,6 +167,7 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<IStripeService, Payments.Stripe.StripeService>();
+        services.AddScoped<IPaymentOrchestrationService, Payments.Services.PaymentOrchestrationService>();
         services.AddScoped<Application.Subscriptions.Services.StripeSubscriptionSyncService>();
 
         // Lending Domain Repositories
@@ -212,6 +213,7 @@ public static class DependencyInjection
         services.AddScoped<ExpirePaymentLinksJob>();
         services.AddScoped<TenantConnectSyncJob>();
         services.AddScoped<FinancialReconciliationJob>();
+        services.AddScoped<ReconciliationEngineJob>();
         services.AddScoped<CheckSystemHealthJob>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();

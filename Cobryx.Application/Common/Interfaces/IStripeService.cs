@@ -49,8 +49,45 @@ public interface IStripeService
         string description,
         string? stripeAccountId = null,
         string? idempotencyKey = null,
+        string? lastCursor = null,
+        CancellationToken ct = default);
+
+    Task<List<StripePaymentIntentDto>> ListPaymentIntentsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
+        CancellationToken ct = default);
+
+    Task<List<StripeBalanceTransactionDto>> ListBalanceTransactionsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
         CancellationToken ct = default);
 }
+
+public record StripeBalanceTransactionDto(
+    string Id,
+    long Amount,
+    long Fee,
+    long Net,
+    string Currency,
+    string Type,
+    string ReportingCategory,
+    string Status,
+    DateTime Created,
+    DateTime AvailableOn,
+    string? SourceId,
+    Dictionary<string, string> Metadata);
+
+public record StripePaymentIntentDto(
+    string Id,
+    long Amount,
+    string Currency,
+    string Status,
+    DateTime Created,
+    Dictionary<string, string> Metadata);
 
 public record StripePaymentMethodDto(
     string Id,

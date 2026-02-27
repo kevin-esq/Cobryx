@@ -19,6 +19,8 @@ public class Tenant : BaseEntity, IAggregateRoot
     public string? BusinessAddress { get; private set; }
     public bool IsActive { get; private set; }
     public TenantStatus Status { get; private set; }
+    public bool FinancialSafeMode { get; private set; }
+    public DateTime? SuspendedAt { get; private set; }
     public TenantOnboardingStatus OnboardingStatus { get; private set; }
     public string? StripeAccountId { get; private set; }
     public TenantConnectCapability ConnectCapabilities { get; private set; } = TenantConnectCapability.NotStarted();
@@ -138,4 +140,10 @@ public class Tenant : BaseEntity, IAggregateRoot
     }
 
     public bool IsSuspended => Status == TenantStatus.Suspended;
+
+    public void ToggleFinancialSafeMode(bool enabled)
+    {
+        FinancialSafeMode = enabled;
+        UpdateTimestamp();
+    }
 }

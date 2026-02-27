@@ -114,6 +114,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
                         $"Automated Recovery: {description}",
                         null,
                         idempotencyKey,
+                        null,
                         ct);
 
                     _logger.LogInformation("Recovery charge successful. Intent: {IntentId}", intentId);
