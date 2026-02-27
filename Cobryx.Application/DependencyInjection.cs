@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Services.ReconciliationEngine>();
         services.AddScoped<Lending.Services.FinancialStateEngine>();
         services.AddScoped<ILedgerIntegrityService, Accounting.Services.LedgerIntegrityService>();
+        services.AddScoped<Accounting.Services.IBankReconciliationEngine, Accounting.Services.BankReconciliationEngine>();
 
         return services;
     }

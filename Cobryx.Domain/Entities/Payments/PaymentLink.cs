@@ -39,7 +39,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
     public virtual Customer Customer { get; private set; } = null!;
     public virtual Cobryx.Domain.Entities.Lending.Loan? Loan { get; private set; }
 
-    private PaymentLink() { }
+    private PaymentLink() { AmountSnapshot = null!; PaidAmount = null!; }
 
     public PaymentLink(
         Guid tenantId,

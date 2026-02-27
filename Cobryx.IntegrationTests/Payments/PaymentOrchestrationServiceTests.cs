@@ -91,8 +91,9 @@ public class PaymentOrchestrationServiceTests : IDisposable
             100,
             "USD",
             It.Is<string>(d => d.Contains("Automated Recovery")),
-            null,
+            null, // stripeAccountId
             expectedIdempotencyKey,
+            null, // lastCursor
             It.IsAny<CancellationToken>()), Times.Once);
 
         // Verify recovery attempt recorded in DB
@@ -122,7 +123,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsSuccess);
-        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _senderMock.Verify(s => s.Send(It.IsAny<IRequest<Result<string>>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -139,7 +140,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Simulate Stripe authentication_required error
-        _stripeMock.Setup(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _stripeMock.Setup(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new global::Stripe.StripeException("authentication_required")
             {
                 StripeError = new global::Stripe.StripeError { Type = "card_error", Code = "authentication_required" }
@@ -186,7 +187,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsSuccess);
-        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(
             LogLevel.Warning,
             It.IsAny<EventId>(),
@@ -229,7 +230,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsSuccess);
-        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(
             LogLevel.Warning,
             It.IsAny<EventId>(),
@@ -272,7 +273,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsSuccess);
-        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
@@ -286,5 +287,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.Dispose();
         _connection.Dispose();
         _metrics.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -31,10 +31,12 @@ public class LedgerTransactionConfiguration : IEntityTypeConfiguration<LedgerTra
             .HasForeignKey(x => x.TransactionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(x => x.TenantId);
+        builder.HasIndex(x => new { x.TenantId, x.Id });
         builder.HasIndex(x => new { x.TenantId, x.ReferenceId })
             .IsUnique()
             .HasFilter("\"ReferenceId\" IS NOT NULL");
+        builder.HasIndex(x => new { x.TenantId, x.LoanId });
+        builder.HasIndex(x => new { x.TenantId, x.IsReversal });
         builder.HasIndex(x => x.CreatedAt);
     }
 }

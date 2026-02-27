@@ -31,6 +31,8 @@ public interface ICobryxDbContext
     DbSet<LedgerAccount> LedgerAccounts { get; }
     DbSet<LedgerTransaction> LedgerTransactions { get; }
     DbSet<LedgerEntry> LedgerEntries { get; }
+    DbSet<BankMovement> BankMovements { get; }
+    DbSet<JournalCheckpoint> JournalCheckpoints { get; }
     DbSet<ReconciliationAudit> ReconciliationAudits { get; }
 
     DbSet<TEntity> Set<TEntity>() where TEntity : class;
