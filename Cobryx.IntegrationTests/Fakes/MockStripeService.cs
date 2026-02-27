@@ -111,8 +111,29 @@ public class MockStripeService : IStripeService
         string description,
         string? stripeAccountId = null,
         string? idempotencyKey = null,
+        string? lastCursor = null,
         CancellationToken ct = default)
     {
         return Task.FromResult("pi_fake_recovery_123");
+    }
+
+    public Task<List<StripePaymentIntentDto>> ListPaymentIntentsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
+        CancellationToken ct = default)
+    {
+        return Task.FromResult(new List<StripePaymentIntentDto>());
+    }
+
+    public Task<List<StripeBalanceTransactionDto>> ListBalanceTransactionsAsync(
+        DateTime from,
+        DateTime to,
+        string? stripeAccountId = null,
+        string? startingAfter = null,
+        CancellationToken ct = default)
+    {
+        return Task.FromResult(new List<StripeBalanceTransactionDto>());
     }
 }

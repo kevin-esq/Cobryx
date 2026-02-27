@@ -5,9 +5,10 @@ namespace Cobryx.Application.Common.Interfaces;
 public interface ILedgerIntegrityService
 {
     /// <summary>
-    /// Performs a full journal replay to verify consistency and immutability.
+    /// Performs a journal replay. By default uses checkpoints for incremental speed,
+    /// but can be forced to do a full historical audit.
     /// </summary>
-    Task<IntegrityReport> VerifyJournalIntegrityAsync(Guid tenantId, CancellationToken ct = default);
+    Task<IntegrityReport> VerifyJournalIntegrityAsync(Guid tenantId, bool forceFullReplay = false, CancellationToken ct = default);
 
     /// <summary>
     /// Checks if any financial circuit breakers should be tripped based on recent drifts.

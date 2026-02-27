@@ -9,10 +9,10 @@ namespace Cobryx.Domain.Entities.Accounting;
 public class LedgerAccount : BaseEntity
 {
     public Guid TenantId { get; private set; }
-    public string Code { get; private set; } // e.g., "1010"
-    public string Name { get; private set; } // e.g., "Cash at Bank"
+    public string Code { get; private set; } = string.Empty; // e.g., "1010"
+    public string Name { get; private set; } = string.Empty; // e.g., "Cash at Bank"
     public LedgerAccountType Type { get; private set; }
-    public string Currency { get; private set; }
+    public string Currency { get; private set; } = string.Empty;
     public bool IsSystem { get; private set; } // Prevents deletion of core accounts
 
     private LedgerAccount() { } // EF Core

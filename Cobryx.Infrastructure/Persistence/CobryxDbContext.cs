@@ -59,23 +59,20 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
 
     private void UpdateAuditFields()
     {
-        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+        var entries = ChangeTracker.Entries<BaseEntity>();
+        if (entries == null) return;
+
+        foreach (var entry in entries)
         {
+            if (entry.Entity == null) continue;
+
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.IncrementVersion();
             }
             else if (entry.State == EntityState.Modified)
             {
-                if (entry.Entity.Version == 0 && entry.Entity is not OutboxEvent)
-                {
-                    entry.State = EntityState.Added;
-                    entry.Entity.IncrementVersion();
-                }
-                else
-                {
-                    entry.Entity.IncrementVersion();
-                }
+                entry.Entity.IncrementVersion();
             }
         }
     }
@@ -124,6 +121,8 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
     public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<BankMovement> BankMovements => Set<BankMovement>();
+    public DbSet<JournalCheckpoint> JournalCheckpoints => Set<JournalCheckpoint>();
     public DbSet<FinancialStatusAudit> FinancialStatusAudits => Set<FinancialStatusAudit>();
 
     // Lending Domain

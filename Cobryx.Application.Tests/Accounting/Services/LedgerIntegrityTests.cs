@@ -130,14 +130,26 @@ public class LedgerIntegrityTests
             await contextAlter.SaveChangesAsync();
         }
 
-        // Pass 2: Re-scan
+        // Pass 2: Default Rescan (Incremental)
         using (var context2 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service2 = CreateService(context2);
             var report2 = await service2.VerifyJournalIntegrityAsync(_tenantId);
 
-            // Assert
-            Assert.NotEqual(originalFingerprint, report2.JournalFingerprint);
+            // Assert: Fingerprint is the SAME as originalHealthy because it used the checkpoint
+            Assert.Equal(originalFingerprint, report2.JournalFingerprint);
+            Assert.True(report2.IsHealthy); // Healthy from an incremental delta perspective
+        }
+
+        // Pass 3: Forced Full Rescan
+        using (var context3 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
+        {
+            var service3 = CreateService(context3);
+            var report3 = await service3.VerifyJournalIntegrityAsync(_tenantId, forceFullReplay: true);
+
+            // Assert: Detects the alteration
+            Assert.NotEqual(originalFingerprint, report3.JournalFingerprint);
+            Assert.False(report3.IsHealthy);
         }
         _loggerMock.VerifyLog(LogLevel.Information, "Integrity Scan completed. Healthy: false*", Times.Never()); // It's still "healthy" balance-wise (if we changed both), but fingerprint changed
     }
