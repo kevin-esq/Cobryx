@@ -64,7 +64,7 @@ public class Phase4InstitutionalTests
         context.BankMovements.AddRange(m1, m2);
         await context.SaveChangesAsync();
 
-        var engine = new BankReconciliationEngine(context, new CobryxMetrics(), Mock.Of<ILogger<BankReconciliationEngine>>());
+        var engine = new BankReconciliationEngine(context, Mock.Of<ILedgerIntegrityService>(), new CobryxMetrics(), Mock.Of<ILogger<BankReconciliationEngine>>());
 
         // Act
         var report = await engine.ReconcileBankMovementsAsync(_tenantId);

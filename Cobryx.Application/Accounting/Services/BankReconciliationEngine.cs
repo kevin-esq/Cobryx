@@ -13,10 +13,12 @@ public interface IBankReconciliationEngine
 
 public class BankReconciliationEngine(
     ICobryxDbContext dbContext,
+    ILedgerIntegrityService integrityService,
     CobryxMetrics metrics,
     ILogger<BankReconciliationEngine> logger) : IBankReconciliationEngine
 {
     private readonly ICobryxDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+    private readonly ILedgerIntegrityService _integrityService = integrityService ?? throw new ArgumentNullException(nameof(integrityService));
     private readonly CobryxMetrics _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
     private readonly ILogger<BankReconciliationEngine> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -76,22 +78,32 @@ public class BankReconciliationEngine(
             }
 
             // Level 3: Aggregate Match (1:N settlements)
-            // Look for unmatched transactions that share a ReferenceId or fall in the same window and sum to the movement amount
             var candidates = ledgerTransactions
                 .Where(t => !report.MatchedItems.Any(m => m.LedgerTransactionId == t.Id))
-                .Where(t => Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays) <= 1.5)
+                .Where(t => Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays) <= 3.0)
                 .ToList();
 
-            // Simplified Aggregate: Look for transactions with matching ReferenceId prefix (common for batches)
             if (!string.IsNullOrEmpty(movement.ExternalRef))
             {
                 var batchMatches = candidates.Where(t => t.ReferenceId == movement.ExternalRef).ToList();
-                if (batchMatches.Count > 1 && batchMatches.Sum(t => t.Entries.Sum(e => Math.Abs(e.Debit - e.Credit))) == movement.Amount)
+
+                // Sum only the side that matches movement direction (Debits for Inbound, Credits for Outbound)
+                decimal totalSideAmount = movement.Direction == BankMovementDirection.Inbound
+                    ? batchMatches.Sum(t => t.Entries.Sum(e => Math.Max(0, e.Debit - e.Credit)))
+                    : batchMatches.Sum(t => t.Entries.Sum(e => Math.Max(0, e.Credit - e.Debit)));
+
+                if (batchMatches.Count > 1 && totalSideAmount == movement.Amount)
                 {
+                    // Heuristic: Logarithmic Decay
+                    // confidence = 0.85 - (dateDrift * 0.03) - (log10(batchCount) * 0.05)
+                    var maxDateDrift = (decimal)batchMatches.Max(t => Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays));
+                    var confidence = 0.85m - (maxDateDrift * 0.03m) - ((decimal)Math.Log10(batchMatches.Count) * 0.05m);
+                    confidence = Math.Clamp(confidence, 0.1m, 0.84m);
+
                     foreach (var match in batchMatches)
                     {
-                        movement.MarkAsMatched(match.Id, 0.8m, "Aggregate (Batch Ref Match)");
-                        report.AddMatchedResult(movement.Id, match.Id, 0.8m);
+                        movement.MarkAsMatched(match.Id, confidence, "Aggregate (Batch Ref Log-Decay)");
+                        report.AddMatchedResult(movement.Id, match.Id, confidence);
                     }
                     continue;
                 }
@@ -100,10 +112,26 @@ public class BankReconciliationEngine(
             report.UnmatchedCount++;
         }
 
+        // Final Seal: Capture Ledger Fingerprint for SOC2 Audit
+        var integrityReport = await _integrityService.VerifyJournalIntegrityAsync(tenantId, ct: ct);
+
+        var audit = new ReconciliationAudit(
+            tenantId,
+            Guid.NewGuid(),
+            unmatchedMovements.FirstOrDefault()?.BookingDate ?? DateTime.UtcNow,
+            unmatchedMovements.LastOrDefault()?.BookingDate ?? DateTime.UtcNow,
+            0, 0, 0, // Balances not tracked in this engine pass
+            integrityReport.IsHealthy ? Domain.Entities.Accounting.Enums.ReconciliationStatus.Synced : Domain.Entities.Accounting.Enums.ReconciliationStatus.HardDrift,
+            integrityReport.IsHealthy ? Domain.Entities.Accounting.Enums.ReconciliationSeverity.Info : Domain.Entities.Accounting.Enums.ReconciliationSeverity.Critical,
+            report.UnmatchedCount,
+            detailsJson: null,
+            fingerprint: integrityReport.JournalFingerprint,
+            lastCursor: null);
+
+        _dbContext.ReconciliationAudits.Add(audit);
         await _dbContext.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Bank Reconciliation completed. Matched: {Matched}, Unmatched: {Unmatched}",
-            report.MatchedItems.Count, report.UnmatchedCount);
+        _logger.LogInformation("Bank Reconciliation completed and Sealed. Fingerprint: {Fingerprint}", integrityReport.JournalFingerprint);
 
         return report;
     }
