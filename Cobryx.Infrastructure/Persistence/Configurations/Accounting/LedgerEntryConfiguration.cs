@@ -19,7 +19,7 @@ public class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEntry>
             .HasPrecision(18, 4);
 
         builder.HasIndex(x => new { x.TenantId, x.Id });
-        builder.HasIndex(x => new { x.TenantId, x.AccountId });
+        builder.HasIndex(x => new { x.TenantId, x.AccountId, x.CreatedAt });
         builder.HasIndex(x => new { x.TenantId, x.CreatedAt });
 
         builder.HasIndex(x => x.TransactionId);

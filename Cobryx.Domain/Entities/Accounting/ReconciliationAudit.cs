@@ -30,6 +30,7 @@ public class ReconciliationAudit : BaseEntity, IAggregateRoot, ITenantEntity
     // Details (JSON evidence)
     public string? DriftDetailsJson { get; private set; }
     public int DetectedDriftsCount { get; private set; }
+    public string? LedgerFingerprintSnapshot { get; private set; }
 
     private ReconciliationAudit() { }
 
@@ -45,6 +46,7 @@ public class ReconciliationAudit : BaseEntity, IAggregateRoot, ITenantEntity
         ReconciliationSeverity severity,
         int driftsCount,
         string? detailsJson = null,
+        string? fingerprint = null,
         string? lastCursor = null)
     {
         TenantId = tenantId;
@@ -58,6 +60,7 @@ public class ReconciliationAudit : BaseEntity, IAggregateRoot, ITenantEntity
         Severity = severity;
         DetectedDriftsCount = driftsCount;
         DriftDetailsJson = detailsJson;
+        LedgerFingerprintSnapshot = fingerprint;
         LastStripeCursor = lastCursor;
     }
 }
