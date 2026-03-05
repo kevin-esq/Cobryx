@@ -10,15 +10,18 @@ public class CheckSystemHealthJob
 {
     private readonly ISender _sender;
     private readonly IAlertingService _alertingService;
+    private readonly IDatabaseDiagnosticService _diagnosticService;
     private readonly ILogger<CheckSystemHealthJob> _logger;
 
     public CheckSystemHealthJob(
         ISender sender,
         IAlertingService alertingService,
+        IDatabaseDiagnosticService diagnosticService,
         ILogger<CheckSystemHealthJob> logger)
     {
         _sender = sender;
         _alertingService = alertingService;
+        _diagnosticService = diagnosticService;
         _logger = logger;
     }
 
@@ -29,10 +32,51 @@ public class CheckSystemHealthJob
         // 1. Audit Ledger Integrity (Critical Path)
         await AuditLedgerHealthAsync(ct);
 
-        // 2. Audit Financial Risk (Core Growth Path)
+        // 2. Audit Infrastructure Pressure (SRE Phase 6)
+        await AuditInfrastructureHealthAsync(ct);
+
+        // 3. Audit Financial Risk (Core Growth Path)
         await AuditFinancialMetricsAsync(ct);
 
         _logger.LogInformation("System health check completed.");
+    }
+
+    private async Task AuditInfrastructureHealthAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("Auditing elite infrastructure metrics...");
+
+        // Refresh metrics (this updates CobryxMetrics via delegates)
+        await _diagnosticService.CollectInfrastructureMetricsAsync(ct);
+
+        var wraparoundRisk = await _diagnosticService.GetWraparoundRiskRatioAsync(ct);
+
+        if (wraparoundRisk > 0.95)
+        {
+            await _alertingService.SendAlertAsync(
+                "SRE_Wraparound",
+                $"EMERGENCY: Postgres Wraparound Risk is {wraparoundRisk:P2}. DATABASE SHUTDOWN RISK IMMINENT.",
+                AlertLevel.Critical, // Note: Use Emergency if available, or stay with Critical + high priority
+                new { Risk = wraparoundRisk, Recommendation = "VACUUM FREEZE is urgent." },
+                ct);
+        }
+        else if (wraparoundRisk > 0.85)
+        {
+            await _alertingService.SendAlertAsync(
+                "SRE_Wraparound",
+                $"CRITICAL: Postgres Wraparound Risk is {wraparoundRisk:P2}.",
+                AlertLevel.Critical,
+                new { Risk = wraparoundRisk },
+                ct);
+        }
+        else if (wraparoundRisk > 0.70)
+        {
+            await _alertingService.SendAlertAsync(
+                "SRE_Wraparound",
+                $"Warning: Postgres Wraparound Risk is elevated ({wraparoundRisk:P2}). Throttling active.",
+                AlertLevel.Degraded,
+                new { Risk = wraparoundRisk },
+                ct);
+        }
     }
 
     private async Task AuditLedgerHealthAsync(CancellationToken ct)

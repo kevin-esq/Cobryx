@@ -89,11 +89,39 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> ReplayEntriesScannedTotal { get; }
     public Histogram<double> ReplayDuration { get; }
 
+    // Elite SRE Infrastructure Metrics
+    public ObservableGauge<double> PostgresWraparoundRiskRatio { get; }
+    public ObservableGauge<double> PostgresWalSyncDurationSeconds { get; }
+    public ObservableGauge<double> PostgresDeadTupleRatio { get; }
+    public ObservableGauge<double> PostgresCacheHitRatio { get; }
+    public ObservableGauge<double> HangfireWaitToWorkRatio { get; }
+    public Counter<long> CobryxPressureBackoffActiveTotal { get; }
+
     private static Func<long> _activeWorkersProvider = () => 0;
     private static Func<long> _queueLengthProvider = () => 0;
     private static Func<long> _failedJobsProvider = () => 0;
     private static Func<long> _deletedJobsProvider = () => 0;
     private static Func<double> _revenueConcentrationProvider = () => 0;
+
+    private static Func<double> _wraparoundRiskProvider = () => 0;
+    private static Func<double> _walSyncProvider = () => 0;
+    private static Func<double> _deadTupleRatioProvider = () => 0;
+    private static Func<double> _cacheHitRatioProvider = () => 0;
+    private static Func<double> _waitToWorkRatioProvider = () => 0;
+
+    public static void RegisterInfrastructureProviders(
+        Func<double> wraparoundRisk,
+        Func<double> walSync,
+        Func<double> deadTupleRatio,
+        Func<double> cacheHitRatio,
+        Func<double> waitToWorkRatio)
+    {
+        _wraparoundRiskProvider = wraparoundRisk;
+        _walSyncProvider = walSync;
+        _deadTupleRatioProvider = deadTupleRatio;
+        _cacheHitRatioProvider = cacheHitRatio;
+        _waitToWorkRatioProvider = waitToWorkRatio;
+    }
 
     public static void RegisterHangfireProviders(
         Func<long> activeWorkers,
@@ -214,6 +242,14 @@ public sealed class CobryxMetrics : IDisposable
         CircuitBreakerTrippedTotal = _meter.CreateCounter<long>("financial_circuit_breaker_tripped_total", description: "Total number of times a financial circuit breaker was tripped");
         ReplayEntriesScannedTotal = _meter.CreateCounter<long>("ledger_replay_entries_scanned_total", description: "Total number of ledger entries scanned during integrity checks");
         ReplayDuration = _meter.CreateHistogram<double>("ledger_replay_duration_seconds", unit: "s", description: "Duration of ledger integrity replay runs");
+
+        // Elite SRE Infrastructure
+        PostgresWraparoundRiskRatio = _meter.CreateObservableGauge<double>("postgres_wraparound_risk_ratio", () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");
+        PostgresWalSyncDurationSeconds = _meter.CreateObservableGauge<double>("postgres_wal_sync_duration_seconds", () => _walSyncProvider(), unit: "s", description: "Latency of WAL sync operations from pg_stat_wal");
+        PostgresDeadTupleRatio = _meter.CreateObservableGauge<double>("postgres_dead_tuple_ratio", () => _deadTupleRatioProvider(), description: "Ratio of dead vs live tuples in core ledger tables");
+        PostgresCacheHitRatio = _meter.CreateObservableGauge<double>("postgres_cache_hit_ratio", () => _cacheHitRatioProvider(), description: "Efficiency of Postgres shared buffer cache");
+        HangfireWaitToWorkRatio = _meter.CreateObservableGauge<double>("hangfire_wait_to_work_ratio", () => _waitToWorkRatioProvider(), description: "Ratio of job queued time vs execution time");
+        CobryxPressureBackoffActiveTotal = _meter.CreateCounter<long>("cobryx_pressure_backoff_active_total", description: "Total number of times a batch execution was delayed due to infrastructure pressure");
     }
 
     public void RecordOutcome(string outcomeCode, bool success, string? tier = null, string? httpStatus = null)
