@@ -14,11 +14,13 @@ public interface IBankReconciliationEngine
 public class BankReconciliationEngine(
     ICobryxDbContext dbContext,
     ILedgerIntegrityService integrityService,
+    IDatabaseDiagnosticService diagnosticService,
     CobryxMetrics metrics,
     ILogger<BankReconciliationEngine> logger) : IBankReconciliationEngine
 {
     private readonly ICobryxDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     private readonly ILedgerIntegrityService _integrityService = integrityService ?? throw new ArgumentNullException(nameof(integrityService));
+    private readonly IDatabaseDiagnosticService _diagnosticService = diagnosticService ?? throw new ArgumentNullException(nameof(diagnosticService));
     private readonly CobryxMetrics _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
     private readonly ILogger<BankReconciliationEngine> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -38,9 +40,12 @@ public class BankReconciliationEngine(
             .ToListAsync(ct);
 
         var report = new BankReconciliationReport();
+        var totalJitterAppliedMs = 0;
 
         foreach (var movement in unmatchedMovements)
         {
+            // Level 0: Pressure-Aware Backoff (Stay outside of DB transactions)
+            totalJitterAppliedMs += await ApplyPressureBackoffAsync(totalJitterAppliedMs, ct);
             // Level 1: Exact Match (Ref + Amount)
             if (!string.IsNullOrEmpty(movement.ExternalRef))
             {
@@ -134,6 +139,31 @@ public class BankReconciliationEngine(
         _logger.LogInformation("Bank Reconciliation completed and Sealed. Fingerprint: {Fingerprint}", integrityReport.JournalFingerprint);
 
         return report;
+    }
+
+    private async Task<int> ApplyPressureBackoffAsync(int currentTotalJitterMs, CancellationToken ct)
+    {
+        const int HardCapMs = 10_000; // SRE SLA Guard
+        if (currentTotalJitterMs >= HardCapMs) return 0;
+
+        var wraparoundRisk = await _diagnosticService.GetWraparoundRiskRatioAsync(ct);
+        var deadTupleRatio = await _diagnosticService.GetLedgerDeadTupleRatioAsync(ct);
+
+        // Thresholds: Risk > 0.70 or Dead Tuples > 20%
+        if (wraparoundRisk > 0.70 || deadTupleRatio > 0.20)
+        {
+            var jitter = Random.Shared.Next(100, 501);
+
+            _logger.LogWarning("System under Pressure (XID: {Risk:P}, DeadTuples: {Tuples:P}). Applying {Jitter}ms backoff.",
+                wraparoundRisk, deadTupleRatio, jitter);
+
+            _metrics.CobryxPressureBackoffActiveTotal.Add(1);
+
+            await Task.Delay(jitter, ct);
+            return jitter;
+        }
+
+        return 0;
     }
 }
 
