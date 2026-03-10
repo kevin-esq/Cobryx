@@ -152,12 +152,12 @@ public class ReconciliationEngineTests
         typeof(Loan).GetProperty("Id")!.SetValue(loan, loanId);
         _dbContext.Loans.Add(loan);
 
-        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
-        var principalAcc = new LedgerAccount(_tenantId, "1210", "Principal", LedgerAccountType.Asset, "USD", true);
-        var interestAcc = new LedgerAccount(_tenantId, "4010", "Interest", LedgerAccountType.Revenue, "USD", true);
-        var feeAcc = new LedgerAccount(_tenantId, "4020", "Fees", LedgerAccountType.Revenue, "USD", true);
-        var lossAcc = new LedgerAccount(_tenantId, "5010", "Loss", LedgerAccountType.Expense, "USD", true);
-        var recoveryAcc = new LedgerAccount(_tenantId, "4030", "Recovery", LedgerAccountType.Revenue, "USD", true);
+        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
+        var principalAcc = new LedgerAccount(_tenantId, "1210", "Principal", LedgerAccountType.Asset, LedgerAccountRole.Receivable, "USD", true);
+        var interestAcc = new LedgerAccount(_tenantId, "4010", "Interest", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD", true);
+        var feeAcc = new LedgerAccount(_tenantId, "4020", "Fees", LedgerAccountType.Revenue, LedgerAccountRole.Fees, "USD", true);
+        var lossAcc = new LedgerAccount(_tenantId, "5010", "Loss", LedgerAccountType.Expense, LedgerAccountRole.Loss, "USD", true);
+        var recoveryAcc = new LedgerAccount(_tenantId, "4030", "Recovery", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD", true);
 
         _dbContext.LedgerAccounts.AddRange(cashAcc, principalAcc, interestAcc, feeAcc, lossAcc, recoveryAcc);
         await _dbContext.SaveChangesAsync();
@@ -225,7 +225,7 @@ public class ReconciliationEngineTests
 
         // Create Ledger Transaction with mismatched amount
         var tx = new LedgerTransaction(_tenantId, "Mismatched Settlement", $"PAYOUT-STRIPE-{sourceId}");
-        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
+        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         _dbContext.LedgerAccounts.Add(cashAcc);
         tx.AddEntry(cashAcc.Id, 95.00m, 0); // Only 95 recorded
         _dbContext.LedgerTransactions.Add(tx);

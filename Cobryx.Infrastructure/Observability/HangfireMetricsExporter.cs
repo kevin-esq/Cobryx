@@ -85,7 +85,7 @@ public class HangfireMetricsExporter : BackgroundService
                 _logger.LogWarning(ex, "Could not poll Hangfire statistics");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
         }
     }
 }

@@ -9,16 +9,11 @@ namespace Cobryx.Application.Admin.Commands.SuspendTenant;
 
 public record SuspendTenantCommand(Guid TenantId, string Reason) : IRequest<Result>;
 
-public class SuspendTenantHandler : IRequestHandler<SuspendTenantCommand, Result>
+public class SuspendTenantHandler(ICobryxDbContext dbContext, ICurrentUserProvider currentUserProvider)
+    : IRequestHandler<SuspendTenantCommand, Result>
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ICurrentUserProvider _currentUserProvider;
-
-    public SuspendTenantHandler(ICobryxDbContext dbContext, ICurrentUserProvider currentUserProvider)
-    {
-        _dbContext = dbContext;
-        _currentUserProvider = currentUserProvider;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly ICurrentUserProvider _currentUserProvider = currentUserProvider;
 
     public async Task<Result> Handle(SuspendTenantCommand request, CancellationToken ct)
     {

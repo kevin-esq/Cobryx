@@ -99,6 +99,229 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("WebhookEvents");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.AccountBalanceSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("JournalSequenceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AccountBalanceSnapshots");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.BankMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("BookingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExternalRef")
+                        .HasColumnType("text");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("MatchedLedgerTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("MatchingConfidence")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<string>("MatchingType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RawPayload")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ValueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId", "BookingDate");
+
+                    b.HasIndex("TenantId", "ProviderTransactionId")
+                        .IsUnique();
+
+                    b.ToTable("BankMovements", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.JournalCheckpoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EntryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HashVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastEntryCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastFingerprint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("LastProcessedEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("LastProcessedSequenceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("JournalCheckpoints", (string)null);
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.LedgerAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -140,6 +363,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");
@@ -191,6 +417,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("Debit")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
@@ -204,7 +434,17 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<long>("JournalSequenceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("JournalSequenceId"));
+
                     b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Tags")
@@ -228,11 +468,78 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccountId");
+                    b.HasIndex("JournalSequenceId")
+                        .IsUnique();
 
                     b.HasIndex("TransactionId");
 
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "JournalSequenceId");
+
+                    b.HasIndex("TenantId", "AccountId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "AccountId", "JournalSequenceId");
+
                     b.ToTable("LedgerEntries", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.LedgerOutbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InternalNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("JournalSequenceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LedgerOutboxes");
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Entities.Accounting.LedgerTransaction", b =>
@@ -246,6 +553,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -303,7 +614,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "IsReversal");
+
+                    b.HasIndex("TenantId", "LoanId");
 
                     b.HasIndex("TenantId", "ReferenceId")
                         .IsUnique()
@@ -347,6 +662,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("LedgerBalance")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("LedgerFingerprintSnapshot")
+                        .HasColumnType("text");
 
                     b.Property<string>("MetadataJson")
                         .HasColumnType("text");
@@ -3360,6 +3678,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("FinancialSafeMode")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("GrowthMetricsTenantId")
                         .HasColumnType("uuid");
 
@@ -3402,6 +3723,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("StripeAccountId")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Tags")
                         .HasColumnType("text");

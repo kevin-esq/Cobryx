@@ -110,7 +110,7 @@ public class HardeningStressTests
         _integrityServiceMock.Setup(s => s.VerifyJournalIntegrityAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IntegrityReport(true, 1, 0, 0, "FINGERPRINT", [], false));
 
-        var engine = new BankReconciliationEngine(context, _integrityServiceMock.Object, _metrics, _reconLoggerMock.Object);
+        var engine = new BankReconciliationEngine(context, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
         var report = await engine.ReconcileBankMovementsAsync(tenantId);
 
         // Check confidence calculation: 0.85 - (0 * 0.03) - (log10(10)*0.05) = 0.85 - 0.05 = 0.80
@@ -145,8 +145,8 @@ public class HardeningStressTests
         using (var context1 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         using (var context2 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
-            var engine1 = new BankReconciliationEngine(context1, _integrityServiceMock.Object, _metrics, _reconLoggerMock.Object);
-            var engine2 = new BankReconciliationEngine(context2, _integrityServiceMock.Object, _metrics, _reconLoggerMock.Object);
+            var engine1 = new BankReconciliationEngine(context1, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
+            var engine2 = new BankReconciliationEngine(context2, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
 
             var task1 = engine1.ReconcileBankMovementsAsync(tenantId);
             var task2 = engine2.ReconcileBankMovementsAsync(tenantId);

@@ -28,7 +28,7 @@ Every public-facing class (Controller, DTO, Request) and public method (Action) 
 
 Outcome codes are the primary way consumers handle business results. They must be explicitly documented in the `<remarks>` section of every endpoint following the namespaced pattern `MODULE.ENTITY.ACTION_RESULT`.
 
-### Pattern:
+### Pattern
 ```xml
 /// <remarks>
 /// Possible Outcomes:
@@ -46,7 +46,7 @@ Providing realistic data and clear validation metadata is mandatory for all prim
 ### The "Verbose Record" Pattern (Mandatory for Records)
 Standard primary constructor parameter documentation (`/// <param name="...">`) often fails to display examples correctly in Swagger. **Always use explicit properties with separate summary and example tags.**
 
-#### Correct Pattern for Request DTOs:
+#### Correct Pattern for Request DTOs
 ```csharp
 public record ResendVerificationRequest([Required] string Email, string? Locale = "es-MX")
 {
@@ -75,7 +75,7 @@ For properties of type `IEnumerable<T>`, `List<T>`, or `PaginatedList<T>`, speci
 public List<InvoiceContract> Invoices { get; init; } = Invoices;
 ```
 
-### JSON Examples (<example> tag)
+### JSON Examples (`<example>` tag)
 - Use **realistic** data (e.g., actual names, real-looking UUIDs, valid ISO dates).
 - Never use generic placeholders like `string` or `0`.
 - **Enums**: Since we use `JsonStringEnumConverter`, document valid values in `<remarks>`. Ensure casing matches the project configuration (typically PascalCase or camelCase).

@@ -18,3 +18,10 @@ public enum CompoundingFrequency
     Weekly = 2,
     Monthly = 3
 }
+
+public enum DayCountBasis
+{
+    Actual365 = 1,
+    Actual360 = 2,
+    Thirty360 = 3
+}

@@ -11,11 +11,11 @@ We do not log or measure human-readable strings. All events are identified by st
 ### Outcome Code Namespacing
 Codes must follow a strict three-tier hierarchy for automated aggregation and discoverability in observability tools: `MODULE.ENTITY.ACTION_RESULT`.
 
-| Segment | Purpose | Example |
-|---------|---------|---------|
-| **MODULE** | High-level system area (low cardinality). | `BILLING`, `AUTH`, `LENDING` |
-| **ENTITY** | Domain object being acted upon. | `INVOICE`, `USER`, `CREDIT` |
-| **ACTION_RESULT** | Specific outcome of the operation. | `PAYMENT_SUCCESS`, `VALIDATION_FAILED` |
+| Segment           | Purpose                                   | Example                                |
+| ----------------- | ----------------------------------------- | -------------------------------------- |
+| **MODULE**        | High-level system area (low cardinality). | `BILLING`, `AUTH`, `LENDING`           |
+| **ENTITY**        | Domain object being acted upon.           | `INVOICE`, `USER`, `CREDIT`            |
+| **ACTION_RESULT** | Specific outcome of the operation.        | `PAYMENT_SUCCESS`, `VALIDATION_FAILED` |
 
 **Correct**: `BILLING.INVOICE.PAYMENT_FAILED`
 **Incorrect**: `BILLING.FAILED_PAYMENT`
@@ -26,12 +26,12 @@ Codes must follow a strict three-tier hierarchy for automated aggregation and di
 
 Logging levels must correspond to the impact on the system to avoid "alert fatigue."
 
-| Outcome Category | HTTP Code | Serilog Level | Alerting Threshold |
-|------------------|-----------|---------------|-------------------|
-| **Success** | 2xx | `Information` | None |
-| **Business Error** | 4xx | `Warning` | Rate-based (e.g., >10% failure in 5m) |
-| **System Error** | 5xx | `Error` | Immediate (e.g., >1 occurrence in 1m) |
-| **Security Threat** | 401/403 | `Critical` | Immediate (e.g., Brute Force Detection) |
+| Outcome Category    | HTTP Code | Serilog Level | Alerting Threshold                      |
+| ------------------- | --------- | ------------- | --------------------------------------- |
+| **Success**         | 2xx       | `Information` | None                                    |
+| **Business Error**  | 4xx       | `Warning`     | Rate-based (e.g., >10% failure in 5m)   |
+| **System Error**    | 5xx       | `Error`       | Immediate (e.g., >1 occurrence in 1m)   |
+| **Security Threat** | 401/403   | `Critical`    | Immediate (e.g., Brute Force Detection) |
 
 ---
 

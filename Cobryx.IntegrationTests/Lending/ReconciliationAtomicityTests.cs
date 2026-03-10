@@ -144,7 +144,15 @@ public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFa
         var codes = new[] { "1010", "1210", "4010", "4020", "5010", "4030" };
         foreach (var code in codes)
         {
-            var acc = new LedgerAccount(tenantId, code, $"Acc {code}", LedgerAccountType.Asset, "MXN", true);
+            var role = code switch
+            {
+                "1010" => LedgerAccountRole.Available,
+                "1210" => LedgerAccountRole.Receivable,
+                "4020" => LedgerAccountRole.Fees,
+                "5010" => LedgerAccountRole.Loss,
+                _ => LedgerAccountRole.None
+            };
+            var acc = new LedgerAccount(tenantId, code, $"Acc {code}", LedgerAccountType.Asset, role, "MXN", true);
             context.LedgerAccounts.Add(acc);
         }
 

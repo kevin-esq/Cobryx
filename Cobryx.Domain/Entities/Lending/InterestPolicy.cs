@@ -16,6 +16,7 @@ public class InterestPolicy : BaseEntity, ITenantEntity
     public InterestMethod Method { get; private set; }
     public decimal? Rate { get; private set; }
     public CompoundingFrequency? CompoundingFrequency { get; private set; }
+    public DayCountBasis DayCountBasis { get; private set; } = DayCountBasis.Actual365;
     public decimal? CashPrice { get; private set; }
     public decimal? CreditPrice { get; private set; }
     public bool IsActive { get; private set; }
@@ -114,6 +115,21 @@ public class InterestPolicy : BaseEntity, ITenantEntity
             return 0;
 
         return (CreditPrice.Value - CashPrice.Value) / CashPrice.Value * 100;
+    }
+
+    public decimal CalculateDailyRate()
+    {
+        if (!Rate.HasValue) return 0;
+
+        var annualRate = Rate.Value / 100;
+        var divisor = DayCountBasis switch
+        {
+            DayCountBasis.Actual360 => 360,
+            DayCountBasis.Thirty360 => 360,
+            _ => 365
+        };
+
+        return annualRate / divisor;
     }
 
     public void Deactivate()

@@ -14,16 +14,11 @@ public record LedgerHealthDto(
     int OrphanedEntryCount,
     List<string> Issues);
 
-public class GetLedgerHealthHandler : IRequestHandler<GetLedgerHealthQuery, Result<LedgerHealthDto>>
+public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedgerHealthHandler> logger)
+    : IRequestHandler<GetLedgerHealthQuery, Result<LedgerHealthDto>>
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ILogger<GetLedgerHealthHandler> _logger;
-
-    public GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedgerHealthHandler> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly ILogger<GetLedgerHealthHandler> _logger = logger;
 
     public async Task<Result<LedgerHealthDto>> Handle(GetLedgerHealthQuery request, CancellationToken ct)
     {
@@ -41,7 +36,7 @@ public class GetLedgerHealthHandler : IRequestHandler<GetLedgerHealthQuery, Resu
             .Where(x => x.Balance != 0)
             .ToListAsync(ct);
 
-        if (imbalancedTxs.Any())
+        if (imbalancedTxs.Count > 0)
         {
             var msg = $"{imbalancedTxs.Count} imbalanced transactions detected.";
             issues.Add(msg);
@@ -74,7 +69,7 @@ public class GetLedgerHealthHandler : IRequestHandler<GetLedgerHealthQuery, Resu
             _logger.LogError("LEDGER HEALTH: {Message}", msg);
         }
 
-        var status = imbalancedTxs.Any() ? "CRITICAL" : (issues.Any() ? "DEGRADED" : "HEALTHY");
+        var status = imbalancedTxs.Count > 0 ? "CRITICAL" : (issues.Count > 0 ? "DEGRADED" : "HEALTHY");
 
         return Result.Success(new LedgerHealthDto(
             Status: status,

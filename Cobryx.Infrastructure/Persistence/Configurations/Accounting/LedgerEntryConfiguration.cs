@@ -18,6 +18,13 @@ public class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEntry>
         builder.Property(x => x.Credit)
             .HasPrecision(18, 4);
 
+        builder.Property(x => x.JournalSequenceId)
+            .ValueGeneratedOnAdd(); // In postgres we'll link this to a SEQUENCE
+
+        builder.HasIndex(x => new { x.TenantId, x.JournalSequenceId });
+        builder.HasIndex(x => new { x.TenantId, x.AccountId, x.JournalSequenceId });
+        builder.HasIndex(x => x.JournalSequenceId).IsUnique();
+
         builder.HasIndex(x => new { x.TenantId, x.Id });
         builder.HasIndex(x => new { x.TenantId, x.AccountId, x.CreatedAt });
         builder.HasIndex(x => new { x.TenantId, x.CreatedAt });

@@ -22,6 +22,7 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
     public DateTime FirstPaymentDate { get; private set; }
     public int GracePeriodDays { get; private set; }
     public Guid? LateFeePolicyId { get; private set; }
+    public Guid PaymentApplicationPolicyId { get; private set; }
     public RoundingMode RoundingMode { get; private set; }
     public LoanOrigin Origin { get; private set; }
     public Guid? CreditSaleId { get; private set; }
@@ -32,6 +33,9 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
     public DateTime? SignedAt { get; private set; }
 
     public virtual Loan? Loan { get; private set; }
+    public virtual InterestPolicy InterestPolicy { get; private set; } = null!;
+    public virtual LateFeePolicy? LateFeePolicy { get; private set; }
+    public virtual PaymentApplicationPolicy PaymentApplicationPolicy { get; private set; } = null!;
 
     private LoanAgreement() { }
 
@@ -53,7 +57,8 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         bool isRecoverable = false,
         decimal? recoveryValue = null,
         int daysBetweenPayments = 0,
-        string currency = CobryxDefaults.Currency)
+        string currency = CobryxDefaults.Currency,
+        Guid? paymentApplicationPolicyId = null)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
@@ -82,6 +87,7 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         ProductSnapshot = productSnapshot;
         IsRecoverable = isRecoverable;
         RecoveryValue = recoveryValue;
+        PaymentApplicationPolicyId = paymentApplicationPolicyId ?? Guid.Empty; // Should be set during creation flow
         IsSigned = false;
     }
 

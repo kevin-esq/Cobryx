@@ -41,7 +41,7 @@ The `errors` object is a map where:
 Validation codes are hierarchical to allow granular frontend mapping:
 `VALIDATION.{MODULE}.{FIELD}.{REASON}`
 
-### Common Patterns:
+### Common Patterns
 - **REQUIRED**: `VALIDATION.CUSTOMER.FIRST_NAME.REQUIRED`
 - **INVALID**: `VALIDATION.CUSTOMER.PHONE.INVALID`
 - **TOO_LONG**: `VALIDATION.CUSTOMER.FIRST_NAME.TOO_LONG`

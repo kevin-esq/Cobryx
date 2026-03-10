@@ -14,7 +14,7 @@ Example: `CRM.CUSTOMER.CREATED_SUCCESS`
 **Endpoint:** POST /api/v1/auth/login
 **HTTP Status:** 200
 
-#### Meaning
+#### Meaning: Login
 The user has successfully logged in and a session has been established.
 
 ---
@@ -23,7 +23,7 @@ The user has successfully logged in and a session has been established.
 **Endpoint:** POST /api/v1/auth/login
 **HTTP Status:** 200
 
-#### Meaning
+#### Meaning: MFA Required
 Primary credentials are valid, but MFA is required to complete the login.
 
 ---
@@ -32,7 +32,7 @@ Primary credentials are valid, but MFA is required to complete the login.
 **Endpoint:** POST /api/v1/auth/signup
 **HTTP Status:** 201
 
-#### Meaning
+#### Meaning: Signup
 A new user account has been successfully created.
 
 ---
@@ -41,7 +41,7 @@ A new user account has been successfully created.
 **Endpoint:** POST /api/v1/auth/signup
 **HTTP Status:** 200
 
-#### Meaning
+#### Meaning: Verification Required
 Account created, but email verification is required.
 
 ---
@@ -52,7 +52,7 @@ Account created, but email verification is required.
 **Endpoint:** POST /api/v1/customers
 **HTTP Status:** 201
 
-#### Meaning
+#### Meaning: Created
 A new customer record has been created.
 
 ---
@@ -61,7 +61,7 @@ A new customer record has been created.
 **Endpoint:** PUT /api/v1/customers/{id}
 **HTTP Status:** 200
 
-#### Meaning
+#### Meaning: Update
 Customer details have been updated.
 
 ---

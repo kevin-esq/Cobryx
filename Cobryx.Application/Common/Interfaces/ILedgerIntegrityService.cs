@@ -14,6 +14,21 @@ public interface ILedgerIntegrityService
     /// Checks if any financial circuit breakers should be tripped based on recent drifts.
     /// </summary>
     Task<bool> CheckCircuitBreakersAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Scans the global ledger for sequence gaps (missing entries).
+    /// </summary>
+    Task<List<long>> VerifyGlobalSequenceGapsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Verifies the global zero-sum invariant across the entire ledger.
+    /// </summary>
+    Task<bool> VerifyGlobalSumInvariantAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Verifies a specific account snapshot against the current ledger delta.
+    /// </summary>
+    Task<bool> VerifyAccountSnapshotAsync(Guid snapshotId, CancellationToken ct = default);
 }
 
 public record IntegrityReport(
