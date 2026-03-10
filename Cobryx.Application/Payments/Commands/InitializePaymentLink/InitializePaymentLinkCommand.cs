@@ -64,7 +64,7 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
 
         if (!tenant.IsConnectActive && !string.IsNullOrEmpty(tenant.StripeAccountId))
         {
-            return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus); // TODO: Specific Connect Error
+            return Result.Failure<string>(DomainErrorCode.PaymentLink.ConnectNotActive);
         }
 
         // 4. Return existing secret if already processing (Intent Reuse)

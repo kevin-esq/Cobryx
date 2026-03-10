@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Common;
 using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Tenants.Commands.GetConnectOnboardingLink;
@@ -39,18 +40,33 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
         // 1. Ensure Stripe Account exists
         if (string.IsNullOrEmpty(tenant.StripeAccountId))
         {
+            // Fetch Primary Admin / Owner Email
+            var owner = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Role.Name == Role.Constants.Owner, ct);
+
+            if (owner == null)
+            {
+                // Fallback to any Admin if no explicit Owner found
+                owner = await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Role.Name == Role.Constants.Admin, ct);
+            }
+
+            var onboardingEmail = owner?.Email.Value ?? "onboarding@cobryx.com"; // Final fallback to system if misconfigured
+
             try
             {
-                // We'll use the tenant's business name and email (TODO: Fetch primary admin email if needed)
                 var stripeAccountId = await _stripeService.CreateConnectAccountAsync(
-                    "onboarding@cobryx.com", // Placeholder or fetch correct email
+                    onboardingEmail,
                     tenant.BusinessName,
                     ct);
 
                 tenant.SetStripeAccountId(stripeAccountId);
                 await _context.SaveChangesAsync(ct);
 
-                _logger.LogInformation("Created Stripe Connect Account {AccountId} for Tenant {TenantId}", stripeAccountId, tenant.Id);
+                _logger.LogInformation("Created Stripe Connect Account {AccountId} for Tenant {TenantId} (Email: {Email})",
+                    stripeAccountId, tenant.Id, onboardingEmail);
             }
             catch (Exception ex)
             {

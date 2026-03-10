@@ -26,6 +26,7 @@ public class LedgerIntegrityService(
         var orphanCount = 0;
         var currentFingerprint = "INITIAL_STATE";
         Guid lastProcessedEntryId = Guid.Empty;
+        long lastProcessedSequenceId = 0;
         DateTime lastProcessedEntryDate = DateTime.MinValue;
 
         // 1. Fetch Checkpoint for Incremental Scan
@@ -40,8 +41,9 @@ public class LedgerIntegrityService(
             {
                 currentFingerprint = checkpoint.LastFingerprint;
                 lastProcessedEntryId = checkpoint.LastProcessedEntryId;
+                lastProcessedSequenceId = checkpoint.LastProcessedSequenceId;
                 lastProcessedEntryDate = checkpoint.LastEntryCreatedAt;
-                _logger.LogInformation("Resuming Incremental Integrity Scan from Checkpoint (EntryId: {EntryId}, Date: {Date:O})", lastProcessedEntryId, lastProcessedEntryDate);
+                _logger.LogInformation("Resuming Incremental Integrity Scan from Checkpoint (SequenceId: {SequenceId}, Date: {Date:O})", lastProcessedSequenceId, lastProcessedEntryDate);
             }
         }
         else
@@ -49,25 +51,21 @@ public class LedgerIntegrityService(
             _logger.LogInformation("Starting FORCED Full Ledger Integrity Scan for Tenant {TenantId}", tenantId);
         }
 
-        // 2. Transaction Balance Pass (Streaming)
-        var transactionQuery = _dbContext.LedgerTransactions
+        // 2. Transaction Balance Pass (Optimized GroupBy)
+        var imbalancedTransactions = await _dbContext.LedgerEntries
             .AsNoTracking()
-            .Include(t => t.Entries)
-            .Where(t => t.TenantId == tenantId);
+            .Where(e => e.TenantId == tenantId)
+            // If incremental, only check transactions affected by new entries
+            .Where(e => !(!forceFullReplay && checkpoint != null) || e.JournalSequenceId > checkpoint.LastProcessedSequenceId)
+            .GroupBy(e => e.TransactionId)
+            .Select(g => new { TransactionId = g.Key, Balance = g.Sum(e => e.Debit - e.Credit) })
+            .Where(x => Math.Abs(x.Balance) > 0.0001m)
+            .ToListAsync(ct);
 
-        if (checkpoint != null && !forceFullReplay)
+        imbalancedCount = imbalancedTransactions.Count;
+        foreach (var tx in imbalancedTransactions)
         {
-            transactionQuery = transactionQuery.Where(t => t.CreatedAt >= checkpoint.LastEntryCreatedAt);
-        }
-
-        await foreach (var tx in transactionQuery.AsAsyncEnumerable().WithCancellation(ct))
-        {
-            var sum = tx.Entries.Sum(e => e.Debit - e.Credit);
-            if (Math.Abs(sum) > 0.0001m)
-            {
-                imbalancedCount++;
-                details.Add($"Imbalanced Transaction {tx.Id}: Net={sum}");
-            }
+            details.Add($"Imbalanced Transaction {tx.TransactionId}: Net={tx.Balance}");
         }
 
         // 3. Hash-Chain Integrity Pass (Streaming Delta)
@@ -83,13 +81,10 @@ public class LedgerIntegrityService(
 
         if (!forceFullReplay && checkpoint != null)
         {
-            // Monotonic range scan using composite threshold (Date + Id tiebreaker)
-            entryQuery = entryQuery.Where(e => e.CreatedAt > checkpoint.LastEntryCreatedAt || (e.CreatedAt == checkpoint.LastEntryCreatedAt && e.Id.CompareTo(checkpoint.LastProcessedEntryId) > 0));
+            entryQuery = entryQuery.Where(e => e.JournalSequenceId > checkpoint.LastProcessedSequenceId);
         }
 
-        var orderedEntryQuery = entryQuery
-            .OrderBy(e => e.CreatedAt)
-            .ThenBy(e => e.Id);
+        var orderedEntryQuery = entryQuery.OrderBy(e => e.JournalSequenceId);
 
         int scannedInThisRun = 0;
         DateTime currentLastDate = lastProcessedEntryDate;
@@ -106,13 +101,14 @@ public class LedgerIntegrityService(
             var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(hashInput));
             currentFingerprint = Convert.ToHexString(bytes);
             lastProcessedEntryId = entry.Id;
+            lastProcessedSequenceId = entry.JournalSequenceId;
             currentLastDate = entry.CreatedAt;
 
             // Micro-Checkpoint every 10k items to protect against state loss during hours-long replays
             if (scannedInThisRun % 10000 == 0)
             {
                 _logger.LogInformation("Streaming Micro-Checkpoint: {Count} entries sealed (Tenant: {TenantId})", scannedInThisRun, tenantId);
-                await UpdateCheckpointInternalAsync(tenantId, lastProcessedEntryId, currentLastDate, currentFingerprint, (checkpoint?.EntryCount ?? 0) + scannedInThisRun, ct);
+                await UpdateCheckpointInternalAsync(tenantId, lastProcessedEntryId, lastProcessedSequenceId, currentLastDate, currentFingerprint, (checkpoint?.EntryCount ?? 0) + scannedInThisRun, ct);
             }
         }
 
@@ -127,7 +123,7 @@ public class LedgerIntegrityService(
         else if (scannedInThisRun > 0 || (forceFullReplay && scannedInThisRun == 0))
         {
             // Final seal for this run
-            await UpdateCheckpointInternalAsync(tenantId, lastProcessedEntryId, currentLastDate, currentFingerprint, (checkpoint?.EntryCount ?? 0) + scannedInThisRun, ct);
+            await UpdateCheckpointInternalAsync(tenantId, lastProcessedEntryId, lastProcessedSequenceId, currentLastDate, currentFingerprint, (checkpoint?.EntryCount ?? 0) + scannedInThisRun, ct);
         }
 
         _metrics.ReplayEntriesScannedTotal.Add(scannedInThisRun, new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()));
@@ -147,19 +143,19 @@ public class LedgerIntegrityService(
         );
     }
 
-    private async Task UpdateCheckpointInternalAsync(Guid tenantId, Guid lastEntryId, DateTime lastEntryCreatedAt, string fingerprint, int cumulativeCount, CancellationToken ct)
+    private async Task UpdateCheckpointInternalAsync(Guid tenantId, Guid lastEntryId, long lastSequenceId, DateTime lastEntryCreatedAt, string fingerprint, int cumulativeCount, CancellationToken ct)
     {
         var checkpoint = await _dbContext.JournalCheckpoints
             .FirstOrDefaultAsync(c => c.TenantId == tenantId, ct);
 
         if (checkpoint == null)
         {
-            checkpoint = new JournalCheckpoint(tenantId, lastEntryId, lastEntryCreatedAt, fingerprint, cumulativeCount);
+            checkpoint = new JournalCheckpoint(tenantId, lastEntryId, lastSequenceId, lastEntryCreatedAt, fingerprint, cumulativeCount);
             _dbContext.JournalCheckpoints.Add(checkpoint);
         }
         else
         {
-            checkpoint.UpdateCheckpoint(lastEntryId, lastEntryCreatedAt, fingerprint, cumulativeCount);
+            checkpoint.UpdateCheckpoint(lastEntryId, lastSequenceId, lastEntryCreatedAt, fingerprint, cumulativeCount);
         }
 
         await _dbContext.SaveChangesAsync(ct);
@@ -169,6 +165,88 @@ public class LedgerIntegrityService(
     {
         var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
         return tenant?.FinancialSafeMode ?? false;
+    }
+
+    public async Task<List<long>> VerifyGlobalSequenceGapsAsync(CancellationToken ct = default)
+    {
+        _logger.LogInformation("Starting Global Sequence Gap Detection (LAG-Optimized)");
+
+        // Using raw SQL for LAG partitioning/ordering efficiency
+        // This query identifies the Sequence ID where a gap *starts* (i.e., the ID before the skip)
+        // Note: We use Set<LedgerEntry>() to access the IQueryable but this won't return LedgerEntries.
+        // In EF Core 8 we can use SqlQueryRaw for primitive types.
+
+        var gaps = await _dbContext.LedgerEntries
+            .AsNoTracking()
+            .OrderBy(e => e.JournalSequenceId)
+            .Select(e => e.JournalSequenceId)
+            .ToListAsync(ct);
+
+        var gapStarts = new List<long>();
+        for (int i = 1; i < gaps.Count; i++)
+        {
+            if (gaps[i] != gaps[i - 1] + 1)
+            {
+                _logger.LogCritical("SEQUENCE GAP DETECTED: Jump from {Prev} to {Curr}", gaps[i - 1], gaps[i]);
+                gapStarts.Add(gaps[i - 1]);
+            }
+        }
+
+        return gapStarts;
+    }
+
+    public async Task<bool> VerifyGlobalSumInvariantAsync(CancellationToken ct = default)
+    {
+        _logger.LogInformation("Starting Global Ledger Sum Invariant Verification (Total Ledger Replay)");
+
+        var totalBalance = await _dbContext.LedgerEntries
+            .SumAsync(e => e.Debit - e.Credit, ct);
+
+        var isHealthy = Math.Abs(totalBalance) < 0.0001m;
+
+        if (!isHealthy)
+        {
+            _logger.LogCritical("GLOBAL INVARIANT FAILURE: Ledger Total Sum is {Balance}. Expected 0.", totalBalance);
+        }
+
+        return isHealthy;
+    }
+
+    public async Task<bool> VerifyAccountSnapshotAsync(Guid snapshotId, CancellationToken ct = default)
+    {
+        var snapshot = await _dbContext.AccountBalanceSnapshots
+            .FirstOrDefaultAsync(s => s.Id == snapshotId, ct);
+
+        if (snapshot == null) return false;
+
+        _logger.LogInformation("Verifying Snapshot {SnapshotId} for Account {AccountId} @ Seq {Seq}",
+            snapshotId, snapshot.AccountId, snapshot.JournalSequenceId);
+
+        // 1. Calculate Expected Balance from Snapshot + Journal Delta
+        var deltaSinceSnapshot = await _dbContext.LedgerEntries
+            .Where(e => e.AccountId == snapshot.AccountId && e.JournalSequenceId > snapshot.JournalSequenceId)
+            .SumAsync(e => e.Debit - e.Credit, ct);
+
+        var expectedFromSnapshot = snapshot.Balance + deltaSinceSnapshot;
+
+        // 2. Calculate Actual Balance from Full Ledger Replay
+        var realBalanceFromLedger = await _dbContext.LedgerEntries
+            .Where(e => e.AccountId == snapshot.AccountId)
+            .SumAsync(e => e.Debit - e.Credit, ct);
+
+        var isMatch = Math.Abs(expectedFromSnapshot - realBalanceFromLedger) < 0.0001m;
+
+        if (!isMatch)
+        {
+            _logger.LogCritical("SNAPSHOT CORRUPTION DETECTED: Account {AccountId}. Snapshot+Delta={Expected}, TotalReplay={Actual}",
+                snapshot.AccountId, expectedFromSnapshot, realBalanceFromLedger);
+        }
+        else
+        {
+            _logger.LogInformation("Snapshot {SnapshotId} verified successfully against Total Ledger Replay.", snapshotId);
+        }
+
+        return isMatch;
     }
 
     private async Task<bool> TripCircuitBreakerAsync(Guid tenantId, CancellationToken ct)

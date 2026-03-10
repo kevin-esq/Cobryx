@@ -108,35 +108,31 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
             .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.PaymentDate >= thirtyDaysAgo && p.Status == Domain.Enums.PaymentStatus.Completed)
             .SumAsync(p => p.Amount.Amount, cancellationToken);
 
-        // 2. Advanced KPI: Expected Collections (Simplified for current model)
-        // In a real system, we would join with Installments schedule. 
-        // For this v1, we'll use (TotalArrears + Scheduled) approx.
+        var expectedCollectionsLast30d = await dbContext.Set<Domain.Entities.Lending.Installment>()
+            .Where(i => i.Loan.TenantId == tenantId && !i.IsDeleted && i.DueDate >= thirtyDaysAgo && i.DueDate <= DateTime.UtcNow)
+            .SumAsync(i => i.TotalAmount, cancellationToken);
+
         var totalPrincipalDisbursed = await dbContext.Set<Domain.Entities.Lending.Loan>()
             .Where(l => l.TenantId == tenantId && !l.IsDeleted)
             .SumAsync(l => l.OriginalPrincipal, cancellationToken);
 
-        // 3. Calculation Logic
         var activeLoans = loans.Where(l => l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active).ToList();
         var totalPrincipalBalance = loans.Sum(l => l.CurrentPrincipalBalance);
         var overdueCount = loans.Count(l => l.DaysInArrears > 0);
 
-        // Overdue Risk: (Overdue Count / Total Active)
         var overdueRisk = activeLoans.Any()
             ? (decimal)overdueCount / activeLoans.Count * 100
             : 0;
 
-        // Collection Efficiency (Dummy target for demo: collections vs total arrears)
         var totalArrears = loans.Sum(l => l.CurrentInterestBalance + l.CurrentLateFeeBalance);
-        var collectionEfficiency = (totalArrears + collectionsLast30d) > 0
-            ? (collectionsLast30d / (totalArrears + collectionsLast30d)) * 100
+        var collectionEfficiency = expectedCollectionsLast30d > 0
+            ? (collectionsLast30d / expectedCollectionsLast30d) * 100
             : 100;
 
-        // Portfolio Yield (Interest vs Principal)
         var portfolioYield = totalPrincipalDisbursed > 0
             ? (loans.Sum(l => l.CurrentInterestBalance) / totalPrincipalDisbursed) * 100
             : 0;
 
-        // 4. Impact Signals (Psychographic logic)
         var signals = new List<ImpactSignalDto>();
 
         if (overdueRisk > 15)

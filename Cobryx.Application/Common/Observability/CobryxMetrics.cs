@@ -89,6 +89,22 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> ReplayEntriesScannedTotal { get; }
     public Histogram<double> ReplayDuration { get; }
 
+    // Balance Cache Metrics
+    public Counter<long> BalanceCacheHits { get; }
+    public Counter<long> BalanceCacheMisses { get; }
+    public Histogram<double> BalanceCacheRebuildDuration { get; }
+    public Counter<long> BalanceCacheRecomputeTotal { get; }
+    public Histogram<double> LedgerDeltaScanDuration { get; }
+    public Histogram<double> LedgerSnapshotAge { get; }
+    public Counter<long> LedgerCacheAtomicRejectTotal { get; }
+
+    // SRE metrics
+    public Histogram<double> ShadowReplayLag { get; }
+    public Counter<long> ShadowReplayEventsProcessed { get; }
+    public Counter<long> ShadowDriftDetected { get; }
+    public Counter<long> ShadowReplayThroughput { get; }
+    public Counter<long> ShadowReplayRebuildTotal { get; }
+
     // Elite SRE Infrastructure Metrics
     public ObservableGauge<double> PostgresWraparoundRiskRatio { get; }
     public ObservableGauge<double> PostgresWalSyncDurationSeconds { get; }
@@ -242,6 +258,22 @@ public sealed class CobryxMetrics : IDisposable
         CircuitBreakerTrippedTotal = _meter.CreateCounter<long>("financial_circuit_breaker_tripped_total", description: "Total number of times a financial circuit breaker was tripped");
         ReplayEntriesScannedTotal = _meter.CreateCounter<long>("ledger_replay_entries_scanned_total", description: "Total number of ledger entries scanned during integrity checks");
         ReplayDuration = _meter.CreateHistogram<double>("ledger_replay_duration_seconds", unit: "s", description: "Duration of ledger integrity replay runs");
+
+        BalanceCacheHits = _meter.CreateCounter<long>("ledger_balance_cache_hit_total", description: "Total hits on the Redis balance cache");
+        BalanceCacheMisses = _meter.CreateCounter<long>("ledger_balance_cache_miss_total", description: "Total misses on the Redis balance cache requiring SQL fallback");
+        BalanceCacheRebuildDuration = _meter.CreateHistogram<double>("ledger_balance_cache_rebuild_seconds", unit: "s", description: "Time taken to rebuild balance from Snapshot + Delta");
+
+        BalanceCacheRecomputeTotal = _meter.CreateCounter<long>("ledger_balance_recompute_total", description: "Total number of times a balance had to be recomputed from SQL");
+        LedgerDeltaScanDuration = _meter.CreateHistogram<double>("ledger_delta_scan_duration_seconds", unit: "s", description: "Duration of delta scans since last snapshot");
+        LedgerSnapshotAge = _meter.CreateHistogram<double>("ledger_snapshot_age_seconds", unit: "s", description: "Age of the latest snapshot used for balance calculation");
+        LedgerCacheAtomicRejectTotal = _meter.CreateCounter<long>("ledger_cache_atomic_reject_total", description: "Total number of Redis cache updates rejected due to stale sequence");
+
+        // SRE
+        ShadowReplayLag = _meter.CreateHistogram<double>("shadow_replay_lag_seconds", unit: "s", description: "Lag between primary ledger and shadow replay engine");
+        ShadowReplayEventsProcessed = _meter.CreateCounter<long>("shadow_replay_events_processed_total", description: "Total events processed by the shadow replay engine");
+        ShadowDriftDetected = _meter.CreateCounter<long>("shadow_drift_detected_total", description: "Total number of drift incidents detected by SRE");
+        ShadowReplayThroughput = _meter.CreateCounter<long>("shadow_replay_throughput", description: "Throughput of the shadow replay engine");
+        ShadowReplayRebuildTotal = _meter.CreateCounter<long>("shadow_replay_rebuild_total", description: "Total number of times shadow state was rebuilt");
 
         // Elite SRE Infrastructure
         PostgresWraparoundRiskRatio = _meter.CreateObservableGauge<double>("postgres_wraparound_risk_ratio", () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");

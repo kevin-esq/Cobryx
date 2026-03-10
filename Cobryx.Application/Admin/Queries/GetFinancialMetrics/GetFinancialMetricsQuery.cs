@@ -19,14 +19,10 @@ public record FinancialMetricsDto(
     decimal PAR90Percentage,
     int TotalActiveLoans);
 
-public class GetFinancialMetricsHandler : IRequestHandler<GetFinancialMetricsQuery, Result<FinancialMetricsDto>>
+public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
+    : IRequestHandler<GetFinancialMetricsQuery, Result<FinancialMetricsDto>>
 {
-    private readonly ICobryxDbContext _dbContext;
-
-    public GetFinancialMetricsHandler(ICobryxDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
 
     public async Task<Result<FinancialMetricsDto>> Handle(GetFinancialMetricsQuery request, CancellationToken ct)
     {

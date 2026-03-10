@@ -8,11 +8,16 @@ public class ProductionAlertingService : IAlertingService
 {
     private readonly ILogger<ProductionAlertingService> _logger;
     private readonly IEmailService _emailService;
+    private readonly ISlackService _slackService;
 
-    public ProductionAlertingService(ILogger<ProductionAlertingService> logger, IEmailService emailService)
+    public ProductionAlertingService(
+        ILogger<ProductionAlertingService> logger,
+        IEmailService emailService,
+        ISlackService slackService)
     {
         _logger = logger;
         _emailService = emailService;
+        _slackService = slackService;
     }
 
     public async Task SendAlertAsync(
@@ -57,8 +62,10 @@ public class ProductionAlertingService : IAlertingService
     {
         try
         {
-            // For now, we use Email as the reliable fallback.
-            // In a real env, this is where we'd plug in Slack/Discord/PagerDuty.
+            // 1. Dispatch to Slack (Modern standard)
+            await _slackService.SendAlertAsync(message, $"Cobryx Alert: [{level}] from {source}", GetColor(level));
+
+            // 2. Dispatch to Email (Reliable fallback)
             var subject = $"Cobryx Alert: [{level}] from {source}";
             var body = $"""
                 <h3>Cobryx System Alert</h3>
@@ -72,7 +79,6 @@ public class ProductionAlertingService : IAlertingService
                 <p><small>This is an automated alert from the Cobryx Production Monitor.</small></p>
                 """;
 
-            // TARGET: Ops Team
             await _emailService.SendEmailAsync("ops@cobryx.com", subject, body, ct);
         }
         catch (Exception ex)
@@ -80,4 +86,11 @@ public class ProductionAlertingService : IAlertingService
             _logger.LogError(ex, "Failed to dispatch alert to external communications.");
         }
     }
+
+    private static string GetColor(AlertLevel level) => level switch
+    {
+        AlertLevel.Critical => "#FF0000", // Red
+        AlertLevel.Degraded => "#FFA500", // Orange
+        _ => "#32CD32" // LimeGreen
+    };
 }

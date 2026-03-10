@@ -29,10 +29,20 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
     public decimal ArrearsAmount { get; private set; }
     public FinancialStatus FinancialStatus { get; private set; }
     public DateTime? NextPaymentDueDate { get; private set; }
+    public DateTime LastAccrualDate { get; private set; }
+    public DateTime DisbursementDate { get; private set; }
     public DateTime? ClosedAt { get; private set; }
+    public DateTime? ClosedDate => ClosedAt;
     public bool IsDemo { get; private set; }
+    public bool IsWrittenOff { get; private set; }
+    public DateTime? WriteOffDate { get; private set; }
 
     public virtual LoanAgreement Agreement { get; private set; } = null!;
+    public virtual LoanDelinquencyState? DelinquencyState { get; private set; }
+    public virtual ICollection<LoanCollectionsEvent> CollectionsEvents { get; private set; } = new List<LoanCollectionsEvent>();
+
+    private readonly List<AccruedCharge> _accruedCharges = new();
+    public IReadOnlyCollection<AccruedCharge> AccruedCharges => _accruedCharges.AsReadOnly();
 
     private readonly List<Installment> _installments = new();
     public IReadOnlyCollection<Installment> Installments => _installments.AsReadOnly();
@@ -196,6 +206,14 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
+    public void MarkAsWrittenOff(DateTime date)
+    {
+        IsWrittenOff = true;
+        WriteOffDate = date;
+        FinancialStatus = FinancialStatus.ChargedOff;
+        UpdateTimestamp();
+    }
+
     public void MarkAsChargedOff()
     {
         if (FinancialStatus == FinancialStatus.ChargedOff) return;
@@ -244,14 +262,73 @@ public class Loan : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void AccrueInterest(DateTime asOfDate, decimal dailyRate)
+    public void MarkAccrued(DateTime accrualDate)
     {
+        if (accrualDate <= LastAccrualDate)
+            return;
+
+        LastAccrualDate = accrualDate.Date;
         UpdateTimestamp();
     }
 
-    public void AssessLateFees(DateTime asOfDate, decimal lateFeeAmount)
+    public void AddAccruedCharge(AccruedCharge charge)
     {
-        CurrentLateFeeBalance += lateFeeAmount;
+        if (charge.LoanId != Id)
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
+
+        if (charge.AccrualDate <= LastAccrualDate && _accruedCharges.Any(c => c.AccrualDate == charge.AccrualDate && c.Type == charge.Type))
+            throw new DomainException(DomainErrorCode.Loans.DuplicateAccrual);
+
+        _accruedCharges.Add(charge);
+
+        switch (charge.Type)
+        {
+            case ChargeType.OrdinaryInterest:
+                CurrentInterestBalance += charge.Amount;
+                OutstandingInterest += charge.Amount;
+                break;
+            case ChargeType.LateFee:
+            case ChargeType.Penalty:
+                CurrentLateFeeBalance += charge.Amount;
+                OutstandingFees += charge.Amount;
+                break;
+        }
+
+        MarkAccrued(charge.AccrualDate);
         UpdateTimestamp();
     }
+
+    public void AssessLateFees(DateTime date, decimal amount)
+    {
+        if (amount <= 0) return;
+        AddAccruedCharge(new AccruedCharge(Id, ChargeType.LateFee, amount, date));
+    }
+
+    public void ApplyAllocation(LoanPaymentAllocation allocation)
+    {
+        if (allocation.LoanId != Id)
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
+
+        // Apply with 10-decimal precision
+        OutstandingFees = Math.Max(0, OutstandingFees - allocation.FeesApplied);
+        OutstandingInterest = Math.Max(0, OutstandingInterest - allocation.InterestApplied);
+        CurrentPrincipalBalance = Math.Max(0, CurrentPrincipalBalance - allocation.PrincipalApplied);
+
+        CurrentInterestBalance = OutstandingInterest;
+        CurrentLateFeeBalance = OutstandingFees;
+
+        TotalPaid += (allocation.FeesApplied + allocation.InterestApplied + allocation.PrincipalApplied);
+
+        // If principal is zero and no other debt, close the loan
+        if (CurrentPrincipalBalance == 0 && OutstandingInterest == 0 && OutstandingFees == 0)
+        {
+            MarkAsClosed();
+        }
+
+        UpdateTimestamp();
+    }
+
+    public decimal OutstandingInterest { get; private set; }
+    public decimal OutstandingFees { get; private set; }
+    public decimal OutstandingPrincipal => CurrentPrincipalBalance;
 }

@@ -199,6 +199,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode InvalidInterestPolicy = new("DOMAIN.LOAN.INVALID_INTEREST_POLICY");
         public static readonly DomainErrorCode InvalidLateFeePolicy = new("DOMAIN.LOAN.INVALID_LATE_FEE_POLICY");
         public static readonly DomainErrorCode CreditSaleNotFound = new("DOMAIN.LOAN.CREDIT_SALE_NOT_FOUND");
+        public static readonly DomainErrorCode DuplicateAccrual = new("DOMAIN.LOAN.DUPLICATE_ACCRUAL");
     }
 
     public static class Subscription
@@ -267,6 +268,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode AlreadyPaid = new("DOMAIN.PAYMENT_LINK.ALREADY_PAID");
         public static readonly DomainErrorCode LimitReached = new("DOMAIN.PAYMENT_LINK.LIMIT_REACHED");
         public static readonly DomainErrorCode InvalidStatus = new("DOMAIN.PAYMENT_LINK.INVALID_STATUS");
+        public static readonly DomainErrorCode ConnectNotActive = new("DOMAIN.PAYMENT_LINK.CONNECT_NOT_ACTIVE");
     }
 
     internal static DomainErrorCode From(string value) => new(value);

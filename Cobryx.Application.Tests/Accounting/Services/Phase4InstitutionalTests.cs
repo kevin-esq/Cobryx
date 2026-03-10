@@ -18,6 +18,9 @@ public class Phase4InstitutionalTests
     private readonly DbContextOptions<CobryxDbContext> _dbOptions;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Mock<ITenantProvider> _tenantProviderMock;
+    private readonly Mock<ILedgerIntegrityService> _integrityServiceMock;
+    private readonly Mock<ILogger<BankReconciliationEngine>> _reconLoggerMock;
+    private readonly CobryxMetrics _metrics;
 
     public Phase4InstitutionalTests()
     {
@@ -33,6 +36,12 @@ public class Phase4InstitutionalTests
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, _tenantId);
         context.Tenants.Add(tenant);
         context.SaveChanges();
+        _integrityServiceMock = new Mock<ILedgerIntegrityService>();
+        _integrityServiceMock.Setup(s => s.VerifyJournalIntegrityAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IntegrityReport(true, 1, 0, 0, "INITIAL_FINGERPRINT", new List<string>(), false));
+
+        _reconLoggerMock = new Mock<ILogger<BankReconciliationEngine>>();
+        _metrics = new CobryxMetrics();
     }
 
     [Fact]
@@ -40,7 +49,7 @@ public class Phase4InstitutionalTests
     {
         // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
-        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
+        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
 
         // 1. Exact Match target
@@ -64,7 +73,7 @@ public class Phase4InstitutionalTests
         context.BankMovements.AddRange(m1, m2);
         await context.SaveChangesAsync();
 
-        var engine = new BankReconciliationEngine(context, Mock.Of<ILedgerIntegrityService>(), new CobryxMetrics(), Mock.Of<ILogger<BankReconciliationEngine>>());
+        var engine = new BankReconciliationEngine(context, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
 
         // Act
         var report = await engine.ReconcileBankMovementsAsync(_tenantId);
@@ -85,11 +94,15 @@ public class Phase4InstitutionalTests
         // Arrange
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
-            var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
-            context.LedgerAccounts.Add(acc);
+            var account = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
+            context.LedgerAccounts.Add(account);
 
             var tx1 = new LedgerTransaction(_tenantId, "Block 1", "B1");
-            tx1.AddEntry(acc.Id, 100, 100);
+            tx1.AddEntry(account.Id, 100, 100);
+            tx1.Post();
+
+            typeof(LedgerEntry).GetProperty("JournalSequenceId")!.SetValue(tx1.Entries.First(), 1L);
+
             context.LedgerTransactions.Add(tx1);
             await context.SaveChangesAsync();
         }
@@ -122,6 +135,12 @@ public class Phase4InstitutionalTests
             var acc = await context2.LedgerAccounts.FirstAsync();
             var tx2 = new LedgerTransaction(_tenantId, "Block 2", "B2");
             tx2.AddEntry(acc.Id, 200, 200);
+            tx2.Post();
+
+            // Manual Sequence assignment for InMemory test
+            var entry = tx2.Entries.First();
+            typeof(LedgerEntry).GetProperty("JournalSequenceId")!.SetValue(entry, 2L);
+
             context2.LedgerTransactions.Add(tx2);
             await context2.SaveChangesAsync();
         }

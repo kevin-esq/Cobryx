@@ -12,6 +12,7 @@ public class LedgerAccount : BaseEntity
     public string Code { get; private set; } = string.Empty; // e.g., "1010"
     public string Name { get; private set; } = string.Empty; // e.g., "Cash at Bank"
     public LedgerAccountType Type { get; private set; }
+    public LedgerAccountRole Role { get; private set; }
     public string Currency { get; private set; } = string.Empty;
     public bool IsSystem { get; private set; } // Prevents deletion of core accounts
 
@@ -22,6 +23,7 @@ public class LedgerAccount : BaseEntity
         string code,
         string name,
         LedgerAccountType type,
+        LedgerAccountRole role = LedgerAccountRole.None,
         string currency = "MXN",
         bool isSystem = false)
     {
@@ -29,6 +31,7 @@ public class LedgerAccount : BaseEntity
         Code = code;
         Name = name;
         Type = type;
+        Role = role;
         Currency = currency.ToUpperInvariant();
         IsSystem = isSystem;
     }

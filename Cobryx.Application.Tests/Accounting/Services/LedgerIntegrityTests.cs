@@ -40,14 +40,14 @@ public class LedgerIntegrityTests
     }
 
     private LedgerIntegrityService CreateService(CobryxDbContext context)
-        => new LedgerIntegrityService(context, new CobryxMetrics(), _loggerMock.Object);
+        => new(context, new CobryxMetrics(), _loggerMock.Object);
 
     [Fact]
     public async Task VerifyJournalIntegrityAsync_ShouldBeHealthy_WhenLedgerIsCorrect()
     {
         // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
-        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
+        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
 
         var tx = new LedgerTransaction(_tenantId, "Valid Tx", "REF-1");
@@ -73,7 +73,7 @@ public class LedgerIntegrityTests
     {
         // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
-        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
+        var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
 
         var tx = new LedgerTransaction(_tenantId, "Imbalanced Tx", "REF-2");
@@ -104,7 +104,7 @@ public class LedgerIntegrityTests
         // Arrange
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
-            var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, "USD", true);
+            var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
             context.LedgerAccounts.Add(acc);
 
             var tx = new LedgerTransaction(_tenantId, "Alteration Test", "REF-3");
@@ -160,11 +160,12 @@ public static class LoggerExtensions
 {
     public static void VerifyLog<T>(this Mock<ILogger<T>> loggerMock, LogLevel level, string message, Times times)
     {
+        var cleanedMessage = message.Replace("*", "");
         loggerMock.Verify(
             x => x.Log(
                 level,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains(message.Replace("*", ""))),
+                It.Is<It.IsAnyType>((v, _) => (v.ToString() ?? "").Contains(cleanedMessage)),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             times);

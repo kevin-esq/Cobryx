@@ -12,6 +12,7 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
     public Guid TenantId { get; private set; }
     public string Description { get; private set; } = string.Empty;
     public string? ReferenceId { get; private set; }
+    public string Currency { get; private set; } = "USD";
     public DateTime EffectiveDate { get; private set; }
     public bool IsPosted { get; private set; }
     public bool IsReversal { get; private set; }
@@ -23,12 +24,13 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
     private LedgerTransaction() { }
 
-    public LedgerTransaction(Guid tenantId, string description, string? referenceId = null, Guid? loanId = null)
+    public LedgerTransaction(Guid tenantId, string description, string? referenceId = null, Guid? loanId = null, string currency = "USD")
     {
         TenantId = tenantId;
         Description = description;
         ReferenceId = referenceId;
         LoanId = loanId;
+        Currency = currency;
         EffectiveDate = DateTime.UtcNow;
         IsPosted = false;
     }
@@ -37,7 +39,7 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
     {
         if (IsPosted) throw new DomainException(DomainErrorCode.Common.GeneralError);
 
-        _entries.Add(new LedgerEntry(TenantId, Id, accountId, debit, credit));
+        _entries.Add(new LedgerEntry(TenantId, Id, accountId, debit, credit, Currency, ReferenceId ?? string.Empty));
     }
 
     public void Post()

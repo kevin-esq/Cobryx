@@ -277,6 +277,26 @@ try
             job => job.RunAsync(CancellationToken.None),
             "*/10 * * * * *"); // Every 10 seconds
 
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Accounting.LedgerOutboxWorker>(
+            "ledger-cdc-outbox",
+            job => job.ProcessEventsAsync(CancellationToken.None),
+            "*/5 * * * * *"); // Every 5 seconds for high-fidelity ledger stream
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Accounting.LedgerIntegrityJob>(
+            "ledger-integrity-scan",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Hourly);
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Accounting.DriftDetectionWorker>(
+            "ledger-drift-detection",
+            job => job.ExecuteAsync(CancellationToken.None),
+            Cron.Minutely);
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Lending.LoanAccrualWorker>(
+            "loan-daily-accrual",
+            job => job.ExecuteAsync(),
+            "0 1 * * *"); // 1:00 AM Daily
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),

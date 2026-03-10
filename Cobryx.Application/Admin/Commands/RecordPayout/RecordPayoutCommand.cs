@@ -15,16 +15,10 @@ public record RecordPayoutCommand(
     string Reference,
     string Status) : IRequest<Result>;
 
-public class RecordPayoutHandler : IRequestHandler<RecordPayoutCommand, Result>
+public class RecordPayoutHandler(ICobryxDbContext dbContext, ILogger<RecordPayoutHandler> logger) : IRequestHandler<RecordPayoutCommand, Result>
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ILogger<RecordPayoutHandler> _logger;
-
-    public RecordPayoutHandler(ICobryxDbContext dbContext, ILogger<RecordPayoutHandler> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly ILogger<RecordPayoutHandler> _logger = logger;
 
     public async Task<Result> Handle(RecordPayoutCommand request, CancellationToken ct)
     {
@@ -74,7 +68,7 @@ public class RecordPayoutHandler : IRequestHandler<RecordPayoutCommand, Result>
 
         if (acc == null)
         {
-            acc = new LedgerAccount(tenantId, code, name, type, currency, true);
+            acc = new LedgerAccount(tenantId, code, name, type, LedgerAccountRole.None, currency, true);
             _dbContext.LedgerAccounts.Add(acc);
             await _dbContext.SaveChangesAsync(ct);
         }

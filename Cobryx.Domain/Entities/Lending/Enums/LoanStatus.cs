@@ -7,7 +7,8 @@ public enum LoanStatus
     Closed = 3,
     Cancelled = 4,
     WrittenOff = 5,
-    Disputed = 6
+    Disputed = 6,
+    Suspended = 7
 }
 
 public enum LegalStatus

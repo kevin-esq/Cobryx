@@ -32,7 +32,7 @@ For error handling, API response patterns, and controller conventions, see [engi
     - [Current Violations (Should Fix)](#current-violations-should-fix)
   - [15. Domain Events Policy](#15-domain-events-policy)
   - [16. Automated Enforcement and Tooling](#16-automated-enforcement-and-tooling)
-    - [Support Tools:](#support-tools)
+    - [Support Tools](#support-tools)
   - [Compliance Summary](#compliance-summary)
     - [Priority Fix Backlog](#priority-fix-backlog)
 
@@ -105,10 +105,10 @@ The Application layer must not reference Infrastructure directly:
 
 **Audit status:** COMPLIANT.
 
-| Layer | Infrastructure references found |
-|-------|---------------------------------|
-| Domain | 0 |
-| Application | 0 |
+| Layer       | Infrastructure references found |
+| ----------- | ------------------------------- |
+| Domain      | 0                               |
+| Application | 0                               |
 
 ---
 
@@ -146,10 +146,10 @@ public class SystemClock : IClock
 
 **Audit status:** COMPLIANT. The `IClock` abstraction has been introduced and registered as a singleton. All new code must favor `_clock.UtcNow` over `DateTime.UtcNow`.
 
-| Layer | `DateTime.UtcNow` usages | Files affected |
-|-------|--------------------------|----------------|
-| Domain | ~50 | `BaseEntity`, `TenantSubscription`, `Payment`, `Invoice`, `Loan`, `RefreshToken`, `UserSecurityToken`, `LoginSession`, `MfaDevice`, `Credit`, `Coupon`, etc. |
-| Application | ~20 | `AuthService`, `LoginCommand`, `StripeSubscriptionSyncService`, `CreateLoanHandler`, `ApplyLateFeesHandler`, `DashboardSummaryQuery`, etc. |
+| Layer       | `DateTime.UtcNow` usages | Files affected                                                                                                                                               |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Domain      | ~50                      | `BaseEntity`, `TenantSubscription`, `Payment`, `Invoice`, `Loan`, `RefreshToken`, `UserSecurityToken`, `LoginSession`, `MfaDevice`, `Credit`, `Coupon`, etc. |
+| Application | ~20                      | `AuthService`, `LoginCommand`, `StripeSubscriptionSyncService`, `CreateLoanHandler`, `ApplyLateFeesHandler`, `DashboardSummaryQuery`, etc.                   |
 
 > [!IMPORTANT]
 > **Migration Strategy (Boy Scout Rule):**
@@ -175,15 +175,15 @@ public Money Price { get; private set; }
 
 **Audit status:** COMPLIANT. Seven Value Objects exist:
 
-| Value Object | Purpose |
-|-------------|---------|
-| `Money` | Amount + Currency, prevents mixing MXN/USD |
-| `EmailAddress` | Validated email with disposable domain detection |
-| `Address` | Structured address with coordinates |
-| `TaxId` | Tax identification (RFC) |
-| `LegalConsent` | Terms version + IP + timestamp |
-| `IdentityDocument` | Identity document type + number |
-| `BusinessSettings` | Tenant business configuration |
+| Value Object       | Purpose                                          |
+| ------------------ | ------------------------------------------------ |
+| `Money`            | Amount + Currency, prevents mixing MXN/USD       |
+| `EmailAddress`     | Validated email with disposable domain detection |
+| `Address`          | Structured address with coordinates              |
+| `TaxId`            | Tax identification (RFC)                         |
+| `LegalConsent`     | Terms version + IP + timestamp                   |
+| `IdentityDocument` | Identity document type + number                  |
+| `BusinessSettings` | Tenant business configuration                    |
 
 ---
 
@@ -191,11 +191,11 @@ public Money Price { get; private set; }
 
 Validation happens at three levels. All three are mandatory:
 
-| Layer | Responsibility | Mechanism |
-|-------|---------------|-----------|
-| API | Input format, required fields | `[Required]`, FluentValidation, `DataAnnotations` |
-| Application | Business rules, authorization | `Result.Failure<T>(errorCode)` |
-| Domain | Invariants, state integrity | Constructor guards, `DomainException` |
+| Layer       | Responsibility                | Mechanism                                         |
+| ----------- | ----------------------------- | ------------------------------------------------- |
+| API         | Input format, required fields | `[Required]`, FluentValidation, `DataAnnotations` |
+| Application | Business rules, authorization | `Result.Failure<T>(errorCode)`                    |
+| Domain      | Invariants, state integrity   | Constructor guards, `DomainException`             |
 
 Never trust controller validation alone. The domain must protect itself.
 
@@ -271,24 +271,24 @@ Rules for defaults:
 
 Services using `IOptions<T>` correctly:
 
-| Service | Options Class |
-|---------|--------------|
+| Service         | Options Class   |
+| --------------- | --------------- |
 | `StripeService` | `StripeOptions` |
-| `AppOptions` | `AppOptions` |
+| `AppOptions`    | `AppOptions`    |
 
 Services using raw `configuration["..."]` (violations):
 
-| Service | Config Key | Default | Risk Level |
-|---------|-----------|---------|------------|
-| `Fido2Service` | `Fido2:Origin` | `"http://localhost:3000"` | CRITICAL — wrong origin breaks auth in production |
-| `Fido2Service` | `Fido2:ServerDomain` | `"localhost"` | CRITICAL — wrong domain breaks passkey verification |
-| `CaptchaService` | `Security:Captcha:SecretKey` | Turnstile test key | CRITICAL — test key bypasses captcha in production |
-| `ClamAvScanner` | `Security:ClamAV:Host` | `"localhost"` | HIGH — scan fails silently |
-| `ClamAvScanner` | `Security:ClamAV:Port` | `"3310"` | HIGH |
-| `JwtTokenGenerator` | `JwtSettings:ExpiryMinutes` | `"60"` | MEDIUM — silent default |
-| `HealthCheckExtensions` | Multiple keys | Various | MEDIUM — duplicated config reads |
-| `DependencyInjection.cs` | `Caching:DefaultTTL` | `null!` | HIGH — NRE crash if missing |
-| `R2StorageProvider` | `Storage:S3:BucketName` | `"documents"` | LOW |
+| Service                  | Config Key                   | Default                   | Risk Level                                          |
+| ------------------------ | ---------------------------- | ------------------------- | --------------------------------------------------- |
+| `Fido2Service`           | `Fido2:Origin`               | `"http://localhost:3000"` | CRITICAL — wrong origin breaks auth in production   |
+| `Fido2Service`           | `Fido2:ServerDomain`         | `"localhost"`             | CRITICAL — wrong domain breaks passkey verification |
+| `CaptchaService`         | `Security:Captcha:SecretKey` | Turnstile test key        | CRITICAL — test key bypasses captcha in production  |
+| `ClamAvScanner`          | `Security:ClamAV:Host`       | `"localhost"`             | HIGH — scan fails silently                          |
+| `ClamAvScanner`          | `Security:ClamAV:Port`       | `"3310"`                  | HIGH                                                |
+| `JwtTokenGenerator`      | `JwtSettings:ExpiryMinutes`  | `"60"`                    | MEDIUM — silent default                             |
+| `HealthCheckExtensions`  | Multiple keys                | Various                   | MEDIUM — duplicated config reads                    |
+| `DependencyInjection.cs` | `Caching:DefaultTTL`         | `null!`                   | HIGH — NRE crash if missing                         |
+| `R2StorageProvider`      | `Storage:S3:BucketName`      | `"documents"`             | LOW                                                 |
 
 ---
 
@@ -345,13 +345,13 @@ Every `.csproj` must have:
 
 **Audit status:** COMPLIANT.
 
-| Project | Status |
-|---------|--------|
-| `Cobryx.Domain` | Enabled |
-| `Cobryx.Application` | Enabled |
-| `Cobryx.Infrastructure` | Enabled |
-| `Cobryx.Api` | Enabled |
-| `Cobryx.Domain.Tests` | Enabled |
+| Project                   | Status  |
+| ------------------------- | ------- |
+| `Cobryx.Domain`           | Enabled |
+| `Cobryx.Application`      | Enabled |
+| `Cobryx.Infrastructure`   | Enabled |
+| `Cobryx.Api`              | Enabled |
+| `Cobryx.Domain.Tests`     | Enabled |
 | `Cobryx.IntegrationTests` | Enabled |
 
 ---
@@ -359,6 +359,8 @@ Every `.csproj` must have:
 In the domain, avoid `Guid.NewGuid()` as it causes index fragmentation in relational databases. Use **Sequential GUIDs** (e.g., via `RT.Comb` or `NewId`).
 
 > **Rule:** All entity identifiers must be generated using a sequential/ordered UUID scheme to ensure B-Tree efficiency and data locality in the persistence layer.
+
+---
 
 ---
 
@@ -442,20 +444,20 @@ Rule: In the Domain layer, null equals invalid state. It must throw, never silen
 
 ### Current Good Patterns (Keep Using)
 
-| Pattern | Example | Location |
-|---------|---------|----------|
-| Permission constants | `Permission.Constants.CustomersView` | `Permission.cs` |
-| PaymentMethod constants | `PaymentMethod.PaymentMethods.Cash` | `PaymentMethod.cs` |
-| Outcome Namespacing | `CRM.CUSTOMER.CREATED_SUCCESS` | All Outcome classes |
-| Error Hierarchy | `Error.Customer.NotFound` | `DomainErrorCode.cs` |
-| Metric names | `const string MeterName = "Cobryx.Api"` | `CobryxMetrics.cs` |
+| Pattern                 | Example                                 | Location             |
+| ----------------------- | --------------------------------------- | -------------------- |
+| Permission constants    | `Permission.Constants.CustomersView`    | `Permission.cs`      |
+| PaymentMethod constants | `PaymentMethod.PaymentMethods.Cash`     | `PaymentMethod.cs`   |
+| Outcome Namespacing     | `CRM.CUSTOMER.CREATED_SUCCESS`          | All Outcome classes  |
+| Error Hierarchy         | `Error.Customer.NotFound`               | `DomainErrorCode.cs` |
+| Metric names            | `const string MeterName = "Cobryx.Api"` | `CobryxMetrics.cs`   |
 
 ### Current Violations (Should Fix)
 
-| File | Magic String | Fix |
-|------|-------------|-----|
-| `CustomerSuggestion.cs` | `Status = "Pending"` | Create `SuggestionStatus` enum |
-| `DbInitializer.cs` | `role.Name == "Owner"`, `"Admin"`, etc. | Add `Role.Constants` class |
+| File                    | Magic String                            | Fix                            |
+| ----------------------- | --------------------------------------- | ------------------------------ |
+| `CustomerSuggestion.cs` | `Status = "Pending"`                    | Create `SuggestionStatus` enum |
+| `DbInitializer.cs`      | `role.Name == "Owner"`, `"Admin"`, etc. | Add `Role.Constants` class     |
 
 Rule: If a string value appears in a `switch`, `if`, or status comparison, it must be
 an enum or a `const`. Prefer enums over strings for any value that controls behavior.
@@ -477,7 +479,7 @@ public void MarkAsPaid()
 {
     if (Status == Status.Paid) return;
     Status = Status.Paid;
-    
+
     // CORRECT — Registering intent, not execution
     AddDomainEvent(new InvoicePaidEvent(Id, CustomerId));
 }
@@ -489,7 +491,7 @@ public void MarkAsPaid()
 
 Standardizing code is only half the battle; enforcement should be automated wherever possible.
 
-### Support Tools:
+### Support Tools
 - **Roslyn Analyzers:** Use custom analyzers to enforce naming conventions and prohibit `DateTime.UtcNow`.
 - **ArchUnit.NET:** Mandatory for unit testing architecture. Use it to fail the build if `Domain` references `Infrastructure` or if `Controllers` are not thin.
 - **EditorConfig:** Strict `.editorconfig` to enforce formatting and prevent "noise" in PR diffs.
@@ -498,31 +500,31 @@ Standardizing code is only half the battle; enforcement should be automated wher
 
 ## Compliance Summary
 
-| # | Rule | Status |
-|---|------|--------|
-| 1 | Domain uses enums, not strings | PASS (2 minor exceptions) |
-| 2 | Entities protect themselves | PASS |
-| 3 | No infrastructure in domain | PASS |
-| 4 | Result pattern over exceptions | PASS |
-| 5 | IClock abstraction | PASS |
-| 6 | Value Objects | PASS (7 VOs) |
-| 7 | Validate at boundary | PASS |
-| 8 | Thin controllers | PASS |
-| 9 | Options + ValidateOnStart | PASS |
-| 10 | Structured logging | PASS |
-| 11 | Idempotency | PASS |
-| 12 | Nullable Reference Types | PASS (all 6 projects) |
-| 13 | Guid abstraction | ACCEPTABLE |
-| 14 | Clean Architecture layers | PASS |
-| 15 | Intentional naming | PASS |
-| 16 | Null coalescing policy | PASS (minor role fallback) |
-| 17 | No magic strings | FAIL — 3 files |
+| #   | Rule                           | Status                     |
+| --- | ------------------------------ | -------------------------- |
+| 1   | Domain uses enums, not strings | PASS (2 minor exceptions)  |
+| 2   | Entities protect themselves    | PASS                       |
+| 3   | No infrastructure in domain    | PASS                       |
+| 4   | Result pattern over exceptions | PASS                       |
+| 5   | IClock abstraction             | PASS                       |
+| 6   | Value Objects                  | PASS (7 VOs)               |
+| 7   | Validate at boundary           | PASS                       |
+| 8   | Thin controllers               | PASS                       |
+| 9   | Options + ValidateOnStart      | PASS                       |
+| 10  | Structured logging             | PASS                       |
+| 11  | Idempotency                    | PASS                       |
+| 12  | Nullable Reference Types       | PASS (all 6 projects)      |
+| 13  | Guid abstraction               | ACCEPTABLE                 |
+| 14  | Clean Architecture layers      | PASS                       |
+| 15  | Intentional naming             | PASS                       |
+| 16  | Null coalescing policy         | PASS (minor role fallback) |
+| 17  | No magic strings               | FAIL — 3 files             |
 
 ### Priority Fix Backlog
 
-| Priority | Item | Effort |
-|----------|------|--------|
-| P0 (Security) | Fido2, Captcha, JWT config to Options + ValidateOnStart | Small |
-| P1 (Reliability) | ClamAV, Redis, HealthCheck config to Options | Small |
-| P2 (Quality) | Magic strings to enums/constants | Small |
-| P3 (Testability) | IClock abstraction | Large (cross-cutting) |
+| Priority         | Item                                                    | Effort                |
+| ---------------- | ------------------------------------------------------- | --------------------- |
+| P0 (Security)    | Fido2, Captcha, JWT config to Options + ValidateOnStart | Small                 |
+| P1 (Reliability) | ClamAV, Redis, HealthCheck config to Options            | Small                 |
+| P2 (Quality)     | Magic strings to enums/constants                        | Small                 |
+| P3 (Testability) | IClock abstraction                                      | Large (cross-cutting) |

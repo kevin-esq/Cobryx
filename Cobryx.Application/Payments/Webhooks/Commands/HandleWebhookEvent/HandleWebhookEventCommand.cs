@@ -16,30 +16,22 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent;
 
 public record HandleWebhookEventCommand(Guid WebhookEventId) : IRequest<Result>;
 
-public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventCommand, Result>
+public class HandleWebhookEventHandler(
+    IWebhookEventRepository webhookEventRepository,
+    IPaymentRepository paymentRepository,
+    ITenantRepository tenantRepository,
+    IUnitOfWork unitOfWork,
+    IEnumerable<IWebhookParser> parsers,
+    ISender sender,
+    ILogger<HandleWebhookEventHandler> logger) : IRequestHandler<HandleWebhookEventCommand, Result>
 {
-    private readonly IWebhookEventRepository _webhookEventRepository;
-    private readonly IPaymentRepository _paymentRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IEnumerable<IWebhookParser> _parsers;
-    private readonly ISender _sender;
-    private readonly ILogger<HandleWebhookEventHandler> _logger;
-
-    public HandleWebhookEventHandler(
-        IWebhookEventRepository webhookEventRepository,
-        IPaymentRepository paymentRepository,
-        IUnitOfWork unitOfWork,
-        IEnumerable<IWebhookParser> parsers,
-        ISender sender,
-        ILogger<HandleWebhookEventHandler> logger)
-    {
-        _webhookEventRepository = webhookEventRepository;
-        _paymentRepository = paymentRepository;
-        _unitOfWork = unitOfWork;
-        _parsers = parsers;
-        _sender = sender;
-        _logger = logger;
-    }
+    private readonly IWebhookEventRepository _webhookEventRepository = webhookEventRepository;
+    private readonly IPaymentRepository _paymentRepository = paymentRepository;
+    private readonly ITenantRepository _tenantRepository = tenantRepository;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IEnumerable<IWebhookParser> _parsers = parsers;
+    private readonly ISender _sender = sender;
+    private readonly ILogger<HandleWebhookEventHandler> _logger = logger;
 
     public async Task<Result> Handle(HandleWebhookEventCommand request, CancellationToken cancellationToken)
     {
@@ -108,23 +100,30 @@ public class HandleWebhookEventHandler : IRequestHandler<HandleWebhookEventComma
 
     private async Task<Result> HandlePayoutAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)
     {
-        var tenantId = Guid.Empty;
-        // Payouts might be platform or tenant.
-        // In Stripe Connect, the 'account' field of the event tells us the tenant.
-        // For now, we attempt to find the tenant by their StripeAccountId if it's a connect event.
-        // (This part needs a safe way to resolve tenantId from StripeAccountId)
+        var stripeAccountId = (parseResult.Metadata != null && parseResult.Metadata.TryGetValue("stripe_account_id", out var accountId))
+            ? accountId
+            : null;
 
-        // MVP: Assuming platform for now or implementing basic lookup if metadata or account id is present.
-        // In a real scenario, we'd lookup ITenantRepository.GetByStripeAccountIdAsync
+        var tenantId = Guid.Empty;
+
+        if (!string.IsNullOrEmpty(stripeAccountId))
+        {
+            var tenant = await _tenantRepository.GetByStripeAccountIdAsync(stripeAccountId, ct);
+            tenantId = tenant?.Id ?? Guid.Empty;
+        }
+
+        if (tenantId == Guid.Empty)
+        {
+            _logger.LogWarning("Could not resolve Tenant for Stripe Account {StripeAccountId}", stripeAccountId ?? "Missing");
+            return Result.Failure(DomainErrorCode.Tenant.NotFound);
+        }
 
         decimal amount = data.GetProperty("amount").GetInt64() / 100m;
         string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
         string status = data.GetProperty("status").GetString() ?? "unknown";
 
-        // Logic to resolve tenantId...
-        // For payout.paid events, we record it.
         var command = new RecordPayoutCommand(
-            tenantId, // TODO: Resolve from account id
+            tenantId,
             amount,
             currency,
             parseResult.ExternalTransactionId ?? "unknown",

@@ -8,7 +8,7 @@ This document defines the architectural conventions, error-handling patterns, an
   - [Table of Contents](#table-of-contents)
   - [Error Handling Architecture](#error-handling-architecture)
   - [Result\<T\>](#resultt)
-    - [Rules](#rules)
+    - [Result Rules](#result-rules)
   - [DomainErrorCode](#domainerrorcode)
     - [Code Structure](#code-structure)
     - [Adding a New Code](#adding-a-new-code)
@@ -17,7 +17,7 @@ This document defines the architectural conventions, error-handling patterns, an
     - [Categories](#categories)
     - [Definition Pattern](#definition-pattern)
     - [Code Format](#code-format)
-    - [Rules](#rules-1)
+    - [Outcome Rules](#outcome-rules)
   - [Controller Pattern](#controller-pattern)
     - [Standard Action](#standard-action)
     - [HandleResult Behavior](#handleresult-behavior)
@@ -30,7 +30,7 @@ This document defines the architectural conventions, error-handling patterns, an
   - [Validation Responses](#validation-responses)
     - [Client-Facing Response](#client-facing-response)
     - [Implementation](#implementation)
-    - [Rules](#rules-2)
+    - [Validation Rules](#validation-rules)
   - [Anti-Patterns](#anti-patterns)
   - [New Feature Checklist](#new-feature-checklist)
 
@@ -40,11 +40,11 @@ This document defines the architectural conventions, error-handling patterns, an
 
 Cobryx uses three distinct types to communicate errors across architecture layers. Raw strings are never used.
 
-| Type | Layer | Purpose |
-| --- | --- | --- |
-| `DomainErrorCode` | Domain, Application, Infrastructure | Machine-readable, compiler-enforced error identity |
-| `Outcome` | API (Controllers, Outcomes) | Semantic, client-facing result codes with categories |
-| `Result<T>` | All layers | Envelope carrying success/failure state and a `DomainErrorCode` on failure |
+| Type              | Layer                               | Purpose                                                                    |
+| ----------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| `DomainErrorCode` | Domain, Application, Infrastructure | Machine-readable, compiler-enforced error identity                         |
+| `Outcome`         | API (Controllers, Outcomes)         | Semantic, client-facing result codes with categories                       |
+| `Result<T>`       | All layers                          | Envelope carrying success/failure state and a `DomainErrorCode` on failure |
 
 ```mermaid
 graph LR
@@ -73,7 +73,7 @@ return Result.Failure<Guid>(DomainErrorCode.Customer.NotFound);
 return Result.Failure<Guid>("Customer not found");  // CS1503
 ```
 
-### Rules
+### Result Rules
 
 1. Never pass a raw string to `Result.Failure`. The compiler enforces this.
 2. Never pass an `Outcome` to `Result.Failure`. Outcomes belong to the API layer only.
@@ -87,13 +87,13 @@ A `sealed record` with a private constructor. Codes are organized by domain area
 
 ### Code Structure
 
-```
+```csharp
 AREA.ENTITY.ERROR_NAME
 ```
 
 **Examples:**
 
-```
+```csharp
 AUTH.TOKEN.INVALID
 CUSTOMER.NOT_FOUND
 TENANT.CONTEXT_MISSING
@@ -113,12 +113,12 @@ public static class Auth
 
 ### Naming Conventions
 
-| Suffix | Meaning | HTTP Status (auto-mapped) |
-| --- | --- | --- |
-| `.NOT_FOUND` | Resource does not exist | 404 |
-| `.ALREADY_EXISTS` / `.DUPLICATE` | Conflict | 409 |
-| `.BUSINESS_RULE_VIOLATION` / `.INVALID_STATUS` | Unprocessable entity | 422 |
-| Other | Default from `ErrorMapper` | Varies |
+| Suffix                                         | Meaning                    | HTTP Status (auto-mapped) |
+| ---------------------------------------------- | -------------------------- | ------------------------- |
+| `.NOT_FOUND`                                   | Resource does not exist    | 404                       |
+| `.ALREADY_EXISTS` / `.DUPLICATE`               | Conflict                   | 409                       |
+| `.BUSINESS_RULE_VIOLATION` / `.INVALID_STATUS` | Unprocessable entity       | 422                       |
+| Other                                          | Default from `ErrorMapper` | Varies                    |
 
 ---
 
@@ -128,13 +128,13 @@ Outcomes are API-layer semantic codes that tell the frontend what happened. They
 
 ### Categories
 
-| Category | Meaning |
-| --- | --- |
-| `Success` | Operation completed successfully |
-| `Info` | Informational (e.g., MFA required) |
-| `Warning` | Non-blocking issue |
-| `BusinessError` | Business rule violation |
-| `Critical` | System failure |
+| Category        | Meaning                            |
+| --------------- | ---------------------------------- |
+| `Success`       | Operation completed successfully   |
+| `Info`          | Informational (e.g., MFA required) |
+| `Warning`       | Non-blocking issue                 |
+| `BusinessError` | Business rule violation            |
+| `Critical`      | System failure                     |
 
 ### Definition Pattern
 
@@ -159,13 +159,13 @@ public static class AuthOutcomes
 
 ### Code Format
 
-```
+```csharp
 PREFIX.ENTITY.ACTION_RESULT
 ```
 
 **Examples:** `AUTH.USER.LOGIN_SUCCESS`, `BILLING.SUBSCRIPTION.CHECKOUT_CREATE_SUCCESS`
 
-### Rules
+### Outcome Rules
 
 1. Outcomes never appear in `Result.Failure`. They are for API responses only.
 2. Every outcome module uses a `Prefix` constant.
@@ -208,14 +208,14 @@ return HandleResult(mappedResult, MyOutcomes.Created);
 
 ### Available Methods
 
-| Method | Use Case |
-| --- | --- |
-| `HandleResult<T>` | Standard command/query with data |
-| `HandleResult` (non-generic) | Commands that return no data |
-| `HandleDeleteResult` | DELETE operations (204 on success) |
-| `HandleCreatedResult<T>` | POST operations (201 on success) |
-| `CreatedResult<T>` | Direct 201 with data (no `Result`) |
-| `Success<T>` | Direct 200 with data (no `Result`) |
+| Method                       | Use Case                           |
+| ---------------------------- | ---------------------------------- |
+| `HandleResult<T>`            | Standard command/query with data   |
+| `HandleResult` (non-generic) | Commands that return no data       |
+| `HandleDeleteResult`         | DELETE operations (204 on success) |
+| `HandleCreatedResult<T>`     | POST operations (201 on success)   |
+| `CreatedResult<T>`           | Direct 201 with data (no `Result`) |
+| `Success<T>`                 | Direct 200 with data (no `Result`) |
 
 ---
 
@@ -223,11 +223,11 @@ return HandleResult(mappedResult, MyOutcomes.Created);
 
 `GlobalExceptionHandler` catches all unhandled exceptions and maps them to structured API responses.
 
-| Exception Type | Mapped To |
-| --- | --- |
-| `CobryxException` | Its embedded `DomainErrorCode` |
+| Exception Type                         | Mapped To                                                              |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| `CobryxException`                      | Its embedded `DomainErrorCode`                                         |
 | `FluentValidation.ValidationException` | `DomainErrorCode.System.ValidationFailed` with structured field errors |
-| Any other `Exception` | `DomainErrorCode.System.InternalError` (500) |
+| Any other `Exception`                  | `DomainErrorCode.System.InternalError` (500)                           |
 
 Exceptions produce `Outcome.FromExternal()` with `OutcomeCategory.Critical` for system failures or `OutcomeCategory.BusinessError` for validation and business errors.
 
@@ -268,12 +268,12 @@ public async Task<Result<Guid>> Handle(MyCommand request, CancellationToken ct)
 
 Each layer has strict rules about which types it may use:
 
-| Layer | Uses | Never Uses |
-| --- | --- | --- |
-| API (Controllers, Outcomes) | `Outcome`, `HandleResult` | Raw strings, `DomainException` |
-| Application (Handlers, Queries) | `Result<T>`, `DomainErrorCode` | `Outcome`, `HttpContext` |
+| Layer                            | Uses                                 | Never Uses                      |
+| -------------------------------- | ------------------------------------ | ------------------------------- |
+| API (Controllers, Outcomes)      | `Outcome`, `HandleResult`            | Raw strings, `DomainException`  |
+| Application (Handlers, Queries)  | `Result<T>`, `DomainErrorCode`       | `Outcome`, `HttpContext`        |
 | Domain (Entities, Value Objects) | `DomainException`, `DomainErrorCode` | `Result`, `Outcome`, HTTP types |
-| Infrastructure (Services, Repos) | `Result<T>`, `DomainErrorCode` | `Outcome`, Controllers |
+| Infrastructure (Services, Repos) | `Result<T>`, `DomainErrorCode`       | `Outcome`, Controllers          |
 
 ---
 
@@ -308,7 +308,7 @@ public record ValidationError(string Field, string Code, string? Message = null)
 
 Messages are populated in code for internal observability but excluded from serialization.
 
-### Rules
+### Validation Rules
 
 1. `Message` is always `[JsonIgnore]`. It exists for logs, never for the client.
 2. FluentValidation `ErrorMessage` is kept for internal debugging via `ValidationError.Message`.
@@ -319,15 +319,15 @@ Messages are populated in code for internal observability but excluded from seri
 
 ## Anti-Patterns
 
-| Anti-Pattern | Correct Pattern |
-| --- | --- |
-| `Result.Failure("Not found")` | `Result.Failure(DomainErrorCode.X.NotFound)` |
-| `return BadRequest(...)` in a controller | `return HandleResult(result, outcome)` |
-| Using `Outcome` in the Application layer | `Outcome` is API-layer only |
-| Catching `DomainException` in a controller | Let `GlobalExceptionHandler` handle it |
-| Creating ad-hoc error strings | Add to `DomainErrorCode` first |
+| Anti-Pattern                                  | Correct Pattern                                  |
+| --------------------------------------------- | ------------------------------------------------ |
+| `Result.Failure("Not found")`                 | `Result.Failure(DomainErrorCode.X.NotFound)`     |
+| `return BadRequest(...)` in a controller      | `return HandleResult(result, outcome)`           |
+| Using `Outcome` in the Application layer      | `Outcome` is API-layer only                      |
+| Catching `DomainException` in a controller    | Let `GlobalExceptionHandler` handle it           |
+| Creating ad-hoc error strings                 | Add to `DomainErrorCode` first                   |
 | `result.Error ?? someOutcome` in a controller | `result.Error!` (guaranteed non-null on failure) |
-| Serializing `message` in validation errors | Frontend translates codes; use `[JsonIgnore]` |
+| Serializing `message` in validation errors    | Frontend translates codes; use `[JsonIgnore]`    |
 
 ---
 

@@ -21,6 +21,7 @@ logs/
 .vscode/
 .idea/
 .trunk/
+.rino/
 
 # =====================
 # Rider

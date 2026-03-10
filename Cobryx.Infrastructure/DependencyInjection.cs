@@ -12,18 +12,25 @@ using Cobryx.Infrastructure.Middleware;
 using Cobryx.Infrastructure.Services;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Accounting.Services;
+using Cobryx.Infrastructure.Services.Accounting;
+using Cobryx.Infrastructure.Services.Lending;
+using Cobryx.Application.Lending.Services;
+using Cobryx.Infrastructure.BackgroundJobs.Accounting;
+using Cobryx.Infrastructure.BackgroundJobs.Lending;
+using Microsoft.Extensions.Logging;
 using Cobryx.Domain.Common;
 using Cobryx.Infrastructure.HealthChecks;
 using Cobryx.Infrastructure.Identity;
 using Cobryx.Infrastructure.Services.FileStorage;
 using Cobryx.Infrastructure.Services.Security;
+using Cobryx.Infrastructure.Services.Notifications;
 using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Logging;
 using System.Text;
 using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Security;
@@ -77,6 +84,11 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<SlackOptions>()
+            .Bind(configuration.GetSection(SlackOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddSingleton<IClock, SystemClock>();
 
         services.AddHttpContextAccessor();
@@ -99,12 +111,19 @@ public static class DependencyInjection
             options.InstanceName = "Cobryx_";
         });
 
+        services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+            StackExchange.Redis.ConnectionMultiplexer.Connect(cachingConfig.Redis.ConnectionString));
+
         services.AddSingleton<ICacheService>(sp =>
-            new RedisCacheService(sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(), cachingConfig.DefaultTTL));
+            new RedisCacheService(
+                sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(),
+                sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
+                cachingConfig.DefaultTTL));
 
         services.AddScoped<AuditInterceptor>();
         services.AddScoped<OutboxInterceptor>();
         services.AddScoped<DbMetricsInterceptor>();
+        services.AddScoped<IShadowReplayEngine, ShadowReplayEngine>();
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
@@ -183,6 +202,13 @@ public static class DependencyInjection
         services.AddScoped<IAmortizationService, AmortizationService>();
         services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();
+        services.AddScoped<ILoanAccrualEngine, LoanAccrualEngine>();
+        services.AddScoped<ILateFeeService, LateFeeService>();
+        services.AddScoped<IPaymentAllocationEngine, PaymentAllocationEngine>();
+        services.AddScoped<ICollectionsEngine, CollectionsEngine>();
+        services.AddScoped<LoanPaymentService>();
+
+        services.AddHttpClient<ISlackService, SlackService>();
 
         services.AddScoped<Cobryx.Domain.Services.PaymentService>();
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
@@ -216,6 +242,15 @@ public static class DependencyInjection
         services.AddScoped<FinancialReconciliationJob>();
         services.AddScoped<ReconciliationEngineJob>();
         services.AddScoped<CheckSystemHealthJob>();
+        services.AddScoped<LedgerOutboxWorker>();
+        services.AddScoped<DriftDetectionWorker>();
+        services.AddScoped<ILedgerBalanceService, LedgerBalanceService>();
+        services.AddScoped<LedgerIntegrityJob>();
+        services.AddScoped<LoanAccrualWorker>();
+        services.AddScoped<FinancialOutboxWorker>();
+        services.AddScoped<IFinancialEventBus, LocalFinancialEventBus>();
+        services.AddScoped<IFinancialEventConsumer, EventShadowReplayEngine>();
+        services.AddScoped<ILedgerPublisher, LogLedgerPublisher>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
@@ -240,8 +275,8 @@ public static class DependencyInjection
         services.AddHangfireServer(options =>
         {
             // Limit workers to ensure we don't exhaust the DB connection pool (MaxPoolSize=35)
-            // Even under high CPU, we cap at 10 to leave overhead for the API.
-            options.WorkerCount = Math.Min(10, Environment.ProcessorCount * 2);
+            // Reduced to 5 in dev/local to provide more overhead for API and Metrics polling
+            options.WorkerCount = 5;
         });
 
         services.AddHostedService<HangfireMetricsExporter>();

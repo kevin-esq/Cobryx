@@ -98,6 +98,11 @@ public class PaymentApplicationPolicy : BaseEntity, ITenantEntity
         }
     }
 
+    public IEnumerable<PaymentApplicationType> GetPriorityOrder()
+    {
+        return GetApplicationOrder();
+    }
+
     public void SetAsDefault()
     {
         IsDefault = true;

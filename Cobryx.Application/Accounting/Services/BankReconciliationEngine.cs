@@ -94,8 +94,8 @@ public class BankReconciliationEngine(
 
                 // Sum only the side that matches movement direction (Debits for Inbound, Credits for Outbound)
                 decimal totalSideAmount = movement.Direction == BankMovementDirection.Inbound
-                    ? batchMatches.Sum(t => t.Entries.Sum(e => Math.Max(0, e.Debit - e.Credit)))
-                    : batchMatches.Sum(t => t.Entries.Sum(e => Math.Max(0, e.Credit - e.Debit)));
+                    ? batchMatches.Sum<LedgerTransaction>(t => t.Entries.Sum(e => Math.Max(0, e.Debit - e.Credit)))
+                    : batchMatches.Sum<LedgerTransaction>(t => t.Entries.Sum(e => Math.Max(0, e.Credit - e.Debit)));
 
                 if (batchMatches.Count > 1 && totalSideAmount == movement.Amount)
                 {

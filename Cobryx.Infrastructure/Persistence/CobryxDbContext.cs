@@ -98,6 +98,13 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<LoanPaymentAllocation> LoanPaymentAllocations => Set<LoanPaymentAllocation>();
+    public DbSet<LoanDelinquencyState> LoanDelinquencyStates => Set<LoanDelinquencyState>();
+    public DbSet<CollectionsPolicy> CollectionsPolicies => Set<CollectionsPolicy>();
+    public DbSet<LoanCollectionsEvent> LoanCollectionsEvents => Set<LoanCollectionsEvent>();
+    public DbSet<FinancialOutboxEvent> FinancialOutboxEvents => Set<FinancialOutboxEvent>();
+    public DbSet<DeadLetterEvent> DeadLetterEvents => Set<DeadLetterEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
@@ -121,8 +128,12 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
     public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<AccountBalanceSnapshot> AccountBalanceSnapshots => Set<AccountBalanceSnapshot>();
+    public DbSet<LedgerOutbox> LedgerOutboxes => Set<LedgerOutbox>();
     public DbSet<BankMovement> BankMovements => Set<BankMovement>();
     public DbSet<JournalCheckpoint> JournalCheckpoints => Set<JournalCheckpoint>();
+    public DbSet<ShadowBalance> ShadowBalances => Set<ShadowBalance>();
+    public DbSet<EventShadowBalance> EventShadowBalances => Set<EventShadowBalance>();
     public DbSet<FinancialStatusAudit> FinancialStatusAudits => Set<FinancialStatusAudit>();
 
     // Lending Domain
@@ -133,6 +144,7 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
     public DbSet<Domain.Entities.Lending.InterestPolicy> InterestPolicies => Set<Domain.Entities.Lending.InterestPolicy>();
     public DbSet<Domain.Entities.Lending.LateFeePolicy> LateFeePolicies => Set<Domain.Entities.Lending.LateFeePolicy>();
     public DbSet<Domain.Entities.Lending.PaymentApplicationPolicy> PaymentApplicationPolicies => Set<Domain.Entities.Lending.PaymentApplicationPolicy>();
+    public DbSet<AccruedCharge> AccruedCharges => Set<AccruedCharge>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -225,6 +237,67 @@ public class CobryxDbContext : DbContext, ICobryxDbContext, IUnitOfWork
             .HasIndex(e => new { e.StripeEventId, e.StripeAccountId })
             .IsUnique();
 
+        modelBuilder.Entity<LedgerEntry>()
+            .HasIndex(e => new { e.TenantId, e.AccountId, e.JournalSequenceId });
+
+        modelBuilder.Entity<LedgerEntry>()
+            .HasIndex(e => e.JournalSequenceId);
+
+        modelBuilder.Entity<AccountBalanceSnapshot>()
+            .HasIndex(s => new { s.TenantId, s.AccountId, s.JournalSequenceId })
+            .IsDescending(false, false, true);
+
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ShadowBalance>(b =>
+        {
+            b.HasIndex(x => new { x.TenantId, x.AccountId });
+            b.HasIndex(x => x.LastSequence);
+        });
+
+        modelBuilder.Entity<EventShadowBalance>(b =>
+        {
+            b.HasIndex(x => new { x.TenantId, x.AccountId });
+        });
+
+        modelBuilder.Entity<AccruedCharge>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasPrecision(18, 10);
+            entity.HasIndex(e => new { e.LoanId, e.Type, e.AccrualDate }).IsUnique();
+            entity.HasOne(e => e.Loan).WithMany(l => l.AccruedCharges).HasForeignKey(e => e.LoanId);
+        });
+
+        modelBuilder.Entity<LoanPaymentAllocation>(b =>
+        {
+            b.HasIndex(x => x.PaymentId).IsUnique();
+        });
+
+        modelBuilder.Entity<LoanDelinquencyState>(b =>
+        {
+            b.HasIndex(x => x.LoanId).IsUnique();
+            b.HasIndex(x => x.Stage);
+            b.HasIndex(x => x.DaysPastDue);
+        });
+
+        modelBuilder.Entity<LoanCollectionsEvent>(b =>
+        {
+            b.HasIndex(x => x.LoanId);
+        });
+
+        modelBuilder.Entity<FinancialOutboxEvent>(b =>
+        {
+            b.HasIndex(x => new { x.IsPublished, x.LedgerSequenceId })
+             .HasDatabaseName("idx_outbox_unpublished");
+        });
+
+        modelBuilder.Entity<ProcessedEvent>(b =>
+        {
+            b.HasIndex(x => new { x.EventId, x.ConsumerName }).IsUnique();
+        });
+
+        modelBuilder.Entity<DeadLetterEvent>(b =>
+        {
+            b.HasIndex(x => x.EventId).IsUnique();
+        });
     }
 }
