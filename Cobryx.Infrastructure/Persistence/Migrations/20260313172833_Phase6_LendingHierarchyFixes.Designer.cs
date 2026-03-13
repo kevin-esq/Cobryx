@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313172833_Phase6_LendingHierarchyFixes")]
+    partial class Phase6_LendingHierarchyFixes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1106,163 +1109,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("TaxConfigurations");
-                });
-
-            modelBuilder.Entity("Cobryx.Domain.Analytics.CashflowEvent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Direction")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "OccurredAt")
-                        .HasDatabaseName("idx_cashflow_tenant_occurred");
-
-                    b.ToTable("CashflowEvents", (string)null);
-                });
-
-            modelBuilder.Entity("Cobryx.Domain.Analytics.LoanBalanceSnapshot", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DaysPastDue")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("InterestBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("LateFeeBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<long>("LedgerSequenceId")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("LoanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("PrincipalBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LoanId", "RecordedAt")
-                        .HasDatabaseName("idx_snapshot_loan_recorded");
-
-                    b.HasIndex("TenantId", "RecordedAt")
-                        .HasDatabaseName("idx_snapshot_tenant_recorded");
-
-                    b.ToTable("LoanBalanceSnapshots", (string)null);
-                });
-
-            modelBuilder.Entity("Cobryx.Domain.Analytics.PortfolioMetricsDaily", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Bucket0To30")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("Bucket31To60")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("Bucket61To90")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("Bucket90Plus")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("CollectionEfficiency")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("DelinquencyRate")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("NPLRatio")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal>("RevenueMTD")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("RevenueYTD")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("TotalInterest")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("TotalLateFees")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<int>("TotalLoans")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("TotalOutstanding")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("TotalPrincipal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "Date")
-                        .IsUnique()
-                        .HasDatabaseName("idx_portfolio_metrics_tenant_date");
-
-                    b.ToTable("PortfolioMetricsDaily", (string)null);
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Identity.AdminActionAudit", b =>

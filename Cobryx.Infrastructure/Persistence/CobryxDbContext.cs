@@ -10,6 +10,7 @@ using Cobryx.Domain.Lending;
 using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Payments;
 using Cobryx.Domain.Shared;
+using Cobryx.Domain.Analytics;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -106,7 +107,14 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations => Set<Cobryx.Domain.Payments.PaymentAllocation>();
+    // Payment Links
     public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
+
+    // Analytics
+    public DbSet<LoanBalanceSnapshot> LoanBalanceSnapshots => Set<LoanBalanceSnapshot>();
+    public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
+    public DbSet<CashflowEvent> CashflowEvents => Set<CashflowEvent>();
+
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
