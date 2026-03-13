@@ -2,5 +2,5 @@ namespace Cobryx.Domain.Interfaces;
 
 public interface IUnitOfWork : IDisposable
 {
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

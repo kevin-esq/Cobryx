@@ -1,19 +1,20 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Infrastructure.Persistence;
 using Cobryx.Infrastructure.Payments.Services;
+using Cobryx.Infrastructure.Persistence;
+
 using Concordia;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Moq;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Payments;
 
@@ -30,7 +31,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
     public PaymentOrchestrationServiceTests()
     {
-        _connection = new SqliteConnection("Filename=:memory:");
+        _connection = new SqliteConnection("Filename=:memory:;Foreign Keys=False");
         _connection.Open();
 
         var options = new DbContextOptionsBuilder<CobryxDbContext>()
@@ -210,7 +211,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
         var agreement = new LoanAgreement(tenantId, customer.Id, 100, Guid.NewGuid(), PaymentFrequency.Monthly, 1, DateTime.UtcNow, DateTime.UtcNow, LoanOrigin.CashLoan);
         _dbContext.LoanAgreements.Add(agreement);
 
-        var loan = new Loan(tenantId, customer.Id, agreement.Id, "L-DISP", 100);
+        var loan = new Loan(tenantId, customer.Id, agreement.Id, "L-DISP", new Money(100, "USD"));
         loan.MarkAsDisputed();
         _dbContext.Loans.Add(loan);
 
@@ -253,7 +254,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
         var agreement = new LoanAgreement(tenantId, customer.Id, 100, Guid.NewGuid(), PaymentFrequency.Monthly, 1, DateTime.UtcNow, DateTime.UtcNow, LoanOrigin.CashLoan);
         _dbContext.LoanAgreements.Add(agreement);
 
-        var loan = new Loan(tenantId, customer.Id, agreement.Id, "L-CLOSED", 100);
+        var loan = new Loan(tenantId, customer.Id, agreement.Id, "L-CLOSED", new Money(100, "USD"));
         loan.MarkAsClosed();
         _dbContext.Loans.Add(loan);
 

@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
+
 using OtpNet;
 
 namespace Cobryx.Infrastructure.Security;

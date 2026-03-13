@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.ManageSubscription;
@@ -38,7 +39,7 @@ public class UpgradeSubscriptionHandler : IRequestHandler<UpgradeSubscriptionCom
 
         if (subscription == null) return Result.Failure(DomainErrorCode.Subscription.NotFound);
 
-        var newPlan = await _planRepository.GetByIdAsync(request.NewPlanId);
+        var newPlan = await _planRepository.GetByIdAsync(request.NewPlanId, cancellationToken);
         if (newPlan == null) return Result.Failure(DomainErrorCode.Subscription.PlanNotFound);
 
         // Validate plan capacity (Downgrade rejection logic)

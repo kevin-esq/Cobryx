@@ -1,6 +1,6 @@
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Interfaces.Lending;
+using Cobryx.Domain.Lending;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories.Lending;

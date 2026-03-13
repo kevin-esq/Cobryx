@@ -1,5 +1,6 @@
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Services;

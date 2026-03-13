@@ -1,5 +1,6 @@
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Common.Events;
 

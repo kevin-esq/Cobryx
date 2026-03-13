@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-using Cobryx.Domain.Entities;
+
+using Cobryx.Domain.Identity;
 
 namespace Cobryx.Api.Contracts.V1.System;
 

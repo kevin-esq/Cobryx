@@ -1,9 +1,13 @@
 using System.Diagnostics;
+
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using FluentValidation;
+
 using Microsoft.Extensions.Logging;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Infrastructure.Middleware;
 
@@ -29,7 +33,7 @@ public static class PipelineBehaviors
             _logger.LogInformation("Cobryx Request: {Name} {@TenantId} {@Request}", requestName, tenantId, request);
 
             var stopwatch = Stopwatch.StartNew();
-            var response = await next();
+            var response = await next(cancellationToken);
             stopwatch.Stop();
 
             _logger.LogInformation("Cobryx Response: {Name} Processed in {ElapsedMilliseconds}ms", requestName, stopwatch.ElapsedMilliseconds);
@@ -60,7 +64,7 @@ public static class PipelineBehaviors
                     throw new ValidationException(failures);
             }
 
-            return await next();
+            return await next(cancellationToken);
         }
     }
 
@@ -69,7 +73,7 @@ public static class PipelineBehaviors
     {
         public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            return next();
+            return next(cancellationToken);
         }
     }
 
@@ -85,7 +89,7 @@ public static class PipelineBehaviors
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            var response = await next();
+            var response = await next(cancellationToken);
 
             if (ShouldSave(response))
             {

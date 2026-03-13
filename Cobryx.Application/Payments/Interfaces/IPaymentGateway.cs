@@ -1,14 +1,13 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Payments;
 using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Application.Payments.Interfaces;
 
 public interface IPaymentGateway
 {
-    string GatewayName { get; }
-    Task<PaymentGatewayResult> ProcessPaymentAsync(Payment payment, CancellationToken cancellationToken = default);
-    Task<PaymentGatewayResult> RefundPaymentAsync(Payment payment, Money amount, CancellationToken cancellationToken = default);
+    public string GatewayName { get; }
+    public Task<PaymentGatewayResult> ProcessPaymentAsync(Payment payment, CancellationToken cancellationToken = default);
+    public Task<PaymentGatewayResult> RefundPaymentAsync(Payment payment, Money amount, CancellationToken cancellationToken = default);
 }
 
 public record PaymentGatewayResult(

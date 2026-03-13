@@ -1,8 +1,8 @@
 using Cobryx.Api.Errors.Mappers;
-using Cobryx.Api.Errors.Definitions;
-using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
+
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cobryx.Api.Controllers;
@@ -92,10 +92,11 @@ public abstract class CobryxBaseController : ControllerBase
 
     protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, Outcome? outcomeCode = null)
     {
+        _ = uri;
         return HandleResult(result, outcomeCode, 201);
     }
 
-    private int GetErrorStatusCode(string errorCode, int defaultStatusCode)
+    private static int GetErrorStatusCode(string errorCode, int defaultStatusCode)
     {
         if (errorCode.EndsWith(".ALREADY_EXISTS") || errorCode.EndsWith(".DUPLICATE")) return 409;
         if (errorCode.EndsWith(".NOT_FOUND")) return 404;
@@ -104,7 +105,7 @@ public abstract class CobryxBaseController : ControllerBase
         return defaultStatusCode;
     }
 
-    private Outcome GetFailureOutcomeCode(Outcome? successOutcome)
+    private static Outcome GetFailureOutcomeCode(Outcome? successOutcome)
     {
         if (successOutcome == null) return Outcome.FromExternal("SYSTEM.OPERATION.FAILED");
 
@@ -112,7 +113,7 @@ public abstract class CobryxBaseController : ControllerBase
         var lastDot = val.LastIndexOf('.');
         if (lastDot > 0)
         {
-            return Outcome.FromExternal(val.Substring(0, lastDot) + ".FAILED");
+            return Outcome.FromExternal(string.Concat(val.AsSpan(0, lastDot), ".FAILED"));
         }
 
         return Outcome.FromExternal($"{val}.FAILED");

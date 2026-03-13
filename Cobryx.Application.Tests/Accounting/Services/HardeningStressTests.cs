@@ -1,40 +1,31 @@
+using System.Diagnostics;
+
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Application.Common.Observability;
+using Cobryx.Domain.Accounting;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Moq;
-using Xunit;
-using Cobryx.Application.Common.Observability;
+
 using Xunit.Abstractions;
-using System.Diagnostics;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 
-public class HardeningStressTests
+public class HardeningStressTests(ITestOutputHelper output)
 {
-    private readonly DbContextOptions<CobryxDbContext> _dbOptions;
-    private readonly Mock<ITenantProvider> _tenantProviderMock;
-    private readonly Mock<ILogger<LedgerIntegrityService>> _loggerMock;
-    private readonly Mock<ILedgerIntegrityService> _integrityServiceMock;
-    private readonly Mock<ILogger<BankReconciliationEngine>> _reconLoggerMock;
-    private readonly CobryxMetrics _metrics;
-    private readonly ITestOutputHelper _output;
-
-    public HardeningStressTests(ITestOutputHelper output)
-    {
-        _output = output;
-        _dbOptions = new DbContextOptionsBuilder<CobryxDbContext>()
+    private readonly DbContextOptions<CobryxDbContext> _dbOptions = new DbContextOptionsBuilder<CobryxDbContext>()
             .UseInMemoryDatabase(databaseName: $"StressDb_{Guid.NewGuid()}")
             .Options;
-
-        _tenantProviderMock = new Mock<ITenantProvider>();
-        _loggerMock = new Mock<ILogger<LedgerIntegrityService>>();
-        _integrityServiceMock = new Mock<ILedgerIntegrityService>();
-        _reconLoggerMock = new Mock<ILogger<BankReconciliationEngine>>();
-        _metrics = new CobryxMetrics();
-    }
+    private readonly Mock<ITenantProvider> _tenantProviderMock = new();
+    private readonly Mock<ILogger<LedgerIntegrityService>> _loggerMock = new();
+    private readonly Mock<ILedgerIntegrityService> _integrityServiceMock = new();
+    private readonly Mock<ILogger<BankReconciliationEngine>> _reconLoggerMock = new();
+    private readonly CobryxMetrics _metrics = new();
+    private readonly ITestOutputHelper _output = output;
 
     [Fact]
     public async Task MillionScale_DenseTenant_Benchmark()
@@ -46,8 +37,8 @@ public class HardeningStressTests
 
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
-            var account = new LedgerAccount(tenantId, "1010", "Cash", Cobryx.Domain.Enums.LedgerAccountType.Asset);
-            var suspense = new LedgerAccount(tenantId, "9000", "Suspense", Cobryx.Domain.Enums.LedgerAccountType.Equity);
+            var account = new LedgerAccount(tenantId, "1010", "Cash", Cobryx.Domain.Accounting.Enums.LedgerAccountType.Asset);
+            var suspense = new LedgerAccount(tenantId, "9000", "Suspense", Cobryx.Domain.Accounting.Enums.LedgerAccountType.Equity);
             context.LedgerAccounts.Add(account);
             context.LedgerAccounts.Add(suspense);
             await context.SaveChangesAsync();

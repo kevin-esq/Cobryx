@@ -1,9 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Cobryx.Application.Users.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Users.Queries.GetUsers;
@@ -26,7 +27,7 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, Result<PaginatedLi
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<PaginatedList<UserDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var users = await _userRepository.GetByTenantAsync(tenantId.Value);
+        var users = await _userRepository.GetByTenantAsync(tenantId.Value, cancellationToken);
 
         var totalCount = users.Count();
         var items = users

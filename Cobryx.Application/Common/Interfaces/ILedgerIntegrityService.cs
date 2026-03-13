@@ -1,5 +1,3 @@
-using Cobryx.Domain.Entities.Accounting;
-
 namespace Cobryx.Application.Common.Interfaces;
 
 public interface ILedgerIntegrityService
@@ -8,27 +6,27 @@ public interface ILedgerIntegrityService
     /// Performs a journal replay. By default uses checkpoints for incremental speed,
     /// but can be forced to do a full historical audit.
     /// </summary>
-    Task<IntegrityReport> VerifyJournalIntegrityAsync(Guid tenantId, bool forceFullReplay = false, CancellationToken ct = default);
+    public Task<IntegrityReport> VerifyJournalIntegrityAsync(Guid tenantId, bool forceFullReplay = false, CancellationToken ct = default);
 
     /// <summary>
     /// Checks if any financial circuit breakers should be tripped based on recent drifts.
     /// </summary>
-    Task<bool> CheckCircuitBreakersAsync(Guid tenantId, CancellationToken ct = default);
+    public Task<bool> CheckCircuitBreakersAsync(Guid tenantId, CancellationToken ct = default);
 
     /// <summary>
     /// Scans the global ledger for sequence gaps (missing entries).
     /// </summary>
-    Task<List<long>> VerifyGlobalSequenceGapsAsync(CancellationToken ct = default);
+    public Task<List<long>> VerifyGlobalSequenceGapsAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Verifies the global zero-sum invariant across the entire ledger.
     /// </summary>
-    Task<bool> VerifyGlobalSumInvariantAsync(CancellationToken ct = default);
+    public Task<bool> VerifyGlobalSumInvariantAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Verifies a specific account snapshot against the current ledger delta.
     /// </summary>
-    Task<bool> VerifyAccountSnapshotAsync(Guid snapshotId, CancellationToken ct = default);
+    public Task<bool> VerifyAccountSnapshotAsync(Guid snapshotId, CancellationToken ct = default);
 }
 
 public record IntegrityReport(

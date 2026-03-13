@@ -1,18 +1,22 @@
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using Cobryx.Domain.Common;
-using FluentValidation;
-using Cobryx.Application.Common.Validation;
-using Cobryx.Domain.Enums;
 using Cobryx.Application.Common.Configuration;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
-using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Validation;
 using Cobryx.Domain.Exceptions.System;
+using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Identity.Enums;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using FluentValidation;
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Register;
 
@@ -49,47 +53,34 @@ public class SignUpValidator : AbstractValidator<SignUpCommand>
     }
 }
 
-public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
+public class SignUpHandler(
+    ITenantRepository tenantRepository,
+    IUserRepository userRepository,
+    IRoleRepository roleRepository,
+    IPasswordHasher passwordHasher,
+    IHttpContextService httpContextService,
+    IUnitOfWork unitOfWork,
+    IEmailService emailService,
+    IOptions<AppOptions> appOptions,
+    ILogger<SignUpHandler> logger) : IRequestHandler<SignUpCommand, Result<Guid>>
 {
-    private readonly ITenantRepository _tenantRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IRoleRepository _roleRepository;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly IHttpContextService _httpContextService;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IEmailService _emailService;
-    private readonly AppOptions _appOptions;
-    private readonly ILogger<SignUpHandler> _logger;
-
-    public SignUpHandler(
-        ITenantRepository tenantRepository,
-        IUserRepository userRepository,
-        IRoleRepository roleRepository,
-        IPasswordHasher passwordHasher,
-        IHttpContextService httpContextService,
-        IUnitOfWork unitOfWork,
-        IEmailService emailService,
-        IOptions<AppOptions> appOptions,
-        ILogger<SignUpHandler> logger)
-    {
-        _tenantRepository = tenantRepository;
-        _userRepository = userRepository;
-        _roleRepository = roleRepository;
-        _passwordHasher = passwordHasher;
-        _httpContextService = httpContextService;
-        _unitOfWork = unitOfWork;
-        _emailService = emailService;
-        _appOptions = appOptions.Value;
-        _logger = logger;
-    }
+    private readonly ITenantRepository _tenantRepository = tenantRepository;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IRoleRepository _roleRepository = roleRepository;
+    private readonly IPasswordHasher _passwordHasher = passwordHasher;
+    private readonly IHttpContextService _httpContextService = httpContextService;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IEmailService _emailService = emailService;
+    private readonly AppOptions _appOptions = appOptions.Value;
+    private readonly ILogger<SignUpHandler> _logger = logger;
 
     public async Task<Result<Guid>> Handle(SignUpCommand request, CancellationToken cancellationToken)
     {
         if (await _userRepository.ExistsByEmailAsync(request.Email, cancellationToken))
             throw new UserEmailAlreadyExistsException();
 
-        var ownerRole = await _roleRepository.GetByNameAsync(Role.Constants.Owner, cancellationToken);
-        if (ownerRole == null) throw new SystemConfigurationException();
+        var ownerRole = await _roleRepository.GetByNameAsync(Role.Constants.Owner, cancellationToken)
+            ?? throw new SystemConfigurationException();
 
         var tenant = new Tenant(request.BusinessName);
         await _tenantRepository.AddAsync(tenant, cancellationToken);
@@ -135,8 +126,6 @@ public class SignUpHandler : IRequestHandler<SignUpCommand, Result<Guid>>
         var growthMetrics = new TenantGrowthMetrics(tenant.Id, DateTime.UtcNow);
         growthMetrics.RecordTrialStart(DateTime.UtcNow, starterPlan?.TrialDays ?? 14);
         dbContext.Set<TenantGrowthMetrics>().Add(growthMetrics);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var baseUrl = request.ReturnUrl ?? _appOptions.AppUrl;
         await _emailService.SendEmailAsync(

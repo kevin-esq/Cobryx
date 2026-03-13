@@ -2,5 +2,5 @@ namespace Cobryx.Domain.Interfaces;
 
 public interface IInvoiceNumberService
 {
-    Task<string> GenerateNextNumberAsync(Guid tenantId);
+    public Task<string> GenerateNextNumberAsync(Guid tenantId);
 }

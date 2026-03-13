@@ -1,10 +1,11 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Credits.Common;
 using Cobryx.Application.Common.Models;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Credits.Common;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Credits.Queries.GetCredits;

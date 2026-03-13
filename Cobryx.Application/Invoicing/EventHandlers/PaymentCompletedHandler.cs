@@ -1,29 +1,21 @@
+using Cobryx.Application.Common.Events;
 using Cobryx.Domain.Events.Payments;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities.Invoicing;
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Common.Events;
+
 using Concordia;
-using Microsoft.EntityFrameworkCore;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Invoicing.EventHandlers;
 
-public class PaymentCompletedHandler : INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>
+public class PaymentCompletedHandler(
+    IPaymentRepository paymentRepository,
+    IInvoiceRepository invoiceRepository,
+    ILogger<PaymentCompletedHandler> logger) : INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>
 {
-    private readonly IPaymentRepository _paymentRepository;
-    private readonly IInvoiceRepository _invoiceRepository;
-    private readonly ILogger<PaymentCompletedHandler> _logger;
-
-    public PaymentCompletedHandler(
-        IPaymentRepository paymentRepository,
-        IInvoiceRepository invoiceRepository,
-        ILogger<PaymentCompletedHandler> logger)
-    {
-        _paymentRepository = paymentRepository;
-        _invoiceRepository = invoiceRepository;
-        _logger = logger;
-    }
+    private readonly IPaymentRepository _paymentRepository = paymentRepository;
+    private readonly IInvoiceRepository _invoiceRepository = invoiceRepository;
+    private readonly ILogger<PaymentCompletedHandler> _logger = logger;
 
     public async Task Handle(DomainEventNotification<PaymentCompletedEvent> notification, CancellationToken cancellationToken)
     {
@@ -45,7 +37,7 @@ public class PaymentCompletedHandler : INotificationHandler<DomainEventNotificat
                 allocation.Amount.Amount, allocation.Amount.Currency, invoice.Id, domainEvent.PaymentId);
 
             invoice.ApplyPayment(domainEvent.PaymentId, allocation.Amount);
-            await _invoiceRepository.UpdateAsync(invoice);
+            await _invoiceRepository.UpdateAsync(invoice, cancellationToken);
         }
     }
 }

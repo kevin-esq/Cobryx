@@ -1,5 +1,5 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -9,6 +9,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddFinancialSafeMode : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "Id" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -192,7 +194,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerTransactions_TenantId_Id",
                 table: "LedgerTransactions",
-                columns: new[] { "TenantId", "Id" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerTransactions_TenantId_IsReversal",
@@ -228,7 +230,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerEntries_TenantId_Id",
                 table: "LedgerEntries",
-                columns: new[] { "TenantId", "Id" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerEntries_TenantId_JournalSequenceId",

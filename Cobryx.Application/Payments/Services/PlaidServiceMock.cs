@@ -1,10 +1,10 @@
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Domain.Accounting;
 
 namespace Cobryx.Application.Payments.Services;
 
 public interface IBankProviderService
 {
-    Task<List<BankMovement>> FetchRecentMovementsAsync(Guid tenantId, DateTime since, CancellationToken ct = default);
+    public Task<List<BankMovement>> FetchRecentMovementsAsync(Guid tenantId, DateTime since, CancellationToken ct = default);
 }
 
 public class PlaidServiceMock : IBankProviderService

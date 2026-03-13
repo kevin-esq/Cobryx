@@ -1,6 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Lending.Queries.GetAgingReport;
@@ -43,7 +46,7 @@ public class GetAgingReportHandler : IRequestHandler<GetAgingReportQuery, AgingR
             .Where(l => l.TenantId == request.TenantId && l.Status == LoanStatus.Active)
             .ToListAsync(ct);
 
-        if (!loans.Any())
+        if (loans.Count == 0)
             return new AgingReportResponse();
 
         var totalPrincipal = loans.Sum(l => l.CurrentPrincipalBalance);
@@ -79,7 +82,7 @@ public class GetAgingReportHandler : IRequestHandler<GetAgingReportQuery, AgingR
         };
     }
 
-    private AgingBucket CreateBucket(string label, IEnumerable<Domain.Entities.Lending.Loan> loans)
+    private static AgingBucket CreateBucket(string label, IEnumerable<Loan> loans)
     {
         var loanList = loans.ToList();
         return new AgingBucket

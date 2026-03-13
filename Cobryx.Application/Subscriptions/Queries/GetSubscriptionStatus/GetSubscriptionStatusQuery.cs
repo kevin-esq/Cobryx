@@ -1,5 +1,6 @@
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;

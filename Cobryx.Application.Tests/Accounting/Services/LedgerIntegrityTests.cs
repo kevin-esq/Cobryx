@@ -1,15 +1,15 @@
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Moq;
-using Xunit;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 

@@ -4,7 +4,7 @@ namespace Cobryx.Application.Common.Interfaces;
 
 public interface IAuditLogQueryService
 {
-    Task<PaginatedList<AuditLogEntry>> QueryAsync(
+    public Task<PaginatedList<AuditLogEntry>> QueryAsync(
         Guid tenantId,
         int page,
         int pageSize,

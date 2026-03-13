@@ -1,33 +1,25 @@
 using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Microsoft.Extensions.Logging;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Auth.Services;
 
-public class AuthService : IAuthService
+public class AuthService(
+    IJwtTokenGenerator jwtTokenGenerator,
+    ISecurityAuditService auditService,
+    IRefreshTokenRepository refreshTokenRepository,
+    IUnitOfWork unitOfWork,
+    ILogger<AuthService> logger) : IAuthService
 {
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
-    private readonly ISecurityAuditService _auditService;
-    private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<AuthService> _logger;
-
-    public AuthService(
-        IJwtTokenGenerator jwtTokenGenerator,
-        ISecurityAuditService auditService,
-        IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork,
-        ILogger<AuthService> logger)
-    {
-        _jwtTokenGenerator = jwtTokenGenerator;
-        _auditService = auditService;
-        _refreshTokenRepository = refreshTokenRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
+    private readonly IJwtTokenGenerator _jwtTokenGenerator = jwtTokenGenerator;
+    private readonly ISecurityAuditService _auditService = auditService;
+    private readonly IRefreshTokenRepository _refreshTokenRepository = refreshTokenRepository;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly ILogger<AuthService> _logger = logger;
 
     public AuthResult GenerateAuthResponse(User user, string ipAddress, string? deviceFingerprint, string? userAgent, string? deviceName = null, Role? roleOverride = null)
     {
@@ -110,7 +102,7 @@ public class AuthService : IAuthService
         );
     }
 
-    private AuthResult CreateAuthResult(User user, string accessToken, string refreshToken, Guid sessionId, DateTime refreshExpires, Role? roleOverride = null)
+    private static AuthResult CreateAuthResult(User user, string accessToken, string refreshToken, Guid sessionId, DateTime refreshExpires, Role? roleOverride = null)
     {
         return new AuthResult(
             accessToken,

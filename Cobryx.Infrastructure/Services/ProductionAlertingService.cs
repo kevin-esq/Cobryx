@@ -1,6 +1,8 @@
-using Cobryx.Application.Common.Interfaces;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
+
+using Cobryx.Application.Common.Interfaces;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Infrastructure.Services;
 

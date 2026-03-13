@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Cobryx.Api.Contracts.V1.Customers;

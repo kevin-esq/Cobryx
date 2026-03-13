@@ -9,5 +9,5 @@ public interface IClock
     /// <summary>
     /// Gets the current date and time in Coordinated Universal Time (UTC).
     /// </summary>
-    DateTime UtcNow { get; }
+    public DateTime UtcNow { get; }
 }

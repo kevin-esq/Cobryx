@@ -1,10 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Entities.Lending.Enums;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -86,7 +86,7 @@ public class PaymentReminderJob
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
-    private bool ShouldSendReminder(PaymentLink link, DateTime now)
+    private static bool ShouldSendReminder(PaymentLink link, DateTime now)
     {
         var daysSinceCreation = (now - link.CreatedAt).TotalDays;
         var daysUntilExpiry = (link.ExpiresAt - now).TotalDays;

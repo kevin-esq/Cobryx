@@ -1,14 +1,17 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Payments.Commands.CreatePaymentLink;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Cobryx.Domain.Entities.Lending.Enums;
-using CustomerEntity = Cobryx.Domain.Entities.Customer;
+
+using CustomerEntity = Cobryx.Domain.Lending.Customer;
 
 namespace Cobryx.Infrastructure.Payments.Services;
 
@@ -162,7 +165,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
         }
     }
 
-    private FailureType ClassifyFailure(string? code)
+    private static FailureType ClassifyFailure(string? code)
     {
         return code switch
         {
@@ -191,6 +194,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
         string description,
         CancellationToken ct)
     {
+        _ = description;
         var command = new CreatePaymentLinkCommand(
             customer.Id,
             new Money(amount, currency),

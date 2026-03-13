@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Cobryx.Api.Contracts.V1.Lending;
 
 /// <summary>

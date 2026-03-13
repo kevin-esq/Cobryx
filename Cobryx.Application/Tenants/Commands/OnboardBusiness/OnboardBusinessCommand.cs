@@ -1,13 +1,15 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.Exceptions.Common;
 using Cobryx.Domain.Exceptions.Tenants;
 using Cobryx.Domain.Exceptions.Users;
-using Cobryx.Domain.Exceptions.Common;
+using Cobryx.Domain.Identity.Enums;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using FluentValidation;
-using Cobryx.Application.Common.Validation;
 
 namespace Cobryx.Application.Tenants.Commands.OnboardBusiness;
 
@@ -73,7 +75,7 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
         if (tenant == null) throw new TenantNotFoundException(tenantId.Value);
 
-        if (tenant.OnboardingStatus == Cobryx.Domain.Enums.TenantOnboardingStatus.Completed)
+        if (tenant.OnboardingStatus == TenantOnboardingStatus.Completed)
         {
             user.CompleteOnboarding();
             await _userRepository.UpdateAsync(user, cancellationToken);

@@ -29,7 +29,7 @@ public class MockEmailService : IEmailService
         return null;
     }
 
-    private string? ExtractToken(string? body)
+    private static string? ExtractToken(string? body)
     {
         if (string.IsNullOrEmpty(body)) return null;
         var parts = body.Split("token=");

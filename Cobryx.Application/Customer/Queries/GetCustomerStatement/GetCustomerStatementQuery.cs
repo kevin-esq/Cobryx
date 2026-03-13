@@ -1,8 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Customer.Queries.GetCustomerStatement;
@@ -33,14 +33,9 @@ public record StatementTransactionDto(
     decimal Amount,
     string Reference);
 
-public class GetCustomerStatementHandler : IRequestHandler<GetCustomerStatementQuery, Result<CustomerStatementDto>>
+public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestHandler<GetCustomerStatementQuery, Result<CustomerStatementDto>>
 {
-    private readonly ICobryxDbContext _dbContext;
-
-    public GetCustomerStatementHandler(ICobryxDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
 
     public async Task<Result<CustomerStatementDto>> Handle(GetCustomerStatementQuery request, CancellationToken ct)
     {

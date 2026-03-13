@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Lending;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,8 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     public void Configure(EntityTypeBuilder<Customer> builder)
     {
         builder.HasIndex(c => c.TenantId);
+        builder.HasIndex(c => new { c.TenantId, c.CreatedAt })
+            .IsDescending(false, true);
         builder.HasIndex(c => c.Phone);
 
         builder.HasIndex(c => new { c.LastName, c.FirstName });

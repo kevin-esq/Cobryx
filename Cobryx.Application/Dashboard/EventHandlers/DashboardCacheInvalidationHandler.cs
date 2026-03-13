@@ -1,8 +1,10 @@
-using Cobryx.Domain.Events.Payments;
-using Cobryx.Domain.Events;
 using Cobryx.Application.Common.Events;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Events;
+using Cobryx.Domain.Events.Payments;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Dashboard.EventHandlers;

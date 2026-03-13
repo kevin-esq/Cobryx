@@ -1,0 +1,27 @@
+<Project>
+
+  <PropertyGroup>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Nullable>enable</Nullable>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <AnalysisLevel>latest</AnalysisLevel>
+
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <Deterministic>true</Deterministic>
+
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+
+    <DebugType>portable</DebugType>
+
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+  </PropertyGroup>
+
+</Project>

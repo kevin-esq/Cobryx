@@ -2,7 +2,8 @@ using Cobryx.Application.Accounting.Events;
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Domain.Accounting;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

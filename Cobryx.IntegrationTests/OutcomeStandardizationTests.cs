@@ -1,13 +1,16 @@
 using System.Net;
-using System.Net.Http.Json;
+using System.Text.Json;
+
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
-using FluentAssertions;
-using System.Text.Json;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+
+using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Cobryx.IntegrationTests.Helpers;
 
 namespace Cobryx.IntegrationTests;
 
@@ -29,10 +32,6 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var roleRepo = scope.ServiceProvider.GetRequiredService<IRoleRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        var conn = db.Database.GetDbConnection();
-        if (conn.State == System.Data.ConnectionState.Open) await conn.CloseAsync();
-        await conn.OpenAsync();
-
         await db.Database.EnsureCreatedAsync();
         await DbInitializer.SeedRolesAsync(roleRepo, unitOfWork);
     }
@@ -45,7 +44,7 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
         var email = $"success_test_{Guid.NewGuid()}@example.com";
         var command = new SignUpCommand("Success Corp", "Test", "User", email, "SecurePass123!@#");
 
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", command);
+        var response = await _client.PostIdempotentAsync("/api/v1/auth/signup", command);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -61,21 +60,19 @@ public class OutcomeStandardizationTests : IClassFixture<CobryxWebApplicationFac
     {
         var email = $"login_test_{Guid.NewGuid()}@example.com";
         var signupCommand = new SignUpCommand("Login Corp", "Test", "User", email, "SecurePass123!@#");
-        await _client.PostAsJsonAsync("/api/v1/auth/signup", signupCommand);
+        await _client.PostIdempotentAsync("/api/v1/auth/signup", signupCommand);
 
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-            if (user != null)
-            {
-                user.VerifyEmail();
-                await db.SaveChangesAsync();
-            }
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == (Cobryx.Domain.ValueObjects.EmailAddress)email);
+            user.Should().NotBeNull("User should exist after signup");
+            user!.VerifyEmail();
+            await db.SaveChangesAsync();
         }
 
         var loginCommand = new LoginCommand(email, "SecurePass123!@#");
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginCommand);
+        var response = await _client.PostIdempotentAsync("/api/v1/auth/login", loginCommand);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 

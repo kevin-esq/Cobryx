@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddTenantInvitations_Fixed : Migration
     {
+        private static readonly string[] columns = new[] { "Status", "ExpiresAt" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -62,7 +63,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_TenantInvitation_Status_ExpiresAt",
                 table: "TenantInvitations",
-                columns: new[] { "Status", "ExpiresAt" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantInvitations_TenantId_Email",

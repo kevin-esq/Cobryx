@@ -1,9 +1,11 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared;
+using Cobryx.Infrastructure.Configuration;
+
 using Fido2NetLib;
 using Fido2NetLib.Objects;
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
-using Cobryx.Infrastructure.Configuration;
-using Cobryx.Domain.Common;
+
 using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Security;

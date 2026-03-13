@@ -1,20 +1,22 @@
-using Serilog;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Asp.Versioning;
+
 using Cobryx.Application;
+using Cobryx.Application.Common.Observability;
+using Cobryx.Application.Modules;
+using Cobryx.Domain.Shared;
 using Cobryx.Infrastructure;
 using Cobryx.Infrastructure.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
-using Cobryx.Infrastructure.Configuration;
-using Cobryx.Application.Common.Configuration;
-using Cobryx.Domain.Common;
-using Microsoft.Extensions.Options;
-using Cobryx.Application.Common.Observability;
-using OpenTelemetry.Metrics;
-using Microsoft.EntityFrameworkCore;
-using Asp.Versioning;
+using Cobryx.Infrastructure.Modules;
+
 using Hangfire;
+
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+
+using OpenTelemetry.Metrics;
+
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,7 +114,13 @@ builder.Services.AddScoped<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocu
 
 builder.Services
     .AddApplicationServices()
-    .AddInfrastructureServices(builder.Configuration);
+    .AddLendingModule()
+    .AddPaymentsModule()
+    .AddAccountingModule()
+    .AddInfrastructureServices(builder.Configuration)
+    .AddLendingInfrastructure()
+    .AddPaymentsInfrastructure()
+    .AddAccountingInfrastructure();
 
 builder.Services.AddExceptionHandler<Cobryx.Api.Infrastructure.GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -127,20 +135,18 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("CanViewCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:view"));
-    options.AddPolicy("CanCreateCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:create"));
-    options.AddPolicy("CanViewCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:view"));
-    options.AddPolicy("CanCreateCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:create"));
-    options.AddPolicy("CanApplyPayments", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "payments:apply"));
-    options.AddPolicy("CanManageTenant", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "tenant:manage"));
-    options.AddPolicy("PlatformAdmin", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "platform:admin"));
-    options.AddPolicy("EmailVerified", policy => policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true"));
-    options.AddPolicy("AccountVerified", policy =>
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("CanViewCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:view"))
+    .AddPolicy("CanCreateCustomers", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "customers:create"))
+    .AddPolicy("CanViewCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:view"))
+    .AddPolicy("CanCreateCredits", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "credits:create"))
+    .AddPolicy("CanApplyPayments", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "payments:apply"))
+    .AddPolicy("CanManageTenant", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "tenant:manage"))
+    .AddPolicy("PlatformAdmin", policy => policy.RequireClaim(CobryxClaimTypes.Permissions, "platform:admin"))
+    .AddPolicy("EmailVerified", policy => policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true"))
+    .AddPolicy("AccountVerified", policy =>
         policy.RequireClaim(CobryxClaimTypes.EmailVerified, "true")
               .RequireClaim(CobryxClaimTypes.RequiresOnboarding, "false"));
-});
 
 builder.Services.AddApiVersioning(options =>
 {
@@ -224,12 +230,15 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseMiddleware<Cobryx.Api.Middlewares.TenantMiddleware>();
-app.UseMiddleware<Cobryx.Api.Middlewares.SubscriptionGateMiddleware>();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseMiddleware<Cobryx.Api.Middlewares.SubscriptionGateMiddleware>();
+}
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     DashboardTitle = "Cobryx Jobs Manager",
-    Authorization = new[] { new Cobryx.Api.Infrastructure.HangfireDashboardFilter() }
+    Authorization = [new Cobryx.Api.Infrastructure.HangfireDashboardFilter()]
 });
 
 // Cloud Run terminates TLS — no HTTPS redirect needed in container.
@@ -246,7 +255,7 @@ app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 try
 {
-    using (var scope = app.Services.CreateScope())
+    using var scope = app.Services.CreateScope();
     {
         var roleRepo = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IRoleRepository>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<Cobryx.Domain.Interfaces.IUnitOfWork>();
@@ -272,12 +281,12 @@ try
         Log.Information("Database seeding completed successfully");
 
         // Register Recurring Jobs
-        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob>(
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.Messaging.ProcessOutboxJob>(
             "process-outbox-events",
             job => job.RunAsync(CancellationToken.None),
             "*/10 * * * * *"); // Every 10 seconds
 
-        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Accounting.LedgerOutboxWorker>(
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.Messaging.LedgerOutboxWorker>(
             "ledger-cdc-outbox",
             job => job.ProcessEventsAsync(CancellationToken.None),
             "*/5 * * * * *"); // Every 5 seconds for high-fidelity ledger stream

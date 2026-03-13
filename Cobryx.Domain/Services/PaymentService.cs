@@ -1,13 +1,13 @@
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Domain.Services;
 
 public class PaymentService
 {
-    public void ApplyPaymentToInvoice(Payment payment, Invoice invoice, Money amount)
+    public static void ApplyPaymentToInvoice(Payment payment, Invoice invoice, Money amount)
     {
         if (payment.TenantId != invoice.TenantId)
             throw new DomainException(DomainErrorCode.Invoicing.PaymentTenantMismatch);

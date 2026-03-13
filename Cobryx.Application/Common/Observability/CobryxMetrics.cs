@@ -1,7 +1,7 @@
 using System.Diagnostics.Metrics;
-using System.Collections.Generic;
-using System;
-using Cobryx.Domain.Enums;
+
+using Cobryx.Domain.Shared.Enums;
+
 
 namespace Cobryx.Application.Common.Observability;
 

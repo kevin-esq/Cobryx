@@ -1,12 +1,13 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Documents.Commands.DeleteDocument;
 using Cobryx.Application.Documents.Commands.UploadDocument;
 using Cobryx.Application.Documents.Queries.GetDocumentDownload;
 using Cobryx.Application.Documents.Queries.GetDocumentStatus;
-using Cobryx.Domain.Common;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

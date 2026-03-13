@@ -1,9 +1,12 @@
 using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Fido2NetLib;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
@@ -49,7 +52,7 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
         if (userId == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Completing FIDO2 assertion for user: {Email}", user.Email);
@@ -70,7 +73,7 @@ public class CompleteFido2AssertionHandler : IRequestHandler<CompleteFido2Assert
         var userAgent = _httpContextService.GetUserAgent();
         var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent);
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success(authResult);
     }

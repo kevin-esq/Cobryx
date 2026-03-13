@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Invoicing.Commands.CreateTaxConfiguration;
 
@@ -12,18 +13,12 @@ public record CreateTaxConfigurationCommand(
     bool IsInclusive = true,
     bool IsDefault = false) : IRequest<Result<Guid>>;
 
-public class CreateTaxConfigurationHandler : IRequestHandler<CreateTaxConfigurationCommand, Result<Guid>>
+public class CreateTaxConfigurationHandler(
+    ITaxConfigurationRepository taxRepository,
+    ITenantProvider tenantProvider) : IRequestHandler<CreateTaxConfigurationCommand, Result<Guid>>
 {
-    private readonly ITaxConfigurationRepository _taxRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public CreateTaxConfigurationHandler(
-        ITaxConfigurationRepository taxRepository,
-        ITenantProvider tenantProvider)
-    {
-        _taxRepository = taxRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly ITaxConfigurationRepository _taxRepository = taxRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<Guid>> Handle(CreateTaxConfigurationCommand request, CancellationToken cancellationToken)
     {
@@ -32,11 +27,11 @@ public class CreateTaxConfigurationHandler : IRequestHandler<CreateTaxConfigurat
 
         if (request.IsDefault)
         {
-            var existingDefault = await _taxRepository.GetDefaultAsync(tenantId.Value);
+            var existingDefault = await _taxRepository.GetDefaultAsync(tenantId.Value, cancellationToken);
             if (existingDefault != null)
             {
                 existingDefault.UnsetDefault();
-                await _taxRepository.UpdateAsync(existingDefault);
+                await _taxRepository.UpdateAsync(existingDefault, cancellationToken);
             }
         }
 
@@ -47,7 +42,7 @@ public class CreateTaxConfigurationHandler : IRequestHandler<CreateTaxConfigurat
             request.IsInclusive,
             request.IsDefault);
 
-        await _taxRepository.AddAsync(tax);
+        await _taxRepository.AddAsync(tax, cancellationToken);
 
         return Result.Success(tax.Id);
     }

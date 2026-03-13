@@ -1,5 +1,3 @@
-using System;
-
 namespace Cobryx.Api.Infrastructure;
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]

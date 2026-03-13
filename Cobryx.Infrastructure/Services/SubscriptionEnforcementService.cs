@@ -1,8 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Exceptions;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Services;

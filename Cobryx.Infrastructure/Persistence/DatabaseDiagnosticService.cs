@@ -1,9 +1,9 @@
-using System.Data;
-using System.Diagnostics;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+
 using Npgsql;
 
 namespace Cobryx.Infrastructure.Persistence;

@@ -1,8 +1,11 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Fido2NetLib;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
@@ -33,7 +36,7 @@ public class InitiateFido2RegistrationHandler : IRequestHandler<InitiateFido2Reg
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) return Result.Failure<CredentialCreateOptions>(DomainErrorCode.Auth.NotAuthenticated);
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure<CredentialCreateOptions>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Initiating FIDO2 registration for user: {Email}", user.Email);

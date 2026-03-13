@@ -1,6 +1,8 @@
 using System.Security.Claims;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.MultiTenancy;

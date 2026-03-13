@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddReconciliationAndTenantStatus : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "RunId" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -144,7 +145,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ReconciliationAudits_TenantId_RunId",
                 table: "ReconciliationAudits",
-                columns: new[] { "TenantId", "RunId" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReconciliationAudits_TenantId_ToUtc",

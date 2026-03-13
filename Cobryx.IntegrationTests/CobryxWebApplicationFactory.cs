@@ -1,20 +1,21 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
+using System.Data.Common;
+using System.Text;
+
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.Infrastructure.Persistence.Interceptors;
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.IntegrationTests.Fakes;
-using Microsoft.Data.Sqlite;
-using System.Data.Common;
-using Microsoft.Extensions.Configuration;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Cobryx.IntegrationTests;
 
@@ -24,13 +25,16 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((context, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                { "JwtSettings:Secret", "SuperSecretKeyForIntegrationTests1234567890!" },
-                { "JwtSettings:Issuer", "CobryxApi-Test" },
-                { "JwtSettings:Audience", "CobryxClient-Test" },
+                { "ASPNETCORE_ENVIRONMENT", "Testing" },
+                { "Caching:UseInMemory", "true" },
+                { "JwtSettings:Secret", "SuperSecretKeyForTesting!LengthMustBeAtLeast32Chars" },
+                { "JwtSettings:Issuer", "CobryxTest" },
+                { "JwtSettings:Audience", "CobryxTest" },
                 { "JwtSettings:ExpiryMinutes", "60" },
                 { "App:BaseUrl", "https://test.cobryx.com" },
                 { "App:AppUrl", "https://app-test.cobryx.com" },
@@ -42,6 +46,10 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
                 { "Stripe:WebhookSecret", "whsec_test_123" },
                 { "Stripe:SuccessUrl", "https://test.cobryx.com/success" },
                 { "Stripe:CancelUrl", "https://test.cobryx.com/cancel" },
+                { "App:InvitationTokenSecret", "TestSecretKey1234567890!Length32Chars" },
+                { "Security:Captcha:SecretKey", "6LeIxAcTAAAAAGG-vFI1TnRWxMZ_DM7Oru8nEPvM" },
+                { "Stripe:PaymentLinkSecret", "test_pl_secret_12345678901234567890" },
+                { "Hangfire:UseMemoryStorage", "true" },
                 { "Storage:S3:AccessKey", "test-access-key" },
                 { "Storage:S3:SecretKey", "test-secret-key" },
                 { "Storage:S3:ServiceUrl", "https://localhost:9000" },
@@ -53,10 +61,10 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                var secret = "SuperSecretKeyForIntegrationTests1234567890!";
+                var secret = "SuperSecretKeyForTesting!LengthMustBeAtLeast32Chars";
                 options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-                options.TokenValidationParameters.ValidIssuer = "CobryxApi-Test";
-                options.TokenValidationParameters.ValidAudience = "CobryxClient-Test";
+                options.TokenValidationParameters.ValidIssuer = "CobryxTest";
+                options.TokenValidationParameters.ValidAudience = "CobryxTest";
                 options.TokenValidationParameters.ValidateIssuer = true;
                 options.TokenValidationParameters.ValidateAudience = true;
                 options.TokenValidationParameters.ClockSkew = TimeSpan.Zero;
@@ -109,8 +117,10 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContext<CobryxDbContext>((sp, options) =>
             {
                 options.AddInterceptors(
-                    sp.GetRequiredService<AuditInterceptor>(),
-                    sp.GetRequiredService<OutboxInterceptor>());
+                sp.GetRequiredService<OutboxInterceptor>(),
+                sp.GetRequiredService<AuditInterceptor>(),
+                sp.GetRequiredService<AuditFieldsInterceptor>(),
+                sp.GetRequiredService<DbMetricsInterceptor>());
                 options.UseSqlite(_connection);
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();

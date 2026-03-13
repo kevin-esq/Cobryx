@@ -1,7 +1,10 @@
 using Asp.Versioning;
+
 using Cobryx.Application.Payments.Commands.CreatePaymentLink;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,13 +1,12 @@
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
 using Cobryx.Domain.ValueObjects;
-using Xunit;
 
 namespace Cobryx.Domain.Tests.Payments;
 
 public class PaymentLinkTests
 {
-    private PaymentLink CreateActiveLink()
+    private static PaymentLink CreateActiveLink()
     {
         return new PaymentLink(
             Guid.NewGuid(),
@@ -44,12 +43,15 @@ public class PaymentLinkTests
     public void RecordRecoveryFailure_ShouldBeDeterministic_PerLink()
     {
         // Arrange
-        var id = Guid.NewGuid();
-        var link1 = new PaymentLink(Guid.NewGuid(), Guid.NewGuid(), new Money(100, "USD"), "token", DateTime.UtcNow.AddDays(7), "secret");
-        var link2 = new PaymentLink(Guid.NewGuid(), Guid.NewGuid(), new Money(100, "USD"), "token", DateTime.UtcNow.AddDays(7), "secret");
+        var link1 = CreateActiveLink();
+        var link2 = CreateActiveLink();
 
-        // We use reflection or just assume if they have the same ID they get same jitter
-        // But since I used Guid.ToByteArray in the seed, I'll manually set the IDs if possible or just check consistency.
+        // Act
+        link1.RecordRecoveryFailure("insufficient_funds");
+        link2.RecordRecoveryFailure("insufficient_funds");
+
+        // Assert
+        Assert.Equal(link1.NextRecoveryAttemptAt, link2.NextRecoveryAttemptAt);
     }
 
     [Fact]
@@ -59,7 +61,7 @@ public class PaymentLinkTests
         var link = CreateActiveLink();
 
         // Act
-        for (int i = 0; i < 5; i++)
+        for (var i = 0; i < 5; i++)
         {
             link.RecordRecoveryFailure("soft_fail");
         }
@@ -82,6 +84,14 @@ public class PaymentLinkTests
         // We can check if the deadline logic works by checking if it uses it.
         // Since we can't easily mock DateTime.UtcNow in this simple unit test without more infra,
         // we trust the conditional logic: if (RecoveryAttemptCount >= MaxRecoveryAttempts || DateTime.UtcNow > RecoveryDeadline)
+
+        // Act
+        link.RecordRecoveryFailure("soft_fail");
+
+        // Assert
+        Assert.Equal(1, link.RecoveryAttemptCount);
+        Assert.Equal(PaymentLinkStatus.Active, link.Status);
+        Assert.NotNull(link.NextRecoveryAttemptAt);
     }
 
     [Fact]

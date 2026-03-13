@@ -1,22 +1,18 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Documents.Queries.GetDocumentStatus;
 
-public class GetDocumentStatusHandler : IRequestHandler<GetDocumentStatusQuery, Result<DocumentStatusDto>>
+public class GetDocumentStatusHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider) : IRequestHandler<GetDocumentStatusQuery, Result<DocumentStatusDto>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetDocumentStatusHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider)
-    {
-        _unitOfWork = unitOfWork;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<DocumentStatusDto>> Handle(GetDocumentStatusQuery request, CancellationToken ct)
     {

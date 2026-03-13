@@ -1,8 +1,11 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Concordia;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
 

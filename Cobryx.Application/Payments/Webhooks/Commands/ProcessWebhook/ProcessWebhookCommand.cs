@@ -1,8 +1,10 @@
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Application.Webhooks.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.ProcessWebhook;

@@ -1,13 +1,14 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Services;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Payments.Enums;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Enums;
 using Cobryx.Infrastructure.Persistence;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Webhooks;
 

@@ -1,11 +1,14 @@
 using Asp.Versioning;
+
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Tenants.Commands.SeedDemoData;
 using Cobryx.Application.Tenants.Commands.UpdateBusinessSettings;
 using Cobryx.Application.Tenants.Commands.UpdateTenantSettings;
-using Cobryx.Application.Tenants.Commands.SeedDemoData;
 using Cobryx.Application.Tenants.Queries.GetBusinessSettings;
 using Cobryx.Application.Tenants.Queries.GetTenantSettings;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

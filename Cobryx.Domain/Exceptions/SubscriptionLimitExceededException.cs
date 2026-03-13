@@ -1,20 +1,17 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Domain.Exceptions;
 
-public class SubscriptionLimitExceededException : CobryxException
+public class SubscriptionLimitExceededException(DomainErrorCode errorCode, Dictionary<string, object>? metadata = null) : CobryxException(metadata)
 {
-    private readonly DomainErrorCode _errorCode;
+    private readonly DomainErrorCode _errorCode = errorCode;
     public override DomainErrorCode ErrorCode => _errorCode;
 
-    public SubscriptionLimitExceededException(DomainErrorCode errorCode, Dictionary<string, object>? metadata = null)
-        : base(metadata)
+    public static SubscriptionLimitExceededException LimitReached(string resource)
     {
-        _errorCode = errorCode;
+        _ = resource;
+        return new(DomainErrorCode.Subscription.LimitReached);
     }
-
-    public static SubscriptionLimitExceededException LimitReached(string resource) =>
-        new(DomainErrorCode.Subscription.LimitReached);
 
     public static SubscriptionLimitExceededException Expired() =>
         new(DomainErrorCode.Subscription.Expired);

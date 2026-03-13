@@ -1,14 +1,17 @@
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using FluentValidation;
-using Cobryx.Application.Common.Validation;
 using Cobryx.Application.Common.Configuration;
-using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
+using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.Identity.Enums;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using FluentValidation;
+
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 

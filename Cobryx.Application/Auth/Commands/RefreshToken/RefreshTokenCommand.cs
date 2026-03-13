@@ -1,12 +1,12 @@
-using System.Linq;
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
 using Cobryx.Domain.Exceptions.Auth;
 using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 

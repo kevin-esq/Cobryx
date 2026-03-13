@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Invoicing.Commands.DeleteTaxConfiguration;
 
@@ -25,7 +26,7 @@ public class DeleteTaxConfigurationHandler : IRequestHandler<DeleteTaxConfigurat
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
-        var tax = await _taxRepository.GetByIdAsync(request.Id);
+        var tax = await _taxRepository.GetByIdAsync(request.Id, cancellationToken);
         if (tax == null || tax.TenantId != tenantId.Value)
             return Result.Failure(DomainErrorCode.Invoicing.TaxNotFound);
 
@@ -33,7 +34,7 @@ public class DeleteTaxConfigurationHandler : IRequestHandler<DeleteTaxConfigurat
             return Result.Failure(DomainErrorCode.Invoicing.TaxDeleteDefaultForbidden);
 
         tax.Delete();
-        await _taxRepository.UpdateAsync(tax);
+        await _taxRepository.UpdateAsync(tax, cancellationToken);
 
         return Result.Success();
     }

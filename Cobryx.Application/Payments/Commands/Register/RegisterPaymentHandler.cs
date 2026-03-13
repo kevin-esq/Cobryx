@@ -1,9 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
 
 namespace Cobryx.Application.Payments.Commands.Register;
@@ -32,7 +32,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
             return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
         }
 
-        var credit = await _creditRepository.GetByIdAsync(request.CreditId);
+        var credit = await _creditRepository.GetByIdAsync(request.CreditId, cancellationToken);
         if (credit == null || credit.TenantId != tenantId.Value)
         {
             return Result.Failure<Guid>(DomainErrorCode.Credits.NotFound);
@@ -52,8 +52,8 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
 
         credit.ApplyPayment(payment.Id, amount);
 
-        await _paymentRepository.AddAsync(payment);
-        await _creditRepository.UpdateAsync(credit);
+        await _paymentRepository.AddAsync(payment, cancellationToken);
+        await _creditRepository.UpdateAsync(credit, cancellationToken);
 
         return Result.Success(payment.Id);
     }

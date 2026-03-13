@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddCompositeIndexesForPerformance : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "Status" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -597,7 +598,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_SupportTickets_TenantId_Status",
                 table: "SupportTickets",
-                columns: new[] { "TenantId", "Status" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_CustomerId",
@@ -682,7 +683,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Invoices_TenantId_Status",
                 table: "Invoices",
-                columns: new[] { "TenantId", "Status" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoginSessions_LastActiveAt",

@@ -1,10 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Portal.Queries.GetCustomerPortalSummary;
@@ -34,14 +33,9 @@ public record PortalTransactionDto(
     string Type,
     string? ReferenceId);
 
-public class GetCustomerPortalSummaryHandler : IRequestHandler<GetCustomerPortalSummaryQuery, Result<CustomerPortalSummaryDto>>
+public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequestHandler<GetCustomerPortalSummaryQuery, Result<CustomerPortalSummaryDto>>
 {
-    private readonly ICobryxDbContext _dbContext;
-
-    public GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
 
     public async Task<Result<CustomerPortalSummaryDto>> Handle(GetCustomerPortalSummaryQuery request, CancellationToken ct)
     {
@@ -60,9 +54,9 @@ public class GetCustomerPortalSummaryHandler : IRequestHandler<GetCustomerPortal
             .Where(l => l.CustomerId == request.CustomerId && l.TenantId == request.TenantId && l.Status == LoanStatus.Active)
             .ToListAsync(ct);
 
-        if (!loans.Any())
+        if (loans.Count == 0)
         {
-            return Result.Success(new CustomerPortalSummaryDto(0, 0, null, new(), new()));
+            return Result.Success(new CustomerPortalSummaryDto(0, 0, null, [], []));
         }
 
         var loanIds = loans.Select(l => l.Id).ToList();
@@ -127,7 +121,7 @@ public class GetCustomerPortalSummaryHandler : IRequestHandler<GetCustomerPortal
 
         return Result.Success(new CustomerPortalSummaryDto(
             totalBalance,
-            nextInstallment?.TotalAmount ?? 0,
+            nextInstallment?.TotalAmount.Amount ?? 0m,
             nextInstallment?.DueDate,
             loanSummaries,
             recentTransactions

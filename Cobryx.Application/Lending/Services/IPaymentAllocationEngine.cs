@@ -1,6 +1,4 @@
-using Cobryx.Domain.Entities.Lending;
-using System.Threading;
-using System.Threading.Tasks;
+using Cobryx.Domain.Lending;
 
 namespace Cobryx.Application.Lending.Services;
 
@@ -15,5 +13,5 @@ public interface IPaymentAllocationEngine
     /// <param name="paymentId">The unique identifier of the payment.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A plan describing the allocation distribution.</returns>
-    Task<LoanPaymentAllocation> AllocateAsync(Loan loan, decimal paymentAmount, Guid paymentId, CancellationToken ct = default);
+    public Task<LoanPaymentAllocation> AllocateAsync(Loan loan, decimal paymentAmount, Guid paymentId, CancellationToken ct = default);
 }

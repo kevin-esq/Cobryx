@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Cobryx.Application.Products.Common;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Products.Queries.GetProducts;
@@ -25,7 +26,7 @@ public class GetProductsHandler : IRequestHandler<GetProductsQuery, Result<Pagin
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<PaginatedList<ProductDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var allProducts = await _productRepository.GetAllAsync();
+        var allProducts = await _productRepository.GetAllAsync(cancellationToken);
         var products = allProducts.Where(p => p.TenantId == tenantId.Value);
 
         var totalCount = products.Count();

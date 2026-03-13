@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddPaymentLinks : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "Code" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -295,7 +296,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerAccounts_TenantId_Code",
                 table: "LedgerAccounts",
-                columns: new[] { "TenantId", "Code" },
+                columns: columns,
                 unique: true);
 
             migrationBuilder.CreateIndex(

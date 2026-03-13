@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

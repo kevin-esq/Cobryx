@@ -1,5 +1,3 @@
-using System;
-
 namespace Cobryx.Application.Common.Attributes;
 
 /// <summary>

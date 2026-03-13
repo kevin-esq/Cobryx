@@ -1,7 +1,9 @@
+using System.Text.Json;
+
 using Cobryx.Application.Accounting.Events;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Cobryx.Infrastructure.Services.Accounting;
 

@@ -4,13 +4,15 @@ using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Application.Tenants.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Identity.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using FluentValidation;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

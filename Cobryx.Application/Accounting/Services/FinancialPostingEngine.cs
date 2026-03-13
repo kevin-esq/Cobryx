@@ -1,13 +1,14 @@
+using System.Text.Json;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Entities.Accounting.Enums;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Messaging;
+using Cobryx.Domain.Shared;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Cobryx.Application.Accounting.Services;
 
@@ -24,7 +25,6 @@ public class FinancialPostingEngine(ICobryxDbContext context, ILogger<FinancialP
         Loan loan,
         LoanPaymentAllocation allocation,
         string reference,
-        decimal? platformFee = null,
         CancellationToken ct = default)
     {
         _logger.LogInformation("Posting payment allocation for Loan {LoanId}, Payment {PaymentId}", loan.Id, allocation.PaymentId);
@@ -135,7 +135,7 @@ public class FinancialPostingEngine(ICobryxDbContext context, ILogger<FinancialP
             .Include(t => t.Entries)
             .ToListAsync(ct);
 
-        var alreadyReversed = existingReversals.Sum<LedgerTransaction>(t => t.Entries.Sum(e => Math.Abs(e.Debit)));
+        var alreadyReversed = existingReversals.SelectMany(static t => t.Entries).Sum(static e => Math.Abs(e.Debit));
         var originalTotal = original.Entries.Sum(e => Math.Abs(e.Debit));
         var remainingReversibleAmount = Math.Max(0, originalTotal - alreadyReversed);
 
@@ -235,17 +235,17 @@ public class FinancialPostingEngine(ICobryxDbContext context, ILogger<FinancialP
         await _context.SaveChangesAsync(ct);
         var sequenceId = transaction.Entries.OrderBy(e => e.JournalSequenceId).First().JournalSequenceId;
 
-        var outboxEvent = new FinancialOutboxEvent(
+        var outboxMessage = new OutboxMessage(
             transaction.TenantId,
-            eventType,
+            eventType.ToString(),
+            payloadJson,
             entityId,
             sequenceId,
             transaction.TenantId.ToString(),
-            DateTime.UtcNow,
-            payloadJson
+            null
         );
 
-        _context.FinancialOutboxEvents.Add(outboxEvent);
+        _context.OutboxMessages.Add(outboxMessage);
         await _context.SaveChangesAsync(ct);
     }
 

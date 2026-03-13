@@ -1,14 +1,15 @@
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Identity.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;
 
-public class UserRepository : BaseRepository<User>, IUserRepository
+public class UserRepository(CobryxDbContext dbContext) : BaseRepository<User>(dbContext), IUserRepository
 {
-    public UserRepository(CobryxDbContext dbContext) : base(dbContext) { }
 
     public override async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -38,7 +39,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return await _dbSet.AnyAsync(u => u.Email == (EmailAddress)emailLower, cancellationToken);
     }
 
-    public async Task<User?> GetBySecurityTokenHashAsync(string tokenHash, Domain.Enums.SecurityTokenType type, CancellationToken cancellationToken = default)
+    public async Task<User?> GetBySecurityTokenHashAsync(string tokenHash, SecurityTokenType type, CancellationToken cancellationToken = default)
     {
         return await _dbSet
             .Include(u => u.SecurityTokens)

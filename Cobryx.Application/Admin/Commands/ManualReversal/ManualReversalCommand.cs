@@ -1,33 +1,27 @@
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Lending.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Admin.Commands.ManualReversal;
 
 public record ManualReversalCommand(Guid TransactionId, decimal Amount, string Reason) : IRequest<Result>;
 
-public class ManualReversalHandler : IRequestHandler<ManualReversalCommand, Result>
+public class ManualReversalHandler(
+    ICobryxDbContext dbContext,
+    FinancialPostingEngine postingEngine,
+    FinancialStateEngine stateEngine,
+    ICurrentUserProvider currentUserProvider) : IRequestHandler<ManualReversalCommand, Result>
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly FinancialPostingEngine _postingEngine;
-    private readonly FinancialStateEngine _stateEngine;
-    private readonly ICurrentUserProvider _currentUserProvider;
-
-    public ManualReversalHandler(
-        ICobryxDbContext dbContext,
-        FinancialPostingEngine postingEngine,
-        FinancialStateEngine stateEngine,
-        ICurrentUserProvider currentUserProvider)
-    {
-        _dbContext = dbContext;
-        _postingEngine = postingEngine;
-        _stateEngine = stateEngine;
-        _currentUserProvider = currentUserProvider;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly FinancialPostingEngine _postingEngine = postingEngine;
+    private readonly FinancialStateEngine _stateEngine = stateEngine;
+    private readonly ICurrentUserProvider _currentUserProvider = currentUserProvider;
 
     public async Task<Result> Handle(ManualReversalCommand request, CancellationToken ct)
     {

@@ -1,10 +1,11 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Application.Subscriptions.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Subscriptions.Commands.SyncSubscription;

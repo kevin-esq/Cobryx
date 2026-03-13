@@ -1,7 +1,7 @@
 using Cobryx.Application.Common.Observability;
+
 using Hangfire;
-using Hangfire.Storage;
-using Hangfire.Storage.Monitoring;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

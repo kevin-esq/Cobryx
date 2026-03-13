@@ -1,8 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Lending.Dtos;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Interfaces.Lending;
-using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Lending.Queries.GetLoanSchedule;
@@ -12,16 +12,10 @@ namespace Cobryx.Application.Lending.Queries.GetLoanSchedule;
 /// </summary>
 public record GetLoanScheduleQuery(Guid LoanId) : IRequest<Result<LoanScheduleDto>>;
 
-public class GetLoanScheduleHandler : IRequestHandler<GetLoanScheduleQuery, Result<LoanScheduleDto>>
+public class GetLoanScheduleHandler(ILoanRepository loanRepository, ITenantProvider tenantProvider) : IRequestHandler<GetLoanScheduleQuery, Result<LoanScheduleDto>>
 {
-    private readonly ILoanRepository _loanRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetLoanScheduleHandler(ILoanRepository loanRepository, ITenantProvider tenantProvider)
-    {
-        _loanRepository = loanRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly ILoanRepository _loanRepository = loanRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<LoanScheduleDto>> Handle(GetLoanScheduleQuery request, CancellationToken ct)
     {
@@ -44,9 +38,9 @@ public class GetLoanScheduleHandler : IRequestHandler<GetLoanScheduleQuery, Resu
                 i.DueDate,
                 i.PrincipalAmount,
                 i.InterestAmount,
-                i.TotalAmount,
-                i.PrincipalPaid,
-                i.InterestPaid,
+                i.TotalAmount.Amount,
+                i.PrincipalPaid.Amount,
+                i.InterestPaid.Amount,
                 i.LateFeePaid,
                 i.TotalPaid,
                 i.RemainingAmount,

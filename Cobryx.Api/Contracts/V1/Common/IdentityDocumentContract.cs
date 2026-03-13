@@ -1,4 +1,4 @@
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Shared.Enums;
 
 namespace Cobryx.Api.Contracts.V1.Common;
 

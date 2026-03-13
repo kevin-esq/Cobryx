@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

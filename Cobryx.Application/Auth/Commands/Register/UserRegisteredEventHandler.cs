@@ -1,14 +1,12 @@
-using System.Threading;
-using System.Threading.Tasks;
+using Cobryx.Application.Common.Configuration;
+using Cobryx.Application.Common.Events;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Events;
 using Cobryx.Domain.Interfaces;
-using Concordia;
-using Microsoft.Extensions.Logging;
 
-using Cobryx.Application.Common.Events;
-using Cobryx.Domain.Enums;
-using Cobryx.Application.Common.Configuration;
+using Concordia;
+
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Register;

@@ -1,4 +1,5 @@
 using Cobryx.Application.Payments.Services;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Infrastructure.BackgroundJobs;

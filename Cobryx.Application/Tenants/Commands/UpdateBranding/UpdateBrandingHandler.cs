@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.UpdateBranding;
@@ -24,14 +25,14 @@ public class UpdateBrandingHandler : IRequestHandler<UpdateBrandingCommand, Resu
             return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
         }
 
-        var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value);
+        var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
         if (tenant == null)
         {
             return Result.Failure(DomainErrorCode.Tenant.NotFound);
         }
 
         tenant.UpdateBranding(request.LogoUrl, request.PrimaryColor, request.SecondaryColor);
-        await _tenantRepository.UpdateAsync(tenant);
+        await _tenantRepository.UpdateAsync(tenant, cancellationToken);
 
         return Result.Success();
     }

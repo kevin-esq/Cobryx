@@ -1,5 +1,6 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Create;

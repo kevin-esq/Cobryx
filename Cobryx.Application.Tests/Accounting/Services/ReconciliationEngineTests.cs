@@ -1,16 +1,16 @@
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Entities.Accounting.Enums;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Moq;
-using Xunit;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 
@@ -45,7 +45,7 @@ public class ReconciliationEngineTests
 
         // Default: empty balance transactions to avoid breaking existing tests
         _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripeBalanceTransactionDto>());
+            .ReturnsAsync([]);
     }
 
     [Fact]
@@ -60,10 +60,10 @@ public class ReconciliationEngineTests
             .ReturnsAsync((1000m, 200m));
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>
-            {
-                new StripePaymentIntentDto(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-20), new Dictionary<string, string>())
-            });
+            .ReturnsAsync(
+            [
+                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-20), [])
+            ]);
 
         // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
@@ -88,11 +88,11 @@ public class ReconciliationEngineTests
             .ReturnsAsync((1000m, 200m));
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>
-            {
+            .ReturnsAsync(
+            [
                 // Created 5 mins ago (within 15 min tolerance)
-                new StripePaymentIntentDto(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), new Dictionary<string, string>())
-            });
+                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), [])
+            ]);
 
         // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
@@ -121,10 +121,10 @@ public class ReconciliationEngineTests
             .ReturnsAsync((1000m, 200m));
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>
-            {
-                new StripePaymentIntentDto(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), new Dictionary<string, string>())
-            });
+            .ReturnsAsync(
+            [
+                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
+            ]);
 
         // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
@@ -147,7 +147,7 @@ public class ReconciliationEngineTests
         // 1. Setup a Loan and System Accounts in memory
         var customerId = Guid.NewGuid();
         var agreementId = Guid.NewGuid();
-        var loan = new Loan(_tenantId, customerId, agreementId, "L-100", 1000m);
+        var loan = new Loan(_tenantId, customerId, agreementId, "L-100", new Money(1000m, "USD"));
         // Force ID via reflection or just use the object
         typeof(Loan).GetProperty("Id")!.SetValue(loan, loanId);
         _dbContext.Loans.Add(loan);
@@ -166,13 +166,13 @@ public class ReconciliationEngineTests
             .ReturnsAsync((1000m, 200m));
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>
-            {
-                new StripePaymentIntentDto(intentId, 50000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), new Dictionary<string, string>
+            .ReturnsAsync(
+            [
+                new(intentId, 50000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), new Dictionary<string, string>
                 {
                     { "LoanId", loanId.ToString() }
                 })
-            });
+            ]);
 
         // Act
         // 1. First Pass: Detect but don't repair
@@ -199,10 +199,10 @@ public class ReconciliationEngineTests
         var intentId = "pi_confirm_123";
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>
-            {
-                new StripePaymentIntentDto(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), new Dictionary<string, string>())
-            });
+            .ReturnsAsync(
+            [
+                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
+            ]);
 
         // 1. First Run: Detect but don't repair (not confirmed yet)
         await _engine.ReconcileAsync(_tenantId, from, to);
@@ -232,14 +232,14 @@ public class ReconciliationEngineTests
         await _dbContext.SaveChangesAsync();
 
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripePaymentIntentDto>());
+            .ReturnsAsync([]);
 
         _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<StripeBalanceTransactionDto>
-            {
+            .ReturnsAsync(
+            [
                 // BT shows 100 net
-                new StripeBalanceTransactionDto(btId, 10500, 500, 10000, "usd", "payout", "payout", "available", DateTime.UtcNow, DateTime.UtcNow, sourceId, new Dictionary<string, string>())
-            });
+                new(btId, 10500, 500, 10000, "usd", "payout", "payout", "available", DateTime.UtcNow, DateTime.UtcNow, sourceId, [])
+            ]);
 
         // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);

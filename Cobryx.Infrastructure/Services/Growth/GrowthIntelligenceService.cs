@@ -1,12 +1,9 @@
-using System;
-using System.Threading.Tasks;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared.Enums;
+
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Cobryx.Infrastructure.Services.Growth;
 

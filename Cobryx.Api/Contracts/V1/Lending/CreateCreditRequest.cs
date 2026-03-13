@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Cobryx.Domain.Enums;
 
 namespace Cobryx.Api.Contracts.V1.Lending;
 

@@ -1,8 +1,10 @@
 using Cobryx.Application.Common.Events;
-using Cobryx.Domain.Entities.Metrics;
 using Cobryx.Domain.Events.Onboarding;
+using Cobryx.Domain.Identity.Metrics;
 using Cobryx.Domain.Interfaces;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Dashboard.EventHandlers;

@@ -1,7 +1,7 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
 
 namespace Cobryx.Application.Payments.Commands.RefundPayment;
@@ -24,7 +24,7 @@ public class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, Result
 
     public async Task<Result> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
     {
-        var payment = await _paymentRepository.GetByIdAsync(request.PaymentId);
+        var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
         if (payment == null) return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         var refundAmount = new Money(request.Amount, request.Currency);

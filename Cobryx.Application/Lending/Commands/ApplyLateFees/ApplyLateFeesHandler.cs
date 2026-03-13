@@ -1,31 +1,22 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.Interfaces.Lending;
-using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Lending.Commands.ApplyLateFees;
 
-public class ApplyLateFeesHandler : IRequestHandler<ApplyLateFeesCommand, Result<LateFeeResultDto>>
+public class ApplyLateFeesHandler(
+    ILoanRepository loanRepository,
+    ILateFeePolicyRepository policyRepository,
+    ILoanAgreementRepository agreementRepository,
+    ITenantProvider tenantProvider) : IRequestHandler<ApplyLateFeesCommand, Result<LateFeeResultDto>>
 {
-    private readonly ILoanRepository _loanRepository;
-    private readonly ILateFeePolicyRepository _policyRepository;
-    private readonly ILoanAgreementRepository _agreementRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public ApplyLateFeesHandler(
-        ILoanRepository loanRepository,
-        ILateFeePolicyRepository policyRepository,
-        ILoanAgreementRepository agreementRepository,
-        ITenantProvider tenantProvider)
-    {
-        _loanRepository = loanRepository;
-        _policyRepository = policyRepository;
-        _agreementRepository = agreementRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly ILoanRepository _loanRepository = loanRepository;
+    private readonly ILateFeePolicyRepository _policyRepository = policyRepository;
+    private readonly ILoanAgreementRepository _agreementRepository = agreementRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<LateFeeResultDto>> Handle(ApplyLateFeesCommand request, CancellationToken ct)
     {
@@ -69,11 +60,11 @@ public class ApplyLateFeesHandler : IRequestHandler<ApplyLateFeesCommand, Result
             foreach (var installment in loan.Installments.Where(i => i.Status != InstallmentStatus.Paid && i.DueDate < today))
             {
                 var daysLate = (int)(today - installment.DueDate).TotalDays;
-                var fee = policy.CalculateLateFee(daysLate, installment.PrincipalAmount + installment.InterestAmount - installment.PrincipalPaid - installment.InterestPaid);
+                var fee = policy.CalculateLateFee(daysLate, installment.PrincipalAmount + installment.InterestAmount - installment.PrincipalPaid.Amount - installment.InterestPaid.Amount);
 
                 if (fee > 0)
                 {
-                    loan.AssessLateFees(today, fee);
+                    loan.AssessLateFees(fee);
                     totalFees += fee;
                     affectedInstallments++;
                     loanUpdated = true;
@@ -82,7 +73,7 @@ public class ApplyLateFeesHandler : IRequestHandler<ApplyLateFeesCommand, Result
 
             if (loanUpdated)
             {
-                loan.UpdateFinancialRiskStatus(DateTime.UtcNow);
+                loan.UpdateFinancialRiskStatus();
                 await _loanRepository.UpdateAsync(loan, ct);
                 affectedLoans++;
             }

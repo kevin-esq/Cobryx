@@ -1,10 +1,12 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Cobryx.Application.Tenants.Commands.InviteUser;
 using Cobryx.Application.Tenants.Commands.RevokeInvitation;
 using Cobryx.Application.Tenants.Common;
 using Cobryx.Application.Tenants.Queries.GetPendingInvitations;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

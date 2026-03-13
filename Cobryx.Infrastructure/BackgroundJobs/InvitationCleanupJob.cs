@@ -1,9 +1,9 @@
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

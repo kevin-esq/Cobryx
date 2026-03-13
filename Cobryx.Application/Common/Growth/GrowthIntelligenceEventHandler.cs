@@ -1,11 +1,10 @@
-using System.Threading;
-using System.Threading.Tasks;
+using Cobryx.Application.Common.Events;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Events.Lending;
-using Cobryx.Domain.Events.Payments;
 using Cobryx.Domain.Events.Onboarding;
+using Cobryx.Domain.Events.Payments;
+
 using Concordia;
-using Cobryx.Application.Common.Events;
 
 namespace Cobryx.Application.Common.Growth;
 

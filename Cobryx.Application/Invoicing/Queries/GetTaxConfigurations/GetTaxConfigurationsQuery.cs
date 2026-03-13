@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Invoicing.Queries.GetTaxConfigurations;
 
@@ -27,7 +28,7 @@ public class GetTaxConfigurationsHandler : IRequestHandler<GetTaxConfigurationsQ
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<TaxDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var taxes = await _taxRepository.GetAllActiveAsync(tenantId.Value);
+        var taxes = await _taxRepository.GetAllActiveAsync(tenantId.Value, cancellationToken);
 
         var dtos = taxes.Select(t => new TaxDto(
             t.Id,

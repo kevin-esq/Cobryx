@@ -1,4 +1,4 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Events.Payments;

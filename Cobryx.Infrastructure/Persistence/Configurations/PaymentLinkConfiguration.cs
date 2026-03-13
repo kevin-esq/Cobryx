@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Payments;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -27,13 +28,13 @@ public class PaymentLinkConfiguration : IEntityTypeConfiguration<PaymentLink>
             .IsUnique()
             .HasFilter("\"StripePaymentIntentId\" IS NOT NULL");
 
-        builder.OwnsOne(p => p.AmountSnapshot, m =>
+        builder.ComplexProperty(p => p.AmountSnapshot, m =>
         {
             m.Property(x => x.Amount).HasColumnName("AmountSnapshot_Value").HasPrecision(18, 2);
             m.Property(x => x.Currency).HasColumnName("AmountSnapshot_Currency").HasMaxLength(3);
         });
 
-        builder.OwnsOne(p => p.PaidAmount, m =>
+        builder.ComplexProperty(p => p.PaidAmount, m =>
         {
             m.Property(x => x.Amount).HasColumnName("PaidAmount_Value").HasPrecision(18, 2);
             m.Property(x => x.Currency).HasColumnName("PaidAmount_Currency").HasMaxLength(3);

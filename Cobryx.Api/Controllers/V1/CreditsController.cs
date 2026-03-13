@@ -1,13 +1,11 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Contracts.V1.Lending;
+
 using Cobryx.Api.Outcomes;
 
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -20,20 +18,14 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/lending/credits")]
 [Tags("Financial Core")]
-public class CreditsController : CobryxBaseController
+public class CreditsController(ISender sender, Application.Common.Interfaces.ITenantProvider tenantProvider) : CobryxBaseController(sender)
 {
-    private readonly Application.Common.Interfaces.ITenantProvider _tenantProvider;
-
-    public CreditsController(ISender sender, Application.Common.Interfaces.ITenantProvider tenantProvider) : base(sender)
-    {
-        _tenantProvider = tenantProvider;
-    }
+    private readonly Application.Common.Interfaces.ITenantProvider _tenantProvider = tenantProvider;
 
     /// <summary>
     /// Establishes a new credit line facility for a customer.
     /// </summary>
     /// <param name="request">The credit line configuration, including Amount and Interest terms.</param>
-    /// <param name="idempotencyKey">Informational only — replay protection is not yet enforced. Pass a UUID to prepare for future deduplication.</param>
     /// <remarks>
     /// The 'InterestRate' is typically an annual nominal rate (APR) unless specified otherwise by the product policy.
     ///
@@ -51,8 +43,7 @@ public class CreditsController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> Create(
-        [FromBody] CreateCreditRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey = null)
+        [FromBody] CreateCreditRequest request)
     {
         var tenantId = _tenantProvider.GetTenantId();
         if (tenantId == null) return Unauthorized();
@@ -64,8 +55,8 @@ public class CreditsController : CobryxBaseController
             request.Amount,
             request.Currency,
             request.InterestRate,
-            Enum.Parse<Domain.Enums.InterestType>(request.InterestType, true),
-            Enum.Parse<Domain.Enums.PaymentFrequency>(request.Frequency, true),
+            Enum.Parse<Cobryx.Domain.Lending.Enums.InterestType>(request.InterestType, true),
+            Enum.Parse<Cobryx.Domain.Lending.Enums.PaymentFrequency>(request.Frequency, true),
             request.InstallmentsCount,
             request.GraceDays,
             request.ProductId);
@@ -99,8 +90,8 @@ public class CreditsController : CobryxBaseController
             return HandleResult(result, CreditOutcomes.SearchCompleted);
         }
 
-        var mapped = new Cobryx.Application.Common.Models.PaginatedList<CreditSummaryContract>(
-            result.Value.Items.Select(c => new CreditSummaryContract(
+        var mapped = new Application.Common.Models.PaginatedList<CreditSummaryContract>(
+            [.. result.Value.Items.Select(c => new CreditSummaryContract(
                 c.Id,
                 c.CustomerId,
                 c.CustomerName,
@@ -111,7 +102,7 @@ public class CreditsController : CobryxBaseController
                 c.Status.ToString(),
                 c.StartDate,
                 c.TotalPaid,
-                c.RemainingBalance)).ToList(),
+                c.RemainingBalance))],
             result.Value.TotalCount,
             result.Value.Page,
             result.Value.TotalPages);

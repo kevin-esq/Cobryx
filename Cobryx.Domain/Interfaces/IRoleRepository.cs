@@ -1,8 +1,8 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface IRoleRepository : IRepository<Role>
 {
-    Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
+    public Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 }

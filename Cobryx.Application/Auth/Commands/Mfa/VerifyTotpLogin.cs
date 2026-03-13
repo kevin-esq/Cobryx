@@ -1,8 +1,11 @@
 using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
@@ -48,12 +51,12 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
         if (userId == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Verifying TOTP for user: {Email}", user.Email);
 
-        var totpDevice = user.MfaDevices.FirstOrDefault(d => d.Type == Domain.Entities.MfaDeviceType.Totp && d.IsVerified);
+        var totpDevice = user.MfaDevices.FirstOrDefault(d => d.Type == MfaDeviceType.Totp && d.IsVerified);
         if (totpDevice == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.MfaNotConfigured);
 
         bool isValid = _mfaService.VerifyCode(totpDevice.Secret, request.Code);
@@ -82,7 +85,7 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
         var userAgent = _httpContextService.GetUserAgent();
         var authResult = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, null);
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success(authResult);
     }

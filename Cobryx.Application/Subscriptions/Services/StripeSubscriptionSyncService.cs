@@ -1,9 +1,12 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared.Enums;
+
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Subscriptions.Services;
@@ -145,7 +148,12 @@ public class StripeSubscriptionSyncService
 
         var newPlanId = plan?.Id ?? subscription.PlanId;
 
-        using var transaction = await Db.Database.BeginTransactionAsync(ct);
+        IDbContextTransaction? transaction = null;
+        if (Db.Database.CurrentTransaction == null && Db.Database.ProviderName != "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            transaction = await Db.Database.BeginTransactionAsync(ct);
+        }
+
         try
         {
             subscription.SyncFromStripe(stripeSubscriptionId, status, stripeState.TrialEnd, newPlanId, _clock.UtcNow);
@@ -156,7 +164,7 @@ public class StripeSubscriptionSyncService
             // Bust subscription gate cache immediately after state change
             try
             {
-                await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}");
+                await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}", ct);
             }
             catch (Exception cacheEx)
             {
@@ -175,9 +183,10 @@ public class StripeSubscriptionSyncService
             {
                 if (oldStatus == SubscriptionStatus.Trial || oldStatus == SubscriptionStatus.Active)
                 {
-                    if (plan != null && plan.Id != subscription.PlanId)
+                    if (plan != null && (subscription.Plan == null || plan.Id != subscription.Plan.Id))
                     {
-                        mrrChangeType = newMrr > subscription.Plan.Price.Amount ? MRRChangeType.Expansion : MRRChangeType.Contraction;
+                        var oldPrice = subscription.Plan?.Price.Amount ?? 0;
+                        mrrChangeType = newMrr > oldPrice ? MRRChangeType.Expansion : MRRChangeType.Contraction;
                     }
                     else if (oldStatus == SubscriptionStatus.Trial)
                     {
@@ -196,11 +205,11 @@ public class StripeSubscriptionSyncService
                 await _growthService.RecordMRRTransitionAsync(subscription.TenantId, newMrr, mrrChangeType, eventType);
             }
 
-            await transaction.CommitAsync(ct);
+            if (transaction != null) await transaction.CommitAsync(ct);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(ct);
+            if (transaction != null) await transaction.RollbackAsync(ct);
             _logger.LogError(ex, "Failed to sync authoritative state for Subscription {StripeSubscriptionId}. Rollback occurred.", stripeSubscriptionId);
             throw;
         }
@@ -211,12 +220,14 @@ public class StripeSubscriptionSyncService
     private async Task<TenantSubscription?> GetSubscriptionAsync(Guid tenantId, CancellationToken ct)
     {
         return await Db.Set<TenantSubscription>()
+            .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
     }
 
     private async Task<TenantSubscription?> GetSubscriptionByStripeIdAsync(string stripeSubscriptionId, CancellationToken ct)
     {
         return await Db.Set<TenantSubscription>()
+            .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.StripeSubscriptionId == stripeSubscriptionId, ct);
     }
 

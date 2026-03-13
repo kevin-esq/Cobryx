@@ -1,11 +1,14 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Customers.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Exceptions.Customers;
 using Cobryx.Domain.Exceptions.Tenants;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Customers.Queries.GetCustomerById;
@@ -30,7 +33,7 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
 
         var customer = await _customerRepository.Query()
             .AsNoTracking()
-            .Include(c => c.Credits)
+            .Include(c => c.LendingInstruments)
             .FirstOrDefaultAsync(c => c.Id == request.Id && c.TenantId == tenantId.Value, cancellationToken);
 
         if (customer == null)
@@ -46,7 +49,7 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
             customer.Phone,
             customer.Address,
             customer.Document,
-            customer.Credits.Count(c => c.Status == CreditStatus.Active),
+            customer.LendingInstruments.OfType<Credit>().Count(c => c.Status == CreditStatus.Active),
             customer.CreatedAt));
     }
 }

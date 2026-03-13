@@ -1,5 +1,6 @@
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -1,18 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
-using Cobryx.Application.Auth.Commands.Login;
-using Cobryx.Application.Auth.Commands.Register;
-using Cobryx.Application.Auth.Common;
-using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Cobryx.IntegrationTests.Fakes;
-using Cobryx.Infrastructure.Persistence;
+
 using Cobryx.Api.Contracts.V1.Identity;
-using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Infrastructure.Persistence;
+using Cobryx.IntegrationTests.Fakes;
+using Cobryx.IntegrationTests.Helpers;
+
+using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
-using Cobryx.Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cobryx.IntegrationTests;
 
@@ -54,10 +53,21 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
 
     private async Task<string> RegisterAndLoginAsync(string email)
     {
-        await _client.PostAsJsonAsync("/api/v1/auth/signup", new SignUpCommand("Test Corp", "Test", "User", email, DefaultPassword));
+        var signupResp = await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpRequest("Test", "User", "Test Corp", email, DefaultPassword));
+        if (signupResp.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var body = await signupResp.Content.ReadAsStringAsync();
+            throw new Exception($"Signup failed with 400: {body}");
+        }
+        signupResp.EnsureSuccessStatusCode();
+
         var token = _emailService.GetLastToken(email);
-        await _client.PostAsJsonAsync("/api/v1/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
+        var verifyResp = await _client.PostAsJsonAsync("/api/v1/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
+        verifyResp.EnsureSuccessStatusCode();
+
         var loginResp = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
+        loginResp.EnsureSuccessStatusCode();
+
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
         loginResult.Should().NotBeNull();
         loginResult!.Data.Should().NotBeNull();

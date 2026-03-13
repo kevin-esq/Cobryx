@@ -1,9 +1,6 @@
-using System;
-using System.Linq;
-using System.Reflection;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using FluentAssertions;
-using Xunit;
 
 namespace Cobryx.IntegrationTests;
 

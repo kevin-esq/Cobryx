@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class FinancialHardening : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "ReferenceId" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -24,7 +26,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_LedgerTransactions_TenantId_ReferenceId",
                 table: "LedgerTransactions",
-                columns: new[] { "TenantId", "ReferenceId" },
+                columns: columns,
                 unique: true,
                 filter: "\"ReferenceId\" IS NOT NULL");
         }

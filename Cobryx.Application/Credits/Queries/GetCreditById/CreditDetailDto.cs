@@ -1,4 +1,5 @@
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Lending.Enums;
+
 
 namespace Cobryx.Application.Credits.Queries.GetCreditById;
 

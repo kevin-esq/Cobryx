@@ -1,7 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
@@ -34,7 +36,7 @@ public class GetTotpSetupHandler : IRequestHandler<GetTotpSetupQuery, Result<Tot
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) return Result.Failure<TotpSetupResult>(DomainErrorCode.Auth.NotAuthenticated);
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure<TotpSetupResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Generating TOTP setup for user: {Email}", user.Email);

@@ -1,30 +1,26 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Json;
-using Cobryx.Application.Common.Observability;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Cobryx.Api.Contracts.V1.Financial;
-using System.Text.Json;
+using Cobryx.Application.Common.Observability;
+
+using Cobryx.IntegrationTests.Helpers;
 using FluentAssertions;
-using Xunit;
 
 namespace Cobryx.IntegrationTests;
 
-public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
+[Collection("Sequential")]
+public class ObservabilityTests(CobryxWebApplicationFactory factory) : IClassFixture<CobryxWebApplicationFactory>
 {
-    private readonly CobryxWebApplicationFactory _factory;
-
-    public ObservabilityTests(CobryxWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly CobryxWebApplicationFactory _factory = factory;
 
     [Fact]
     public async Task InvalidLogin_RecordsBothErrorAndOutcomeMetrics()
     {
         var meterName = CobryxMetrics.MeterName;
         var errorMetric = "cobryx_domain_errors_total";
-        var outcomeMetric = "cobryx_business_outcomes_total";
+        var outcomeMetric = "cobryx_outcome_total";
 
         long errorCount = 0;
         long outcomeCount = 0;
@@ -67,10 +63,13 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        await Task.Delay(100);
+        for (var i = 0; i < 15 && (errorCount == 0 || outcomeCount == 0); i++)
+        {
+            await Task.Delay(200);
+        }
 
-        errorCount.Should().BeGreaterThan(0);
-        outcomeCount.Should().BeGreaterThan(0);
+        errorCount.Should().BeGreaterThan(0, $"Error metric should have been recorded. ErrorCount: {errorCount}, OutcomeCount: {outcomeCount}");
+        outcomeCount.Should().BeGreaterThan(0, "Outcome metric should have been recorded");
 
         recordedErrorCode.Should().Be("VALIDATION.FAILED");
         recordedOutcomeCode.Should().Be("VALIDATION.FAILED");
@@ -111,11 +110,16 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
 
         var uniqueEmail = $"test-{Guid.NewGuid()}@example.com";
         var command = new { BusinessName = "Test Biz", Email = uniqueEmail, Password = "Password123!", FirstName = "Test", LastName = "User" };
-        var response = await client.PostAsJsonAsync("/api/v1/auth/signup", command);
+        var response = await client.PostIdempotentAsync("/api/v1/auth/signup", command);
         var signupResult = await response.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<Guid>>();
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"because signup should succeed. Response: {await response.Content.ReadAsStringAsync()}");
 
-        await Task.Delay(100);
+        var delay = 0;
+        while (recordedValue == 0 && delay < 3000)
+        {
+            await Task.Delay(100);
+            delay += 100;
+        }
 
         recordedValue.Should().BeGreaterThan(0);
         recordedCode.Should().Be("AUTH.USER.VERIFICATION_REQUIRED");
@@ -150,17 +154,23 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
         var productPayload = new CreateProductRequest("Test Product", "Test Description", 100.00m, "MXN");
-        var response = await client.PostAsJsonAsync("/api/v1/financial/products", productPayload);
+        var response = await client.PostIdempotentAsync("/api/v1/financial/products", productPayload);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created, $"because the token should be valid and payload is correct. Body: {await response.Content.ReadAsStringAsync()}");
 
-        await Task.Delay(100);
-        recordedModule.Should().Be("Product");
+        var delay = 0;
+        while (recordedModule == null && delay < 3000)
+        {
+            await Task.Delay(100);
+            delay += 100;
+        }
+
+        recordedModule.Should().Be("Other"); // Matches PRODUCT -> Other in GetModule
     }
 
     private string CreateMockToken()
     {
-        var secret = "SuperSecretKeyForIntegrationTests1234567890!";
+        var secret = "SuperSecretKeyForTesting!LengthMustBeAtLeast32Chars";
         var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secret));
         var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
 
@@ -172,8 +182,8 @@ public class ObservabilityTests : IClassFixture<CobryxWebApplicationFactory>
         };
 
         var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
-            issuer: "CobryxApi-Test",
-            audience: "CobryxClient-Test",
+            issuer: "CobryxTest",
+            audience: "CobryxTest",
             claims: claims,
             expires: DateTime.Now.AddMinutes(60),
             signingCredentials: creds

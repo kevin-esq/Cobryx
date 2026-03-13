@@ -1,12 +1,15 @@
 using Asp.Versioning;
+
 using Cobryx.Application.Customer.Commands.AttachPaymentMethod;
 using Cobryx.Application.Customer.Commands.SetDefaultPaymentMethod;
 using Cobryx.Application.Customer.Commands.ToggleAutoPay;
 using Cobryx.Application.Customer.Queries.GetCustomerPaymentMethods;
 using Cobryx.Application.Customer.Queries.GetCustomerStatement;
 using Cobryx.Application.Portal.Queries.GetCustomerPortalSummary;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

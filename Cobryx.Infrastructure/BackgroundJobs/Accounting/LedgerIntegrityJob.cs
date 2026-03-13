@@ -1,8 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+
+using Hangfire;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Hangfire;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Accounting;
 

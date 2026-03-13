@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Services;
@@ -18,7 +19,7 @@ public class UsageMeteringService : IUsageMeteringService
     public async Task<UsageSnapshot> GetUsageSnapshotAsync(Guid tenantId, CancellationToken ct = default)
     {
         var cacheKey = IUsageMeteringService.GetCacheKey(tenantId);
-        var cachedSnapshot = await _cacheService.GetAsync<UsageSnapshot>(cacheKey);
+        var cachedSnapshot = await _cacheService.GetAsync<UsageSnapshot>(cacheKey, ct);
 
         if (cachedSnapshot != null)
         {
@@ -47,7 +48,7 @@ public class UsageMeteringService : IUsageMeteringService
             subscription?.Plan?.MaxLoans ?? 0);
 
         // Store in cache for 5 minutes. Snapshots are reactive-invalidated by Domain Events.
-        await _cacheService.SetAsync(cacheKey, snapshot, TimeSpan.FromMinutes(5));
+        await _cacheService.SetAsync(cacheKey, snapshot, TimeSpan.FromMinutes(5), ct);
 
         return snapshot;
     }

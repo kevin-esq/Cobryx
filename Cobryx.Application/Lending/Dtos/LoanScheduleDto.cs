@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Lending.Enums;
+
 
 namespace Cobryx.Application.Lending.Dtos;
 

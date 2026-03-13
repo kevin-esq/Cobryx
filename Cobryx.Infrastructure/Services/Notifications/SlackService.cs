@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json;
+
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

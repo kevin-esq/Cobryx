@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.MultiTenancy;

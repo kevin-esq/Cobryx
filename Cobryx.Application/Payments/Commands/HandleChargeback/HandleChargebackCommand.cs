@@ -1,6 +1,6 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Payments.Commands.HandleChargeback;
@@ -20,7 +20,7 @@ public class HandleChargebackHandler : IRequestHandler<HandleChargebackCommand, 
 
     public async Task<Result> Handle(HandleChargebackCommand request, CancellationToken cancellationToken)
     {
-        var payment = await _paymentRepository.GetByIdAsync(request.PaymentId);
+        var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
         if (payment == null) return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         try

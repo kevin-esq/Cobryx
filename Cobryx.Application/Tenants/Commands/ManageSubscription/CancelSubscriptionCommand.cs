@@ -1,7 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+using Cobryx.Domain.Shared.Enums;
+
 using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.ManageSubscription;

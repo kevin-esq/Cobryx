@@ -1,6 +1,6 @@
-using Cobryx.Domain.Common;
-using Cobryx.Api.Errors.Definitions;
 using Cobryx.Api.Errors.Catalog;
+using Cobryx.Api.Errors.Definitions;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Api.Errors.Mappers;
 

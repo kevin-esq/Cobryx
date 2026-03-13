@@ -1,12 +1,15 @@
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Auth.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using FluentValidation;
-using Cobryx.Application.Common.Validation;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.Identity.Enums;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using FluentValidation;
+
 using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Auth.Commands.Core;
@@ -27,6 +30,11 @@ public class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Result>
 
     public async Task<Result> Handle(VerifyEmailCommand request, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            return Result.Failure(DomainErrorCode.Auth.InvalidToken);
+        }
+
         var tokenHash = TokenHasher.ComputeHash(request.Token);
         var user = await _userRepository.GetBySecurityTokenHashAsync(tokenHash, SecurityTokenType.EmailVerification, cancellationToken);
 

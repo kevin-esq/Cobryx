@@ -1,6 +1,7 @@
-using FluentValidation;
-using Cobryx.Domain.ValueObjects;
 using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.ValueObjects;
+
+using FluentValidation;
 
 namespace Cobryx.Application.Customers.Commands.Create;
 

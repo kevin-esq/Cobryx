@@ -1,8 +1,8 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Application.Common.Interfaces;
 
 public interface IDomainEventService
 {
-    Task Publish(IDomainEvent domainEvent);
+    public Task Publish(IDomainEvent domainEvent);
 }

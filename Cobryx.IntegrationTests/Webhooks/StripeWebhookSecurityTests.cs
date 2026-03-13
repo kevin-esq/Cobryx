@@ -1,9 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+
 using Cobryx.Api.Contracts.V1.Common;
 using Cobryx.Api.Outcomes;
+
 using FluentAssertions;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Webhooks;
 

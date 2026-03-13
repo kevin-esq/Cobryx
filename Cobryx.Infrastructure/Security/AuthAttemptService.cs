@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Cobryx.Infrastructure.Security;

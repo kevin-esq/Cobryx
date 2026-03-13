@@ -1,12 +1,12 @@
 using Asp.Versioning;
-using Cobryx.Api.Controllers;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Cobryx.Application.Dashboard.Common;
 using Cobryx.Application.Dashboard.Queries.GetGuidedSetup;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 

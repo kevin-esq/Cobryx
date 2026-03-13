@@ -1,8 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

@@ -1,8 +1,8 @@
 using Cobryx.Application.Common.Observability;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Contracts.V1.Identity;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+
 using Serilog;
 
 namespace Cobryx.Api.Infrastructure.Observability;

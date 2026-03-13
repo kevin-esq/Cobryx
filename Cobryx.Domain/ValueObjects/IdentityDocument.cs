@@ -1,5 +1,6 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Shared;
+using Cobryx.Domain.Shared.Enums;
+
 
 namespace Cobryx.Domain.ValueObjects;
 

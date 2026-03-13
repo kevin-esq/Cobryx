@@ -1,28 +1,22 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Lending.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Admin.Commands.ManualChargeOff;
 
 public record ManualChargeOffCommand(Guid LoanId, string Reason) : IRequest<Result>;
 
-public class ManualChargeOffHandler : IRequestHandler<ManualChargeOffCommand, Result>
+public class ManualChargeOffHandler(
+    ICobryxDbContext dbContext,
+    FinancialStateEngine stateEngine,
+    ICurrentUserProvider currentUserProvider) : IRequestHandler<ManualChargeOffCommand, Result>
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly FinancialStateEngine _stateEngine;
-    private readonly ICurrentUserProvider _currentUserProvider;
-
-    public ManualChargeOffHandler(
-        ICobryxDbContext dbContext,
-        FinancialStateEngine stateEngine,
-        ICurrentUserProvider currentUserProvider)
-    {
-        _dbContext = dbContext;
-        _stateEngine = stateEngine;
-        _currentUserProvider = currentUserProvider;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly FinancialStateEngine _stateEngine = stateEngine;
+    private readonly ICurrentUserProvider _currentUserProvider = currentUserProvider;
 
     public async Task<Result> Handle(ManualChargeOffCommand request, CancellationToken ct)
     {

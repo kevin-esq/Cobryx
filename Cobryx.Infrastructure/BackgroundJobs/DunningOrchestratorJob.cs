@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -50,7 +51,7 @@ public class DunningOrchestratorJob
             .Where(l => l.Loan == null || (l.Loan.Status != LoanStatus.Disputed && l.Loan.Status != LoanStatus.Closed))
             .ToListAsync(ct);
 
-        if (!pendingRecoveries.Any()) return;
+        if (pendingRecoveries.Count == 0) return;
 
         _logger.LogInformation("Dunning Engine: Processing {Count} pending recoveries.", pendingRecoveries.Count);
 

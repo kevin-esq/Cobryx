@@ -1,11 +1,12 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;
 
@@ -27,7 +28,7 @@ public class GetSubscriptionStatusHandler : IRequestHandler<GetSubscriptionStatu
             return Result.Failure<SubscriptionStatusDto>(DomainErrorCode.Auth.NotAuthenticated);
 
         var dbContext = (DbContext)_unitOfWork;
-        var subscription = await dbContext.Set<Cobryx.Domain.Entities.TenantSubscription>()
+        var subscription = await dbContext.Set<TenantSubscription>()
             .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.TenantId == tenantId.Value, cancellationToken);
 

@@ -1,17 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Application.Subscriptions.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Infrastructure.Configuration;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Application.Common.Configuration;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+
 using Stripe;
-using System.ComponentModel.DataAnnotations;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -48,7 +51,7 @@ public class WebhooksController : CobryxBaseController
         CancellationToken ct)
     {
         using var reader = new StreamReader(Request.Body);
-        var json = await reader.ReadToEndAsync();
+        var json = await reader.ReadToEndAsync(ct);
 
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -116,11 +119,39 @@ public class WebhooksController : CobryxBaseController
             _logger.LogWarning(ex, "Stripe webhook signature verification failed");
             return BadRequest(ApiResponseFactory.Error(WebhookOutcomes.InvalidSignature));
         }
+        catch (Exception ex) when (ex is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            _logger.LogInformation("Concurrency conflict handled for concurrent Stripe event {EventId}", stripeEvent?.Id);
+            return Ok(ApiResponseFactory.Success<object>(new { received = true, concurrent = true }, WebhookOutcomes.Received));
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            if (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true ||
+                ex.InnerException?.Message.Contains("duplicate key value violates unique constraint") == true ||
+                ex.ToString().Contains("UNIQUE constraint failed") ||
+                ex.ToString().Contains("duplicate key value violates unique constraint"))
+            {
+                 _logger.LogInformation("Idempotent match for concurrent Stripe event {EventId}", stripeEvent?.Id);
+                 return Ok(ApiResponseFactory.Success<object>(new { received = true, idempotent = true }, WebhookOutcomes.Received));
+            }
+
+            _logger.LogError(ex, "Database error processing Stripe webhook {EventId}", stripeEvent?.Id ?? "unknown");
+            var error = ApiResponseFactory.Error(WebhookOutcomes.ProcessingFailed);
+#if DEBUG || TEST
+            error.ErrorCode = $"{error.ErrorCode} Details: {ex.Message} -> {ex.InnerException?.Message ?? "None"}";
+#endif
+            return StatusCode(500, error);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing Stripe webhook {EventId} (Account: {Account})",
                 stripeEvent?.Id ?? "unknown", stripeEvent?.Account ?? "platform");
-            return StatusCode(500, ApiResponseFactory.Error(WebhookOutcomes.ProcessingFailed));
+
+            var error = ApiResponseFactory.Error(WebhookOutcomes.ProcessingFailed);
+#if DEBUG || TEST
+            error.ErrorCode = $"{error.ErrorCode} Details: {ex.Message} -> {ex.InnerException?.Message ?? "None"}";
+#endif
+            return StatusCode(500, error);
         }
 
         return Ok(ApiResponseFactory.Success<object>(new { received = true }, WebhookOutcomes.Received));
@@ -128,7 +159,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleCheckoutCompleted(Event stripeEvent, CancellationToken ct)
     {
-        var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
+        var session = stripeEvent.Data?.Object as Stripe.Checkout.Session;
         if (session == null) return;
 
         var tenantIdStr = session.Metadata?.GetValueOrDefault(CobryxClaimTypes.TenantId);
@@ -144,8 +175,9 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleInvoicePaid(Event stripeEvent, CancellationToken ct)
     {
-        var invoice = stripeEvent.Data.Object as Stripe.Invoice;
-        var subscriptionId = invoice?.Parent?.SubscriptionDetails?.Subscription?.Id;
+        var invoice = stripeEvent.Data?.Object as Stripe.Invoice;
+        if (invoice == null) return;
+        var subscriptionId = (string?)((dynamic)invoice).SubscriptionId;
         if (subscriptionId == null) return;
 
         await _syncService.HandleInvoicePaidAsync(stripeEvent.Id, subscriptionId, ct);
@@ -153,8 +185,9 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleInvoicePaymentFailed(Event stripeEvent, CancellationToken ct)
     {
-        var invoice = stripeEvent.Data.Object as Stripe.Invoice;
-        var subscriptionId = invoice?.Parent?.SubscriptionDetails?.Subscription?.Id;
+        var invoice = stripeEvent.Data?.Object as Stripe.Invoice;
+        if (invoice == null) return;
+        var subscriptionId = (string?)((dynamic)invoice).SubscriptionId;
         if (subscriptionId == null) return;
 
         await _syncService.HandleInvoicePaymentFailedAsync(stripeEvent.Id, subscriptionId, ct);
@@ -162,7 +195,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleSubscriptionUpdated(Event stripeEvent, CancellationToken ct)
     {
-        var subscription = stripeEvent.Data.Object as Subscription;
+        var subscription = stripeEvent.Data?.Object as Stripe.Subscription;
         if (subscription == null) return;
 
         await _syncService.HandleSubscriptionUpdatedAsync(stripeEvent.Id, subscription.Id, ct);
@@ -170,7 +203,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleSubscriptionDeleted(Event stripeEvent, CancellationToken ct)
     {
-        var subscription = stripeEvent.Data.Object as Subscription;
+        var subscription = stripeEvent.Data?.Object as Stripe.Subscription;
         if (subscription == null) return;
 
         await _syncService.HandleSubscriptionDeletedAsync(stripeEvent.Id, subscription.Id, ct);
@@ -178,7 +211,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandlePaymentIntentSucceeded(Event stripeEvent, CancellationToken ct)
     {
-        var intent = stripeEvent.Data.Object as PaymentIntent;
+        var intent = stripeEvent.Data?.Object as Stripe.PaymentIntent;
         if (intent == null) return;
 
         var amount = new Domain.ValueObjects.Money(intent.Amount / 100m, intent.Currency.ToUpperInvariant());
@@ -194,7 +227,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleChargeRefunded(Event stripeEvent, CancellationToken ct)
     {
-        var charge = stripeEvent.Data.Object as Charge;
+        var charge = stripeEvent.Data?.Object as Stripe.Charge;
         if (charge == null || string.IsNullOrEmpty(charge.PaymentIntentId)) return;
 
         var amount = new Domain.ValueObjects.Money(charge.AmountRefunded / 100m, charge.Currency.ToUpperInvariant());
@@ -203,7 +236,7 @@ public class WebhooksController : CobryxBaseController
 
     private async Task HandleAccountUpdated(Event stripeEvent, CancellationToken ct)
     {
-        var account = stripeEvent.Data.Object as Stripe.Account;
+        var account = stripeEvent.Data?.Object as Stripe.Account;
         if (account == null) return;
 
         _logger.LogInformation("Processing account.updated for Stripe Account: {AccountId}", account.Id);

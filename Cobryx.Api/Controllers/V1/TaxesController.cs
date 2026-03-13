@@ -1,14 +1,11 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Contracts.V1.Financial;
+
 using Cobryx.Api.Outcomes;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 

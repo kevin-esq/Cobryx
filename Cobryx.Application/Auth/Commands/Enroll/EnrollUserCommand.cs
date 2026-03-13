@@ -1,14 +1,17 @@
 using System.Diagnostics;
+
 using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using FluentValidation;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -35,36 +38,24 @@ public class EnrollUserValidator : AbstractValidator<EnrollUserCommand>
     }
 }
 
-public class EnrollUserHandler : IRequestHandler<EnrollUserCommand, Result<Guid>>
+public class EnrollUserHandler(
+    IUnitOfWork unitOfWork,
+    IUserRepository userRepository,
+    ISubscriptionEnforcementService enforcementService,
+    IPasswordHasher passwordHasher,
+    IHttpContextService httpContextService,
+    CobryxMetrics metrics,
+    IOptions<AppOptions> appOptions,
+    ILogger<EnrollUserHandler> logger) : IRequestHandler<EnrollUserCommand, Result<Guid>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IUserRepository _userRepository;
-    private readonly ISubscriptionEnforcementService _enforcementService;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly IHttpContextService _httpContextService;
-    private readonly CobryxMetrics _metrics;
-    private readonly AppOptions _appOptions;
-    private readonly ILogger<EnrollUserHandler> _logger;
-
-    public EnrollUserHandler(
-        IUnitOfWork unitOfWork,
-        IUserRepository userRepository,
-        ISubscriptionEnforcementService enforcementService,
-        IPasswordHasher passwordHasher,
-        IHttpContextService httpContextService,
-        CobryxMetrics metrics,
-        IOptions<AppOptions> appOptions,
-        ILogger<EnrollUserHandler> logger)
-    {
-        _unitOfWork = unitOfWork;
-        _userRepository = userRepository;
-        _enforcementService = enforcementService;
-        _passwordHasher = passwordHasher;
-        _httpContextService = httpContextService;
-        _metrics = metrics;
-        _appOptions = appOptions.Value;
-        _logger = logger;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly ISubscriptionEnforcementService _enforcementService = enforcementService;
+    private readonly IPasswordHasher _passwordHasher = passwordHasher;
+    private readonly IHttpContextService _httpContextService = httpContextService;
+    private readonly CobryxMetrics _metrics = metrics;
+    private readonly AppOptions _appOptions = appOptions.Value;
+    private readonly ILogger<EnrollUserHandler> _logger = logger;
 
     public async Task<Result<Guid>> Handle(EnrollUserCommand request, CancellationToken ct)
     {

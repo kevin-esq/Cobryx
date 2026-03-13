@@ -1,25 +1,25 @@
-using Cobryx.Domain.Entities.Invoicing;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Interfaces;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Payments.Commands.ProcessPayment;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Infrastructure.Persistence;
+
 using Concordia;
+
 using FluentAssertions;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Cobryx.IntegrationTests;
 
-public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
+public class InvoicingFlowTests(CobryxWebApplicationFactory factory) : IClassFixture<CobryxWebApplicationFactory>
 {
-    private readonly CobryxWebApplicationFactory _factory;
-
-    public InvoicingFlowTests(CobryxWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly CobryxWebApplicationFactory _factory = factory;
 
     [Fact]
     public async Task ProcessPayment_ShouldMarkInvoiceAsPaid_ThroughDecoupledEventFlow()
@@ -30,6 +30,7 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
         var paymentMethodRepo = scope.ServiceProvider.GetRequiredService<IPaymentMethodRepository>();
         var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
         var dbContext = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
 
         var tenantId = tenantProvider.GetTenantId().GetValueOrDefault();
 
@@ -46,6 +47,9 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
 
         await dbContext.SaveChangesAsync();
 
+        var outboxCountBefore = await db.OutboxMessages.CountAsync();
+        Console.WriteLine($"DEBUG: Outbox count before process: {outboxCountBefore}");
+
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var command = new ProcessPaymentCommand(
             CustomerId: customer.Id,
@@ -53,34 +57,33 @@ public class InvoicingFlowTests : IClassFixture<CobryxWebApplicationFactory>
             Amount: 500,
             Currency: "MXN",
             PaymentDate: DateTime.UtcNow,
-            InvoiceIds: new List<Guid> { invoice.Id }
+            InvoiceIds: [invoice.Id]
         );
 
         var result = await sender.Send(command);
-
         result.IsSuccess.Should().BeTrue();
-        var paymentId = result.Value;
+        // This is where the magic happens - the handler should have called SaveChanges
+        var outboxCountAfter = await db.OutboxMessages.CountAsync();
+        Console.WriteLine($"DEBUG: Outbox count after process: {outboxCountAfter}");
 
-        var outboxProcessor = new Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob(
+        var outboxProcessor = new Cobryx.Infrastructure.Messaging.ProcessOutboxJob(
             _factory.Services,
-            scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Cobryx.Infrastructure.BackgroundJobs.ProcessOutboxJob>>());
+            scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Cobryx.Infrastructure.Messaging.ProcessOutboxJob>>());
         await outboxProcessor.RunAsync(CancellationToken.None);
 
         // Assert in a fresh scope to avoid stale entity state from the initial scope
-        using (var assertionScope = _factory.Services.CreateScope())
-        {
-            var assertionInvoiceRepo = assertionScope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
-            var finalInvoice = await assertionInvoiceRepo.GetByIdAsync(invoice.Id);
+        using var assertionScope = _factory.Services.CreateScope();
+        var assertionInvoiceRepo = assertionScope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
+        var finalInvoice = await assertionInvoiceRepo.GetByIdAsync(invoice.Id);
 
-            finalInvoice.Should().NotBeNull();
-            finalInvoice!.Status.Should().Be(InvoiceStatus.Paid);
-            finalInvoice.TotalPaid.Amount.Should().Be(500);
+        finalInvoice.Should().NotBeNull();
+        finalInvoice!.Status.Should().Be(InvoiceStatus.Paid);
+        finalInvoice.TotalPaid.Amount.Should().Be(500);
 
-            var assertionPaymentRepo = assertionScope.ServiceProvider.GetRequiredService<IPaymentRepository>();
-            var finalPayment = await assertionPaymentRepo.GetByIdAsync(paymentId);
+        var assertionPaymentRepo = assertionScope.ServiceProvider.GetRequiredService<IPaymentRepository>();
+        var finalPayment = await assertionPaymentRepo.GetByIdAsync(result.Value);
 
-            finalPayment.Should().NotBeNull();
-            finalPayment!.Status.Should().Be(PaymentStatus.Completed);
-        }
+        finalPayment.Should().NotBeNull();
+        finalPayment!.Status.Should().Be(PaymentStatus.Completed);
     }
 }

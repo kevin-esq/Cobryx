@@ -1,14 +1,14 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Accounting;
 using Cobryx.Application.Accounting.Services;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Lending.Services;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.ValueObjects;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Cobryx.Application.Lending.Services;
-using Cobryx.Domain.Entities.Lending.Enums;
+
 
 namespace Cobryx.Application.Payments.Services;
 
@@ -244,7 +244,7 @@ public class PaymentLinkReconciliationService
             .Take(50)
             .ToListAsync(ct);
 
-        if (!stuckLinks.Any())
+        if (stuckLinks.Count == 0)
         {
             _logger.LogInformation("No stuck links requiring recovery found.");
             return;

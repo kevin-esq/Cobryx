@@ -1,10 +1,11 @@
-using Cobryx.Application.Payments.Webhooks.Common;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Application.Payments.Webhooks.Common;
 using Cobryx.Application.Payments.Webhooks.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Infrastructure.Configuration;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Stripe;
 
 namespace Cobryx.Infrastructure.Webhooks.Stripe;
@@ -67,55 +68,55 @@ public class StripeWebhookParser : IWebhookParser
         return Task.FromResult(result);
     }
 
-    private WebhookParseResult HandlePayoutPaid(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandlePayoutPaid(Event e, Dictionary<string, string> metadata)
     {
         var payout = e.Data.Object as Payout;
         return new WebhookParseResult(WebhookConstants.InternalEvents.PayoutPaid, payout!, payout!.Id, metadata);
     }
 
-    private WebhookParseResult HandlePayoutFailed(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandlePayoutFailed(Event e, Dictionary<string, string> metadata)
     {
         var payout = e.Data.Object as Payout;
         return new WebhookParseResult(WebhookConstants.InternalEvents.PayoutFailed, payout!, payout!.Id, metadata);
     }
 
-    private WebhookParseResult HandlePaymentIntentSucceeded(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandlePaymentIntentSucceeded(Event e, Dictionary<string, string> metadata)
     {
         var intent = e.Data.Object as PaymentIntent;
         return new WebhookParseResult(WebhookConstants.InternalEvents.PaymentSucceeded, intent!, intent!.Id, metadata);
     }
 
-    private WebhookParseResult HandlePaymentIntentFailed(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandlePaymentIntentFailed(Event e, Dictionary<string, string> metadata)
     {
         var intent = e.Data.Object as PaymentIntent;
         return new WebhookParseResult(WebhookConstants.InternalEvents.PaymentFailed, intent!, intent!.Id, metadata);
     }
 
-    private WebhookParseResult HandleCheckoutCompleted(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandleCheckoutCompleted(Event e, Dictionary<string, string> metadata)
     {
         var session = e.Data.Object as global::Stripe.Checkout.Session;
         return new WebhookParseResult(WebhookConstants.InternalEvents.CheckoutCompleted, session!, session!.Id, metadata);
     }
 
-    private WebhookParseResult HandleInvoicePaid(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandleInvoicePaid(Event e, Dictionary<string, string> metadata)
     {
         var invoice = e.Data.Object as Invoice;
         return new WebhookParseResult(WebhookConstants.InternalEvents.InvoicePaid, invoice!, e.Id, metadata);
     }
 
-    private WebhookParseResult HandleInvoicePaymentFailed(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandleInvoicePaymentFailed(Event e, Dictionary<string, string> metadata)
     {
         var invoice = e.Data.Object as Invoice;
         return new WebhookParseResult(WebhookConstants.InternalEvents.InvoicePaymentFailed, invoice!, e.Id, metadata);
     }
 
-    private WebhookParseResult HandleSubscriptionUpdated(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandleSubscriptionUpdated(Event e, Dictionary<string, string> metadata)
     {
         var subscription = e.Data.Object as Subscription;
         return new WebhookParseResult(WebhookConstants.InternalEvents.SubscriptionUpdated, subscription!, e.Id, metadata);
     }
 
-    private WebhookParseResult HandleSubscriptionDeleted(Event e, Dictionary<string, string> metadata)
+    private static WebhookParseResult HandleSubscriptionDeleted(Event e, Dictionary<string, string> metadata)
     {
         var subscription = e.Data.Object as Subscription;
         return new WebhookParseResult(WebhookConstants.InternalEvents.SubscriptionDeleted, subscription!, e.Id, metadata);

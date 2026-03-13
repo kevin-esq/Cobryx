@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class UpdateStripeEventIdempotencyForConnect : Migration
     {
+        private static readonly string[] columns = new[] { "StripeEventId", "StripeAccountId" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -23,7 +25,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ProcessedStripeEvents_StripeEventId_StripeAccountId",
                 table: "ProcessedStripeEvents",
-                columns: new[] { "StripeEventId", "StripeAccountId" },
+                columns: columns,
                 unique: true);
         }
 

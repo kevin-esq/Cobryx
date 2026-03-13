@@ -1,13 +1,11 @@
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
 

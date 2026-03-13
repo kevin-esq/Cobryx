@@ -1,10 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionIntelligence;
 

@@ -1,8 +1,7 @@
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.ValueObjects;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+
 using FluentAssertions;
-using Xunit;
 
 namespace Cobryx.Domain.Tests.Lending;
 
@@ -21,8 +20,8 @@ public class LoanFinancialStatusTests
 
         var installments = new List<Installment>
         {
-            new Installment(loan.Id, 1, today.AddDays(30), 500, 0),
-            new Installment(loan.Id, 2, today.AddDays(60), 500, 0)
+            new(loan.Id, 1, today.AddDays(30), 500, 0),
+            new(loan.Id, 2, today.AddDays(60), 500, 0)
         };
         loan.AddInstallments(installments);
 
@@ -101,8 +100,5 @@ public class LoanFinancialStatusTests
         loan.FinancialStatus.Should().Be(FinancialStatus.Recovered);
     }
 
-    private Loan CreateLoan(decimal amount)
-    {
-        return new Loan(_tenantId, _customerId, _agreementId, "L-123", amount);
-    }
+    private Loan CreateLoan(decimal amount) => new(_tenantId, _customerId, _agreementId, "L-123", amount);
 }

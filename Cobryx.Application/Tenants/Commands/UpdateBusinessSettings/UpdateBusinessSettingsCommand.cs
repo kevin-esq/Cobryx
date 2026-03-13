@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.UpdateBusinessSettings;

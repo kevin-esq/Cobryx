@@ -1,8 +1,8 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface ITenantRepository : IRepository<Tenant>
 {
-    Task<Tenant?> GetByStripeAccountIdAsync(string stripeAccountId, CancellationToken ct = default);
+    public Task<Tenant?> GetByStripeAccountIdAsync(string stripeAccountId, CancellationToken cancellationToken = default);
 }

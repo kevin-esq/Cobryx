@@ -1,6 +1,7 @@
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;

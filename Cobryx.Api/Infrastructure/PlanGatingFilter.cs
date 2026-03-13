@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -11,21 +12,14 @@ namespace Cobryx.Api.Infrastructure;
 /// <summary>
 /// Global filter that enforces Plan Intelligence gating via [RequiresFeature] and [RequiresLimit].
 /// </summary>
-public class PlanGatingFilter : IAsyncActionFilter
+public class PlanGatingFilter(
+    ISubscriptionEnforcementService enforcementService,
+    ITenantSubscriptionRepository subscriptionRepository,
+    ITenantProvider tenantProvider) : IAsyncActionFilter
 {
-    private readonly ISubscriptionEnforcementService _enforcementService;
-    private readonly ITenantSubscriptionRepository _subscriptionRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public PlanGatingFilter(
-        ISubscriptionEnforcementService enforcementService,
-        ITenantSubscriptionRepository subscriptionRepository,
-        ITenantProvider tenantProvider)
-    {
-        _enforcementService = enforcementService;
-        _subscriptionRepository = subscriptionRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly ISubscriptionEnforcementService _enforcementService = enforcementService;
+    private readonly ITenantSubscriptionRepository _subscriptionRepository = subscriptionRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -95,7 +89,7 @@ public class PlanGatingFilter : IAsyncActionFilter
         _ => false
     };
 
-    private void RecordFeatureBlocked(ActionExecutingContext context, Guid tenantId, PlanFeature feature)
+    private static void RecordFeatureBlocked(ActionExecutingContext context, Guid tenantId, PlanFeature feature)
     {
         var metrics = context.HttpContext.RequestServices.GetRequiredService<IGrowthIntelligenceService>();
         metrics.RecordFeatureActivation(tenantId, $"FEATURE_BLOCKED.{feature}");
