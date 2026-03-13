@@ -7,21 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Analytics.Snapshots.EventHandlers;
 
-public class LoanDisbursedSnapshotHandler : INotificationHandler<DomainEventNotification<LoanDisbursedEvent>>
+public class LoanDisbursedSnapshotHandler(IUnitOfWork unitOfWork) : INotificationHandler<DomainEventNotification<LoanDisbursedEvent>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public LoanDisbursedSnapshotHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async Task Handle(DomainEventNotification<LoanDisbursedEvent> notification, CancellationToken ct)
     {
         var evt = notification.DomainEvent;
         var dbContext = (DbContext)_unitOfWork;
         
-        var loan = await dbContext.Set<Cobryx.Domain.Lending.Loan>().FirstOrDefaultAsync(x => x.Id == evt.LoanId, ct);
+        var loan = await dbContext.Set<Domain.Lending.Loan>().FirstOrDefaultAsync(x => x.Id == evt.LoanId, ct);
         if (loan == null) return;
 
         var sequenceId = evt.LedgerSequenceId > 0 ? evt.LedgerSequenceId : evt.OccurredOn.Ticks;

@@ -35,4 +35,36 @@ public class PortfolioMetricsDaily
         Date = date;
         LastUpdated = DateTime.UtcNow;
     }
+    public void SetTotals(int totalLoans, decimal totalOutstanding, decimal totalPrincipal, decimal totalInterest, decimal totalLateFees)
+    {
+        TotalLoans = totalLoans;
+        TotalOutstanding = totalOutstanding;
+        TotalPrincipal = totalPrincipal;
+        TotalInterest = totalInterest;
+        TotalLateFees = totalLateFees;
+        LastUpdated = DateTime.UtcNow;
+    }
+
+    public void SetRisk(decimal nplRatio, decimal bucket0To30, decimal bucket31To60, decimal bucket61To90, decimal bucket90Plus)
+    {
+        NPLRatio = nplRatio;
+        Bucket0To30 = bucket0To30;
+        Bucket31To60 = bucket31To60;
+        Bucket61To90 = bucket61To90;
+        Bucket90Plus = bucket90Plus;
+        LastUpdated = DateTime.UtcNow;
+    }
+
+    public void SetRevenue(decimal revenueMTD, decimal revenueYTD)
+    {
+        RevenueMTD = revenueMTD;
+        RevenueYTD = revenueYTD;
+        LastUpdated = DateTime.UtcNow;
+    }
+
+    public void SetCollections(decimal collectionEfficiency)
+    {
+        CollectionEfficiency = collectionEfficiency;
+        LastUpdated = DateTime.UtcNow;
+    }
 }

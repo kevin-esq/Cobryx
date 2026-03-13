@@ -112,6 +112,7 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
 
     // Analytics
     public DbSet<LoanBalanceSnapshot> LoanBalanceSnapshots => Set<LoanBalanceSnapshot>();
+    public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
     public DbSet<CashflowEvent> CashflowEvents => Set<CashflowEvent>();
 
@@ -260,6 +261,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
         modelBuilder.Entity<AccountBalanceSnapshot>()
             .HasIndex(s => new { s.TenantId, s.AccountId, s.JournalSequenceId })
             .IsDescending(false, false, true);
+
+        modelBuilder.Entity<LatestLoanSnapshot>().HasNoKey();
 
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<ShadowBalance>(b =>

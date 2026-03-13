@@ -301,6 +301,11 @@ try
             job => job.ExecuteAsync(CancellationToken.None),
             Cron.Minutely);
 
+        RecurringJob.AddOrUpdate<Cobryx.Application.Analytics.Jobs.PortfolioMetricsJob>(
+            "portfolio-metrics",
+            job => job.RunAsync(),
+            Cron.Daily(0));
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Lending.LoanAccrualWorker>(
             "loan-daily-accrual",
             job => job.ExecuteAsync(),
