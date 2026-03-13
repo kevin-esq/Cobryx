@@ -1,7 +1,9 @@
+using Cobryx.Infrastructure.Configuration;
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Configuration;
-using Cobryx.Infrastructure.Configuration;
+
 using nClam;
 
 namespace Cobryx.Infrastructure.HealthChecks;

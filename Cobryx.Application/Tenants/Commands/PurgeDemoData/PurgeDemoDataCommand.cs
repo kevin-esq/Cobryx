@@ -1,10 +1,11 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Exceptions;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Commands.PurgeDemoData;
@@ -31,7 +32,7 @@ public class PurgeDemoDataHandler : IRequestHandler<PurgeDemoDataCommand, Result
             .Where(l => l.TenantId == tenantId && l.IsDemo)
             .ToListAsync(cancellationToken);
 
-        if (demoLoans.Any())
+        if (demoLoans.Count != 0)
         {
             dbContext.Set<Loan>().RemoveRange(demoLoans);
         }
@@ -40,7 +41,7 @@ public class PurgeDemoDataHandler : IRequestHandler<PurgeDemoDataCommand, Result
             .Where(p => p.TenantId == tenantId && p.IsDemo)
             .ToListAsync(cancellationToken);
 
-        if (demoPayments.Any())
+        if (demoPayments.Count != 0)
         {
             dbContext.Set<Payment>().RemoveRange(demoPayments);
         }

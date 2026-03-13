@@ -1,7 +1,8 @@
-using Serilog.Context;
 using System.Security.Claims;
+
 using Microsoft.AspNetCore.Http;
-using Cobryx.Domain.Interfaces;
+
+using Serilog.Context;
 
 namespace Cobryx.Infrastructure.Middleware;
 

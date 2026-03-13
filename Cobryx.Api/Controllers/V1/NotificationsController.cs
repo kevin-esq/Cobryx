@@ -1,17 +1,13 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Outcomes;
-using Cobryx.Domain.Entities;
+
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 

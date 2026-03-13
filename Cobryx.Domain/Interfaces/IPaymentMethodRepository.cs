@@ -1,10 +1,10 @@
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments;
+
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface IPaymentMethodRepository : IRepository<PaymentMethod>
 {
-    Task<PaymentMethod?> GetByCodeAsync(Guid tenantId, string code, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<PaymentMethod>> GetAllActiveAsync(Guid tenantId, CancellationToken cancellationToken = default);
+    public Task<PaymentMethod?> GetByCodeAsync(Guid tenantId, string code, CancellationToken cancellationToken = default);
+    public Task<IReadOnlyList<PaymentMethod>> GetAllActiveAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }

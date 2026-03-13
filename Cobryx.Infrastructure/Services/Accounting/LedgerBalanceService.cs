@@ -1,10 +1,12 @@
+using System.Diagnostics;
+
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Domain.Accounting;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Cobryx.Infrastructure.Services.Accounting;
 
@@ -27,7 +29,7 @@ public class LedgerBalanceService : ILedgerBalanceService
         _logger = logger;
     }
 
-    private string GetCacheKey(Guid tenantId, Guid accountId) => $"ledger:balance:{tenantId}:{accountId}";
+    private static string GetCacheKey(Guid tenantId, Guid accountId) => $"ledger:balance:{tenantId}:{accountId}";
 
     public async Task<BalanceResult> GetBalanceAsync(Guid tenantId, Guid accountId, CancellationToken ct = default)
     {

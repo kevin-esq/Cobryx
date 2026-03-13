@@ -1,17 +1,14 @@
 using Asp.Versioning;
+
+using Cobryx.Api.Outcomes;
 using Cobryx.Application.Invoicing.Commands.CreatePaymentMethod;
 using Cobryx.Application.Invoicing.Commands.DeletePaymentMethod;
 using Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Contracts.V1.Financial;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Cobryx.Api.Outcomes;
-using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Cobryx.Api.Controllers.V1;
 

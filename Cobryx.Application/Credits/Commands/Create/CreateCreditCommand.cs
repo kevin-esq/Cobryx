@@ -1,7 +1,7 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Application.Credits.Commands.Create;
 

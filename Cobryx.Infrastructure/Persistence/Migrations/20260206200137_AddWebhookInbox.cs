@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddWebhookInbox : Migration
     {
+        private static readonly string[] columns = new[] { "Provider", "ExternalEventId" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -43,7 +44,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_WebhookEvents_Provider_ExternalEventId",
                 table: "WebhookEvents",
-                columns: new[] { "Provider", "ExternalEventId" },
+                columns: columns,
                 unique: true);
         }
 

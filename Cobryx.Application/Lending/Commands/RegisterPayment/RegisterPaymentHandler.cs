@@ -1,44 +1,34 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Interfaces.Lending;
-using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Lending.Commands.RegisterPayment;
 
-public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Result<PaymentResultDto>>
+public class RegisterPaymentHandler(
+    ILoanRepository loanRepository,
+    IPaymentRepository paymentRepository,
+    IPaymentApplicationPolicyRepository policyRepository,
+    IPaymentApplicationService paymentAppService,
+    ITenantProvider tenantProvider,
+    ISender sender,
+    IUnitOfWork unitOfWork) : IRequestHandler<RegisterPaymentCommand, Result<PaymentResultDto>>
 {
-    private readonly ILoanRepository _loanRepository;
-    private readonly IPaymentRepository _paymentRepository;
-    private readonly IPaymentApplicationPolicyRepository _policyRepository;
-    private readonly IPaymentApplicationService _paymentAppService;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly ISender _sender;
-    private readonly IUnitOfWork _unitOfWork;
-
-    public RegisterPaymentHandler(
-        ILoanRepository loanRepository,
-        IPaymentRepository paymentRepository,
-        IPaymentApplicationPolicyRepository policyRepository,
-        IPaymentApplicationService paymentAppService,
-        ITenantProvider tenantProvider,
-        ISender sender,
-        IUnitOfWork unitOfWork)
-    {
-        _loanRepository = loanRepository;
-        _paymentRepository = paymentRepository;
-        _policyRepository = policyRepository;
-        _paymentAppService = paymentAppService;
-        _tenantProvider = tenantProvider;
-        _sender = sender;
-        _unitOfWork = unitOfWork;
-    }
+    private readonly ILoanRepository _loanRepository = loanRepository;
+    private readonly IPaymentRepository _paymentRepository = paymentRepository;
+    private readonly IPaymentApplicationPolicyRepository _policyRepository = policyRepository;
+    private readonly IPaymentApplicationService _paymentAppService = paymentAppService;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
+    private readonly ISender _sender = sender;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async Task<Result<PaymentResultDto>> Handle(RegisterPaymentCommand request, CancellationToken ct)
     {
@@ -49,9 +39,7 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
         var loan = await _loanRepository.GetByIdWithInstallmentsAsync(request.LoanId, ct);
         if (loan == null || loan.TenantId != tenantId.Value)
             throw new DomainException(DomainErrorCode.Loans.NotFound);
-        var policy = await _policyRepository.GetDefaultByTenantAsync(tenantId.Value, ct);
-        if (policy == null)
-            throw new DomainException(DomainErrorCode.Loans.NotFound);
+        var policy = await _policyRepository.GetDefaultByTenantAsync(tenantId.Value, ct) ?? throw new DomainException(DomainErrorCode.Loans.NotFound);
 
         var payment = new Payment(
             tenantId.Value,
@@ -66,14 +54,14 @@ public class RegisterPaymentHandler : IRequestHandler<RegisterPaymentCommand, Re
 
         loan.RecordPaymentApplied(request.Amount, request.PaidAt);
         loan.RecalculateBalances();
-        loan.UpdateFinancialRiskStatus(DateTime.UtcNow);
+        loan.UpdateFinancialRiskStatus();
         await _paymentRepository.AddAsync(payment, ct);
         await _loanRepository.UpdateAsync(loan, ct);
 
         // Telemetry: Value Realization
         var db = (DbContext)_unitOfWork;
         var paymentsCount = await db.Set<Payment>()
-            .CountAsync(p => p.TenantId == tenantId.Value && p.Status == Domain.Enums.PaymentStatus.Completed && !p.IsDemo, ct);
+            .CountAsync(p => p.TenantId == tenantId.Value && p.Status == PaymentStatus.Completed && !p.IsDemo, ct);
 
         if (paymentsCount == 1) // First real payment
         {

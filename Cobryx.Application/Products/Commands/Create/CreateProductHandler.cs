@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Products.Commands.Create;
@@ -37,7 +38,7 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result
             product.ConfigureLoanRules(request.DefaultInterestRate, request.MaxInstallments);
         }
 
-        await _productRepository.AddAsync(product);
+        await _productRepository.AddAsync(product, cancellationToken);
 
         return Result.Success(product.Id);
     }

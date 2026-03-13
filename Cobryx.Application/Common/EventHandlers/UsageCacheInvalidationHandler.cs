@@ -1,8 +1,9 @@
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Events;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Events;
 using Cobryx.Domain.Events.Invoicing;
 using Cobryx.Domain.Events.Lending;
+
 using Concordia;
 
 namespace Cobryx.Application.Common.EventHandlers;

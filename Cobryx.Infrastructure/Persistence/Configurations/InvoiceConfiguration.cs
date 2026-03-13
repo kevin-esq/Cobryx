@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Accounting;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

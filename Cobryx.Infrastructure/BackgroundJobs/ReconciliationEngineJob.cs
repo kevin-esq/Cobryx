@@ -1,7 +1,8 @@
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Accounting.Enums;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Shared;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -11,21 +12,14 @@ namespace Cobryx.Infrastructure.BackgroundJobs;
 /// Continuous security net for financial integrity.
 /// Scans all active tenants for ledger/Stripe discrepancies.
 /// </summary>
-public class ReconciliationEngineJob
+public class ReconciliationEngineJob(
+    ICobryxDbContext dbContext,
+    ReconciliationEngine reconciliationEngine,
+    ILogger<ReconciliationEngineJob> logger)
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ReconciliationEngine _reconciliationEngine;
-    private readonly ILogger<ReconciliationEngineJob> _logger;
-
-    public ReconciliationEngineJob(
-        ICobryxDbContext dbContext,
-        ReconciliationEngine reconciliationEngine,
-        ILogger<ReconciliationEngineJob> logger)
-    {
-        _dbContext = dbContext;
-        _reconciliationEngine = reconciliationEngine;
-        _logger = logger;
-    }
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly ReconciliationEngine _reconciliationEngine = reconciliationEngine;
+    private readonly ILogger<ReconciliationEngineJob> _logger = logger;
 
     public async Task RunAsync(CancellationToken ct)
     {

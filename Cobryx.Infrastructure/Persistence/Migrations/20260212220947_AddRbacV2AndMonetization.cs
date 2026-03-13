@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddRbacV2AndMonetization : Migration
     {
+        private static readonly string[] columnsUp = ["RoleId", "PermissionKey"];
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -84,7 +85,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.AddPrimaryKey(
                 name: "PK_RolePermissions",
                 table: "RolePermissions",
-                columns: new[] { "RoleId", "PermissionKey" });
+                columns: columnsUp);
 
             migrationBuilder.AddUniqueConstraint(
                 name: "AK_Permissions_Name",
@@ -117,6 +118,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Cascade);
         }
+
+        private static readonly string[] columnsDown = ["PermissionsId", "RolesId"];
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -183,7 +186,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.AddPrimaryKey(
                 name: "PK_RolePermissions",
                 table: "RolePermissions",
-                columns: new[] { "PermissionsId", "RolesId" });
+                columns: columnsDown);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_RolesId",

@@ -1,11 +1,13 @@
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared.Enums;
+
 
 namespace Cobryx.Domain.Services;
 
 public class UsageService
 {
-    public bool CanPerformAction(TenantSubscription subscription, MetricType metricType, decimal currentUsage)
+    public static bool CanPerformAction(TenantSubscription subscription, MetricType metricType, decimal currentUsage)
     {
         if (subscription == null || subscription.Status != SubscriptionStatus.Active)
             return false;
@@ -21,7 +23,7 @@ public class UsageService
         };
     }
 
-    public UsageRecord CreateUsageRecord(Guid tenantId, MetricType metricType, decimal quantity)
+    public static UsageRecord CreateUsageRecord(Guid tenantId, MetricType metricType, decimal quantity)
     {
         return new UsageRecord(tenantId, metricType, quantity);
     }

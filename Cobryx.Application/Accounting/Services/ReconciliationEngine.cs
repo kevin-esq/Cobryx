@@ -1,40 +1,31 @@
-using System.Collections.Generic;
-using System.Linq;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Entities.Accounting.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace Cobryx.Application.Accounting.Services;
 
-public class ReconciliationEngine
+public class ReconciliationEngine(
+    ICobryxDbContext dbContext,
+    IStripeService stripeService,
+    FinancialPostingEngine postingEngine,
+    CobryxMetrics metrics,
+    ILogger<ReconciliationEngine> logger)
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly IStripeService _stripeService;
-    private readonly FinancialPostingEngine _postingEngine;
-    private readonly CobryxMetrics _metrics;
-    private readonly ILogger<ReconciliationEngine> _logger;
+    private readonly ICobryxDbContext _dbContext = dbContext;
+    private readonly IStripeService _stripeService = stripeService;
+    private readonly FinancialPostingEngine _postingEngine = postingEngine;
+    private readonly CobryxMetrics _metrics = metrics;
+    private readonly ILogger<ReconciliationEngine> _logger = logger;
 
     // Institutional timing tolerance: 15 minutes lag for webhooks
     private static readonly TimeSpan _timingTolerance = TimeSpan.FromMinutes(15);
-
-    public ReconciliationEngine(
-        ICobryxDbContext dbContext,
-        IStripeService stripeService,
-        FinancialPostingEngine postingEngine,
-        CobryxMetrics metrics,
-        ILogger<ReconciliationEngine> _logger)
-    {
-        _dbContext = dbContext;
-        _stripeService = stripeService;
-        _postingEngine = postingEngine;
-        _metrics = metrics;
-        this._logger = _logger;
-    }
 
     public async Task<ReconciliationAudit> ReconcileAsync(
         Guid tenantId,
@@ -60,7 +51,7 @@ public class ReconciliationEngine
         while (hasMore)
         {
             var intents = await _stripeService.ListPaymentIntentsAsync(from, to, stripeAccountId, lastCursor, ct);
-            if (!intents.Any()) break;
+            if (intents.Count == 0) break;
 
             foreach (var intent in intents.Where(i => i.Status == "succeeded"))
             {
@@ -118,7 +109,7 @@ public class ReconciliationEngine
         var severity = ReconciliationSeverity.Info;
         var status = ReconciliationStatus.Synced;
 
-        if (drifts.Any())
+        if (drifts.Count != 0)
         {
             status = ReconciliationStatus.SoftDrift;
             severity = ReconciliationSeverity.Info;
@@ -235,7 +226,7 @@ public class ReconciliationEngine
         while (hasMore)
         {
             var transactions = await _stripeService.ListBalanceTransactionsAsync(from, to, stripeAccountId, lastCursor, ct);
-            if (!transactions.Any()) break;
+            if (transactions.Count == 0) break;
 
             foreach (var tx in transactions)
             {

@@ -1,5 +1,4 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Domain.Events;
 

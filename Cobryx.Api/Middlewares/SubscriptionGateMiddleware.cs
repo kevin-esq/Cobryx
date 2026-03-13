@@ -1,11 +1,11 @@
 using System.Text.Json;
+
 using Cobryx.Api.Common;
 using Cobryx.Api.Infrastructure;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
-using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Api.Middlewares;
 

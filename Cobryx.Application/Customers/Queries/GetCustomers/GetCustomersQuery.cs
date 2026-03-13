@@ -1,11 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Customers.Common;
 using Cobryx.Application.Common.Models;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Customers.Common;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Customers.Queries.GetCustomers;
@@ -15,16 +17,10 @@ public record GetCustomersQuery(
     int Page = 1,
     int PageSize = 10) : IRequest<Result<PaginatedList<CustomerDto>>>;
 
-public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<PaginatedList<CustomerDto>>>
+public class GetCustomersHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider) : IRequestHandler<GetCustomersQuery, Result<PaginatedList<CustomerDto>>>
 {
-    private readonly ICustomerRepository _customerRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetCustomersHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
-    {
-        _customerRepository = customerRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly ICustomerRepository _customerRepository = customerRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<PaginatedList<CustomerDto>>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
@@ -39,8 +35,8 @@ public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<Pag
         {
             var search = request.SearchTerm.ToLower();
             query = query.Where(c =>
-                c.FirstName.ToLower().Contains(search) ||
-                c.LastName.ToLower().Contains(search) ||
+                c.FirstName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.LastName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                 c.Phone.Contains(search));
         }
 
@@ -58,7 +54,7 @@ public class GetCustomersHandler : IRequestHandler<GetCustomersQuery, Result<Pag
                 c.Phone,
                 c.Address,
                 c.Document,
-                c.Credits.Count(cr => cr.Status == CreditStatus.Active),
+                c.LendingInstruments.OfType<Credit>().Count(cr => cr.Status == CreditStatus.Active),
                 c.CreatedAt))
             .ToListAsync(cancellationToken);
 

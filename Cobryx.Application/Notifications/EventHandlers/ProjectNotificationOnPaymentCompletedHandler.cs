@@ -1,9 +1,10 @@
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Events.Payments;
 using Cobryx.Application.Common.Events;
-using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Events.Payments;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Notifications.EventHandlers;

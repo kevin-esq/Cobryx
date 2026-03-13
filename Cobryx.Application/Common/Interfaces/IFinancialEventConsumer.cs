@@ -1,4 +1,4 @@
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Domain.Messaging;
 
 namespace Cobryx.Application.Common.Interfaces;
 
@@ -12,10 +12,10 @@ public interface IFinancialEventConsumer
     /// Processes a semantic financial event.
     /// Implementation must ensure idempotency using ProcessedEvent tracking.
     /// </summary>
-    Task ConsumeAsync(FinancialOutboxEvent @event, CancellationToken ct = default);
+    public Task ConsumeAsync(OutboxMessage @event, CancellationToken ct = default);
 
     /// <summary>
     /// Unique name of the consumer for idempotency tracking.
     /// </summary>
-    string Name { get; }
+    public string Name { get; }
 }

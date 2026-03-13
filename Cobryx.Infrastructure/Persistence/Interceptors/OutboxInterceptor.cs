@@ -1,9 +1,11 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Newtonsoft.Json;
 using System.Diagnostics;
+
+using Cobryx.Domain.Messaging;
+using Cobryx.Domain.Shared;
+
+using Microsoft.EntityFrameworkCore.Diagnostics;
+
+using Newtonsoft.Json;
 
 namespace Cobryx.Infrastructure.Persistence.Interceptors;
 
@@ -21,42 +23,48 @@ public class OutboxInterceptor : SaveChangesInterceptor
         return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    private void CaptureEvents(Microsoft.EntityFrameworkCore.DbContext? context)
+    private static void CaptureEvents(Microsoft.EntityFrameworkCore.DbContext? context)
     {
         if (context == null) return;
 
         var entities = context.ChangeTracker
             .Entries<BaseEntity>()
-            .Where(e => e.Entity.DomainEvents.Any())
+            .Where(e => e.Entity.DomainEvents.Count != 0)
             .Select(e => e.Entity)
             .ToList();
 
-        if (!entities.Any()) return;
+        if (entities.Count == 0) return;
 
         var outboxEvents = entities
             .SelectMany(e =>
             {
                 var domainEvents = e.DomainEvents.ToList();
                 e.ClearDomainEvents();
-                return domainEvents;
+                return domainEvents.Select(domainEvent => new { Entity = e, Event = domainEvent });
             })
-            .Select(domainEvent =>
+            .Select(pair =>
             {
-                var outboxEvent = new OutboxEvent(
+                var e = pair.Entity;
+                var domainEvent = pair.Event;
+
+                var correlationId = Activity.Current?.GetTagItem("CorrelationId")?.ToString()
+                                    ?? Activity.Current?.Id;
+
+                var tenantId = e is ITenantEntity te ? te.TenantId : Guid.Empty;
+
+                var outboxMsg = new OutboxMessage(
+                    tenantId,
                     domainEvent.GetType().FullName!,
                     JsonConvert.SerializeObject(domainEvent, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.All
-                    }));
+                    }),
+                    correlationId);
 
-                // Capture CorrelationId from the ambient Activity
-                outboxEvent.SetCorrelationId(Activity.Current?.GetTagItem("CorrelationId")?.ToString()
-                                           ?? Activity.Current?.Id);
-
-                return outboxEvent;
+                return outboxMsg;
             })
             .ToList();
 
-        context.Set<OutboxEvent>().AddRange(outboxEvents);
+        context.Set<OutboxMessage>().AddRange(outboxEvents);
     }
 }

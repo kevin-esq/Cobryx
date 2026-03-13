@@ -1,5 +1,7 @@
 using System.IO.Compression;
-using Cobryx.Domain.Common;
+
+using Cobryx.Domain.Shared;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Documents.Services;

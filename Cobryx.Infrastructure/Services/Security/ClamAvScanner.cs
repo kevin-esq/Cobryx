@@ -2,8 +2,10 @@ using Cobryx.Application.Common.Observability;
 using Cobryx.Domain.Exceptions.System;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Configuration;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using nClam;
 
 namespace Cobryx.Infrastructure.Services.Security;

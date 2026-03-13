@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Payments;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

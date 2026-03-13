@@ -1,6 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Google.Apis.Auth;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 

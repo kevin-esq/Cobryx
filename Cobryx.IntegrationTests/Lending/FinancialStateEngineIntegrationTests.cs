@@ -1,28 +1,23 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Lending.Services;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
 using Cobryx.Infrastructure.Persistence;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Lending;
 
 [Collection("Sequential")]
-public class FinancialStateEngineIntegrationTests : IClassFixture<CobryxWebApplicationFactory>
+public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory factory) : IClassFixture<CobryxWebApplicationFactory>
 {
-    private readonly CobryxWebApplicationFactory _factory;
-
-    public FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly CobryxWebApplicationFactory _factory = factory;
 
     [Fact]
     public async Task UpdateStatusAsync_ShouldRecordAuditTrailOnTransition()
@@ -34,17 +29,31 @@ public class FinancialStateEngineIntegrationTests : IClassFixture<CobryxWebAppli
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
         var tenantId = Guid.NewGuid();
+        var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
+        tenantProvider.SetTenantId(tenantId);
+
         var (customerId, agreementId) = await SeedBaseDataAsync(context, tenantId);
 
-        var loan = new Loan(tenantId, customerId, agreementId, "L-INTEG-1", 1000);
+        var loan = new Loan(tenantId, customerId, agreementId, "L-INTEG-1", new Cobryx.Domain.ValueObjects.Money(1000, "MXN"));
 
-        // Add an overdue installment (10 days past due)
         var dueDate = clock.UtcNow.AddDays(-10);
-        var installment = new Installment(loan.Id, 1, dueDate, 500, 50);
-        loan.AddInstallments(new[] { installment });
+        var currency = "MXN";
+        var amount = new Cobryx.Domain.ValueObjects.Money(500, currency);
+        var interest = new Cobryx.Domain.ValueObjects.Money(50, currency);
+        var balance = new Cobryx.Domain.ValueObjects.Money(550, currency);
+        var installment = new Installment(loan.Id, 1, dueDate, amount, interest, balance);
+        loan.AddInstallments([installment]);
 
         context.Loans.Add(loan);
-        await context.SaveChangesAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var inner = ex.InnerException?.Message ?? "No inner info";
+            throw new Exception($"FK Failure caught on line 45: {ex.Message}. Inner: {inner}", ex);
+        }
 
         // Act
         await stateEngine.UpdateStatusAsync(loan.Id, "Integ Test Trigger");
@@ -72,9 +81,12 @@ public class FinancialStateEngineIntegrationTests : IClassFixture<CobryxWebAppli
         var stateEngine = scope.ServiceProvider.GetRequiredService<FinancialStateEngine>();
 
         var tenantId = Guid.NewGuid();
+        var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
+        tenantProvider.SetTenantId(tenantId);
+
         var (customerId, agreementId) = await SeedBaseDataAsync(context, tenantId);
 
-        var loan = new Loan(tenantId, customerId, agreementId, "L-INTEG-CO", 1000);
+        var loan = new Loan(tenantId, customerId, agreementId, "L-INTEG-CO", new Cobryx.Domain.ValueObjects.Money(1000, "MXN"));
         context.Loans.Add(loan);
         await context.SaveChangesAsync();
 
@@ -96,12 +108,16 @@ public class FinancialStateEngineIntegrationTests : IClassFixture<CobryxWebAppli
         tx.IsPosted.Should().BeTrue();
     }
 
-    private async Task<(Guid CustomerId, Guid AgreementId)> SeedBaseDataAsync(CobryxDbContext context, Guid tenantId)
+    private static async Task<(Guid customerId, Guid agreementId)> SeedBaseDataAsync(CobryxDbContext context, Guid tenantId)
     {
-        // 1. Tenant
-        var tenant = new Tenant("Test Bank", "bank@test.com");
+        // 0. Tenant (Required for FKs)
+        var tenant = new Tenant("Integ Tenant", "integ@test.com");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, tenantId);
         context.Tenants.Add(tenant);
+
+        // 1. Interest Policy
+        var interestPolicy = InterestPolicy.CreateExplicit(tenantId, "Standard Interest", "STD-INT", 12.0m);
+        context.InterestPolicies.Add(interestPolicy);
 
         // 2. System Accounts (Required by PostingEngine)
         var codes = new[] { "1010", "1210", "4010", "4020", "5010", "4030" };
@@ -125,12 +141,35 @@ public class FinancialStateEngineIntegrationTests : IClassFixture<CobryxWebAppli
         typeof(Customer).GetProperty("Id")!.SetValue(customer, customerId);
         context.Customers.Add(customer);
 
-        // 4. Agreement
+        // 4. Payment Application Policy
+        var applicationPolicy = PaymentApplicationPolicy.CreateStandard(tenantId, "Standard Application", "STD-APP", true);
+        context.PaymentApplicationPolicies.Add(applicationPolicy);
+
+        // 5. Late Fee Policy
+        var lateFeePolicy = LateFeePolicy.CreateFixed(tenantId, "Standard Late Fee", 10.0m);
+        context.LateFeePolicies.Add(lateFeePolicy);
+
+        await context.SaveChangesAsync();
+
+        // 6. Loan Agreement
         var agreementId = Guid.NewGuid();
         var agreement = new LoanAgreement(
-            tenantId, customerId, 1000, Guid.NewGuid(), Cobryx.Domain.Entities.Lending.Enums.PaymentFrequency.Monthly, 12,
-            DateTime.UtcNow, DateTime.UtcNow.AddMonths(1), LoanOrigin.CashLoan);
-        typeof(LoanAgreement).GetProperty("Id")!.SetValue(agreement, agreementId);
+            tenantId,
+            customerId,
+            1000,
+            interestPolicy.Id,
+            Cobryx.Domain.Lending.Enums.PaymentFrequency.Monthly,
+            12,
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddMonths(1),
+            Cobryx.Domain.Lending.Enums.LoanOrigin.CashLoan,
+            lateFeePolicyId: lateFeePolicy.Id,
+            currency: "MXN",
+            paymentApplicationPolicyId: applicationPolicy.Id);
+        // Force ID via reflection to ensure consistency
+        var idProp = typeof(Cobryx.Domain.Shared.BaseEntity).GetProperty("Id");
+        idProp!.SetValue(agreement, agreementId);
+
         context.LoanAgreements.Add(agreement);
 
         await context.SaveChangesAsync();

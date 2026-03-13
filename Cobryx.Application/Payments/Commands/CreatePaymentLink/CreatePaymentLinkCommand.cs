@@ -1,13 +1,16 @@
+using System.Security.Cryptography;
+
+using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Enums;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Cobryx.Application.Common.Configuration;
-using System.Security.Cryptography;
 
 namespace Cobryx.Application.Payments.Commands.CreatePaymentLink;
 
@@ -103,7 +106,7 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         return Result.Success($"{paymentLink.Salt}.{rawToken}");
     }
 
-    private string GenerateSecureToken()
+    private static string GenerateSecureToken()
     {
         var bytes = new byte[32];
         RandomNumberGenerator.Fill(bytes);

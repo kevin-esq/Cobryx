@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Invoicing.Commands.DeletePaymentMethod;
 
@@ -25,12 +26,12 @@ public class DeletePaymentMethodHandler : IRequestHandler<DeletePaymentMethodCom
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
-        var paymentMethod = await _paymentMethodRepository.GetByIdAsync(request.Id);
+        var paymentMethod = await _paymentMethodRepository.GetByIdAsync(request.Id, cancellationToken);
         if (paymentMethod == null || paymentMethod.TenantId != tenantId.Value)
             return Result.Failure(DomainErrorCode.Invoicing.PaymentMethodNotFound);
 
         paymentMethod.Delete();
-        await _paymentMethodRepository.UpdateAsync(paymentMethod);
+        await _paymentMethodRepository.UpdateAsync(paymentMethod, cancellationToken);
 
         return Result.Success();
     }

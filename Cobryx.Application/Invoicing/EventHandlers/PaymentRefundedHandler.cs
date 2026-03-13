@@ -1,7 +1,9 @@
+using Cobryx.Application.Common.Events;
 using Cobryx.Domain.Events.Payments;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Application.Common.Events;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Invoicing.EventHandlers;
@@ -38,7 +40,7 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
                 if (invoice != null)
                 {
                     invoice.ReverseAllocation(allocation);
-                    await _invoiceRepository.UpdateAsync(invoice);
+                    await _invoiceRepository.UpdateAsync(invoice, cancellationToken);
                 }
             }
         }

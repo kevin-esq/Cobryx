@@ -1,7 +1,12 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Dashboard;
@@ -45,10 +50,10 @@ public record DashboardSummaryDto
     public bool IsDemoData { get; init; }
 
     /// <summary>Psychographic summary signals to create urgency or highlight success.</summary>
-    public List<ImpactSignalDto> ImpactSignals { get; init; } = new();
+    public List<ImpactSignalDto> ImpactSignals { get; init; } = [];
 
     /// <summary>Breakdown of loan counts by their internal risk/performance status.</summary>
-    public List<RiskDistributionDto> RiskDistribution { get; init; } = new();
+    public List<RiskDistributionDto> RiskDistribution { get; init; } = [];
 }
 
 /// <summary>
@@ -78,16 +83,10 @@ public record RiskDistributionDto(
 
 public record GetDashboardSummaryQuery : IRequest<Result<DashboardSummaryDto>>;
 
-public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSummaryQuery, Result<DashboardSummaryDto>>
+public class GetDashboardSummaryQueryHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider) : IRequestHandler<GetDashboardSummaryQuery, Result<DashboardSummaryDto>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetDashboardSummaryQueryHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider)
-    {
-        _unitOfWork = unitOfWork;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<DashboardSummaryDto>> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
     {
@@ -95,32 +94,32 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
         var dbContext = (DbContext)_unitOfWork;
 
         // 1. Fetch Core Data
-        var loans = await dbContext.Set<Domain.Entities.Lending.Loan>()
-            .Where(l => l.TenantId == tenantId && !l.IsDeleted && l.Status != Domain.Entities.Lending.Enums.LoanStatus.Closed)
+        var loans = await dbContext.Set<Loan>()
+            .Where(l => l.TenantId == tenantId && !l.IsDeleted && l.Status != LoanStatus.Closed)
             .ToListAsync(cancellationToken);
 
-        var customersCount = await dbContext.Set<Domain.Entities.Customer>()
+        var customersCount = await dbContext.Set<Cobryx.Domain.Lending.Customer>()
             .Where(c => c.TenantId == tenantId && !c.IsDeleted)
             .CountAsync(cancellationToken);
 
         var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-        var collectionsLast30d = await dbContext.Set<Domain.Entities.Payments.Payment>()
-            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.PaymentDate >= thirtyDaysAgo && p.Status == Domain.Enums.PaymentStatus.Completed)
+        var collectionsLast30d = await dbContext.Set<Cobryx.Domain.Payments.Payment>()
+            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.PaymentDate >= thirtyDaysAgo && p.Status == PaymentStatus.Completed)
             .SumAsync(p => p.Amount.Amount, cancellationToken);
 
-        var expectedCollectionsLast30d = await dbContext.Set<Domain.Entities.Lending.Installment>()
+        var expectedCollectionsLast30d = await dbContext.Set<Installment>()
             .Where(i => i.Loan.TenantId == tenantId && !i.IsDeleted && i.DueDate >= thirtyDaysAgo && i.DueDate <= DateTime.UtcNow)
-            .SumAsync(i => i.TotalAmount, cancellationToken);
+            .SumAsync(i => i.TotalAmount.Amount, cancellationToken);
 
-        var totalPrincipalDisbursed = await dbContext.Set<Domain.Entities.Lending.Loan>()
+        var totalPrincipalDisbursed = await dbContext.Set<Loan>()
             .Where(l => l.TenantId == tenantId && !l.IsDeleted)
             .SumAsync(l => l.OriginalPrincipal, cancellationToken);
 
-        var activeLoans = loans.Where(l => l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active).ToList();
+        var activeLoans = loans.Where(l => l.Status == LoanStatus.Active).ToList();
         var totalPrincipalBalance = loans.Sum(l => l.CurrentPrincipalBalance);
         var overdueCount = loans.Count(l => l.DaysInArrears > 0);
 
-        var overdueRisk = activeLoans.Any()
+        var overdueRisk = activeLoans.Count != 0
             ? (decimal)overdueCount / activeLoans.Count * 100
             : 0;
 
@@ -133,7 +132,7 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
             ? (loans.Sum(l => l.CurrentInterestBalance) / totalPrincipalDisbursed) * 100
             : 0;
 
-        var signals = new List<ImpactSignalDto>();
+        List<ImpactSignalDto> signals = [];
 
         if (overdueRisk > 15)
             signals.Add(new ImpactSignalDto("CASHFLOW_AT_RISK", "Critical"));
@@ -159,13 +158,15 @@ public class GetDashboardSummaryQueryHandler : IRequestHandler<GetDashboardSumma
             CollectionEfficiency = Math.Round(collectionEfficiency, 2),
             PortfolioYield = Math.Round(portfolioYield, 2),
             OverdueRisk = Math.Round(overdueRisk, 2),
-            ShowGettingStarted = !loans.Any(),
+            ShowGettingStarted = loans.Count == 0,
             IsDemoData = loans.Any(l => l.IsDemo),
             ImpactSignals = signals,
-            RiskDistribution = loans
-                .GroupBy(l => l.RiskStatus)
-                .Select(g => new RiskDistributionDto(g.Key.ToString(), g.Count()))
-                .ToList()
+            RiskDistribution =
+            [
+                .. loans
+                    .GroupBy(l => l.RiskStatus)
+                    .Select(g => new RiskDistributionDto(g.Key.ToString(), g.Count()))
+            ]
         };
 
         return Result.Success(summary);

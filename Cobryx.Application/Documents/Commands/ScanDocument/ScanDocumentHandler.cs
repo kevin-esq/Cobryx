@@ -1,12 +1,13 @@
+using System.Diagnostics;
+
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Cobryx.Application.Documents.Commands.ScanDocument;
 
@@ -16,32 +17,22 @@ namespace Cobryx.Application.Documents.Commands.ScanDocument;
 /// Idempotent: only scans documents still in PendingScan state.
 /// Max retry: 3 attempts before marking as ScanFailed.
 /// </summary>
-public class ScanDocumentHandler
+public class ScanDocumentHandler(
+    IUnitOfWork unitOfWork,
+    IDocumentStorage storage,
+    IVirusScanner scanner,
+    IClock clock,
+    CobryxMetrics metrics,
+    ILogger<ScanDocumentHandler> logger)
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IDocumentStorage _storage;
-    private readonly IVirusScanner _scanner;
-    private readonly IClock _clock;
-    private readonly CobryxMetrics _metrics;
-    private readonly ILogger<ScanDocumentHandler> _logger;
-
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IDocumentStorage _storage = storage;
+    private readonly IVirusScanner _scanner = scanner;
+    private readonly IClock _clock = clock;
+    private static readonly TimeSpan UrlExpiry = TimeSpan.FromMinutes(15);
+    private readonly CobryxMetrics _metrics = metrics;
+    private readonly ILogger<ScanDocumentHandler> _logger = logger;
     private const int MaxRetryAttempts = 3;
-
-    public ScanDocumentHandler(
-        IUnitOfWork unitOfWork,
-        IDocumentStorage storage,
-        IVirusScanner scanner,
-        IClock clock,
-        CobryxMetrics metrics,
-        ILogger<ScanDocumentHandler> logger)
-    {
-        _unitOfWork = unitOfWork;
-        _storage = storage;
-        _scanner = scanner;
-        _clock = clock;
-        _metrics = metrics;
-        _logger = logger;
-    }
 
     public async Task ExecuteAsync(Guid documentId, int attempt = 1, CancellationToken ct = default)
     {

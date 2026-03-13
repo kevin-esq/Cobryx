@@ -1,27 +1,21 @@
 using System.Text.Json;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared;
+
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.Persistence.Interceptors;
 
-public class AuditInterceptor : SaveChangesInterceptor
+public class AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantProvider tenantProvider, IHttpContextAccessor httpContextAccessor) : SaveChangesInterceptor
 {
-    private readonly ICurrentUserProvider _currentUserProvider;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantProvider tenantProvider, IHttpContextAccessor httpContextAccessor)
-    {
-        _currentUserProvider = currentUserProvider;
-        _tenantProvider = tenantProvider;
-        _httpContextAccessor = httpContextAccessor;
-    }
+    private readonly ICurrentUserProvider _currentUserProvider = currentUserProvider;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -44,36 +38,48 @@ public class AuditInterceptor : SaveChangesInterceptor
 
         var auditEntries = new List<AuditEntry>();
 
-        foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
+        foreach (var entry in context.ChangeTracker.Entries<ITenantEntity>())
         {
-            if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+            if (entry.State is EntityState.Detached or EntityState.Unchanged)
                 continue;
 
-            if (entry.State == EntityState.Added)
+            if (entry.Entity is BaseEntity baseEntity)
             {
-                if (userId.HasValue) entry.Entity.SetCreatedBy(userId.Value);
-            }
-            else if (entry.State == EntityState.Modified || entry.HasChangedOwnedEntities())
-            {
-                if (userId.HasValue) entry.Entity.SetUpdatedBy(userId.Value);
-            }
-
-            if (tenantId.HasValue && entry.Entity is not AuditLog && entry.Entity is not SystemErrorLog)
-            {
-                var httpContext = _httpContextAccessor.HttpContext;
-                var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString();
-                var userAgent = httpContext?.Request.Headers["User-Agent"].ToString();
-
-                var auditEntry = new AuditEntry(entry)
+                if (entry.State == EntityState.Added)
                 {
-                    TenantId = tenantId.Value,
-                    UserId = userId,
-                    EntityName = entry.Entity.GetType().Name,
-                    Action = entry.State.ToString(),
-                    IpAddress = ipAddress,
-                    UserAgent = userAgent
-                };
-                auditEntries.Add(auditEntry);
+                    if (userId.HasValue) baseEntity.SetCreatedBy(userId.Value);
+                }
+                else if (entry.State == EntityState.Modified || entry.HasChangedOwnedEntities())
+                {
+                    if (userId.HasValue) baseEntity.SetUpdatedBy(userId.Value);
+                }
+            }
+
+            if (entry.Entity is not AuditLog and not SystemErrorLog)
+            {
+                var targetTenantId = entry.Entity.TenantId;
+                if (targetTenantId == Guid.Empty && tenantId.HasValue)
+                {
+                    targetTenantId = tenantId.Value;
+                }
+
+                if (targetTenantId != Guid.Empty)
+                {
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    var ipAddress = httpContext?.Connection.RemoteIpAddress?.ToString();
+                    var userAgent = httpContext?.Request.Headers.UserAgent.ToString();
+
+                    var auditEntry = new AuditEntry(entry)
+                    {
+                        TenantId = targetTenantId,
+                        UserId = userId,
+                        EntityName = entry.Entity.GetType().Name,
+                        Action = entry.State.ToString(),
+                        IpAddress = ipAddress,
+                        UserAgent = userAgent
+                    };
+                    auditEntries.Add(auditEntry);
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-﻿namespace Cobryx.Application.Tests;
+namespace Cobryx.Application.Tests;
 
 public class UnitTest1
 {

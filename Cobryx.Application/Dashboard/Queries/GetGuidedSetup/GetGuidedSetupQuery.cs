@@ -1,9 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Dashboard.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Exceptions;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Dashboard.Queries.GetGuidedSetup;
@@ -26,17 +30,17 @@ public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var dbContext = (DbContext)_unitOfWork;
 
-        var tenant = await dbContext.Set<Domain.Entities.Tenant>()
+        var tenant = await dbContext.Set<Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
 
-        var usersCount = await dbContext.Set<Domain.Entities.User>()
+        var usersCount = await dbContext.Set<User>()
             .CountAsync(u => u.TenantId == tenantId, cancellationToken);
 
-        var activeLoansCount = await dbContext.Set<Domain.Entities.Lending.Loan>()
+        var activeLoansCount = await dbContext.Set<Loan>()
             .CountAsync(l => l.TenantId == tenantId && !l.IsDeleted, cancellationToken);
 
-        var paymentsCount = await dbContext.Set<Domain.Entities.Payments.Payment>()
-            .CountAsync(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == Domain.Enums.PaymentStatus.Completed, cancellationToken);
+        var paymentsCount = await dbContext.Set<Cobryx.Domain.Payments.Payment>()
+            .CountAsync(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == PaymentStatus.Completed, cancellationToken);
 
         var context = new OnboardingContextDto(
             activeLoansCount,

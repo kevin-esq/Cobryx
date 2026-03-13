@@ -1,4 +1,5 @@
-using Cobryx.Domain.Entities.Lending;
+using Cobryx.Domain.Lending;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -1,10 +1,11 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Entities.Invoicing;
+using Cobryx.Domain.Accounting.Enums;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments;
 using Cobryx.Domain.Services;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Concordia;
 
 namespace Cobryx.Application.Payments.Commands.ProcessPayment;
@@ -25,17 +26,20 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly ITenantProvider _tenantProvider;
     private readonly PaymentService _paymentService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ProcessPaymentHandler(
         IPaymentRepository paymentRepository,
         IInvoiceRepository invoiceRepository,
         ITenantProvider tenantProvider,
-        PaymentService paymentService)
+        PaymentService paymentService,
+        IUnitOfWork unitOfWork)
     {
         _paymentRepository = paymentRepository;
         _invoiceRepository = invoiceRepository;
         _tenantProvider = tenantProvider;
         _paymentService = paymentService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<Guid>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
@@ -53,7 +57,7 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
             request.Reference,
             request.Notes);
 
-        if (request.InvoiceIds != null && request.InvoiceIds.Any())
+        if (request.InvoiceIds != null && request.InvoiceIds.Count != 0)
         {
             decimal remainingAmount = request.Amount;
 
@@ -61,10 +65,10 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
             {
                 if (remainingAmount <= 0) break;
 
-                var invoice = await _invoiceRepository.GetByIdAsync(invoiceId);
+                var invoice = await _invoiceRepository.GetByIdAsync(invoiceId, cancellationToken);
                 if (invoice == null || invoice.TenantId != tenantId.Value) continue;
 
-                if (invoice.Status == Domain.Enums.InvoiceStatus.Paid) continue;
+                if (invoice.Status == InvoiceStatus.Paid) continue;
 
                 decimal unpaidAmount = invoice.Total.Amount - invoice.TotalPaid.Amount;
                 decimal amountToApply = Math.Min(unpaidAmount, remainingAmount);
@@ -77,11 +81,12 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
             }
         }
 
-        await _paymentRepository.AddAsync(payment);
+        await _paymentRepository.AddAsync(payment, cancellationToken);
 
         payment.Initiate();
-
         payment.Complete();
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(payment.Id);
     }

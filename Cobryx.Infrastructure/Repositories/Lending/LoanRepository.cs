@@ -1,6 +1,7 @@
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Interfaces.Lending;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories.Lending;
@@ -8,18 +9,9 @@ namespace Cobryx.Infrastructure.Repositories.Lending;
 /// <summary>
 /// Repository for managing <see cref="Loan"/> persistence.
 /// </summary>
-public class LoanRepository : ILoanRepository
+public class LoanRepository(CobryxDbContext context) : ILoanRepository
 {
-    private readonly CobryxDbContext _context;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LoanRepository"/> class.
-    /// </summary>
-    /// <param name="context">The database context.</param>
-    public LoanRepository(CobryxDbContext context)
-    {
-        _context = context;
-    }
+    private readonly CobryxDbContext _context = context;
 
     /// <summary>
     /// Retrieves a loan by its unique identifier.
@@ -29,7 +21,7 @@ public class LoanRepository : ILoanRepository
     /// <returns>The loan if found, otherwise null.</returns>
     public async Task<Loan?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Loans.FindAsync(new object[] { id }, ct);
+        return await _context.Loans.FindAsync([id], ct);
     }
 
     /// <summary>
@@ -68,7 +60,7 @@ public class LoanRepository : ILoanRepository
     public async Task<IReadOnlyList<Loan>> GetActiveByTenantAsync(Guid tenantId, CancellationToken ct = default)
     {
         return await _context.Loans
-            .Where(l => l.TenantId == tenantId && l.Status == Domain.Entities.Lending.Enums.LoanStatus.Active)
+            .Where(l => l.TenantId == tenantId && l.Status == LoanStatus.Active)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync(ct);
     }

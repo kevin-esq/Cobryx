@@ -1,6 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Interfaces;
 
 namespace Cobryx.Infrastructure.Services;
 
@@ -9,7 +8,6 @@ public class CachedUsageMeteringService : IUsageMeteringService
     private readonly IUsageMeteringService _inner;
     private readonly ICacheService _cacheService;
     private readonly CobryxMetrics _metrics;
-    private const string CacheKeyPrefix = "usage:snapshot:";
 
     public CachedUsageMeteringService(
         IUsageMeteringService inner,

@@ -1,6 +1,7 @@
 using Cobryx.Application.Accounting.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

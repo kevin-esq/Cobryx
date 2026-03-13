@@ -1,9 +1,11 @@
 using Asp.Versioning;
+
 using Cobryx.Application.Users.Commands.UpdateUserRole;
 using Cobryx.Application.Users.Queries.GetAvailableRoles;
 using Cobryx.Application.Users.Queries.GetTenantUsers;
-using Cobryx.Domain.Common;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

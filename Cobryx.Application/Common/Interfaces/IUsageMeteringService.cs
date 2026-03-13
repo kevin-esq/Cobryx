@@ -10,7 +10,7 @@ public record UsageSnapshot(
 
 public interface IUsageMeteringService
 {
-    Task<UsageSnapshot> GetUsageSnapshotAsync(Guid tenantId, CancellationToken ct = default);
+    public Task<UsageSnapshot> GetUsageSnapshotAsync(Guid tenantId, CancellationToken ct = default);
 
-    static string GetCacheKey(Guid tenantId) => $"usage:snapshot:{tenantId}";
+    public static string GetCacheKey(Guid tenantId) => $"usage:snapshot:{tenantId}";
 }

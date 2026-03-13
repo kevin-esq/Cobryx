@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Http;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
+using Microsoft.AspNetCore.Http;
 
 namespace Cobryx.Infrastructure.Services;
 
@@ -33,7 +34,7 @@ public class HttpContextService : IHttpContextService
         var context = _httpContextAccessor.HttpContext;
         if (context == null) return CobryxDefaults.UnknownValue;
 
-        var userAgent = context.Request.Headers["User-Agent"].ToString();
+        var userAgent = context.Request.Headers.UserAgent.ToString();
         return string.IsNullOrWhiteSpace(userAgent) ? CobryxDefaults.UnknownValue : userAgent;
     }
 

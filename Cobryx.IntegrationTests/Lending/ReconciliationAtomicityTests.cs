@@ -1,33 +1,30 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Lending.Services;
 using Cobryx.Application.Payments.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Persistence;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Lending;
 
 [Collection("Sequential")]
-public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFactory>
+public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) : IClassFixture<CobryxWebApplicationFactory>
 {
-    private readonly CobryxWebApplicationFactory _factory;
-
-    public ReconciliationAtomicityTests(CobryxWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly CobryxWebApplicationFactory _factory = factory;
 
     [Fact]
     public async Task HandlePaymentSuccess_ShouldRollbackAll_WhenStateUpdateFails()
@@ -50,7 +47,7 @@ public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFa
         var tenantId = Guid.NewGuid();
         var (customerId, agreementId) = await SeedBaseDataAsync(context, tenantId);
 
-        var loan = new Loan(tenantId, customerId, agreementId, "L-ATOM-1", 1000);
+        var loan = new Loan(tenantId, customerId, agreementId, "L-ATOM-1", new Money(1000, "MXN"));
         context.Loans.Add(loan);
 
         var paymentIntentId = "pi_crash_123";
@@ -107,7 +104,7 @@ public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFa
         var tenantId = Guid.NewGuid();
         var (customerId, agreementId) = await SeedBaseDataAsync(context, tenantId);
 
-        var loan = new Loan(tenantId, customerId, agreementId, "L-STUCK-1", 500);
+        var loan = new Loan(tenantId, customerId, agreementId, "L-STUCK-1", new Money(500, "MXN"));
         context.Loans.Add(loan);
 
         var paymentIntentId = "pi_stuck_456";
@@ -135,13 +132,15 @@ public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFa
         ledgerTxExists.Should().BeTrue("Ledger Transaction should be created by recovery logic");
     }
 
-    private async Task<(Guid CustomerId, Guid AgreementId)> SeedBaseDataAsync(CobryxDbContext context, Guid tenantId)
+    private static async Task<(Guid customerId, Guid agreementId)> SeedBaseDataAsync(CobryxDbContext context, Guid tenantId)
     {
-        var tenant = new Tenant("Test Bank", "bank@test.com");
+        var tenant = new Tenant("Atomic Tenant", "atomic@test.com");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, tenantId);
         context.Tenants.Add(tenant);
 
         var codes = new[] { "1010", "1210", "4010", "4020", "5010", "4030" };
+        tenant.SetStripeAccountId("acct_test_reconcile");
+        tenant.UpdateConnectStatus(true, true, true);
         foreach (var code in codes)
         {
             var role = code switch
@@ -161,9 +160,36 @@ public class ReconciliationAtomicityTests : IClassFixture<CobryxWebApplicationFa
         typeof(Customer).GetProperty("Id")!.SetValue(customer, customerId);
         context.Customers.Add(customer);
 
+        var interestPolicy = InterestPolicy.CreateExplicit(tenantId, "Standard Interest", "STD-INT", 12.0m);
+        context.InterestPolicies.Add(interestPolicy);
+
+        var applicationPolicy = PaymentApplicationPolicy.CreateStandard(tenantId, "Standard Application", "STD-APP", true);
+        context.PaymentApplicationPolicies.Add(applicationPolicy);
+
+        var lateFeePolicy = LateFeePolicy.CreateFixed(tenantId, "Standard Late Fee", 10.0m);
+        context.LateFeePolicies.Add(lateFeePolicy);
+
+        await context.SaveChangesAsync();
+
         var agreementId = Guid.NewGuid();
-        var agreement = new LoanAgreement(tenantId, customerId, 1000, Guid.NewGuid(), Cobryx.Domain.Entities.Lending.Enums.PaymentFrequency.Monthly, 12, DateTime.UtcNow, DateTime.UtcNow.AddMonths(1), LoanOrigin.CashLoan);
-        typeof(LoanAgreement).GetProperty("Id")!.SetValue(agreement, agreementId);
+        var agreement = new LoanAgreement(
+            tenantId,
+            customerId,
+            1000,
+            interestPolicy.Id,
+            Cobryx.Domain.Lending.Enums.PaymentFrequency.Monthly,
+            12,
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddMonths(1),
+            Cobryx.Domain.Lending.Enums.LoanOrigin.CashLoan,
+            lateFeePolicyId: lateFeePolicy.Id,
+            currency: "MXN",
+            paymentApplicationPolicyId: applicationPolicy.Id);
+
+        // Force ID via reflection
+        var idProp = typeof(Cobryx.Domain.Shared.BaseEntity).GetProperty("Id");
+        idProp!.SetValue(agreement, agreementId);
+
         context.LoanAgreements.Add(agreement);
 
         var pm = new PaymentMethod(tenantId, "Stripe Payment", "STRIPE");

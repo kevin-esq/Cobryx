@@ -1,9 +1,12 @@
 using Asp.Versioning;
+
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Audit.Queries.GetAuditLogs;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

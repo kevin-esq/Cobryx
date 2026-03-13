@@ -1,5 +1,3 @@
-using System;
-
 namespace Cobryx.Api.Contracts.V1.Lending;
 
 /// <summary>

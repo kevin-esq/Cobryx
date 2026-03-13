@@ -1,11 +1,12 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Accounting;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
+
 using Microsoft.EntityFrameworkCore;
-using Cobryx.Domain.Entities.Invoicing;
 
 namespace Cobryx.Infrastructure.Persistence;
 

@@ -1,14 +1,15 @@
+using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Application.Auth.Common;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Exceptions.Auth;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using FluentValidation;
 using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using FluentValidation;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Login;
 
@@ -121,7 +122,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             {
                 _logger.LogInformation("Promoting password hash for {Email}", user.Email);
                 user.SetPasswordHash(_passwordHasher.HashPassword(request.Password));
-                await _userRepository.UpdateAsync(user);
+                await _userRepository.UpdateAsync(user, cancellationToken);
             }
 
             if (user.IsMfaEnabled)

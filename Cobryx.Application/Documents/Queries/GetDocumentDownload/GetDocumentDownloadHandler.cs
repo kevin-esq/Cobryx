@@ -1,29 +1,22 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+using Cobryx.Domain.Shared.Enums;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Documents.Queries.GetDocumentDownload;
 
-public class GetDocumentDownloadHandler : IRequestHandler<GetDocumentDownloadQuery, Result<DocumentDownloadDto>>
+public class GetDocumentDownloadHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider, IDocumentStorage storage, IClock clock) : IRequestHandler<GetDocumentDownloadQuery, Result<DocumentDownloadDto>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly IDocumentStorage _storage;
-    private readonly IClock _clock;
-
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
+    private readonly IDocumentStorage _storage = storage;
+    private readonly IClock _clock = clock;
     private static readonly TimeSpan UrlExpiry = TimeSpan.FromMinutes(15);
-
-    public GetDocumentDownloadHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider, IDocumentStorage storage, IClock clock)
-    {
-        _unitOfWork = unitOfWork;
-        _tenantProvider = tenantProvider;
-        _storage = storage;
-        _clock = clock;
-    }
 
     public async Task<Result<DocumentDownloadDto>> Handle(GetDocumentDownloadQuery request, CancellationToken ct)
     {

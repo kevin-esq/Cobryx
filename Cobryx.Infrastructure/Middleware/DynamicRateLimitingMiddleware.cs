@@ -1,8 +1,10 @@
-using Cobryx.Domain.Common;
+using System.Net;
+
+using Cobryx.Domain.Shared;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using System.Net;
 
 namespace Cobryx.Infrastructure.Middleware;
 
@@ -57,7 +59,7 @@ public class DynamicRateLimitingMiddleware
         await _next(context);
     }
 
-    private int GetDelaySeconds(int attempts)
+    private static int GetDelaySeconds(int attempts)
     {
         return attempts switch
         {

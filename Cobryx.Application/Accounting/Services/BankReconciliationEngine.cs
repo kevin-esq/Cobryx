@@ -1,6 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
-using Cobryx.Domain.Entities.Accounting;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +10,7 @@ namespace Cobryx.Application.Accounting.Services;
 
 public interface IBankReconciliationEngine
 {
-    Task<BankReconciliationReport> ReconcileBankMovementsAsync(Guid tenantId, CancellationToken ct = default);
+    public Task<BankReconciliationReport> ReconcileBankMovementsAsync(Guid tenantId, CancellationToken ct = default);
 }
 
 public class BankReconciliationEngine(
@@ -94,8 +96,8 @@ public class BankReconciliationEngine(
 
                 // Sum only the side that matches movement direction (Debits for Inbound, Credits for Outbound)
                 decimal totalSideAmount = movement.Direction == BankMovementDirection.Inbound
-                    ? batchMatches.Sum<LedgerTransaction>(t => t.Entries.Sum(e => Math.Max(0, e.Debit - e.Credit)))
-                    : batchMatches.Sum<LedgerTransaction>(t => t.Entries.Sum(e => Math.Max(0, e.Credit - e.Debit)));
+                    ? batchMatches.SelectMany(static t => t.Entries).Sum(static e => Math.Max(0, e.Debit - e.Credit))
+                    : batchMatches.SelectMany(static t => t.Entries).Sum(static e => Math.Max(0, e.Credit - e.Debit));
 
                 if (batchMatches.Count > 1 && totalSideAmount == movement.Amount)
                 {
@@ -126,8 +128,8 @@ public class BankReconciliationEngine(
             unmatchedMovements.FirstOrDefault()?.BookingDate ?? DateTime.UtcNow,
             unmatchedMovements.LastOrDefault()?.BookingDate ?? DateTime.UtcNow,
             0, 0, 0, // Balances not tracked in this engine pass
-            integrityReport.IsHealthy ? Domain.Entities.Accounting.Enums.ReconciliationStatus.Synced : Domain.Entities.Accounting.Enums.ReconciliationStatus.HardDrift,
-            integrityReport.IsHealthy ? Domain.Entities.Accounting.Enums.ReconciliationSeverity.Info : Domain.Entities.Accounting.Enums.ReconciliationSeverity.Critical,
+            integrityReport.IsHealthy ? ReconciliationStatus.Synced : ReconciliationStatus.HardDrift,
+            integrityReport.IsHealthy ? ReconciliationSeverity.Info : ReconciliationSeverity.Critical,
             report.UnmatchedCount,
             detailsJson: null,
             fingerprint: integrityReport.JournalFingerprint,

@@ -1,7 +1,9 @@
 using System.Data.Common;
-using System.Diagnostics;
+
 using Cobryx.Application.Common.Observability;
+
 using Microsoft.EntityFrameworkCore.Diagnostics;
+
 using Npgsql;
 
 namespace Cobryx.Infrastructure.Persistence.Interceptors;

@@ -1,37 +1,26 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Auth.Services;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using Cobryx.Application.Auth.Commands.Login;
-using Cobryx.Domain.Common;
 using Cobryx.Application.Auth.Common;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 
 public record ExternalLoginCommand(ExternalProvider Provider, string IdToken, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
 
-public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result<AuthResult>>
+public class ExternalLoginHandler(
+    IUserRepository userRepository,
+    IExternalAuthService externalAuthService,
+    IAuthService authService,
+    ITenantRepository tenantRepository,
+    IHttpContextService httpContextService) : IRequestHandler<ExternalLoginCommand, Result<AuthResult>>
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IExternalAuthService _externalAuthService;
-    private readonly IAuthService _authService;
-    private readonly ITenantRepository _tenantRepository;
-    private readonly IHttpContextService _httpContextService;
-
-    public ExternalLoginHandler(
-        IUserRepository userRepository,
-        IExternalAuthService externalAuthService,
-        IAuthService authService,
-        ITenantRepository tenantRepository,
-        IHttpContextService httpContextService)
-    {
-        _userRepository = userRepository;
-        _externalAuthService = externalAuthService;
-        _authService = authService;
-        _tenantRepository = tenantRepository;
-        _httpContextService = httpContextService;
-    }
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly IExternalAuthService _externalAuthService = externalAuthService;
+    private readonly IAuthService _authService = authService;
+    private readonly ITenantRepository _tenantRepository = tenantRepository;
+    private readonly IHttpContextService _httpContextService = httpContextService;
 
     public async Task<Result<AuthResult>> Handle(ExternalLoginCommand request, CancellationToken cancellationToken)
     {
@@ -47,7 +36,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
             return Result.Failure<AuthResult>(DomainErrorCode.Auth.ExternalLoginFailed);
         }
 
-        var user = await _userRepository.GetByEmailAsync(externalUser.Email);
+        var user = await _userRepository.GetByEmailAsync(externalUser.Email, cancellationToken);
 
         if (user == null)
         {
@@ -70,7 +59,7 @@ public class ExternalLoginHandler : IRequestHandler<ExternalLoginCommand, Result
 
         var authResponse = _authService.GenerateAuthResponse(user, ipAddress, deviceFingerprint, userAgent, null);
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success(authResponse);
     }

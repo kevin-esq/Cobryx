@@ -1,5 +1,5 @@
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Accounting.Enums;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Events.Invoicing;

@@ -1,34 +1,26 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Documents.Services;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
 using Cobryx.Domain.Exceptions.Tenants;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Documents.Commands.UploadDocument;
 
-public class UploadDocumentHandler : IRequestHandler<UploadDocumentCommand, Result<UploadDocumentResult>>
+public class UploadDocumentHandler(
+    IUnitOfWork unitOfWork,
+    IDocumentStorage storage,
+    ITenantProvider tenantProvider,
+    FileSignatureValidator validator,
+    IClock clock) : IRequestHandler<UploadDocumentCommand, Result<UploadDocumentResult>>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IDocumentStorage _storage;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly FileSignatureValidator _validator;
-    private readonly IClock _clock;
-
-    public UploadDocumentHandler(
-        IUnitOfWork unitOfWork,
-        IDocumentStorage storage,
-        ITenantProvider tenantProvider,
-        FileSignatureValidator validator,
-        IClock clock)
-    {
-        _unitOfWork = unitOfWork;
-        _storage = storage;
-        _tenantProvider = tenantProvider;
-        _validator = validator;
-        _clock = clock;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IDocumentStorage _storage = storage;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
+    private readonly FileSignatureValidator _validator = validator;
+    private readonly IClock _clock = clock;
 
     public async Task<Result<UploadDocumentResult>> Handle(UploadDocumentCommand request, CancellationToken ct)
     {

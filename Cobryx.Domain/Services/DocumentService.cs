@@ -1,6 +1,6 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Domain.Services;
 

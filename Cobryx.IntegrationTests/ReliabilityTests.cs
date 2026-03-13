@@ -1,23 +1,19 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Cobryx.Domain.Entities;
+
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Messaging;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Cobryx.IntegrationTests;
 
-public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
+public class ReliabilityTests(CobryxWebApplicationFactory factory) : IClassFixture<CobryxWebApplicationFactory>
 {
-    private readonly CobryxWebApplicationFactory _factory;
-
-    public ReliabilityTests(CobryxWebApplicationFactory factory)
-    {
-        _factory = factory;
-    }
+    private readonly CobryxWebApplicationFactory _factory = factory;
 
     [Fact]
     public async Task Idempotency_ShouldReplaySameResponse_ForCriticalMutations()
@@ -56,15 +52,16 @@ public class ReliabilityTests : IClassFixture<CobryxWebApplicationFactory>
         var infraContext = (Cobryx.Infrastructure.Persistence.CobryxDbContext)dbContext;
 
         var now = DateTime.UtcNow;
-        var event1 = new OutboxEvent("TypeA", "{}", now);
-        var event2 = new OutboxEvent("TypeB", "{}", now);
+        var tenantId = Guid.NewGuid();
+        var event1 = new OutboxMessage(tenantId, "TypeA", "{}");
+        var event2 = new OutboxMessage(tenantId, "TypeB", "{}");
 
-        infraContext.OutboxEvents.Add(event1);
-        infraContext.OutboxEvents.Add(event2);
+        infraContext.OutboxMessages.Add(event1);
+        infraContext.OutboxMessages.Add(event2);
         await dbContext.SaveChangesAsync();
 
-        var nextEvents = await infraContext.OutboxEvents
-            .Where(e => e.ProcessedOnUtc == null)
+        var nextEvents = await infraContext.OutboxMessages
+            .Where(e => !e.IsProcessed)
             .OrderBy(e => e.OccurredOnUtc)
             .ThenBy(e => e.Id)
             .ToListAsync();

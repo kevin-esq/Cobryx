@@ -102,7 +102,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("WebhookEvents");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.AuditLog", b =>
+            modelBuilder.Entity("AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -182,7 +182,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.BillingAlert", b =>
+            modelBuilder.Entity("BillingAlert", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -243,7 +243,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("BillingAlerts");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Coupon", b =>
+            modelBuilder.Entity("Coupon", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -315,7 +315,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Coupons");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Credit", b =>
+            modelBuilder.Entity("Cobryx.Domain.Credit", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -401,7 +401,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Credits");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Customer", b =>
+            modelBuilder.Entity("Cobryx.Domain.Customer", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -482,7 +482,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.CustomerSuggestion", b =>
+            modelBuilder.Entity("Cobryx.Domain.CustomerSuggestion", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -549,7 +549,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("CustomerSuggestions");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.DocumentMetadata", b =>
+            modelBuilder.Entity("DocumentMetadata", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -627,7 +627,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Documents");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Installment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Installment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -687,7 +687,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Installments");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Invoice", b =>
+            modelBuilder.Entity("Cobryx.Domain.Invoice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -767,7 +767,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Invoices");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.InvoiceItem", b =>
+            modelBuilder.Entity("Cobryx.Domain.InvoiceItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -834,7 +834,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("InvoiceItems");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.CreditSale", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.CreditSale", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -925,7 +925,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("CreditSales", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Installment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.Installment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1010,7 +1010,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("LoanInstallments", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.InterestPolicy", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.InterestPolicy", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1092,7 +1092,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("InterestPolicies", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LateFeePolicy", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.LateFeePolicy", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1167,7 +1167,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("LateFeePolicies", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.Loan", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1280,7 +1280,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Loans", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LoanAgreement", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.LoanAgreement", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1391,7 +1391,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("LoanAgreements", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.PaymentApplicationPolicy", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.PaymentApplicationPolicy", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1464,7 +1464,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("PaymentApplicationPolicies", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.LoginSession", b =>
+            modelBuilder.Entity("LoginSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1539,7 +1539,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("LoginSessions");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.MfaDevice", b =>
+            modelBuilder.Entity("MfaDevice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1615,7 +1615,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("MfaDevices");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Notification", b =>
+            modelBuilder.Entity("Notification", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1694,7 +1694,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.OutboxEvent", b =>
+            modelBuilder.Entity("OutboxEvent", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1758,7 +1758,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("OutboxEvents", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.Payment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.Payment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1840,7 +1840,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.PaymentAllocation", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.PaymentAllocation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1895,7 +1895,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("PaymentAllocations");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.PaymentMethod", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.PaymentMethod", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1962,7 +1962,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("PaymentMethods");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Permission", b =>
+            modelBuilder.Entity("Permission", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2017,7 +2017,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Permissions");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Product", b =>
+            modelBuilder.Entity("Product", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2095,7 +2095,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.RecoveryCode", b =>
+            modelBuilder.Entity("RecoveryCode", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2153,7 +2153,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("RecoveryCodes");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.RefreshToken", b =>
+            modelBuilder.Entity("RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2235,7 +2235,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.ReleaseNote", b =>
+            modelBuilder.Entity("ReleaseNote", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2297,7 +2297,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("ReleaseNotes");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Role", b =>
+            modelBuilder.Entity("Role", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2355,7 +2355,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.SubscriptionPlan", b =>
+            modelBuilder.Entity("SubscriptionPlan", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2416,7 +2416,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("SubscriptionPlans");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.SupportTicket", b =>
+            modelBuilder.Entity("SupportTicket", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2491,7 +2491,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("SupportTickets");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.SystemErrorLog", b =>
+            modelBuilder.Entity("SystemErrorLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2574,7 +2574,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("SystemErrorLogs");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.TaxConfiguration", b =>
+            modelBuilder.Entity("TaxConfiguration", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2642,7 +2642,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("TaxConfigurations");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Tenant", b =>
+            modelBuilder.Entity("Tenant", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2725,7 +2725,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Tenants");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.TenantSubscription", b =>
+            modelBuilder.Entity("TenantSubscription", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2793,7 +2793,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("TenantSubscriptions");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.UsageRecord", b =>
+            modelBuilder.Entity("UsageRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2850,7 +2850,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("UsageRecords");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2953,7 +2953,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.UserProfile", b =>
+            modelBuilder.Entity("UserProfile", b =>
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -3015,7 +3015,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("UserProfiles");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.UserSecurityToken", b =>
+            modelBuilder.Entity("UserSecurityToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -3097,9 +3097,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("RolePermissions", (string)null);
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Credit", b =>
+            modelBuilder.Entity("Cobryx.Domain.Credit", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Customer", "Customer")
+                    b.HasOne("Cobryx.Domain.Customer", "Customer")
                         .WithMany("Credits")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3133,7 +3133,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Customer", b =>
+            modelBuilder.Entity("Cobryx.Domain.Customer", b =>
                 {
                     b.OwnsOne("Cobryx.Domain.ValueObjects.Address", "Address", b1 =>
                         {
@@ -3210,9 +3210,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("Document");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Installment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Installment", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Credit", null)
+                    b.HasOne("Cobryx.Domain.Credit", null)
                         .WithMany("Installments")
                         .HasForeignKey("CreditId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3427,15 +3427,15 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Invoice", b =>
+            modelBuilder.Entity("Cobryx.Domain.Invoice", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Customer", "Customer")
+                    b.HasOne("Cobryx.Domain.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cobryx.Domain.Entities.Invoicing.Installment", "Installment")
+                    b.HasOne("Cobryx.Domain.Installment", "Installment")
                         .WithMany()
                         .HasForeignKey("InstallmentId");
 
@@ -3552,9 +3552,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.InvoiceItem", b =>
+            modelBuilder.Entity("Cobryx.Domain.InvoiceItem", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Invoicing.Invoice", null)
+                    b.HasOne("Cobryx.Domain.Invoice", null)
                         .WithMany("Items")
                         .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3642,14 +3642,14 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.CreditSale", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.CreditSale", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Lending.LoanAgreement", "Agreement")
+                    b.HasOne("Cobryx.Domain.Lending.LoanAgreement", "Agreement")
                         .WithMany()
                         .HasForeignKey("LoanAgreementId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", "Loan")
+                    b.HasOne("Cobryx.Domain.Lending.Loan", "Loan")
                         .WithMany()
                         .HasForeignKey("LoanId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -3659,9 +3659,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("Loan");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Installment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.Installment", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", "Loan")
+                    b.HasOne("Cobryx.Domain.Lending.Loan", "Loan")
                         .WithMany("Installments")
                         .HasForeignKey("LoanId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3670,20 +3670,20 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("Loan");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.Loan", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Lending.LoanAgreement", "Agreement")
+                    b.HasOne("Cobryx.Domain.Lending.LoanAgreement", "Agreement")
                         .WithOne("Loan")
-                        .HasForeignKey("Cobryx.Domain.Entities.Lending.Loan", "LoanAgreementId")
+                        .HasForeignKey("Cobryx.Domain.Lending.Loan", "LoanAgreementId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Agreement");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.LoginSession", b =>
+            modelBuilder.Entity("LoginSession", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.User", "User")
+                    b.HasOne("User", "User")
                         .WithMany("Sessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3692,9 +3692,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.MfaDevice", b =>
+            modelBuilder.Entity("MfaDevice", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.User", "User")
+                    b.HasOne("User", "User")
                         .WithMany("MfaDevices")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3703,23 +3703,23 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.Payment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.Payment", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Credit", null)
+                    b.HasOne("Cobryx.Domain.Credit", null)
                         .WithMany("Payments")
                         .HasForeignKey("CreditId");
 
-                    b.HasOne("Cobryx.Domain.Entities.Customer", "Customer")
+                    b.HasOne("Cobryx.Domain.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cobryx.Domain.Entities.Lending.Loan", null)
+                    b.HasOne("Cobryx.Domain.Lending.Loan", null)
                         .WithMany("Payments")
                         .HasForeignKey("LoanId");
 
-                    b.HasOne("Cobryx.Domain.Entities.Payments.PaymentMethod", "PaymentMethod")
+                    b.HasOne("Cobryx.Domain.Payments.PaymentMethod", "PaymentMethod")
                         .WithMany()
                         .HasForeignKey("PaymentMethodId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3780,9 +3780,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.PaymentAllocation", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.PaymentAllocation", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Payments.Payment", null)
+                    b.HasOne("Cobryx.Domain.Payments.Payment", null)
                         .WithMany("Allocations")
                         .HasForeignKey("PaymentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3816,7 +3816,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Product", b =>
+            modelBuilder.Entity("Product", b =>
                 {
                     b.OwnsOne("Cobryx.Domain.ValueObjects.Money", "BasePrice", b1 =>
                         {
@@ -3844,9 +3844,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.RecoveryCode", b =>
+            modelBuilder.Entity("RecoveryCode", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.User", "User")
+                    b.HasOne("User", "User")
                         .WithMany("RecoveryCodes")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3855,7 +3855,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.SubscriptionPlan", b =>
+            modelBuilder.Entity("SubscriptionPlan", b =>
                 {
                     b.OwnsOne("Cobryx.Domain.ValueObjects.Money", "Price", b1 =>
                         {
@@ -3883,7 +3883,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Tenant", b =>
+            modelBuilder.Entity("Tenant", b =>
                 {
                     b.OwnsOne("Cobryx.Domain.ValueObjects.BusinessSettings", "Settings", b1 =>
                         {
@@ -3929,9 +3929,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.TenantSubscription", b =>
+            modelBuilder.Entity("TenantSubscription", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.SubscriptionPlan", "Plan")
+                    b.HasOne("SubscriptionPlan", "Plan")
                         .WithMany()
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3940,9 +3940,9 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Role", "Role")
+                    b.HasOne("Role", "Role")
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -3981,20 +3981,20 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.UserProfile", b =>
+            modelBuilder.Entity("UserProfile", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.User", "User")
+                    b.HasOne("User", "User")
                         .WithOne("Profile")
-                        .HasForeignKey("Cobryx.Domain.Entities.UserProfile", "UserId")
+                        .HasForeignKey("UserProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.UserSecurityToken", b =>
+            modelBuilder.Entity("UserSecurityToken", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.User", "User")
+                    b.HasOne("User", "User")
                         .WithMany("SecurityTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -4005,54 +4005,54 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("PermissionRole", b =>
                 {
-                    b.HasOne("Cobryx.Domain.Entities.Permission", null)
+                    b.HasOne("Permission", null)
                         .WithMany()
                         .HasForeignKey("PermissionsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Cobryx.Domain.Entities.Role", null)
+                    b.HasOne("Role", null)
                         .WithMany()
                         .HasForeignKey("RolesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Credit", b =>
+            modelBuilder.Entity("Cobryx.Domain.Credit", b =>
                 {
                     b.Navigation("Installments");
 
                     b.Navigation("Payments");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Customer", b =>
+            modelBuilder.Entity("Cobryx.Domain.Customer", b =>
                 {
                     b.Navigation("Credits");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Invoicing.Invoice", b =>
+            modelBuilder.Entity("Cobryx.Domain.Invoice", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.Loan", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.Loan", b =>
                 {
                     b.Navigation("Installments");
 
                     b.Navigation("Payments");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Lending.LoanAgreement", b =>
+            modelBuilder.Entity("Cobryx.Domain.Lending.LoanAgreement", b =>
                 {
                     b.Navigation("Loan");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.Payments.Payment", b =>
+            modelBuilder.Entity("Cobryx.Domain.Payments.Payment", b =>
                 {
                     b.Navigation("Allocations");
                 });
 
-            modelBuilder.Entity("Cobryx.Domain.Entities.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Navigation("MfaDevices");
 

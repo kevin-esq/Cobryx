@@ -1,20 +1,18 @@
 using Asp.Versioning;
-using Cobryx.Api.Contracts.V1.Subscriptions;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;
-using Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
-using Cobryx.Application.Subscriptions.Commands.CreatePortalSession;
+
+using Cobryx.Api.Infrastructure;
 using Cobryx.Application.Subscriptions.Commands.CreateCheckoutSession;
+using Cobryx.Application.Subscriptions.Commands.CreatePortalSession;
 using Cobryx.Application.Subscriptions.Commands.SyncSubscription;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Subscriptions.Common;
+using Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
+using Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Cobryx.Api.Infrastructure;
 
 namespace Cobryx.Api.Controllers.V1;
 

@@ -1,5 +1,7 @@
 using System.Security.Claims;
+
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace Cobryx.Infrastructure.Security.Authorization;

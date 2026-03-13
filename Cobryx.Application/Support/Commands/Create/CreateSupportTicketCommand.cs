@@ -1,10 +1,12 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Interfaces;
-using Concordia;
-using FluentValidation;
 using Cobryx.Application.Common.Validation;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using FluentValidation;
 
 namespace Cobryx.Application.Support.Commands.Create;
 
@@ -60,7 +62,7 @@ public class CreateSupportTicketHandler : IRequestHandler<CreateSupportTicketCom
             request.Priority,
             request.Category);
 
-        await _repository.AddAsync(ticket);
+        await _repository.AddAsync(ticket, cancellationToken);
 
         return Result.Success(ticket.Id);
     }

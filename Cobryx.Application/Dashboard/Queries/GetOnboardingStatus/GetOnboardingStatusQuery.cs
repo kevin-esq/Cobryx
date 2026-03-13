@@ -1,8 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Dashboard.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
@@ -25,23 +30,23 @@ public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQue
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var dbContext = (DbContext)_unitOfWork;
 
-        var tenant = await dbContext.Set<Domain.Entities.Tenant>()
+        var tenant = await dbContext.Set<Tenant>()
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
 
         var businessCompleted = tenant != null && tenant.TaxId != null && !string.IsNullOrEmpty(tenant.TaxId.Value);
-        var usersCount = await dbContext.Set<Domain.Entities.User>()
+        var usersCount = await dbContext.Set<User>()
             .CountAsync(u => u.TenantId == tenantId, cancellationToken);
         var firstUserInvited = usersCount > 1;
 
-        var loans = await dbContext.Set<Domain.Entities.Lending.Loan>()
+        var loans = await dbContext.Set<Loan>()
             .Where(l => l.TenantId == tenantId && !l.IsDeleted)
             .ToListAsync(cancellationToken);
 
         var firstLoanCreated = loans.Any(l => !l.IsDemo);
         var hasDemoLoans = loans.Any(l => l.IsDemo);
 
-        var payments = await dbContext.Set<Domain.Entities.Payments.Payment>()
-            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == Domain.Enums.PaymentStatus.Completed)
+        var payments = await dbContext.Set<Cobryx.Domain.Payments.Payment>()
+            .Where(p => p.TenantId == tenantId && !p.IsDeleted && p.Status == PaymentStatus.Completed)
             .ToListAsync(cancellationToken);
 
         var firstPaymentRegistered = payments.Any(p => !p.IsDemo);

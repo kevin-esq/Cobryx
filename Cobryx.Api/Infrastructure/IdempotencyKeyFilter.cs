@@ -1,11 +1,10 @@
-using System;
-using Cobryx.Application.Common.Interfaces;
+using System.Text.Json;
+
 using Cobryx.Application.Common.Attributes;
+using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Api.Infrastructure;
 
@@ -96,7 +95,7 @@ public class IdempotencyKeyFilter : IAsyncActionFilter
         }
     }
 
-    private IdempotencyResponse? CaptureResponse(IActionResult result)
+    private static IdempotencyResponse? CaptureResponse(IActionResult result)
     {
         int statusCode = 200;
         string? content = null;

@@ -1,7 +1,10 @@
-using Cobryx.Application.Common.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
-using StackExchange.Redis;
 using System.Text.Json;
+
+using Cobryx.Application.Common.Interfaces;
+
+using Microsoft.Extensions.Caching.Distributed;
+
+using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.Caching;
 

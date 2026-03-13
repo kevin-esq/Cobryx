@@ -1,7 +1,7 @@
 using Cobryx.Application.Subscriptions.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using System.Collections.Generic;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
 

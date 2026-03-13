@@ -1,26 +1,22 @@
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Cobryx.Infrastructure.HealthChecks;
 
-public class OutboxHealthCheck : IHealthCheck
+public class OutboxHealthCheck(CobryxDbContext dbContext) : IHealthCheck
 {
-    private readonly CobryxDbContext _dbContext;
+    private readonly CobryxDbContext _dbContext = dbContext;
     private const int WarningThresholdMinutes = 1;
     private const int UnhealthyThresholdMinutes = 5;
-
-    public OutboxHealthCheck(CobryxDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         try
         {
-            var oldestUnprocessedEvent = await _dbContext.OutboxEvents
-                .Where(e => e.ProcessedOnUtc == null)
+            var oldestUnprocessedEvent = await _dbContext.OutboxMessages
+                .Where(e => !e.IsProcessed)
                 .OrderBy(e => e.OccurredOnUtc)
                 .FirstOrDefaultAsync(ct);
 
@@ -36,7 +32,7 @@ public class OutboxHealthCheck : IHealthCheck
             {
                 { "OldestUnprocessedEventId", oldestUnprocessedEvent.Id },
                 { "LagMinutes", Math.Round(lagMinutes, 2) },
-                { "TotalUnprocessedCount", await _dbContext.OutboxEvents.CountAsync(e => e.ProcessedOnUtc == null, ct) }
+                { "TotalUnprocessedCount", await _dbContext.OutboxMessages.CountAsync(e => !e.IsProcessed, ct) }
             };
 
             if (lagMinutes > UnhealthyThresholdMinutes)

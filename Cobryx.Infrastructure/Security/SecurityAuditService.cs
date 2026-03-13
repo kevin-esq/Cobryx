@@ -1,6 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.Extensions.Logging;
-using Serilog;
 
 namespace Cobryx.Infrastructure.Security;
 

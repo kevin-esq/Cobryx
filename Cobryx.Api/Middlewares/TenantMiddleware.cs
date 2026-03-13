@@ -1,7 +1,6 @@
 using Cobryx.Api.Common;
-using Cobryx.Domain.Common;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Cobryx.Domain.Shared;
+
 using Serilog.Context;
 
 namespace Cobryx.Api.Middlewares;
@@ -26,11 +25,11 @@ public class TenantMiddleware
         {
             var claimTenantId = context.User.FindFirst(CobryxClaimTypes.TenantId)?.Value;
 
-            if (context.Request.Headers.ContainsKey(TenantHeader) &&
-                context.Request.Headers[TenantHeader] != claimTenantId)
+            if (context.Request.Headers.TryGetValue(TenantHeader, out Microsoft.Extensions.Primitives.StringValues value) &&
+                value != claimTenantId)
             {
                 _logger.LogWarning("Security Alert: Tenant mismatch (Token: {TokenId}, Header: {HeaderId})",
-                    claimTenantId, context.Request.Headers[TenantHeader]);
+                    claimTenantId, value);
             }
 
             tenantId = claimTenantId;
@@ -44,16 +43,15 @@ public class TenantMiddleware
 
         if (string.IsNullOrEmpty(tenantId))
         {
-            var path = context.Request.Path.Value?.ToLower();
-            if (path != null && (
-                path.StartsWith(ApiEndpoints.Health) ||
-                path.StartsWith(ApiEndpoints.Auth) ||
-                path.StartsWith(ApiEndpoints.Webhooks) ||
-                path.StartsWith(ApiEndpoints.Swagger) ||
-                path.StartsWith(ApiEndpoints.Hangfire) ||
-                path.StartsWith(ApiEndpoints.Metrics) ||
-                path.StartsWith(ApiEndpoints.Ping) ||
-                path == ApiEndpoints.Root))
+            var path = context.Request.Path.Value ?? string.Empty;
+            if (path.StartsWith(ApiEndpoints.Health, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Auth, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Webhooks, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Swagger, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Hangfire, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Metrics, StringComparison.OrdinalIgnoreCase) ||
+                path.Contains(ApiEndpoints.Ping, StringComparison.OrdinalIgnoreCase) ||
+                path == ApiEndpoints.Root || path == "")
             {
                 await _next(context);
                 return;

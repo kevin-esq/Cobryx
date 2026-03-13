@@ -1,11 +1,12 @@
-using Cobryx.Domain.Entities.Payments;
-using Cobryx.Domain.Entities.Invoicing;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Events.Payments;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Accounting.Enums;
 using Cobryx.Domain.Events.Invoicing;
+using Cobryx.Domain.Events.Payments;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.ValueObjects;
+
 using FluentAssertions;
-using Xunit;
 
 namespace Cobryx.IntegrationTests.Domain;
 

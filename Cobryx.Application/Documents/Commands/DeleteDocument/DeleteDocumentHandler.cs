@@ -1,31 +1,25 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Documents.Commands.DeleteDocument;
 
-public class DeleteDocumentHandler : IRequestHandler<DeleteDocumentCommand, Result>
+public class DeleteDocumentHandler(
+    IUnitOfWork unitOfWork,
+    IDocumentStorage storage,
+    ITenantProvider tenantProvider,
+    ILogger<DeleteDocumentHandler> logger) : IRequestHandler<DeleteDocumentCommand, Result>
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IDocumentStorage _storage;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly ILogger<DeleteDocumentHandler> _logger;
-
-    public DeleteDocumentHandler(
-        IUnitOfWork unitOfWork,
-        IDocumentStorage storage,
-        ITenantProvider tenantProvider,
-        ILogger<DeleteDocumentHandler> logger)
-    {
-        _unitOfWork = unitOfWork;
-        _storage = storage;
-        _tenantProvider = tenantProvider;
-        _logger = logger;
-    }
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly IDocumentStorage _storage = storage;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
+    private readonly ILogger<DeleteDocumentHandler> _logger = logger;
 
     public async Task<Result> Handle(DeleteDocumentCommand request, CancellationToken ct)
     {

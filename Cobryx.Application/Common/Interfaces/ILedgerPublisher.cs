@@ -11,10 +11,10 @@ public interface ILedgerPublisher
     /// Publishes a batch of ledger entries as CDC events.
     /// Implementation should ensure partitioning by TenantId for intra-partition ordering.
     /// </summary>
-    Task PublishAsync(IEnumerable<LedgerCdcEvent> events, CancellationToken ct = default);
+    public Task PublishAsync(IEnumerable<LedgerCdcEvent> events, CancellationToken ct = default);
 
     /// <summary>
     /// Publishes a single ledger event. 
     /// </summary>
-    Task PublishAsync(LedgerCdcEvent @event, CancellationToken ct = default);
+    public Task PublishAsync(LedgerCdcEvent @event, CancellationToken ct = default);
 }

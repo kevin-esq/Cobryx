@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -7,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddCorrelationIdToOutbox : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "IsActive" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -19,7 +21,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Users_TenantId_IsActive",
                 table: "Users",
-                columns: new[] { "TenantId", "IsActive" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Loans_TenantId_IsDeleted",

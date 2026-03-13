@@ -8,6 +8,6 @@ public record WebhookParseResult(
 
 public interface IWebhookParser
 {
-    string Provider { get; }
-    Task<WebhookParseResult> ParseAsync(string json, string? signature = null);
+    public string Provider { get; }
+    public Task<WebhookParseResult> ParseAsync(string json, string? signature = null);
 }

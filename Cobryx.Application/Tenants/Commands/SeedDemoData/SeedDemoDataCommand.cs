@@ -1,13 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
-using Cobryx.Domain.Entities.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Payments;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Exceptions;
-using Cobryx.Domain.Common;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Commands.SeedDemoData;
@@ -37,7 +37,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
         if (alreadyHasDemo) return Result.Success();
 
         // 2. Create Demo Customer
-        var customer = new Cobryx.Domain.Entities.Customer(
+        var customer = new Cobryx.Domain.Lending.Customer(
             tenantId,
             "Demo",
             "Global Corp",
@@ -46,7 +46,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
             null,
             null);
 
-        dbContext.Set<Cobryx.Domain.Entities.Customer>().Add(customer);
+        dbContext.Set<Cobryx.Domain.Lending.Customer>().Add(customer);
 
         // 3. Create Demo Loan Agreement
         var agreement = new LoanAgreement(
@@ -63,10 +63,10 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
         dbContext.Set<LoanAgreement>().Add(agreement);
 
         // 4. Create Demo Loans
-        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", 250000, isDemo: true);
+        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", new Money(250000, "MXN"), isDemo: true);
         activeLoan.Activate();
 
-        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", 100000, isDemo: true);
+        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", new Money(100000, "MXN"), isDemo: true);
         overdueLoan.Activate();
 
         dbContext.Set<Loan>().AddRange(activeLoan, overdueLoan);

@@ -9,7 +9,7 @@ public enum AlertLevel
 
 public interface IAlertingService
 {
-    Task SendAlertAsync(
+    public Task SendAlertAsync(
         string source,
         string message,
         AlertLevel level,

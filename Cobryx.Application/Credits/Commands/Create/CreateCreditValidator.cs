@@ -1,6 +1,6 @@
-using FluentValidation;
-using Cobryx.Domain.Enums;
 using Cobryx.Application.Common.Validation;
+
+using FluentValidation;
 
 namespace Cobryx.Application.Credits.Commands.Create;
 

@@ -1,7 +1,7 @@
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Accounting.Services;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Common;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -39,7 +39,7 @@ public class LoanPaymentService
         CancellationToken ct = default)
     {
         if (amount <= 0)
-            throw new DomainException(Cobryx.Domain.Common.DomainErrorCode.Loans.InvalidPaymentAmount);
+            throw new DomainException(Cobryx.Domain.Shared.DomainErrorCode.Loans.InvalidPaymentAmount);
 
         // 1. Transactional Atomicity
         var strategy = _context.Database.CreateExecutionStrategy();
@@ -53,7 +53,7 @@ public class LoanPaymentService
                         .ThenInclude(a => a.PaymentApplicationPolicy)
                     .Include(l => l.Installments)
                     .FirstOrDefaultAsync(l => l.Id == loanId, ct)
-                    ?? throw new DomainException(Cobryx.Domain.Common.DomainErrorCode.Loans.CreditSaleNotFound);
+                    ?? throw new DomainException(Cobryx.Domain.Shared.DomainErrorCode.Loans.CreditSaleNotFound);
 
                 // 2. Flush Accruals (Ensure balances are current)
                 // We must catch up interest and fees to today's date before allocating the payment.

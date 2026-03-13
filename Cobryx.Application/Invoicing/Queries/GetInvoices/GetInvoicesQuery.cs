@@ -1,8 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities.Invoicing;
 
 namespace Cobryx.Application.Invoicing.Queries.GetInvoices;
 
@@ -19,25 +19,19 @@ public record InvoiceDto(
     string Currency,
     string Status);
 
-public class GetInvoicesHandler : IRequestHandler<GetInvoicesQuery, Result<IReadOnlyList<InvoiceDto>>>
+public class GetInvoicesHandler(
+    IInvoiceRepository invoiceRepository,
+    ITenantProvider tenantProvider) : IRequestHandler<GetInvoicesQuery, Result<IReadOnlyList<InvoiceDto>>>
 {
-    private readonly IInvoiceRepository _invoiceRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetInvoicesHandler(
-        IInvoiceRepository invoiceRepository,
-        ITenantProvider tenantProvider)
-    {
-        _invoiceRepository = invoiceRepository;
-        _tenantProvider = tenantProvider;
-    }
+    private readonly IInvoiceRepository _invoiceRepository = invoiceRepository;
+    private readonly ITenantProvider _tenantProvider = tenantProvider;
 
     public async Task<Result<IReadOnlyList<InvoiceDto>>> Handle(GetInvoicesQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<InvoiceDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var invoices = await _invoiceRepository.GetAllAsync();
+        var invoices = await _invoiceRepository.GetAllAsync(cancellationToken);
 
         var dtos = invoices
             .Where(i => i.TenantId == tenantId.Value)

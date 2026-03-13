@@ -1,8 +1,10 @@
+using Cobryx.Application.Common.Events;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Events;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
-using Cobryx.Application.Common.Events;
 
 namespace Cobryx.Application.Auth.Events;
 

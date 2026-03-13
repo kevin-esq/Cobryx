@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Users.Common;
-using Cobryx.Domain.Common;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Users.Queries.GetTenantUsers;

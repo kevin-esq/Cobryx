@@ -1,6 +1,7 @@
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Entities.Payments;
+using Cobryx.Domain.Payments;
 using Cobryx.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Infrastructure.Repositories;

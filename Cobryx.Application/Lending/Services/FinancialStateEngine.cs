@@ -1,7 +1,8 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
 using Cobryx.Application.Accounting.Services;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +58,7 @@ public class FinancialStateEngine
 
         // 2. Logic is encapsulated in the domain entity
         var oldStatus = loan.FinancialStatus;
-        loan.UpdateFinancialRiskStatus(now);
+        loan.UpdateFinancialRiskStatus();
 
         // 3. Automated Charge-Off Trigger
         // If a loan reaches 180 days past due, it is automatically charged off.

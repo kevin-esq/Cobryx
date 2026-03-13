@@ -1,15 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Cobryx.Domain.Common;
+
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Domain.ValueObjects;
 
-public record EmailAddress : ValueObject
+public partial record EmailAddress : ValueObject
 {
-    private static readonly Regex EmailRegex = new(
-        @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex EmailRegex = MyRegex();
 
     private static readonly HashSet<string> DisposableDomains = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -46,4 +43,7 @@ public record EmailAddress : ValueObject
 
     public static implicit operator string(EmailAddress email) => email.Value;
     public static explicit operator EmailAddress(string email) => new(email);
+
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    private static partial Regex MyRegex();
 }

@@ -1,6 +1,6 @@
-using Cobryx.Domain.Entities.Accounting;
-
 namespace Cobryx.Application.Common.Interfaces;
+
+using Cobryx.Domain.Messaging;
 
 /// <summary>
 /// Domain-level abstraction for the Financial Event Bus.
@@ -12,10 +12,10 @@ public interface IFinancialEventBus
     /// Publishes a financial event to the bus.
     /// This should be called by the Outbox Worker.
     /// </summary>
-    Task PublishAsync(FinancialOutboxEvent @event, CancellationToken ct = default);
+    public Task PublishAsync(OutboxMessage @event, CancellationToken ct = default);
 
     /// <summary>
     /// Batch publish for performance.
     /// </summary>
-    Task PublishBatchAsync(IEnumerable<FinancialOutboxEvent> events, CancellationToken ct = default);
+    public Task PublishBatchAsync(IEnumerable<OutboxMessage> events, CancellationToken ct = default);
 }

@@ -1,6 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

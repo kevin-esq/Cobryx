@@ -1,10 +1,10 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Exceptions;
-using Cobryx.Domain.ValueObjects;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Payments.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 

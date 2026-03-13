@@ -1,6 +1,8 @@
 using Cobryx.Application.Lending.Services;
-using Microsoft.Extensions.Logging;
+
 using Hangfire;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Lending;
 

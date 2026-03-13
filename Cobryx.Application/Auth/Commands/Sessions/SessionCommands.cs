@@ -1,8 +1,9 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Exceptions.Auth;
 using Cobryx.Domain.Exceptions.Users;
+using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Auth.Commands.Sessions;
@@ -32,7 +33,7 @@ public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) throw new NotAuthenticatedException();
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) throw new UserNotFoundException(userId.Value);
 
         var currentSessionId = _currentUserProvider.GetSessionId();
@@ -65,11 +66,11 @@ public class RevokeSessionHandler : IRequestHandler<RevokeSessionCommand, Result
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) throw new NotAuthenticatedException();
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) throw new UserNotFoundException(userId.Value);
 
         user.RevokeSession(request.SessionId);
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success(true);
     }
@@ -95,11 +96,11 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
 
         if (userId == null || sessionId == null) throw new NotAuthenticatedException();
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) throw new UserNotFoundException(userId.Value);
 
         user.RevokeSession(sessionId.Value);
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success();
     }
@@ -123,7 +124,7 @@ public class LogoutAllHandler : IRequestHandler<LogoutAllCommand, Result>
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) throw new NotAuthenticatedException();
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) throw new UserNotFoundException(userId.Value);
 
         foreach (var session in user.Sessions.Where(s => !s.IsRevoked))
@@ -131,7 +132,7 @@ public class LogoutAllHandler : IRequestHandler<LogoutAllCommand, Result>
             session.Revoke();
         }
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success();
     }

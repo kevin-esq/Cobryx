@@ -1,6 +1,5 @@
-using Cobryx.Domain.DomainServices.Lending;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
 
 namespace Cobryx.Domain.Tests.Lending;
 
@@ -107,12 +106,9 @@ public class PaymentApplicationServiceTests
             principalAmount: principal,
             interestAmount: interest);
 
-        loan.AddInstallments(new[] { installment });
+        loan.AddInstallments([installment]);
         return loan;
     }
 
-    private PaymentApplicationPolicy CreateStandardPolicy()
-    {
-        return PaymentApplicationPolicy.CreateStandard(_tenantId, "Standard", "STD-PAYMENT");
-    }
+    private PaymentApplicationPolicy CreateStandardPolicy() => PaymentApplicationPolicy.CreateStandard(_tenantId, "Standard", "STD-PAYMENT");
 }

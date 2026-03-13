@@ -1,16 +1,17 @@
-using System.Net.Http.Json;
-using Cobryx.IntegrationTests.Fakes;
 using System.Net;
-using Cobryx.Application.Auth.Commands.Register;
-using Cobryx.Application.Auth.Commands.Login;
-using Cobryx.Application.Auth.Common;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Net.Http.Headers;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Cobryx.Infrastructure.Persistence;
-using Cobryx.Application.Auth.Commands.Core;
+using System.Net.Http.Json;
+
 using Cobryx.Api.Contracts.V1.Identity;
-using Cobryx.Api.Contracts.V1.Common;
+using Cobryx.Application.Auth.Commands.Core;
+using Cobryx.Application.Auth.Commands.Login;
+using Cobryx.Application.Auth.Commands.Register;
+using Cobryx.Infrastructure.Persistence;
+using Cobryx.IntegrationTests.Fakes;
+
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Cobryx.IntegrationTests.Helpers;
+using FluentAssertions;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
@@ -45,7 +46,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     [Fact]
     public async Task Login_ValidCredentials_SetsRefreshTokenCookie()
@@ -56,16 +57,16 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         await RegisterAndVerifyUser(email, password);
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginCmd);
+        var response = await _client.PostIdempotentAsync("/api/v1/auth/login", loginCmd);
         var loginContent = await response.Content.ReadAsStringAsync();
 
-        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Login failed with {response.StatusCode}: {loginContent}");
+        response.StatusCode.Should().Be(HttpStatusCode.OK, $"Login failed with {response.StatusCode}: {loginContent}");
 
-        var cookies = response.Headers.GetValues("Set-Cookie").ToList();
-        Assert.NotEmpty(cookies);
-        Assert.Contains(cookies, c => c.Contains("refreshToken="));
-        Assert.Contains(cookies, c => c.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(cookies, c => c.Contains("SameSite", StringComparison.OrdinalIgnoreCase));
+        response.Headers.TryGetValues("Set-Cookie", out var cookies).Should().BeTrue("Login should set cookies");
+        var cookieList = cookies!.ToList();
+        cookieList.Should().Contain(c => c.Contains("refreshToken="));
+        cookieList.Should().Contain(c => c.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase));
+        cookieList.Should().Contain(c => c.Contains("SameSite", StringComparison.OrdinalIgnoreCase));
 
         var content = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("\"refreshToken\":", content);
@@ -80,14 +81,14 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         await RegisterAndVerifyUser(email, password);
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
-        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginCmd);
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var loginResponse = await _client.PostIdempotentAsync("/api/v1/auth/login", loginCmd);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var refreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh-token", new { });
+        var refreshResponse = await _client.PostIdempotentAsync("/api/v1/auth/refresh-token", new { });
 
-        Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+        refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(JsonOptions);
+        var apiResponse = await refreshResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(_jsonOptions);
         Assert.NotNull(apiResponse?.Data);
         Assert.NotNull(apiResponse.Data.AccessToken);
 
@@ -105,17 +106,17 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         await RegisterAndVerifyUser(email, password);
 
         var loginCmd = new LoginCommand(email, password, "IntegrationTestDevice");
-        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginCmd);
-        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(JsonOptions);
+        var loginResponse = await _client.PostIdempotentAsync("/api/v1/auth/login", loginCmd);
+        var apiResponse = await loginResponse.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>(_jsonOptions);
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiResponse!.Data!.AccessToken);
 
-        var logoutResponse = await _client.PostAsJsonAsync("/api/v1/auth/logout", new { });
+        var logoutResponse = await _client.PostIdempotentAsync("/api/v1/auth/logout", new { });
 
-        Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
+        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         _client.DefaultRequestHeaders.Authorization = null;
 
-        var cookies = logoutResponse.Headers.GetValues("Set-Cookie").ToList();
-        Assert.Contains(cookies, c => c.Contains("refreshToken=", StringComparison.OrdinalIgnoreCase));
+        logoutResponse.Headers.TryGetValues("Set-Cookie", out var cookies).Should().BeTrue();
+        cookies.Should().Contain(c => c.Contains("refreshToken=", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<string> RegisterAndVerifyUser(string email, string password)
@@ -128,7 +129,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
             password
         );
 
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/signup", signupCmd);
+        var response = await _client.PostIdempotentAsync("/api/v1/auth/signup", signupCmd);
         var content = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.Created, $"Signup failed with {response.StatusCode}: {content}");
 
@@ -137,8 +138,8 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         Assert.NotNull(token);
 
         var verifyCmd = new VerifyEmailCommand(token);
-        var verifyResponse = await _client.PostAsJsonAsync("/api/v1/auth/verify-email", verifyCmd);
-        Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+        var verifyResponse = await _client.PostIdempotentAsync("/api/v1/auth/verify-email", verifyCmd);
+        verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         return email;
     }

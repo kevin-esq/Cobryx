@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -8,6 +7,8 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddNotificationsTable : Migration
     {
+        private static readonly string[] columns = new[] { "TenantId", "IsRead" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -53,7 +54,7 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_TenantId_IsRead",
                 table: "Notifications",
-                columns: new[] { "TenantId", "IsRead" });
+                columns: columns);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId",

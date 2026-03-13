@@ -1,5 +1,6 @@
-using FluentValidation;
 using Cobryx.Application.Common.Validation;
+
+using FluentValidation;
 
 namespace Cobryx.Application.Payments.Commands.Register;
 

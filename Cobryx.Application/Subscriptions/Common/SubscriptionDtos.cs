@@ -1,5 +1,3 @@
-using System;
-
 namespace Cobryx.Application.Subscriptions.Common;
 
 /// <summary>

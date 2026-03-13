@@ -1,11 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Common.Models;
-using Cobryx.Domain.Interfaces;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Cobryx.Domain.Exceptions.Auth;
 using Cobryx.Domain.Exceptions.Tenants;
+using Cobryx.Domain.Interfaces;
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace Cobryx.Api.Infrastructure;
 

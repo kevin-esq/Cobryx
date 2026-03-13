@@ -1,16 +1,14 @@
 using Asp.Versioning;
-using Cobryx.Application.Dashboard;
-using Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
-using Cobryx.Application.Dashboard.Common;
-using Cobryx.Infrastructure.Caching;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Api.Contracts.V1.Common;
-using Cobryx.Api.Outcomes;
+using Cobryx.Application.Dashboard;
+using Cobryx.Application.Dashboard.Common;
+using Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 

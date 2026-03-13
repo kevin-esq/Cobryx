@@ -1,4 +1,5 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Payments.Commands.Register;

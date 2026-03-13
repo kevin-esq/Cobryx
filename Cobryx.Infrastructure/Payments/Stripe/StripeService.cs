@@ -1,10 +1,11 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.ValueObjects;
-using Cobryx.Infrastructure.Configuration;
 using Cobryx.Application.Common.Configuration;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
+using Cobryx.Domain.ValueObjects;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Stripe;
 using Stripe.Checkout;
 

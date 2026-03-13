@@ -1,7 +1,8 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
+
 using Concordia;
-using Cobryx.Domain.Common;
 
 namespace Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
 
@@ -27,7 +28,7 @@ public class GetPaymentMethodsHandler : IRequestHandler<GetPaymentMethodsQuery, 
         var tenantId = _tenantProvider.GetTenantId();
         if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<PaymentMethodDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var methods = await _paymentMethodRepository.GetAllActiveAsync(tenantId.Value);
+        var methods = await _paymentMethodRepository.GetAllActiveAsync(tenantId.Value, cancellationToken);
 
         var dtos = methods.Select(m => new PaymentMethodDto(
             m.Id,

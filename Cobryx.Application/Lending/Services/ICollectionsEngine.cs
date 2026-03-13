@@ -10,10 +10,10 @@ public interface ICollectionsEngine
     /// Evaluates all active loans for the given date, identifying DPD and delinquency stages.
     /// Triggers automated late fees and write-offs based on tenant policies.
     /// </summary>
-    Task RunDailyEvaluationAsync(DateTime today, CancellationToken ct = default);
+    public Task RunDailyEvaluationAsync(DateTime today, CancellationToken ct = default);
 
     /// <summary>
     /// Forces an evaluation for a specific loan (e.g. after a payment).
     /// </summary>
-    Task EvaluateLoanAsync(Guid loanId, DateTime today, CancellationToken ct = default);
+    public Task EvaluateLoanAsync(Guid loanId, DateTime today, CancellationToken ct = default);
 }

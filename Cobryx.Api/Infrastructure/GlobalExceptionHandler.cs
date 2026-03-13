@@ -1,11 +1,9 @@
 using Cobryx.Api.Errors.Mappers;
-using Cobryx.Api.Errors.Definitions;
-using Cobryx.Application.Common.Models;
-using Cobryx.Domain.Common;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using Cobryx.Api.Contracts.V1.Common;
 using Cobryx.Application.Common.Observability;
+using Cobryx.Domain.Shared;
+
+using Microsoft.AspNetCore.Diagnostics;
+
 using Serilog;
 
 namespace Cobryx.Api.Infrastructure;
@@ -112,17 +110,6 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
         return true;
-    }
-
-    private async ValueTask HandleDefaultException(HttpContext context, Exception exception, CancellationToken ct)
-    {
-        var outcome = Outcome.FromExternal("SYSTEM.FAILED", OutcomeCategory.Critical);
-        var response = Cobryx.Api.Contracts.V1.Common.ApiResponseFactory.Error(outcomeCode: outcome);
-
-        _logger.LogError(exception, "Unhandled system exception occurred. TraceId: {TraceId}", context.TraceIdentifier);
-
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await context.Response.WriteAsJsonAsync(response, ct);
     }
 
     private static Outcome GetFailedOutcomeCode(string errorCode)

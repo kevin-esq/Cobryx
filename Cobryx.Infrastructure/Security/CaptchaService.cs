@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
+
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Infrastructure.Configuration;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 

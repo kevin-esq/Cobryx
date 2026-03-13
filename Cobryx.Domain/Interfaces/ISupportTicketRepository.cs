@@ -1,9 +1,9 @@
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 
 namespace Cobryx.Domain.Interfaces;
 
 public interface ISupportTicketRepository
 {
-    Task AddAsync(SupportTicket ticket, CancellationToken cancellationToken = default);
-    Task<SupportTicket?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    public Task AddAsync(SupportTicket ticket, CancellationToken cancellationToken = default);
+    public Task<SupportTicket?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

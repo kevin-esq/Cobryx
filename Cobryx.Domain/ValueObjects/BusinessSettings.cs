@@ -1,6 +1,6 @@
-using System.Collections.Generic;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
+
 
 namespace Cobryx.Domain.ValueObjects;
 

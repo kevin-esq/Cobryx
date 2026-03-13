@@ -1,25 +1,23 @@
 using Asp.Versioning;
+
+using Cobryx.Api.Infrastructure;
+using Cobryx.Api.Outcomes;
+using Cobryx.Application.Auth.Commands.Core;
 using Cobryx.Application.Auth.Commands.Login;
-using Cobryx.Application.Auth.Commands.Sessions;
 using Cobryx.Application.Auth.Commands.RefreshToken;
 using Cobryx.Application.Auth.Commands.Register;
-using Cobryx.Application.Tenants.Commands.OnboardBusiness;
-using Cobryx.Application.Auth.Commands.Core;
-using Cobryx.Application.Auth.Common;
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Api.Contracts.V1.Common;
-using Concordia;
-using Cobryx.Api.Outcomes;
-using Cobryx.Api.Infrastructure;
+using Cobryx.Application.Auth.Commands.Sessions;
 using Cobryx.Application.Common.Attributes;
-using Cobryx.Api.Contracts.V1.Identity;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Tenants.Commands.OnboardBusiness;
 using Cobryx.Application.Tenants.Common;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Cobryx.Api.Controllers.V1;
 

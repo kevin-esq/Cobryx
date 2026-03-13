@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Mail;
+
 using Cobryx.Application.Common.Interfaces;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Logging;
 using Cobryx.Infrastructure.Configuration;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Services;
 

@@ -1,42 +1,35 @@
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
 public record EnableMfaCommand(string Secret, string Code) : IRequest<Result<List<string>>>;
 
-public class EnableMfaHandler : IRequestHandler<EnableMfaCommand, Result<List<string>>>
+public class EnableMfaHandler(
+    IMfaService mfaService,
+    IUserRepository userRepository,
+    ICurrentUserProvider currentUserProvider,
+    IPasswordHasher passwordHasher,
+    ILogger<EnableMfaHandler> logger) : IRequestHandler<EnableMfaCommand, Result<List<string>>>
 {
-    private readonly IMfaService _mfaService;
-    private readonly IUserRepository _userRepository;
-    private readonly ICurrentUserProvider _currentUserProvider;
-    private readonly IPasswordHasher _passwordHasher;
-    private readonly ILogger<EnableMfaHandler> _logger;
-
-    public EnableMfaHandler(
-        IMfaService mfaService,
-        IUserRepository userRepository,
-        ICurrentUserProvider currentUserProvider,
-        IPasswordHasher passwordHasher,
-        ILogger<EnableMfaHandler> logger)
-    {
-        _mfaService = mfaService;
-        _userRepository = userRepository;
-        _currentUserProvider = currentUserProvider;
-        _passwordHasher = passwordHasher;
-        _logger = logger;
-    }
+    private readonly IMfaService _mfaService = mfaService;
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly ICurrentUserProvider _currentUserProvider = currentUserProvider;
+    private readonly IPasswordHasher _passwordHasher = passwordHasher;
+    private readonly ILogger<EnableMfaHandler> _logger = logger;
 
     public async Task<Result<List<string>>> Handle(EnableMfaCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
         if (userId == null) return Result.Failure<List<string>>(DomainErrorCode.Auth.NotAuthenticated);
 
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user == null) return Result.Failure<List<string>>(DomainErrorCode.User.NotFound);
 
         if (user.IsMfaEnabled) return Result.Failure<List<string>>(DomainErrorCode.Auth.MfaAlreadyEnabled);
@@ -59,7 +52,7 @@ public class EnableMfaHandler : IRequestHandler<EnableMfaCommand, Result<List<st
 
         user.EnableMfa();
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(user, cancellationToken);
 
         return Result.Success(rawRecoveryCodes);
     }

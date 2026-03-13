@@ -1,5 +1,7 @@
 using Cobryx.Application.Users.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+
 using Concordia;
 
 namespace Cobryx.Application.Users.Queries.GetAvailableRoles;
@@ -21,7 +23,7 @@ public class GetAvailableRolesHandler : IRequestHandler<GetAvailableRolesQuery, 
 
         // Exclude Owner from basic role listing for enterprise safety
         return roles
-            .Where(r => r.Name != Cobryx.Domain.Entities.Role.Constants.Owner)
+            .Where(r => r.Name != Role.Constants.Owner)
             .Select(r => new RoleDto(r.Id, r.Name, r.Description))
             .OrderBy(r => r.Name);
     }

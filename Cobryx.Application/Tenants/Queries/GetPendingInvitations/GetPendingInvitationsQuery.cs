@@ -1,10 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Tenants.Common;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
-using Cobryx.Domain.Enums;
-using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Identity.Enums;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Queries.GetPendingInvitations;

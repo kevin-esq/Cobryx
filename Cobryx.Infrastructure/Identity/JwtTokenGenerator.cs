@@ -2,10 +2,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Common;
-using Cobryx.Domain.Entities;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Shared;
 using Cobryx.Infrastructure.Configuration;
+
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 

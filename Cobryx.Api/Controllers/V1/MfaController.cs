@@ -1,14 +1,16 @@
+using System.Text.Json;
+
 using Asp.Versioning;
+
+using Cobryx.Api.Outcomes;
 using Cobryx.Application.Auth.Commands.Mfa;
-using Cobryx.Api.Contracts.V1.Identity;
-using Cobryx.Api.Contracts.V1.Common;
+
 using Concordia;
+
+using Fido2NetLib;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Cobryx.Api.Outcomes;
-using Fido2NetLib;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Cobryx.Api.Controllers.V1;
 

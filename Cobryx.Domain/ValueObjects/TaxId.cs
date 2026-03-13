@@ -1,15 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Cobryx.Domain.Common;
+
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Domain.ValueObjects;
 
-public record TaxId : ValueObject
+public partial record TaxId : ValueObject
 {
-    private static readonly Regex RfcRegex = new(
-        @"^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{2}[0-9A]$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex RfcRegex = MyRegex();
 
     public string Value { get; }
 
@@ -37,4 +34,7 @@ public record TaxId : ValueObject
 
     public static implicit operator string(TaxId taxId) => taxId.Value;
     public static explicit operator TaxId(string taxId) => new(taxId);
+
+    [GeneratedRegex(@"^[A-Z&Ñ]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[A-Z0-9]{2}[0-9A]$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    private static partial Regex MyRegex();
 }

@@ -1,4 +1,5 @@
-using Cobryx.Domain.Enums;
+using Cobryx.Domain.Identity.Enums;
+
 
 namespace Cobryx.Application.Tenants.Common;
 

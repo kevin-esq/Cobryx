@@ -1,4 +1,4 @@
-using Cobryx.Domain.Common;
+using Cobryx.Domain.Shared;
 
 namespace Cobryx.Application.Common.Interfaces;
 
@@ -14,5 +14,5 @@ public record ExternalUserProfile(
 
 public interface IExternalAuthService
 {
-    Task<Result<ExternalUserProfile>> VerifyTokenAsync(ExternalProvider provider, string token, CancellationToken cancellationToken = default);
+    public Task<Result<ExternalUserProfile>> VerifyTokenAsync(ExternalProvider provider, string token, CancellationToken cancellationToken = default);
 }

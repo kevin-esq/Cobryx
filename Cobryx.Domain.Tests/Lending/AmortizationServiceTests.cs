@@ -1,6 +1,5 @@
-using Cobryx.Domain.DomainServices.Lending;
-using Cobryx.Domain.Entities.Lending;
-using Cobryx.Domain.Entities.Lending.Enums;
+using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
 
 namespace Cobryx.Domain.Tests.Lending;
 
