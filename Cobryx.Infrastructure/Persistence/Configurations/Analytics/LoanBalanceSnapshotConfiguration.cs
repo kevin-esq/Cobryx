@@ -12,6 +12,10 @@ public class LoanBalanceSnapshotConfiguration : IEntityTypeConfiguration<LoanBal
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.Type)
+               .HasConversion<string>()
+               .HasMaxLength(50);
+
         builder.Property(x => x.PrincipalBalance).HasPrecision(18, 2);
         builder.Property(x => x.InterestBalance).HasPrecision(18, 2);
         builder.Property(x => x.LateFeeBalance).HasPrecision(18, 2);
