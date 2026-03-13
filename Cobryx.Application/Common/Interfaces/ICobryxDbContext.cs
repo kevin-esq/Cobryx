@@ -26,6 +26,7 @@ public interface ICobryxDbContext
 
     // Analytics
     public DbSet<Domain.Analytics.LatestLoanSnapshot> LatestLoanSnapshots { get; }
+    public DbSet<Cobryx.Domain.Analytics.TenantPortfolioAggregate> TenantPortfolioAggregates { get; }
     public DbSet<Domain.Analytics.PortfolioMetricsDaily> PortfolioMetricsDaily { get; }
 
     // Lending

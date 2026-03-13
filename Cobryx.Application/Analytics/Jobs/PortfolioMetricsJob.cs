@@ -1,46 +1,29 @@
 using Cobryx.Application.Analytics.Services;
-using Cobryx.Application.Common.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Analytics.Jobs;
 
-public class PortfolioMetricsJob
+public class PortfolioMetricsJob(
+    IPortfolioAnalyticsService analyticsService,
+    ILogger<PortfolioMetricsJob> logger)
 {
-    private readonly IPortfolioAnalyticsService _analyticsService;
-    private readonly ICobryxDbContext _db;
-    private readonly ILogger<PortfolioMetricsJob> _logger;
-
-    public PortfolioMetricsJob(
-        IPortfolioAnalyticsService analyticsService,
-        ICobryxDbContext db,
-        ILogger<PortfolioMetricsJob> logger)
-    {
-        _analyticsService = analyticsService;
-        _db = db;
-        _logger = logger;
-    }
+    private readonly IPortfolioAnalyticsService _analyticsService = analyticsService;
+    private readonly ILogger<PortfolioMetricsJob> _logger = logger;
 
     public async Task RunAsync()
     {
-        _logger.LogInformation("Starting daily PortfolioMetricsJob");
+        _logger.LogInformation("Starting daily multi-tenant PortfolioMetricsJob");
 
-        var tenants = await _db.Tenants.Select(t => t.Id).ToListAsync();
         var date = DateTime.UtcNow.Date;
 
-        foreach (var tenantId in tenants)
+        try
         {
-            try
-            {
-                _logger.LogInformation("Calculating portfolio metrics for Tenant {TenantId} on {Date}", tenantId, date);
-                await _analyticsService.CalculateNightlyMetricsAsync(tenantId, date);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to calculate portfolio metrics for Tenant {TenantId}", tenantId);
-            }
+            await _analyticsService.CalculateAllNightlyMetricsAsync(date);
+            _logger.LogInformation("Finished daily multi-tenant PortfolioMetricsJob successfully");
         }
-
-        _logger.LogInformation("Finished daily PortfolioMetricsJob for {Count} tenants", tenants.Count);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to calculate portfolio metrics batch.");
+        }
     }
 }

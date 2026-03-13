@@ -35,7 +35,7 @@ public static class DependencyInjection
         services.AddPaymentsModule();
         services.AddAccountingModule();
 
-        services.AddScoped<Cobryx.Application.Analytics.Services.IPortfolioAnalyticsService, Cobryx.Application.Analytics.Services.PortfolioAnalyticsService>();
+        services.AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
 
         return services;
     }

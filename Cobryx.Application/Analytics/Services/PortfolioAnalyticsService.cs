@@ -1,14 +1,13 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Payments.Enums;
-
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Analytics.Services;
 
 public interface IPortfolioAnalyticsService
 {
-    public Task<PortfolioMetricsDaily> CalculateNightlyMetricsAsync(Guid tenantId, DateTime date, CancellationToken ct = default);
+    public Task CalculateAllNightlyMetricsAsync(DateTime date, CancellationToken ct = default);
 }
 
 public class PortfolioAnalyticsService : IPortfolioAnalyticsService
@@ -20,82 +19,133 @@ public class PortfolioAnalyticsService : IPortfolioAnalyticsService
         _db = db;
     }
 
-    public async Task<PortfolioMetricsDaily> CalculateNightlyMetricsAsync(Guid tenantId, DateTime date, CancellationToken ct = default)
+    public async Task CalculateAllNightlyMetricsAsync(DateTime date, CancellationToken ct = default)
     {
-        // 1. Get the latest snapshot per active loan using Window SQL Functions for O(n) performance
-        var latestSnapshots = await _db.LatestLoanSnapshots
-            .FromSqlInterpolated($@"
-                WITH latest_snapshots AS (
-                    SELECT *,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY ""LoanId""
-                            ORDER BY ""RecordedAt"" DESC
-                        ) as rn
-                    FROM ""LoanBalanceSnapshots""
-                    WHERE ""TenantId"" = {tenantId}
-                )
-                SELECT *
-                FROM latest_snapshots
-                WHERE rn = 1
-                AND (""PrincipalBalance"" + ""InterestBalance"" + ""LateFeeBalance"") > 0
-            ")
+        // Multi-Tenant Batch Aggregation using Window SQL Functions for O(1) query scalability
+        var batchQuery = @"
+WITH latest_snapshots AS (
+    SELECT
+        ""TenantId"",
+        ""LoanId"",
+        ""PrincipalBalance"",
+        ""InterestBalance"",
+        ""LateFeeBalance"",
+        ""DaysPastDue"",
+        ROW_NUMBER() OVER (
+            PARTITION BY ""LoanId""
+            ORDER BY ""RecordedAt"" DESC
+        ) AS rn
+    FROM ""LoanBalanceSnapshots""
+),
+current_loans AS (
+    SELECT
+        ""TenantId"",
+        (""PrincipalBalance"" + ""InterestBalance"" + ""LateFeeBalance"") AS outstanding,
+        ""PrincipalBalance"",
+        ""InterestBalance"",
+        ""LateFeeBalance"",
+        ""DaysPastDue""
+    FROM latest_snapshots
+    WHERE rn = 1
+      AND (""PrincipalBalance"" + ""InterestBalance"" + ""LateFeeBalance"") > 0
+)
+SELECT
+    ""TenantId"",
+    CAST(COUNT(*) AS int) AS ""TotalLoans"",
+    SUM(outstanding) AS ""TotalOutstanding"",
+    SUM(""PrincipalBalance"") AS ""TotalPrincipal"",
+    SUM(""InterestBalance"") AS ""TotalInterest"",
+    SUM(""LateFeeBalance"") AS ""TotalLateFees"",
+    SUM(
+        CASE WHEN ""DaysPastDue"" >= 90
+        THEN outstanding ELSE 0 END
+    ) AS ""NplOutstanding"",
+    SUM(
+        CASE WHEN ""DaysPastDue"" <= 30
+        THEN outstanding ELSE 0 END
+    ) AS ""Bucket0To30"",
+    SUM(
+        CASE WHEN ""DaysPastDue"" BETWEEN 31 AND 60
+        THEN outstanding ELSE 0 END
+    ) AS ""Bucket31To60"",
+    SUM(
+        CASE WHEN ""DaysPastDue"" BETWEEN 61 AND 90
+        THEN outstanding ELSE 0 END
+    ) AS ""Bucket61To90"",
+    SUM(
+        CASE WHEN ""DaysPastDue"" > 90
+        THEN outstanding ELSE 0 END
+    ) AS ""Bucket90Plus""
+FROM current_loans
+GROUP BY ""TenantId"";";
+
+        var aggregates = await _db.TenantPortfolioAggregates
+            .FromSqlRaw(batchQuery)
             .ToListAsync(ct);
 
-        // 2. Portfolio Totals Aggregation
-        var totalLoans = latestSnapshots.Count;
-        var totalPrincipal = latestSnapshots.Sum(x => x.PrincipalBalance);
-        var totalInterest = latestSnapshots.Sum(x => x.InterestBalance);
-        var totalLateFees = latestSnapshots.Sum(x => x.LateFeeBalance);
-        var totalOutstanding = totalPrincipal + totalInterest + totalLateFees;
-
-        // 3. Risk / NPL Ratio
-        var nplOutstanding = latestSnapshots
-            .Where(x => x.DaysPastDue >= 90)
-            .Sum(x => x.Outstanding);
-
-        var nplRatio = totalOutstanding > 0 ? nplOutstanding / totalOutstanding : 0;
-
-        // 4. Aging Buckets
-        var bucket0to30 = latestSnapshots.Where(x => x.DaysPastDue <= 30).Sum(x => x.Outstanding);
-        var bucket31to60 = latestSnapshots.Where(x => x.DaysPastDue >= 31 && x.DaysPastDue <= 60).Sum(x => x.Outstanding);
-        var bucket61to90 = latestSnapshots.Where(x => x.DaysPastDue >= 61 && x.DaysPastDue <= 90).Sum(x => x.Outstanding);
-        var bucket90plus = latestSnapshots.Where(x => x.DaysPastDue > 90).Sum(x => x.Outstanding);
-
-        // 5. Revenue MTD / YTD
         var startOfMonth = new DateTime(date.Year, date.Month, 1);
         var startOfYear = new DateTime(date.Year, 1, 1);
 
-        var revenueMTD = await _db.LoanPaymentAllocations
-            .Where(x => x.TenantId == tenantId && x.AllocationDate >= startOfMonth && x.AllocationDate <= date)
-            .SumAsync(x => x.InterestApplied + x.FeesApplied, ct);
+        // Fetch tenant-level revenue and collection statistics concurrently
+        var revenueMtdByTenant = await _db.LoanPaymentAllocations
+            .Where(x => x.AllocationDate >= startOfMonth && x.AllocationDate <= date)
+            .GroupBy(x => x.TenantId)
+            .Select(g => new { TenantId = g.Key, Amount = g.Sum(x => x.InterestApplied + x.FeesApplied) })
+            .ToDictionaryAsync(x => x.TenantId, x => x.Amount, ct);
 
-        var revenueYTD = await _db.LoanPaymentAllocations
-            .Where(x => x.TenantId == tenantId && x.AllocationDate >= startOfYear && x.AllocationDate <= date)
-            .SumAsync(x => x.InterestApplied + x.FeesApplied, ct);
+        var revenueYtdByTenant = await _db.LoanPaymentAllocations
+            .Where(x => x.AllocationDate >= startOfYear && x.AllocationDate <= date)
+            .GroupBy(x => x.TenantId)
+            .Select(g => new { TenantId = g.Key, Amount = g.Sum(x => x.InterestApplied + x.FeesApplied) })
+            .ToDictionaryAsync(x => x.TenantId, x => x.Amount, ct);
 
-        // 6. Collection Efficiency
-        var paymentsDue = await _db.Installments
-            .Where(x => x.Instrument.TenantId == tenantId && x.DueDate >= startOfMonth && x.DueDate <= date)
-            .SumAsync(x => x.TotalAmount.Amount, ct);
+        var paymentsDueByTenant = await _db.Installments
+            .Where(x => x.DueDate >= startOfMonth && x.DueDate <= date)
+            .GroupBy(x => x.Instrument.TenantId)
+            .Select(g => new { TenantId = g.Key, Amount = g.Sum(x => x.TotalAmount.Amount) })
+            .ToDictionaryAsync(x => x.TenantId, x => x.Amount, ct);
 
-        // We assume `_db.Payments` resolves to Credit/Installment payments or we join with allocations
-        // The architect meant all payments successfully recorded.
-        var paymentsCollected = await _db.Payments
-            .Where(x => x.TenantId == tenantId && x.PaymentDate >= startOfMonth && x.PaymentDate <= date && x.Status == PaymentStatus.Completed)
-            .SumAsync(x => x.Amount.Amount, ct);
+        var paymentsCollectedByTenant = await _db.Payments
+            .Where(x => x.PaymentDate >= startOfMonth && x.PaymentDate <= date && x.Status == PaymentStatus.Completed)
+            .GroupBy(x => x.TenantId)
+            .Select(g => new { TenantId = g.Key, Amount = g.Sum(x => x.Amount.Amount) })
+            .ToDictionaryAsync(x => x.TenantId, x => x.Amount, ct);
 
-        var collectionEfficiency = paymentsDue > 0 ? paymentsCollected / paymentsDue : 0;
+        // Combine projections in-memory to limit DB load
+        foreach (var agg in aggregates)
+        {
+            var nplRatio = agg.TotalOutstanding > 0 ? agg.NplOutstanding / agg.TotalOutstanding : 0;
 
-        // 7. Persist
-        var metrics = new PortfolioMetricsDaily(tenantId, date);
-        metrics.SetTotals(totalLoans, totalOutstanding, totalPrincipal, totalInterest, totalLateFees);
-        metrics.SetRisk(nplRatio, bucket0to30, bucket31to60, bucket61to90, bucket90plus);
-        metrics.SetRevenue(revenueMTD, revenueYTD);
-        metrics.SetCollections(collectionEfficiency);
+            var metrics = new PortfolioMetricsDaily(agg.TenantId, date);
 
-        _db.PortfolioMetricsDaily.Add(metrics);
+            metrics.SetTotals(
+                agg.TotalLoans,
+                agg.TotalOutstanding,
+                agg.TotalPrincipal,
+                agg.TotalInterest,
+                agg.TotalLateFees
+            );
+
+            metrics.SetRisk(
+                nplRatio,
+                agg.Bucket0To30,
+                agg.Bucket31To60,
+                agg.Bucket61To90,
+                agg.Bucket90Plus
+            );
+
+            var revMTD = revenueMtdByTenant.GetValueOrDefault(agg.TenantId, 0m);
+            var revYTD = revenueYtdByTenant.GetValueOrDefault(agg.TenantId, 0m);
+            metrics.SetRevenue(revMTD, revYTD);
+
+            var pDue = paymentsDueByTenant.GetValueOrDefault(agg.TenantId, 0m);
+            var pCol = paymentsCollectedByTenant.GetValueOrDefault(agg.TenantId, 0m);
+            var ce = pDue > 0 ? pCol / pDue : 0;
+            metrics.SetCollections(ce);
+
+            _db.PortfolioMetricsDaily.Add(metrics);
+        }
+
         await _db.SaveChangesAsync(ct);
-
-        return metrics;
     }
 }

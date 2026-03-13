@@ -103,16 +103,17 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
-    public DbSet<Cobryx.Domain.Lending.Customer> Customers => Set<Cobryx.Domain.Lending.Customer>();
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations => Set<Cobryx.Domain.Payments.PaymentAllocation>();
+    public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations => Set<Domain.Payments.PaymentAllocation>();
     // Payment Links
     public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
 
     // Analytics
     public DbSet<LoanBalanceSnapshot> LoanBalanceSnapshots => Set<LoanBalanceSnapshot>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
+    public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
     public DbSet<CashflowEvent> CashflowEvents => Set<CashflowEvent>();
 
@@ -263,6 +264,7 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
             .IsDescending(false, false, true);
 
         modelBuilder.Entity<LatestLoanSnapshot>().HasNoKey();
+        modelBuilder.Entity<TenantPortfolioAggregate>().HasNoKey();
 
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<ShadowBalance>(b =>
