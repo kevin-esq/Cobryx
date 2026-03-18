@@ -13,6 +13,7 @@ public class DecisionService
 
     private readonly Cobryx.Application.ML.ModelRouter _router;
     private readonly Cobryx.Application.ML.EnsembleService _ensemble;
+    private readonly Cobryx.Application.ML.IRlEngine _rlEngine;
 
     public DecisionService(
         DecisionEngine engine,
@@ -21,7 +22,8 @@ public class DecisionService
         Cobryx.Application.ML.IFeatureStore featureStore,
         Cobryx.Application.ML.MlClient mlClient,
         Cobryx.Application.ML.ModelRouter router,
-        Cobryx.Application.ML.EnsembleService ensemble)
+        Cobryx.Application.ML.EnsembleService ensemble,
+        Cobryx.Application.ML.IRlEngine rlEngine)
     {
         _engine = engine;
         _cache = cache;
@@ -30,6 +32,7 @@ public class DecisionService
         _mlClient = mlClient;
         _router = router;
         _ensemble = ensemble;
+        _rlEngine = rlEngine;
     }
 
     public async Task<DecisionResult> EvaluateAsync(
@@ -90,6 +93,36 @@ public class DecisionService
 
         var result = _engine.Evaluate(ctx);
 
+        var state = new Cobryx.Domain.ML.RlState
+        {
+            PdBucket = Math.Round(finalPd, 1),
+            UtilizationBucket = Math.Round(features!.Utilization, 1),
+            BehaviorBucket = Math.Round(features!.BehaviorScore, 1)
+        };
+
+        var action = await _rlEngine.DecideAsync(state);
+
+        var creditLimit = result.CreditLimit;
+        var interestRate = result.InterestRate;
+
+        switch (action)
+        {
+            case Cobryx.Domain.ML.DecisionAction.LowRisk:
+                creditLimit *= 1.5m;
+                interestRate *= 0.8m;
+                break;
+            case Cobryx.Domain.ML.DecisionAction.HighRisk:
+                creditLimit *= 0.5m;
+                interestRate *= 1.5m;
+                break;
+            case Cobryx.Domain.ML.DecisionAction.Reject:
+                creditLimit = 0m;
+                break;
+        }
+
+        result.CreditLimit = creditLimit;
+        result.InterestRate = interestRate;
+
         // persist outcome logic mapping for ML retraining feedback loop
         var outcome = new Cobryx.Domain.ML.ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
         _db.ModelOutcomes.Add(outcome);
@@ -105,6 +138,17 @@ public class DecisionService
         );
 
         _db.DecisionSnapshots.Add(snapshot);
+
+        _db.DecisionOutcomes.Add(new Cobryx.Domain.ML.DecisionOutcome
+        {
+            CustomerId = customerId,
+            StateKey = state.ToKey(),
+            Action = action,
+            CreditLimit = creditLimit,
+            InterestRate = interestRate,
+            ModelVersion = prodVersion
+        });
+
         await _db.SaveChangesAsync(ct);
 
         // cache

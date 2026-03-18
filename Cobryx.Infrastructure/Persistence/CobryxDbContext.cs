@@ -132,6 +132,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots => Set<CustomerRiskSnapshot>();
     public DbSet<Cobryx.Domain.ML.ShadowPrediction> ShadowPredictions => Set<Cobryx.Domain.ML.ShadowPrediction>();
     public DbSet<Cobryx.Domain.ML.MlModel> MlModels => Set<Cobryx.Domain.ML.MlModel>();
+    public DbSet<Cobryx.Domain.ML.DecisionOutcome> DecisionOutcomes => Set<Cobryx.Domain.ML.DecisionOutcome>();
+    public DbSet<Cobryx.Domain.ML.QValue> QValues => Set<Cobryx.Domain.ML.QValue>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
