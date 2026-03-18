@@ -28,11 +28,14 @@ public static class DependencyInjection
         services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
 
         // Risk Engine
-        services.AddScoped<IRiskFactor, DpdRiskFactor>();
-        services.AddScoped<IRiskFactor, UtilizationRiskFactor>();
-        services.AddScoped<IRiskFactor, PaymentDelayRiskFactor>();
-        services.AddScoped<IRiskFactor, TrendRiskFactor>();
-        services.AddScoped<ProbabilityOfDefaultCalculator>();
+        services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
+            new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
+            {
+                (new DpdRiskFactor(), 0.4m),
+                (new UtilizationRiskFactor(), 0.2m),
+                (new PaymentDelayRiskFactor(), 0.2m),
+                (new TrendRiskFactor(), 0.2m)
+            }));
 
         services.AddValidatorsFromAssembly(assembly);
 

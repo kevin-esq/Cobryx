@@ -10,7 +10,7 @@ public class RiskEventConfiguration : IEntityTypeConfiguration<RiskEvent>
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.EventType).HasMaxLength(100);
+        builder.Property(x => x.EventType).HasConversion<string>().HasMaxLength(100);
         builder.Property(x => x.ImpactScore).HasPrecision(18, 4);
 
         builder.HasIndex(x => x.CustomerId);

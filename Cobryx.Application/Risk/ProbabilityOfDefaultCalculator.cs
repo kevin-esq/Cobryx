@@ -2,19 +2,20 @@ namespace Cobryx.Application.Risk;
 
 public class ProbabilityOfDefaultCalculator
 {
-    private readonly IEnumerable<IRiskFactor> _factors;
+    private readonly System.Collections.Generic.IEnumerable<(IRiskFactor Factor, decimal Weight)> _factors;
 
-    public ProbabilityOfDefaultCalculator(IEnumerable<IRiskFactor> factors)
+    public ProbabilityOfDefaultCalculator(System.Collections.Generic.IEnumerable<(IRiskFactor Factor, decimal Weight)> factors)
     {
         _factors = factors;
     }
 
     public decimal Calculate(RiskContext context)
     {
-        var scores = _factors.Select(f => f.Evaluate(context)).ToList();
+        var totalWeight = System.Linq.Enumerable.Sum(_factors, f => f.Weight);
+        var weightedSum = System.Linq.Enumerable.Sum(_factors, f => f.Factor.Evaluate(context) * f.Weight);
 
-        var pd = scores.Average(); // simple aggregation
+        var pd = totalWeight > 0 ? weightedSum / totalWeight : 0m;
 
-        return Math.Min(1.0m, pd);
+        return System.Math.Clamp(pd, 0m, 1m);
     }
 }

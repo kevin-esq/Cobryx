@@ -27,7 +27,7 @@ public class CustomerRiskProfile
         RiskScore = risk;
         BehaviorScore = behavior;
         CreditScore = credit;
-        ProbabilityOfDefault = pd;
-        LastUpdated = DateTime.UtcNow;
+        ProbabilityOfDefault = System.Math.Clamp(pd, 0m, 1m);
+        LastUpdated = System.DateTime.UtcNow;
     }
 }

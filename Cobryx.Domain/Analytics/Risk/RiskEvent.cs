@@ -2,22 +2,30 @@ namespace Cobryx.Domain.Analytics.Risk;
 
 public class RiskEvent
 {
-    public Guid Id { get; private set; }
-    public Guid CustomerId { get; private set; }
+    public System.Guid Id { get; private set; }
+    public System.Guid CustomerId { get; private set; }
 
-    public string EventType { get; private set; } = string.Empty;
+    public RiskEventType EventType { get; private set; }
     public decimal ImpactScore { get; private set; }
 
-    public DateTime OccurredAt { get; private set; }
+    public System.DateTime OccurredAt { get; private set; }
 
     private RiskEvent() { }
 
-    public RiskEvent(Guid customerId, string eventType, decimal impactScore)
+    public RiskEvent(System.Guid customerId, RiskEventType eventType, decimal impactScore)
     {
-        Id = Guid.NewGuid();
+        Id = System.Guid.NewGuid();
         CustomerId = customerId;
         EventType = eventType;
         ImpactScore = impactScore;
-        OccurredAt = DateTime.UtcNow;
+        OccurredAt = System.DateTime.UtcNow;
     }
+}
+
+public enum RiskEventType
+{
+    MissedPayment,
+    LatePayment,
+    BalanceIncrease,
+    ManualAdjustment
 }
