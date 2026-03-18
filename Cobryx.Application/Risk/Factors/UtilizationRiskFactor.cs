@@ -4,7 +4,6 @@ public class UtilizationRiskFactor : IRiskFactor
 {
     public decimal Evaluate(RiskContext context)
     {
-        // TODO: replace with real utilization once credit limits are available
         var utilization = context.CreditLimit > 0
             ? context.Outstanding / context.CreditLimit
             : 0m;
