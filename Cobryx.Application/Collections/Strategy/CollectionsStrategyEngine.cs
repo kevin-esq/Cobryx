@@ -1,5 +1,4 @@
 using Cobryx.Application.Collections.Models;
-using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Collections;
 
 namespace Cobryx.Application.Collections.Strategy;
@@ -7,14 +6,14 @@ namespace Cobryx.Application.Collections.Strategy;
 public class CollectionsStrategyEngine : ICollectionsStrategyEngine
 {
     public CollectionDecision Evaluate(
-        LoanBalanceSnapshot snapshot,
+        int daysPastDue,
+        decimal outstanding,
         CustomerRiskProfile risk,
         PaymentBehaviorProfile behavior,
         DpdTrend trend)
     {
-        var dpd = snapshot.DaysPastDue;
+        var dpd = daysPastDue;
         var riskScore = risk.Score;
-        var outstanding = snapshot.Outstanding;
 
         var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
 
