@@ -34,6 +34,12 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Application.Decision.DecisionEngine>();
         services.AddScoped<Cobryx.Application.Decision.DecisionService>();
         services.AddScoped<Cobryx.Application.ML.IFeatureStore, Cobryx.Application.ML.RedisFeatureStore>();
+        services.AddScoped<Cobryx.Application.ML.FeatureUpdater>();
+
+        services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
+        {
+            c.BaseAddress = new System.Uri("http://ml-service");
+        });
 
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
