@@ -1,5 +1,6 @@
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Tests.Lending;
 
@@ -90,14 +91,14 @@ public class PaymentApplicationServiceTests
 
     private Loan CreateLoanWithLateFees(decimal lateFeeBalance)
     {
-        var loan = new Loan(_tenantId, Guid.NewGuid(), Guid.NewGuid(), "TEST-001", 10000m);
-        loan.AssessLateFees(DateTime.UtcNow, lateFeeBalance);
+        var loan = new Loan(_tenantId, Guid.NewGuid(), Guid.NewGuid(), "TEST-001", new Money(10000m, "USD"));
+        loan.AssessLateFees(lateFeeBalance);
         return loan;
     }
 
     private Loan CreateLoanWithInstallments(decimal principal, decimal interest)
     {
-        var loan = new Loan(_tenantId, Guid.NewGuid(), Guid.NewGuid(), "TEST-001", principal);
+        var loan = new Loan(_tenantId, Guid.NewGuid(), Guid.NewGuid(), "TEST-001", new Money(principal, "USD"));
 
         var installment = new Installment(
             loanId: loan.Id,

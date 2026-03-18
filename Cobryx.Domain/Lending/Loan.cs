@@ -142,7 +142,14 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         if (overdueInstallments.Count != 0)
         {
             daysLate = (int)(now - overdueInstallments.Min(i => i.DueDate)).TotalDays;
-            FinancialStatus = daysLate > 90 ? FinancialStatus.Default : FinancialStatus.Late;
+            FinancialStatus = daysLate switch
+            {
+                <= 3 => FinancialStatus.Current,
+                <= 30 => FinancialStatus.Late,
+                <= 90 => FinancialStatus.Delinquent,
+                <= 180 => FinancialStatus.Default,
+                _ => FinancialStatus.ChargedOff
+            };
         }
         else
         {
@@ -222,6 +229,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
     public void MarkAsRecovered()
     {
+        if (FinancialStatus != FinancialStatus.ChargedOff) return;
         FinancialStatus = FinancialStatus.Recovered;
         UpdateTimestamp();
     }

@@ -1,5 +1,6 @@
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.ValueObjects;
 
 using FluentAssertions;
 
@@ -49,7 +50,7 @@ public class LoanFinancialStatusTests
 
         var installments = new List<Installment>
         {
-            new Installment(loan.Id, 1, dueDate, 500, 0)
+            new(loan.Id, 1, dueDate, 500, 0)
         };
         loan.AddInstallments(installments);
 
@@ -74,7 +75,7 @@ public class LoanFinancialStatusTests
         installment.ApplyAllocation(100, PaymentApplicationType.Principal);
         installment.ApplyAllocation(10, PaymentApplicationType.Interest);
 
-        loan.AddInstallments(new[] { installment });
+        loan.AddInstallments([installment]);
 
         // Act
         loan.UpdateFinancialRiskStatus(today);
@@ -100,5 +101,5 @@ public class LoanFinancialStatusTests
         loan.FinancialStatus.Should().Be(FinancialStatus.Recovered);
     }
 
-    private Loan CreateLoan(decimal amount) => new(_tenantId, _customerId, _agreementId, "L-123", amount);
+    private Loan CreateLoan(decimal amount) => new(_tenantId, _customerId, _agreementId, "L-123", new Money(amount, "USD"));
 }
