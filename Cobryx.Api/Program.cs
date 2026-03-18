@@ -337,6 +337,11 @@ try
             job => job.RunAsync(),
             Cron.Daily);
 
+        RecurringJob.AddOrUpdate<Cobryx.Application.ML.Jobs.RlTrainingJob>(
+            "rl-training",
+            job => job.RunAsync(),
+            Cron.Hourly);
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),

@@ -19,6 +19,8 @@ public class DecisionServiceTests
         dbMock.Setup(d => d.DecisionSnapshots).Returns(dbSetMock.Object);
         dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.ModelOutcome>>().Object);
         dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
+        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
+        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Cobryx.Domain.ML.QValue>>().Object);
 
         var cacheStore = new Dictionary<string, DecisionResult>();
         
@@ -54,7 +56,9 @@ public class DecisionServiceTests
         var httpClient = new System.Net.Http.HttpClient(mockHttp.Object) { BaseAddress = new System.Uri("http://dummy") };
         var mlClient = new Cobryx.Application.ML.MlClient(httpClient);
 
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService());
+        var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
+        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object);
         
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext
@@ -88,6 +92,8 @@ public class DecisionServiceTests
         dbMock.Setup(d => d.DecisionSnapshots).Returns(dbSetMock.Object);
         dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.ModelOutcome>>().Object);
         dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
+        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
+        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Cobryx.Domain.ML.QValue>>().Object);
 
         var engine = new DecisionEngine(new CreditLimitEngine(), new PricingEngine(), new FraudEngine());
         var featureStoreMock = new Mock<Cobryx.Application.ML.IFeatureStore>();
@@ -106,7 +112,9 @@ public class DecisionServiceTests
         var httpClient = new System.Net.Http.HttpClient(mockHttp.Object) { BaseAddress = new System.Uri("http://dummy") };
         var mlClient = new Cobryx.Application.ML.MlClient(httpClient);
 
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService());
+        var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
+        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object);
 
         var ctx = new DecisionContext { Credit = new CreditContext { ProbabilityOfDefault = 0.2m }, Pricing = new PricingContext(), Fraud = new FraudContext() };
 

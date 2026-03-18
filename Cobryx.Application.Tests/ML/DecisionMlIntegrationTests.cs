@@ -40,10 +40,14 @@ public class DecisionMlIntegrationTests
         dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<ModelOutcome>>().Object);
         dbMock.Setup(d => d.DecisionSnapshots).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<DecisionSnapshot>>().Object);
         dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
+        dbMock.Setup(d => d.QValues).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.QValue>>().Object);
+        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
 
         var cacheMock = new Mock<Cobryx.Application.Common.Interfaces.ICacheService>();
         
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService());
+        var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
+        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object);
 
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext
