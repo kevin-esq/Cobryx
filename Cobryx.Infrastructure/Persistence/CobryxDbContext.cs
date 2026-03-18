@@ -4,6 +4,7 @@ using System.Text.Json;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Analytics.Risk;
 using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Collections;
 using Cobryx.Domain.Identity;
@@ -122,6 +123,11 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<CollectionPolicy> CollectionPolicies => Set<CollectionPolicy>();
     public DbSet<CollectionAgent> CollectionAgents => Set<CollectionAgent>();
     public DbSet<CollectionOutcome> CollectionOutcomes => Set<CollectionOutcome>();
+
+    // Risk
+    public DbSet<CustomerRiskProfile> CustomerRiskProfiles => Set<CustomerRiskProfile>();
+    public DbSet<RiskEvent> RiskEvents => Set<RiskEvent>();
+    public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots => Set<CustomerRiskSnapshot>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();

@@ -10,6 +10,9 @@ using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Cobryx.Application.Risk;
+using Cobryx.Application.Risk.Factors;
+
 namespace Cobryx.Application;
 
 public static class DependencyInjection
@@ -23,7 +26,13 @@ public static class DependencyInjection
         ConcordiaGeneratedRegistrations.AddConcordiaHandlers(services);
         services.AddScoped<IMediator, Mediator>();
         services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
-        services.AddScoped<INotificationPublisher, ForeachAwaitPublisher>();
+
+        // Risk Engine
+        services.AddScoped<IRiskFactor, DpdRiskFactor>();
+        services.AddScoped<IRiskFactor, UtilizationRiskFactor>();
+        services.AddScoped<IRiskFactor, PaymentDelayRiskFactor>();
+        services.AddScoped<IRiskFactor, TrendRiskFactor>();
+        services.AddScoped<ProbabilityOfDefaultCalculator>();
 
         services.AddValidatorsFromAssembly(assembly);
 

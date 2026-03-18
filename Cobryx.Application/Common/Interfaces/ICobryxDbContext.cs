@@ -1,4 +1,5 @@
 using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Analytics.Risk;
 using Cobryx.Domain.Collections;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Lending;
@@ -61,6 +62,11 @@ public interface ICobryxDbContext
     public DbSet<CollectionPolicy> CollectionPolicies { get; }
     public DbSet<CollectionAgent> CollectionAgents { get; }
     public DbSet<CollectionOutcome> CollectionOutcomes { get; }
+
+    // Risk
+    public DbSet<CustomerRiskProfile> CustomerRiskProfiles { get; }
+    public DbSet<RiskEvent> RiskEvents { get; }
+    public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
