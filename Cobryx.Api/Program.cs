@@ -327,6 +327,11 @@ try
             job => job.RunHourlyOptimizationAsync(),
             Cron.Hourly);
 
+        RecurringJob.AddOrUpdate<Cobryx.Application.Risk.Jobs.EarlyWarningJob>(
+            "risk-early-warning",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Hourly);
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),
