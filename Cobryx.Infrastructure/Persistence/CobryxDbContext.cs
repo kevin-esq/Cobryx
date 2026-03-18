@@ -11,6 +11,7 @@ using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Payments;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.Analytics;
+using Cobryx.Domain.Collections;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -112,6 +113,9 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
 
     // Analytics
     public DbSet<LoanBalanceSnapshot> LoanBalanceSnapshots => Set<LoanBalanceSnapshot>();
+    public DbSet<CollectionCase> CollectionCases => Set<CollectionCase>();
+    public DbSet<CollectionAction> CollectionActions => Set<CollectionAction>();
+    public DbSet<CollectionPolicy> CollectionPolicies => Set<CollectionPolicy>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();

@@ -3,6 +3,7 @@ using Cobryx.Domain.Identity;
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Payments;
+using Cobryx.Domain.Collections;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -54,6 +55,10 @@ public interface ICobryxDbContext
     public DbSet<ReconciliationAudit> ReconciliationAudits { get; }
     public DbSet<ShadowBalance> ShadowBalances { get; }
     public DbSet<EventShadowBalance> EventShadowBalances { get; }
+
+    public DbSet<CollectionCase> CollectionCases { get; }
+    public DbSet<CollectionAction> CollectionActions { get; }
+    public DbSet<CollectionPolicy> CollectionPolicies { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
