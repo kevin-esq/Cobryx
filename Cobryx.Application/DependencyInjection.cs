@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Domain.Decision.IFraudEngine, Cobryx.Application.Decision.FraudEngine>();
         services.AddScoped<Cobryx.Application.Decision.DecisionEngine>();
         services.AddScoped<Cobryx.Application.Decision.DecisionService>();
+        services.AddScoped<Cobryx.Application.ML.IFeatureStore, Cobryx.Application.ML.RedisFeatureStore>();
 
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
