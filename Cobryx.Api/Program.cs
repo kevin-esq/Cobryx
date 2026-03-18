@@ -322,6 +322,11 @@ try
             job => job.ProcessCollectionsAsync(),
             Cron.Hourly);
 
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Collections.CollectionsOptimizerJob>(
+            "collections-ai-optimizer",
+            job => job.RunHourlyOptimizationAsync(),
+            Cron.Hourly);
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),

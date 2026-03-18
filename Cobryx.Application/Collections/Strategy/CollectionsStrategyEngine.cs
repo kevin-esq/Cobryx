@@ -10,12 +10,32 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
         decimal outstanding,
         CustomerRiskProfile risk,
         PaymentBehaviorProfile behavior,
-        DpdTrend trend)
+        DpdTrend trend,
+        Cobryx.Application.Collections.Optimizer.StrategyWeights weights)
     {
         var dpd = daysPastDue;
         var riskScore = risk.Score;
 
         var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
+
+        // Epsilon-Greedy Exploration (10%)
+        var rand = new System.Random();
+        if (rand.NextDouble() < 0.10)
+        {
+            var actions = new[] { CollectionActionType.SmsReminder, CollectionActionType.EmailReminder, CollectionActionType.AgentCall };
+            return new CollectionDecision
+            {
+                Stage = CollectionStage.Contact,
+                Action = actions[rand.Next(actions.Length)],
+                PriorityScore = priorityScore,
+                NextActionAt = System.DateTime.UtcNow.AddDays(1)
+            };
+        }
+
+        // Apply ML Optimizer Weights
+        var bestEarlyAction = weights.EmailWeight > weights.SmsWeight 
+            ? CollectionActionType.EmailReminder 
+            : CollectionActionType.SmsReminder;
 
         // 1. Early stage (0–3)
         if (dpd <= 3)
@@ -23,9 +43,9 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             return new CollectionDecision
             {
                 Stage = CollectionStage.Reminder,
-                Action = CollectionActionType.SmsReminder,
+                Action = bestEarlyAction,
                 PriorityScore = priorityScore,
-                NextActionAt = DateTime.UtcNow.AddDays(1)
+                NextActionAt = System.DateTime.UtcNow.AddDays(1)
             };
         }
 
@@ -73,8 +93,8 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
         {
             Stage = CollectionStage.Legal,
             Action = CollectionActionType.LegalNotice,
-            PriorityScore = priorityScore,
-            NextActionAt = DateTime.UtcNow.AddDays(7)
+            PriorityScore = (int)(priorityScore * weights.LegalWeight), // Boost priority if ML says legal is working well
+            NextActionAt = System.DateTime.UtcNow.AddDays(7)
         };
     }
 }

@@ -56,7 +56,17 @@ public class CollectionsOrchestratorJob
                 // Mocks for Phase 10 logic
                 var riskProfile = new CustomerRiskProfile { Score = 50 };
                 var behaviorProfile = new PaymentBehaviorProfile { MissedPayments = 1, PaymentConsistencyScore = 0.8m };
-                var trend = new DpdTrend { CurrentDpd = snapshot.DaysPastDue, PreviousDpd = Math.Max(0, snapshot.DaysPastDue - 1) };
+                var trend = new DpdTrend { CurrentDpd = snapshot.DaysPastDue, PreviousDpd = System.Math.Max(0, snapshot.DaysPastDue - 1) };
+
+                // ML Weights
+                var db = _redis.GetDatabase();
+                var weightsJson = await db.StringGetAsync($"portfolio:collections:weights:{tenantId}");
+                var weights = new Cobryx.Application.Collections.Optimizer.StrategyWeights();
+                if (weightsJson.HasValue) 
+                {
+                    var deserialized = System.Text.Json.JsonSerializer.Deserialize<Cobryx.Application.Collections.Optimizer.StrategyWeights>(weightsJson!);
+                    if (deserialized != null) weights = deserialized;
+                }
 
                 // 1. STRATEGY EVALUATION
                 var decision = _strategyEngine.Evaluate(
@@ -64,7 +74,8 @@ public class CollectionsOrchestratorJob
                     snapshot.Outstanding, 
                     riskProfile, 
                     behaviorProfile, 
-                    trend);
+                    trend,
+                    weights);
 
                 // 2. CASE MANAGEMENT
                 var collectionCase = await _dbContext.CollectionCases
@@ -102,7 +113,6 @@ public class CollectionsOrchestratorJob
                 }
 
                 // 4. REDIS PRIORITY QUEUE (ZSET + HASH)
-                var db = _redis.GetDatabase();
                 var priorityKey = $"portfolio:collections:priority:{tenantId}";
                 var dataKey = $"portfolio:collections:data:{snapshot.LoanId}";
 

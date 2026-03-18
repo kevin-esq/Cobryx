@@ -9,5 +9,6 @@ public interface ICollectionsStrategyEngine
         decimal outstanding,
         CustomerRiskProfile risk,
         PaymentBehaviorProfile behavior,
-        DpdTrend trend);
+        DpdTrend trend,
+        Cobryx.Application.Collections.Optimizer.StrategyWeights weights);
 }

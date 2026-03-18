@@ -117,6 +117,7 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<CollectionAction> CollectionActions => Set<CollectionAction>();
     public DbSet<CollectionPolicy> CollectionPolicies => Set<CollectionPolicy>();
     public DbSet<CollectionAgent> CollectionAgents => Set<CollectionAgent>();
+    public DbSet<CollectionOutcome> CollectionOutcomes => Set<CollectionOutcome>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
