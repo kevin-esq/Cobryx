@@ -36,22 +36,42 @@ public class CollectionsOptimizerJob
             .ToListAsync();
 
         var db = _redis.GetDatabase();
+        var lockKey = "portfolio:collections:optimizer:lock";
+        var token = System.Guid.NewGuid().ToString();
 
-        foreach (var tenantId in activeTenants)
+        // 1. Idempotency Lock
+        var acquired = await db.LockTakeAsync(lockKey, token, System.TimeSpan.FromMinutes(5));
+        if (!acquired)
         {
-            try
-            {
-                var weights = await _optimizer.CalculateWeightsAsync(tenantId);
-                var key = $"portfolio:collections:weights:{tenantId}";
-                var json = System.Text.Json.JsonSerializer.Serialize(weights);
+            _logger.LogInformation("Optimizer is already running on another instance, skipping.");
+            return;
+        }
 
-                // Cache weights in Redis for quick access by the Strategy Engine
-                await db.StringSetAsync(key, json, TimeSpan.FromDays(1));
-            }
-            catch (Exception ex)
+        try
+        {
+            foreach (var tenantId in activeTenants)
             {
-                _logger.LogError(ex, $"Optimization failed for tenant {tenantId}");
+                try
+                {
+                    var weights = await _optimizer.CalculateWeightsAsync(tenantId);
+                    var key = $"portfolio:collections:weights:{tenantId}";
+                    var json = System.Text.Json.JsonSerializer.Serialize(weights);
+
+                    // 2. Atomic Overwrite with Redis Transaction
+                    var tran = db.CreateTransaction();
+                    _ = tran.KeyDeleteAsync(key);
+                    _ = tran.StringSetAsync(key, json, System.TimeSpan.FromDays(1));
+                    await tran.ExecuteAsync();
+                }
+                catch (System.Exception ex)
+                {
+                    _logger.LogError(ex, $"Optimization failed for tenant {tenantId}");
+                }
             }
+        }
+        finally
+        {
+            await db.LockReleaseAsync(lockKey, token);
         }
         _logger.LogInformation("ML Optimizer Job completed.");
     }

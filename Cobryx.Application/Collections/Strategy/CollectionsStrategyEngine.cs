@@ -19,16 +19,15 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
         var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
 
         // Epsilon-Greedy Exploration (10%)
-        var rand = new System.Random();
-        if (rand.NextDouble() < 0.10)
+        if (Random.Shared.NextDouble() < 0.10)
         {
             var actions = new[] { CollectionActionType.SmsReminder, CollectionActionType.EmailReminder, CollectionActionType.AgentCall };
             return new CollectionDecision
             {
                 Stage = CollectionStage.Contact,
-                Action = actions[rand.Next(actions.Length)],
+                Action = actions[Random.Shared.Next(actions.Length)],
                 PriorityScore = priorityScore,
-                NextActionAt = System.DateTime.UtcNow.AddDays(1)
+                NextActionAt = DateTime.UtcNow.AddDays(1)
             };
         }
 
