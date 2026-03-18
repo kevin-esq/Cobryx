@@ -1,4 +1,7 @@
+#pragma warning disable IDE0005
 using System.Reflection;
+using Polly;
+using Polly.Extensions.Http;
 
 using Cobryx.Application.Auth.Services;
 using Cobryx.Application.Common.Interfaces;
@@ -38,8 +41,14 @@ public static class DependencyInjection
 
         services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
         {
-            c.BaseAddress = new System.Uri("http://ml-service");
-        });
+            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+            c.BaseAddress = new System.Uri(url);
+        })
+        .AddTransientHttpErrorPolicy(p =>
+            p.WaitAndRetryAsync(3, retry =>
+                System.TimeSpan.FromMilliseconds(200 * retry)))
+        .AddTransientHttpErrorPolicy(p =>
+            p.CircuitBreakerAsync(5, System.TimeSpan.FromSeconds(30)));
 
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]

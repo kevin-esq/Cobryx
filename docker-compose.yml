@@ -10,11 +10,13 @@ services:
     env_file:
       - .env
     environment:
+      - ML_SERVICE_URL=http://ml-service
       - DOTNET_SYSTEM_NET_DISABLEIPV6=true
       - Security__ClamAV__Host=clamav
     depends_on:
       - clamav
       - redis
+      - ml-service
     restart: always
 
   clamav:
@@ -29,3 +31,9 @@ services:
     ports:
       - 6379:6379
     restart: always
+
+  ml-service:
+    build: ./ml-service
+    container_name: ml-service
+    ports:
+      - 8001:80

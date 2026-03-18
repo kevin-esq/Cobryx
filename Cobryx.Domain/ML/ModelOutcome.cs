@@ -6,6 +6,7 @@ public class ModelOutcome
     public Guid CustomerId { get; private set; }
 
     public decimal PredictedPD { get; private set; }
+    public string ModelVersion { get; private set; } = string.Empty;
     public bool Defaulted { get; private set; }
     public decimal AmountRecovered { get; private set; }
 
@@ -13,11 +14,12 @@ public class ModelOutcome
 
     private ModelOutcome() { }
 
-    public ModelOutcome(Guid customerId, decimal pd, bool defaulted, decimal recovered)
+    public ModelOutcome(Guid customerId, decimal pd, string modelVersion, bool defaulted, decimal recovered)
     {
         Id = Guid.NewGuid();
         CustomerId = customerId;
         PredictedPD = pd;
+        ModelVersion = modelVersion;
         Defaulted = defaulted;
         AmountRecovered = recovered;
         CreatedAt = DateTime.UtcNow;

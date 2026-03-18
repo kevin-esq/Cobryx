@@ -1,22 +1,33 @@
+#pragma warning disable IDE0005
+using System.Net.Http;
 using System.Net.Http.Json;
-using Cobryx.Domain.ML;
+using System.Threading.Tasks;
 
 namespace Cobryx.Application.ML;
 
-public class MlClient(HttpClient http)
+public class MlClient
 {
-    private readonly HttpClient _http = http;
+    private readonly HttpClient _http;
 
-    public async Task<decimal> PredictAsync(FeatureVector f)
+    public MlClient(HttpClient http)
     {
-        var res = await _http.PostAsJsonAsync("/predict", f);
-        var data = await res.Content.ReadFromJsonAsync<MlResponse>();
-
-        return data?.ProbabilityOfDefault ?? 0m;
+        _http = http;
     }
 
-    private class MlResponse
+    public async Task<(decimal pd, string version)> PredictAsync(object features)
     {
-        public decimal ProbabilityOfDefault { get; set; }
+        var response = await _http.PostAsJsonAsync("/predict", features);
+
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<MlResponse>();
+
+        return (result!.ProbabilityOfDefault, result.ModelVersion);
     }
+}
+
+public class MlResponse
+{
+    public decimal ProbabilityOfDefault { get; set; }
+    public string ModelVersion { get; set; } = "";
 }
