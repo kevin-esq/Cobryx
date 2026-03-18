@@ -1,84 +1,97 @@
-# Cobryx API
+# Cobryx — Fintech Operations Engine
 
-Cobryx is a modular, multi-tenant backend platform built with .NET, following Clean Architecture principles, explicit error contracts, and machine-readable API outcomes.
+Cobryx is a high-performance fintech backend designed for lending, analytics, and collections automation.
 
-## Architecture Overview
+---
 
-Cobryx follows Clean Architecture with strict separation of concerns:
+## 🧠 Architecture Overview
 
-- **Cobryx.Api**: HTTP layer, request/response contracts, error/outcome mapping
-- **Cobryx.Application**: Use cases, business workflows, validation
-- **Cobryx.Domain**: Core domain, entities, domain rules, domain exceptions
-- **Cobryx.Infrastructure**: Persistence, external services, security, background jobs
+The system is structured in layered architecture:
 
-## Design Principles
+Infrastructure → Financial Core → Domain Services → Analytics → Collections Engine → API
 
-The following rules are enforced across the codebase:
+---
 
-- The Application layer is HTTP-agnostic
-- Domain and Application layers never return human-readable messages
-- All errors are represented using stable error codes
-- All success responses expose explicit outcome codes
-- Exceptions are reserved for exceptional domain or infrastructure failures
-- Expected flows use Result-based control flow
+## ⚙ Core Concepts
 
-## API Contracts
+### 1. Financial Core
+- Double-entry ledger
+- Idempotent transactions
+- Event-driven architecture
 
-Cobryx uses explicit, machine-readable contracts for both errors and successful outcomes.
+### 2. Analytics Engine (Phase 7)
+- LoanBalanceSnapshots (event-driven)
+- PortfolioMetricsDaily (batch aggregation)
+- Redis read model (<10ms)
 
-- Errors are returned using stable error codes and structured metadata
-- Success responses return semantic outcome codes
-- No human-readable messages are exposed by the backend
+### 3. Collections Engine (Phase 8)
+- Strategy Engine (decision layer)
+- Priority Queue (Redis ZSET)
+- Assignment Engine (auto-distribution)
+- AI Optimizer (ML-lite feedback loop)
 
-Detailed documentation:
-- [Error Handling](docs/api-contract/errors.md)
-- [Validation Errors](docs/api-contract/validations.md)
-- [API Outcomes](docs/api-contract/outcomes.md)
+---
 
-## Observability & Monitoring
+## 🔄 Data Flow
 
-Cobryx is built for high observability, providing structured telemetry for every transaction.
+Snapshot → Strategy → CollectionCase → Redis Queue → Assignment → Action → Outcome → Optimizer → Strategy
 
-- [Observability Strategy](docs/observability.md): Technical details on metrics and outcome derivation.
-- [Dashboards & PromQL](docs/dashboards.md): Guide for creating Grafana dashboards and SLI/SLO alerts.
+---
 
-## Getting Started
+## 🚀 Performance Characteristics
 
-### Prerequisites
-- .NET SDK 8+
-- Docker & Docker Compose
+- Reads: O(1) via Redis
+- Aggregations: O(n) via SQL Window Functions
+- Assignment: O(log n) via Redis ZSET
 
-### Run locally
+---
 
-```bash
-docker-compose up -d
-dotnet run --project Cobryx.Api
-```
+## 🧱 Tech Stack
 
-## Testing
+- .NET 8 / EF Core
+- PostgreSQL
+- Redis
+- Hangfire
+
+---
+
+## 📚 Documentation
+
+See `/docs/architecture`:
+
+- `/docs/architecture/adr` → Architectural Decisions
+- `architecture.md`
+- `analytics-engine.md`
+- `collections-engine.md`
+
+---
+
+## 🧪 Testing
 
 ```bash
 dotnet test
 ```
 
-Integration tests validate:
+---
 
-* Error mapping and contracts
-* Session and tenant enforcement
-* Authentication and MFA flows
+## 🚀 Running
 
-## Contribution Guidelines
+```bash
+dotnet run
+```
 
-Before adding new features:
+---
 
-- Do not introduce human-readable messages in backend responses
-- Always use centralized error or outcome catalogs
-- Do not throw raw `Exception`
-- New validators must define explicit error codes
-- All new API endpoints must return an outcomeCode on success
+## 🧠 Philosophy
 
-## Non-goals
+Cobryx is designed as:
+- Event-driven
+- Read-optimized
+- Horizontally scalable
+- Self-improving (AI Optimizer)
 
-- The API does not handle localization
-- The API does not format user-facing messages
-- The API does not expose internal exception details
+---
+
+## 🏆 Goal
+
+Transform financial data into real-time operational intelligence.
