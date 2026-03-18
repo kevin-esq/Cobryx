@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+from typing import Annotated
 from app.schemas import FeatureVector, PredictionResponse
 from app.model import joblib
 import numpy as np
@@ -8,9 +9,9 @@ app = FastAPI()
 def load_safe(filename):
     try:
         return joblib.load(filename)
-    except:
+    except Exception:
         class Dummy:
-            def predict_proba(self, X):
+            def predict_proba(self, _):
                 return [[0.0, 0.45]]
         return Dummy()
 
@@ -24,7 +25,7 @@ def health():
     return {"status": "ok"}
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(features: FeatureVector, model: str = Query("xgb_v1")):
+def predict(features: FeatureVector, model: Annotated[str, Query()] = "xgb_v1"):
     pipeline = models.get(model, models["xgb_v1"])
 
     X = np.array([[
