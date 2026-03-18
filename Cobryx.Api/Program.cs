@@ -332,6 +332,11 @@ try
             job => job.RunAsync(CancellationToken.None),
             Cron.Hourly);
 
+        RecurringJob.AddOrUpdate<Cobryx.Application.ML.Jobs.DatasetExporterJob>(
+            "ml-dataset-export",
+            job => job.RunAsync(),
+            Cron.Daily);
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),
