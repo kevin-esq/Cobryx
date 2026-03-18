@@ -27,5 +27,9 @@ public class LoanBalanceSnapshotConfiguration : IEntityTypeConfiguration<LoanBal
 
         builder.HasIndex(x => new { x.TenantId, x.RecordedAt })
                .HasDatabaseName("idx_snapshot_tenant_recorded");
+
+        builder.HasIndex(x => x.RecordedAt)
+               .IsDescending()
+               .HasDatabaseName("idx_snapshot_recent");
     }
 }

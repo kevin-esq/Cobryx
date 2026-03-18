@@ -36,7 +36,7 @@ public static class DependencyInjection
                 (new PaymentDelayRiskFactor(), 0.2m),
                 (new TrendRiskFactor(), 0.2m)
             }));
-            
+
         services.AddScoped<Cobryx.Application.Risk.Jobs.EarlyWarningJob>();
 
         services.AddValidatorsFromAssembly(assembly);

@@ -4,6 +4,7 @@ public class LatestLoanSnapshot
 {
     public Guid LoanId { get; set; }
     public Guid TenantId { get; set; }
+    public Guid CustomerId { get; set; }
     public decimal PrincipalBalance { get; set; }
     public decimal InterestBalance { get; set; }
     public decimal LateFeeBalance { get; set; }

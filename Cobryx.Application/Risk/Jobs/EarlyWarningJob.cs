@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Analytics.Risk;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Risk.Jobs;
 
@@ -8,13 +9,16 @@ public class EarlyWarningJob
 {
     private readonly ICobryxDbContext _db;
     private readonly ProbabilityOfDefaultCalculator _pdCalculator;
+    private readonly ILogger<EarlyWarningJob> _logger;
 
     public EarlyWarningJob(
         ICobryxDbContext db,
-        ProbabilityOfDefaultCalculator pdCalculator)
+        ProbabilityOfDefaultCalculator pdCalculator,
+        ILogger<EarlyWarningJob> logger)
     {
         _db = db;
         _pdCalculator = pdCalculator;
+        _logger = logger;
     }
 
     public async Task RunAsync(CancellationToken ct = default)
@@ -22,20 +26,23 @@ public class EarlyWarningJob
         var sql = @"
 WITH latest_snapshots AS (
     SELECT
-        ""TenantId"",
-        ""LoanId"",
-        ""PrincipalBalance"",
-        ""InterestBalance"",
-        ""LateFeeBalance"",
-        ""DaysPastDue"",
+        s.""TenantId"",
+        s.""LoanId"",
+        l.""CustomerId"",
+        s.""PrincipalBalance"",
+        s.""InterestBalance"",
+        s.""LateFeeBalance"",
+        s.""DaysPastDue"",
         ROW_NUMBER() OVER (
-            PARTITION BY ""LoanId""
-            ORDER BY ""RecordedAt"" DESC
+            PARTITION BY s.""LoanId""
+            ORDER BY s.""RecordedAt"" DESC
         ) AS rn
-    FROM ""LoanBalanceSnapshots""
-    WHERE ""RecordedAt"" >= NOW() - INTERVAL '1 day'
+    FROM ""LoanBalanceSnapshots"" s
+    INNER JOIN ""Loans"" l ON s.""LoanId"" = l.""Id""
+    WHERE s.""RecordedAt"" >= NOW() - INTERVAL '1 day'
+      AND s.""DaysPastDue"" <= 0
 )
-SELECT ""TenantId"", ""LoanId"", ""PrincipalBalance"", ""InterestBalance"", ""LateFeeBalance"", ""DaysPastDue""
+SELECT ""TenantId"", ""LoanId"", ""CustomerId"", ""PrincipalBalance"", ""InterestBalance"", ""LateFeeBalance"", ""DaysPastDue""
 FROM latest_snapshots
 WHERE rn = 1;";
 
@@ -44,46 +51,51 @@ WHERE rn = 1;";
             .ToListAsync(ct);
 
         var events = new List<RiskEvent>();
-        
+        var threshold = 0.6m;
+        var pdCache = new Dictionary<Guid, decimal>();
+
         foreach (var s in snapshots)
         {
-            // skip already delinquent → collections handles it
             if (s.DaysPastDue > 0) continue;
 
-            var context = new RiskContext
+            if (!pdCache.TryGetValue(s.LoanId, out var currentPD))
             {
-                DaysPastDue = s.DaysPastDue,
-                Outstanding = s.Outstanding,
-                CreditLimit = s.Outstanding == 0 ? 1 : s.Outstanding, // safe fallback
-                Utilization = 1m,
-                PaymentDelayDays = 0,
-                PreviousPaymentDelayDays = 0,
-                PreviousUtilization = 0
-            };
+                var context = new RiskContext
+                {
+                    DaysPastDue = s.DaysPastDue,
+                    Outstanding = s.Outstanding,
+                    CreditLimit = s.Outstanding == 0 ? 1m : (s.Outstanding * 2m), // safe fallback 200% util
+                    Utilization = 1m, // the factor eval internally will compute it based on CreditLimit / Outstanding
+                    PaymentDelayDays = 0,
+                    PreviousPaymentDelayDays = 0,
+                    PreviousUtilization = 0
+                };
 
-            var currentPD = _pdCalculator.Calculate(context);
-            
-            // Dummy previous PD logic to satisfy deterioration (fetch real previous PD later)
-            var previousPD = currentPD * 0.9m; 
+                currentPD = _pdCalculator.Calculate(context);
+                pdCache[s.LoanId] = currentPD;
+            }
+
+            var previousPD = currentPD * 0.9m; // stub for true historical pd
             var deltaUtilization = 0m; 
             var deltaPaymentDelay = 0m;
 
-            var deterioration = (currentPD - previousPD) + deltaUtilization + (deltaPaymentDelay / 30m);
+            var rawDeterioration = (currentPD - previousPD) + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
+            var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
 
-            // thresholds configurable per tenant later
-            if (currentPD < 0.6m && deterioration < 0.1m) continue;
+            if (currentPD < threshold && deterioration < 0.1m) continue;
 
-            // Evitar duplicados recientes
             var exists = await _db.RiskEvents.AnyAsync(x =>
-                x.CustomerId == s.TenantId && // Note: mapping Loan -> Customer later, using TenantId per snippet
+                x.CustomerId == s.CustomerId &&
                 x.EventType == RiskEventType.BalanceIncrease &&
                 x.OccurredAt >= DateTime.UtcNow.AddHours(-6),
                 ct);
 
             if (exists) continue;
 
+            _logger.LogInformation("EarlyWarning triggered for Loan {LoanId} with PD {PD} and Deterioration {Deterioration}", s.LoanId, currentPD, deterioration);
+
             var riskEvent = new RiskEvent(
-                s.TenantId,
+                s.CustomerId, // Fixed CustomerId matching!
                 RiskEventType.BalanceIncrease,
                 currentPD
             );
@@ -91,11 +103,14 @@ WHERE rn = 1;";
             events.Add(riskEvent);
         }
 
-        // Batch Save
         if (events.Count > 0)
         {
+            await using var tx = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+
             _db.RiskEvents.AddRange(events);
             await _db.SaveChangesAsync(ct);
+
+            await tx.CommitAsync(ct);
         }
     }
 }
