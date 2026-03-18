@@ -66,6 +66,7 @@ public interface ICobryxDbContext
     // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles { get; }
     public DbSet<RiskEvent> RiskEvents { get; }
+    public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
