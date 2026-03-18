@@ -87,7 +87,8 @@ public class NotificationsController : CobryxBaseController
         var notification = await dbContext.Set<Notification>()
             .FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenantId);
 
-        if (notification == null) return NotFound();
+        if (notification == null)
+            return NotFound();
 
         notification.MarkAsRead();
         await _unitOfWork.SaveChangesAsync();

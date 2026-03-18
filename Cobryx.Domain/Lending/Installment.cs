@@ -16,7 +16,7 @@ public class Installment : BaseEntity
     public int InstallmentNumber => Number;
     public DateTime DueDate { get; private set; }
     public DateTime? PaidAt { get; private set; }
-    
+
     public virtual BaseLendingInstrument Instrument { get; private set; } = null!;
     public Loan Loan => (Instrument as Loan)!;
     public Money TotalAmount { get; private set; }

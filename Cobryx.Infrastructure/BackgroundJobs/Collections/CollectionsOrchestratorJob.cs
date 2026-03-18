@@ -1,11 +1,14 @@
 using System.Text.Json;
+
 using Cobryx.Application.Collections.Assignment;
 using Cobryx.Application.Collections.Models;
 using Cobryx.Application.Collections.Strategy;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Collections;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Collections;
@@ -62,18 +65,19 @@ public class CollectionsOrchestratorJob
                 var db = _redis.GetDatabase();
                 var weightsJson = await db.StringGetAsync($"portfolio:collections:weights:{tenantId}");
                 var weights = new Cobryx.Application.Collections.Optimizer.StrategyWeights();
-                if (weightsJson.HasValue) 
+                if (weightsJson.HasValue)
                 {
                     var deserialized = System.Text.Json.JsonSerializer.Deserialize<Cobryx.Application.Collections.Optimizer.StrategyWeights>(weightsJson!);
-                    if (deserialized != null) weights = deserialized;
+                    if (deserialized != null)
+                        weights = deserialized;
                 }
 
                 // 1. STRATEGY EVALUATION
                 var decision = _strategyEngine.Evaluate(
-                    snapshot.DaysPastDue, 
-                    snapshot.Outstanding, 
-                    riskProfile, 
-                    behaviorProfile, 
+                    snapshot.DaysPastDue,
+                    snapshot.Outstanding,
+                    riskProfile,
+                    behaviorProfile,
                     trend,
                     weights);
 

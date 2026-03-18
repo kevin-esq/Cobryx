@@ -34,7 +34,8 @@ public class SyncSubscriptionHandler : IRequestHandler<SyncSubscriptionCommand, 
     public async Task<Result> Handle(SyncSubscriptionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         _logger.LogInformation("Initiating manual Stripe sync for Tenant {TenantId}", tenantId);
 

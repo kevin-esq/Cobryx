@@ -179,7 +179,8 @@ public class FinancialPostingEngine(ICobryxDbContext context, ILogger<FinancialP
         var accounts = await GetTenantSystemAccountsAsync(loan.TenantId, ct);
         var totalOutstanding = loan.CurrentPrincipalBalance + loan.CurrentInterestBalance + loan.CurrentLateFeeBalance;
 
-        if (totalOutstanding <= 0) return Guid.Empty;
+        if (totalOutstanding <= 0)
+            return Guid.Empty;
 
         var transaction = new LedgerTransaction(
             loan.TenantId,

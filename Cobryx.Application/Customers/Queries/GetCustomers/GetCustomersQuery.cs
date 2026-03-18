@@ -25,7 +25,8 @@ public class GetCustomersHandler(ICustomerRepository customerRepository, ITenant
     public async Task<Result<PaginatedList<CustomerDto>>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<PaginatedList<CustomerDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<PaginatedList<CustomerDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var query = _customerRepository.Query()
             .AsNoTracking()

@@ -1,6 +1,7 @@
 using Cobryx.Application.Collections.Optimizer;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Collections;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +28,8 @@ public class CollectionOptimizer : ICollectionOptimizer
 
         var weights = new StrategyWeights();
 
-        if (!outcomes.Any()) return weights; // Use defaults if no data
+        if (!outcomes.Any())
+            return weights; // Use defaults if no data
 
         // Calculate success rates dynamically
         var smsSuccess = CalculateSuccessRate(outcomes, CollectionActionType.SmsReminder);
@@ -49,7 +51,8 @@ public class CollectionOptimizer : ICollectionOptimizer
     private decimal CalculateSuccessRate(System.Collections.Generic.List<CollectionOutcome> outcomes, CollectionActionType type)
     {
         var typeOutcomes = outcomes.Where(o => o.ActionType == type).ToList();
-        if (!typeOutcomes.Any()) return 0.5m; // Assume 50% success base line if no data
+        if (!typeOutcomes.Any())
+            return 0.5m; // Assume 50% success base line if no data
         return (decimal)typeOutcomes.Count(o => o.WasSuccessful) / typeOutcomes.Count;
     }
 }

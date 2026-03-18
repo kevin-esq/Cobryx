@@ -106,12 +106,17 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
             int score = 0;
 
             var daysSinceLastActivity = (now - tenant.LastActivityAt).TotalDays;
-            if (daysSinceLastActivity < 1) score += 40;
-            else if (daysSinceLastActivity < 3) score += 20;
-            else if (daysSinceLastActivity < 7) score += 10;
+            if (daysSinceLastActivity < 1)
+                score += 40;
+            else if (daysSinceLastActivity < 3)
+                score += 20;
+            else if (daysSinceLastActivity < 7)
+                score += 10;
 
-            if (tenant.FirstWowAt != null) score += 30;
-            if (tenant.ConvertedToPaidAt != null) score += 30;
+            if (tenant.FirstWowAt != null)
+                score += 30;
+            if (tenant.ConvertedToPaidAt != null)
+                score += 30;
 
             tenant.UpdateEngagement(score);
         }

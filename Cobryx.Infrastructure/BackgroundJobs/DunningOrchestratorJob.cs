@@ -51,7 +51,8 @@ public class DunningOrchestratorJob
             .Where(l => l.Loan == null || (l.Loan.Status != LoanStatus.Disputed && l.Loan.Status != LoanStatus.Closed))
             .ToListAsync(ct);
 
-        if (pendingRecoveries.Count == 0) return;
+        if (pendingRecoveries.Count == 0)
+            return;
 
         _logger.LogInformation("Dunning Engine: Processing {Count} pending recoveries.", pendingRecoveries.Count);
 

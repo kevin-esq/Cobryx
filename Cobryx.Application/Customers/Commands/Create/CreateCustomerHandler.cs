@@ -16,7 +16,8 @@ public class CreateCustomerHandler(ICustomerRepository customerRepository, ITena
     public async Task<Result<Guid>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
-        if (tenantId == Guid.Empty) throw new TenantContextMissingException();
+        if (tenantId == Guid.Empty)
+            throw new TenantContextMissingException();
 
         var existing = await _customerRepository.GetByPhoneAsync(tenantId, request.Phone, cancellationToken);
         if (existing != null)

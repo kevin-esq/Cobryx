@@ -89,7 +89,8 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         if (allocation.InvoiceId != Id)
             throw new DomainException(DomainErrorCode.Invoicing.InvoiceAllocationMismatch);
 
-        if (allocation.IsReversed) return;
+        if (allocation.IsReversed)
+            return;
 
         if (allocation.Amount.Currency != Total.Currency)
             throw new DomainException(DomainErrorCode.Invoicing.InvoiceCurrencyMismatch);
@@ -144,8 +145,10 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Issue()
     {
-        if (Status != InvoiceStatus.Draft) throw new DomainException(DomainErrorCode.Invoicing.InvoiceNotDraft);
-        if (_items.Count == 0) throw new DomainException(DomainErrorCode.Invoicing.InvoiceNoItems);
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceNotDraft);
+        if (_items.Count == 0)
+            throw new DomainException(DomainErrorCode.Invoicing.InvoiceNoItems);
 
         Status = InvoiceStatus.Issued;
         AddDomainEvent(new InvoiceIssuedEvent(Id, TenantId, CustomerId, DateTime.UtcNow));

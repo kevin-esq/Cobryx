@@ -42,7 +42,8 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var conn = db.Database.GetDbConnection();
-        if (conn.State == System.Data.ConnectionState.Open) await conn.CloseAsync();
+        if (conn.State == System.Data.ConnectionState.Open)
+            await conn.CloseAsync();
         await conn.OpenAsync();
 
         await db.Database.EnsureCreatedAsync();

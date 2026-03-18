@@ -31,11 +31,13 @@ public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionComma
     public async Task<Result> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
 
-        if (subscription == null) return Result.Failure(DomainErrorCode.Subscription.NotFound);
+        if (subscription == null)
+            return Result.Failure(DomainErrorCode.Subscription.NotFound);
 
         if (subscription.Status == SubscriptionStatus.Cancelled)
             return Result.Failure(DomainErrorCode.Subscription.AlreadyCancelled);

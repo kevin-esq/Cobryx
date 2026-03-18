@@ -33,15 +33,19 @@ public class Coupon : BaseEntity, IAggregateRoot, ITenantEntity
 
     public bool IsValid()
     {
-        if (!IsActive) return false;
-        if (ValidUntil.HasValue && ValidUntil.Value < DateTime.UtcNow) return false;
-        if (MaxRedemptions.HasValue && TimesRedeemed >= MaxRedemptions.Value) return false;
+        if (!IsActive)
+            return false;
+        if (ValidUntil.HasValue && ValidUntil.Value < DateTime.UtcNow)
+            return false;
+        if (MaxRedemptions.HasValue && TimesRedeemed >= MaxRedemptions.Value)
+            return false;
         return true;
     }
 
     public void Redeem()
     {
-        if (!IsValid()) throw new DomainException(DomainErrorCode.Marketing.InvalidCouponGeneral);
+        if (!IsValid())
+            throw new DomainException(DomainErrorCode.Marketing.InvalidCouponGeneral);
         TimesRedeemed++;
         UpdateTimestamp();
     }

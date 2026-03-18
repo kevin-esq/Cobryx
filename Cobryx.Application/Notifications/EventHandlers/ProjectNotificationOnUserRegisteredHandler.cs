@@ -28,7 +28,8 @@ public class ProjectNotificationOnUserRegisteredHandler : INotificationHandler<D
                          n.RelatedEntityId == domainEvent.UserId.ToString() &&
                          n.Type == NotificationType.Information, cancellationToken);
 
-        if (exists) return;
+        if (exists)
+            return;
 
         var userNotification = new Notification(
             domainEvent.TenantId,

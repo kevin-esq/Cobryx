@@ -1,4 +1,5 @@
 using Cobryx.Domain.Collections;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

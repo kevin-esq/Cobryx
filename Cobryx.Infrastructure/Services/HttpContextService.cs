@@ -17,7 +17,8 @@ public class HttpContextService : IHttpContextService
     public string GetIpAddress()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return CobryxDefaults.FallbackIpAddress;
+        if (context == null)
+            return CobryxDefaults.FallbackIpAddress;
 
         var ipAddress = context.Connection.RemoteIpAddress?.ToString();
 
@@ -32,7 +33,8 @@ public class HttpContextService : IHttpContextService
     public string GetUserAgent()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return CobryxDefaults.UnknownValue;
+        if (context == null)
+            return CobryxDefaults.UnknownValue;
 
         var userAgent = context.Request.Headers.UserAgent.ToString();
         return string.IsNullOrWhiteSpace(userAgent) ? CobryxDefaults.UnknownValue : userAgent;

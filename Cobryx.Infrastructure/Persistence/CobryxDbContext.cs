@@ -4,14 +4,14 @@ using System.Text.Json;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Analytics;
+using Cobryx.Domain.Collections;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Payments;
 using Cobryx.Domain.Shared;
-using Cobryx.Domain.Analytics;
-using Cobryx.Domain.Collections;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -33,7 +33,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         var isSqlite = Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
-        if (isSqlite) await _sqliteLock.WaitAsync(cancellationToken);
+        if (isSqlite)
+            await _sqliteLock.WaitAsync(cancellationToken);
 
         try
         {
@@ -59,7 +60,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
         {
             var builder = new System.Text.StringBuilder();
             builder.AppendLine($"--- DbUpdateException: {ex.Message} ---");
-            if (ex.InnerException != null) builder.AppendLine($"Inner: {ex.InnerException.Message}");
+            if (ex.InnerException != null)
+                builder.AppendLine($"Inner: {ex.InnerException.Message}");
 
             foreach (var entry in ChangeTracker.Entries())
             {
@@ -76,7 +78,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
         }
         finally
         {
-            if (isSqlite) _sqliteLock.Release();
+            if (isSqlite)
+                _sqliteLock.Release();
         }
     }
 
@@ -86,7 +89,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
             .Where(e => e.State == EntityState.Added)
             .ToList();
 
-        if (entries.Count == 0) return;
+        if (entries.Count == 0)
+            return;
 
         var lastSequence = await LedgerEntries.IgnoreQueryFilters().AnyAsync(ct)
             ? await LedgerEntries.IgnoreQueryFilters().MaxAsync(x => x.JournalSequenceId, ct)

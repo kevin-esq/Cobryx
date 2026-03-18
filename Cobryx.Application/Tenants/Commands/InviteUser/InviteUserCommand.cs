@@ -65,7 +65,8 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
     public async Task<Result<Guid>> Handle(InviteUserCommand request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         // 1. Check if user already exists
         if (await _userRepository.ExistsByEmailAsync(request.Email, ct))

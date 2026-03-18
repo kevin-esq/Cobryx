@@ -41,7 +41,8 @@ public class FinancialStateEngine
             .Include(l => l.Installments)
             .FirstOrDefaultAsync(l => l.Id == loanId, ct);
 
-        if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff) return;
+        if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff)
+            return;
 
         var now = _clock.UtcNow;
 
@@ -126,7 +127,8 @@ public class FinancialStateEngine
             .Include(l => l.Installments)
             .FirstOrDefaultAsync(l => l.Id == loanId, ct);
 
-        if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff) return;
+        if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff)
+            return;
 
         // 1. BANK-GRADE: Guard Rails
         if (loan.Status == LoanStatus.Closed)
@@ -176,7 +178,8 @@ public class FinancialStateEngine
              .Include(l => l.Installments)
              .FirstOrDefaultAsync(l => l.Id == loanId, ct);
 
-        if (loan == null || loan.FinancialStatus != FinancialStatus.ChargedOff) return;
+        if (loan == null || loan.FinancialStatus != FinancialStatus.ChargedOff)
+            return;
 
         var oldStatus = loan.FinancialStatus;
 

@@ -25,7 +25,8 @@ public class RevokeInvitationHandler : IRequestHandler<RevokeInvitationCommand, 
     public async Task<Result> Handle(RevokeInvitationCommand request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var dbContext = (DbContext)_unitOfWork;
         var invitation = await dbContext.Set<TenantInvitation>()

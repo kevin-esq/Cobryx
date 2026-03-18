@@ -77,7 +77,8 @@ public class DocumentMetadata : BaseEntity, ITenantEntity
     /// </summary>
     public void ResetForRetry()
     {
-        if (ScanStatus != ScanStatus.ScanFailed) return;
+        if (ScanStatus != ScanStatus.ScanFailed)
+            return;
         ScanStatus = ScanStatus.PendingScan;
         ScanFailureReason = null;
     }

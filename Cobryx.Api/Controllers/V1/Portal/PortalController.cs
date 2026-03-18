@@ -36,7 +36,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
         var (customerId, tenantId) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new GetCustomerPortalSummaryQuery(customerId, tenantId), ct);
         return HandleResult(result);
@@ -51,7 +52,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> GetStatement(CancellationToken ct)
     {
         var (customerId, tenantId) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new GetCustomerStatementQuery(customerId, tenantId), ct);
         return HandleResult(result);
@@ -65,7 +67,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> GetPaymentMethods(CancellationToken ct)
     {
         var (customerId, _) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new GetCustomerPaymentMethodsQuery(customerId), ct);
         return HandleResult(result);
@@ -76,7 +79,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> AttachPaymentMethod([FromBody] AttachPaymentMethodRequest request, CancellationToken ct)
     {
         var (customerId, _) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new AttachPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
         return HandleResult(result);
@@ -90,7 +94,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> SetDefaultPaymentMethod([FromBody] SetDefaultPaymentMethodRequest request, CancellationToken ct)
     {
         var (customerId, _) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new SetDefaultPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
         return HandleResult(result);
@@ -104,7 +109,8 @@ public class PortalController : CobryxBaseController
     public async Task<IActionResult> ToggleAutoPay([FromBody] ToggleAutoPayRequest request, CancellationToken ct)
     {
         var (customerId, _) = GetCustomerContext();
-        if (customerId == Guid.Empty) return Forbid();
+        if (customerId == Guid.Empty)
+            return Forbid();
 
         var result = await Sender.Send(new ToggleAutoPayCommand(customerId, request.Enabled), ct);
         return HandleResult(result);

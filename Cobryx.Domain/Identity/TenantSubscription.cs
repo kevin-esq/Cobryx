@@ -73,7 +73,8 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     /// </summary>
     public void ActivateFromPayment(DateTime now)
     {
-        if (Status == SubscriptionStatus.Active) return;
+        if (Status == SubscriptionStatus.Active)
+            return;
 
         Status = SubscriptionStatus.Active;
         TrialEndsAtUtc = null;
@@ -90,7 +91,8 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     /// </summary>
     public void HandlePaymentFailed(DateTime now)
     {
-        if (Status == SubscriptionStatus.PastDue) return;
+        if (Status == SubscriptionStatus.PastDue)
+            return;
 
         Status = SubscriptionStatus.PastDue;
         AddDomainEvent(new SubscriptionPaymentFailedEvent(TenantId, PlanId, now));
@@ -117,7 +119,8 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     /// </summary>
     public void ExecuteCancellation(DateTime gracePeriodEnd, DateTime now, CancellationReason? reason = null, string? feedback = null)
     {
-        if (Status == SubscriptionStatus.Cancelled) return;
+        if (Status == SubscriptionStatus.Cancelled)
+            return;
 
         Status = SubscriptionStatus.Cancelled;
         CancelledAtUtc = now;

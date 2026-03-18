@@ -28,11 +28,13 @@ public class EventShadowReplayEngine(
 
     public async Task ConsumeAsync(OutboxMessage @event, CancellationToken ct = default)
     {
-        if (@event.LedgerSequenceId == null) return;
+        if (@event.LedgerSequenceId == null)
+            return;
         var alreadyProcessed = await _context.ProcessedEvents
             .AnyAsync(p => p.EventId == @event.Id && p.ConsumerName == Name, ct);
 
-        if (alreadyProcessed) return;
+        if (alreadyProcessed)
+            return;
 
         if (@event.Type == FinancialEventType.PaymentPosted.ToString())
         {
@@ -52,7 +54,8 @@ public class EventShadowReplayEngine(
     private async Task HandlePaymentAsync(OutboxMessage @event, CancellationToken ct)
     {
         var split = JsonSerializer.Deserialize<PaymentSplitPayload>(@event.Payload);
-        if (split == null) return;
+        if (split == null)
+            return;
 
         var accounts = await GetTenantSystemAccountsAsync(@event.TenantId, ct);
 
@@ -75,7 +78,8 @@ public class EventShadowReplayEngine(
     private async Task HandleWriteOffAsync(OutboxMessage @event, CancellationToken ct)
     {
         var payload = JsonSerializer.Deserialize<WriteOffPayload>(@event.Payload);
-        if (payload == null) return;
+        if (payload == null)
+            return;
 
         var accounts = await GetTenantSystemAccountsAsync(@event.TenantId, ct);
 

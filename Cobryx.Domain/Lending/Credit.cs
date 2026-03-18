@@ -29,9 +29,12 @@ public class Credit : BaseLendingInstrument
         int graceDays = 0,
         Guid? productId = null) : base(tenantId, customerId, principal, interestRate, interestType, frequency, installmentsCount, graceDays)
     {
-        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
-        if (customerId == Guid.Empty) throw new DomainException(DomainErrorCode.Customer.CustomerIdRequired);
-        if (installmentsCount <= 0) throw new DomainException(DomainErrorCode.Credits.InvalidInstallmentsCount);
+        if (tenantId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (customerId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.Customer.CustomerIdRequired);
+        if (installmentsCount <= 0)
+            throw new DomainException(DomainErrorCode.Credits.InvalidInstallmentsCount);
 
         ProductId = productId;
         StartDate = DateTime.UtcNow;
@@ -42,15 +45,19 @@ public class Credit : BaseLendingInstrument
 
     public void ApplyPayment(Guid paymentId, Money amount)
     {
-        if (amount.Amount <= 0) return;
-        if (Status == CreditStatus.Paid) throw new DomainException(DomainErrorCode.Credits.CreditAlreadyPaid);
+        if (amount.Amount <= 0)
+            return;
+        if (Status == CreditStatus.Paid)
+            throw new DomainException(DomainErrorCode.Credits.CreditAlreadyPaid);
 
         decimal remainingAmount = amount.Amount;
 
         foreach (var installment in _installments.OrderBy(i => i.Number))
         {
-            if (remainingAmount <= 0) break;
-            if (installment.Status == InstallmentStatus.Paid) continue;
+            if (remainingAmount <= 0)
+                break;
+            if (installment.Status == InstallmentStatus.Paid)
+                continue;
 
             remainingAmount = installment.ApplyPayment(remainingAmount);
         }

@@ -146,7 +146,8 @@ public class BankReconciliationEngine(
     private async Task<int> ApplyPressureBackoffAsync(int currentTotalJitterMs, CancellationToken ct)
     {
         const int HardCapMs = 10_000; // SRE SLA Guard
-        if (currentTotalJitterMs >= HardCapMs) return 0;
+        if (currentTotalJitterMs >= HardCapMs)
+            return 0;
 
         var wraparoundRisk = await _diagnosticService.GetWraparoundRiskRatioAsync(ct);
         var deadTupleRatio = await _diagnosticService.GetLedgerDeadTupleRatioAsync(ct);

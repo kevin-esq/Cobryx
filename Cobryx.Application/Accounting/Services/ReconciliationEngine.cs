@@ -51,7 +51,8 @@ public class ReconciliationEngine(
         while (hasMore)
         {
             var intents = await _stripeService.ListPaymentIntentsAsync(from, to, stripeAccountId, lastCursor, ct);
-            if (intents.Count == 0) break;
+            if (intents.Count == 0)
+                break;
 
             foreach (var intent in intents.Where(i => i.Status == "succeeded"))
             {
@@ -169,7 +170,8 @@ public class ReconciliationEngine(
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == "1010", ct);
 
-        if (cashAccount == null) return 0;
+        if (cashAccount == null)
+            return 0;
 
         return await _dbContext.LedgerEntries
             .AsNoTracking()
@@ -187,7 +189,8 @@ public class ReconciliationEngine(
             .AsNoTracking()
             .AnyAsync(t => t.TenantId == tenantId && (t.ReferenceId == referencePay || t.ReferenceId == referenceRec), ct);
 
-        if (ledgerExists) return null; // In-sync
+        if (ledgerExists)
+            return null; // In-sync
 
         // 2. Apply Timing Tolerance (Soft Drift if < 15 mins)
         var age = DateTime.UtcNow - intent.Created;
@@ -226,7 +229,8 @@ public class ReconciliationEngine(
         while (hasMore)
         {
             var transactions = await _stripeService.ListBalanceTransactionsAsync(from, to, stripeAccountId, lastCursor, ct);
-            if (transactions.Count == 0) break;
+            if (transactions.Count == 0)
+                break;
 
             foreach (var tx in transactions)
             {
@@ -259,7 +263,8 @@ public class ReconciliationEngine(
             _ => null
         };
 
-        if (referenceId == null) return null; // Only interested in institutional movements
+        if (referenceId == null)
+            return null; // Only interested in institutional movements
 
         // 2. Check Ledger Existence
         var ledgerTx = await _dbContext.LedgerTransactions

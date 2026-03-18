@@ -26,7 +26,8 @@ public class GetPaymentMethodsHandler : IRequestHandler<GetPaymentMethodsQuery, 
     public async Task<Result<IReadOnlyList<PaymentMethodDto>>> Handle(GetPaymentMethodsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<IReadOnlyList<PaymentMethodDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<IReadOnlyList<PaymentMethodDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var methods = await _paymentMethodRepository.GetAllActiveAsync(tenantId.Value, cancellationToken);
 

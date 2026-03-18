@@ -1,9 +1,9 @@
 using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Collections;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Payments;
-using Cobryx.Domain.Collections;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;

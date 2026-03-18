@@ -191,10 +191,12 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
     public async Task<Result> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (!userId.HasValue) return Result.Failure(DomainErrorCode.Auth.NotAuthenticated);
+        if (!userId.HasValue)
+            return Result.Failure(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure(DomainErrorCode.User.NotFound);
+        if (user == null)
+            return Result.Failure(DomainErrorCode.User.NotFound);
 
         if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {

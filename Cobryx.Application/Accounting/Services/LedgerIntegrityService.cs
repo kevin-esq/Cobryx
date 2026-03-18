@@ -1,9 +1,11 @@
-using Cobryx.Domain.Accounting;
 using System.Security.Cryptography;
 using System.Text;
+
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Domain.Identity;
 using Cobryx.Application.Common.Observability;
+using Cobryx.Domain.Accounting;
+using Cobryx.Domain.Identity;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -217,7 +219,8 @@ public class LedgerIntegrityService(
         var snapshot = await _dbContext.AccountBalanceSnapshots
             .FirstOrDefaultAsync(s => s.Id == snapshotId, ct);
 
-        if (snapshot == null) return false;
+        if (snapshot == null)
+            return false;
 
         _logger.LogInformation("Verifying Snapshot {SnapshotId} for Account {AccountId} @ Seq {Seq}",
             snapshotId, snapshot.AccountId, snapshot.JournalSequenceId);
@@ -254,7 +257,8 @@ public class LedgerIntegrityService(
         _logger.LogWarning("Attempting to trip circuit breaker for Tenant {TenantId}", tenantId);
         Tenant? tenant = null;
 
-        if (_dbContext == null) throw new InvalidOperationException("DbContext is null in TripCircuitBreakerAsync");
+        if (_dbContext == null)
+            throw new InvalidOperationException("DbContext is null in TripCircuitBreakerAsync");
 
         if (_dbContext is DbContext db)
         {

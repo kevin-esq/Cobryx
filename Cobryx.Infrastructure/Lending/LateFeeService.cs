@@ -18,13 +18,15 @@ public class LateFeeService : ILateFeeService
     public decimal AssessLateFee(Loan loan, DateTime date)
     {
         var policy = loan.Agreement?.LateFeePolicy;
-        if (policy == null || !policy.IsActive) return 0;
+        if (policy == null || !policy.IsActive)
+            return 0;
 
         // Ensure DPD is calculated for the target accrual date
         loan.UpdateFinancialRiskStatus(date);
 
         var dpd = loan.FinancialDaysPastDue;
-        if (dpd <= policy.GracePeriodDays) return 0;
+        if (dpd <= policy.GracePeriodDays)
+            return 0;
 
         // Institutional rule: 
         // Fixed: apply only on the exact day grace period ends (dpd == grace + 1)

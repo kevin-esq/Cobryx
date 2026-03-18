@@ -42,7 +42,8 @@ public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, Result<MyP
             .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
-        if (user == null) return Result.Failure<MyProfileDto>(DomainErrorCode.User.NotFound);
+        if (user == null)
+            return Result.Failure<MyProfileDto>(DomainErrorCode.User.NotFound);
 
         return Result.Success(new MyProfileDto(
             user.Id,

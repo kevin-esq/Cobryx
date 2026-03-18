@@ -29,12 +29,14 @@ public class GetSubscriptionIntelligenceHandler : IRequestHandler<GetSubscriptio
     public async Task<Result<SubscriptionIntelligenceDto>> Handle(GetSubscriptionIntelligenceQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<SubscriptionIntelligenceDto>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<SubscriptionIntelligenceDto>(DomainErrorCode.Tenant.ContextMissing);
 
         var usage = await _usageMeteringService.GetUsageSnapshotAsync(tenantId.Value, cancellationToken);
         var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
 
-        if (subscription == null) return Result.Failure<SubscriptionIntelligenceDto>(DomainErrorCode.Subscription.NotFound);
+        if (subscription == null)
+            return Result.Failure<SubscriptionIntelligenceDto>(DomainErrorCode.Subscription.NotFound);
 
         var usageMetrics = new Dictionary<string, SubscriptionResourceUsageDto>
         {

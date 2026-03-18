@@ -81,7 +81,8 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void AddAllocation(Guid invoiceId, Money amount)
     {
-        if (amount.Amount <= 0) throw new DomainException(DomainErrorCode.Invoicing.InvalidAllocationAmount);
+        if (amount.Amount <= 0)
+            throw new DomainException(DomainErrorCode.Invoicing.InvalidAllocationAmount);
         _allocations.Add(new PaymentAllocation(Id, invoiceId, amount));
     }
 
@@ -110,7 +111,8 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Chargeback()
     {
-        if (Status == PaymentStatus.Chargeback) return;
+        if (Status == PaymentStatus.Chargeback)
+            return;
 
         if (Status is not (PaymentStatus.Completed or PaymentStatus.Processing))
             throw new DomainException(DomainErrorCode.Invoicing.PaymentInvalidStatusForChargeback);

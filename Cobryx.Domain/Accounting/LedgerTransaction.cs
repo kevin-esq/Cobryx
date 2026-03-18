@@ -36,14 +36,16 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
     public void AddEntry(Guid accountId, decimal debit, decimal credit)
     {
-        if (IsPosted) throw new DomainException(DomainErrorCode.Common.GeneralError);
+        if (IsPosted)
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
 
         _entries.Add(new LedgerEntry(TenantId, Id, accountId, debit, credit, Currency, ReferenceId ?? string.Empty));
     }
 
     public void Post()
     {
-        if (IsPosted) return;
+        if (IsPosted)
+            return;
 
         // Double-Entry Integrity Check
         var balance = _entries.Sum(e => e.Debit - e.Credit);

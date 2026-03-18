@@ -59,7 +59,8 @@ public class OutboxMessage : BaseEntity, ITenantEntity
         CorrelationId = correlationId;
         IsProcessed = false;
 
-        if (payload.Length > 16384) throw new ArgumentException("Payload exceeds 16KB limit", nameof(payload));
+        if (payload.Length > 16384)
+            throw new ArgumentException("Payload exceeds 16KB limit", nameof(payload));
     }
 
     public void MarkAsProcessed(DateTime processedAt)

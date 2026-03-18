@@ -1,7 +1,9 @@
 using Cobryx.Application.Collections.Assignment;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.Services.Collections;
@@ -35,25 +37,28 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
                 .Take(100)
                 .ToListAsync();
 
-            if (!unassignedCases.Any()) return;
+            if (!unassignedCases.Any())
+                return;
 
             // 3. Find Available Agents
             var activeAgents = await _dbContext.CollectionAgents
                 .Where(a => a.TenantId == tenantId && a.IsActive && a.CurrentLoad < a.MaxCapacity)
                 .ToListAsync();
 
-            if (!activeAgents.Any()) return;
+            if (!activeAgents.Any())
+                return;
 
             // 4. Distribute using round-robin logic
             int agentIndex = 0;
             foreach (var caseToAssign in unassignedCases)
             {
                 var agent = activeAgents[agentIndex];
-                if (agent.CurrentLoad >= agent.MaxCapacity) continue;
+                if (agent.CurrentLoad >= agent.MaxCapacity)
+                    continue;
 
                 caseToAssign.AssignAgent(agent.Id);
                 agent.CurrentLoad++;
-                
+
                 // Track load in Redis too for realtime dashboards
                 await db.HashIncrementAsync($"portfolio:collections:agents:load:{tenantId}", agent.Id.ToString(), 1);
 

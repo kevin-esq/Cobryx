@@ -352,7 +352,8 @@ public sealed class CobryxMetrics : IDisposable
 
     private static CobryxModule GetModule(string code)
     {
-        if (string.IsNullOrEmpty(code)) return CobryxModule.System;
+        if (string.IsNullOrEmpty(code))
+            return CobryxModule.System;
 
         var prefix = code.Split('.')[0].ToUpperInvariant();
 

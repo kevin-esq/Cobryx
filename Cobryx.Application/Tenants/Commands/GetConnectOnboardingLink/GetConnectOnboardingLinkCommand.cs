@@ -33,10 +33,12 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
     public async Task<Result<string>> Handle(GetConnectOnboardingLinkCommand request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Result.Failure<string>(DomainErrorCode.Auth.NotAuthenticated);
+        if (tenantId == null)
+            return Result.Failure<string>(DomainErrorCode.Auth.NotAuthenticated);
 
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-        if (tenant == null) return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
+        if (tenant == null)
+            return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
 
         // 1. Ensure Stripe Account exists
         if (string.IsNullOrEmpty(tenant.StripeAccountId))

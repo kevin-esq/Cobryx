@@ -119,7 +119,8 @@ public class DbInitializer
 
     public static async Task SeedPlansAsync(CobryxDbContext dbContext)
     {
-        if (await dbContext.SubscriptionPlans.AnyAsync()) return;
+        if (await dbContext.SubscriptionPlans.AnyAsync())
+            return;
 
         var plans = new[]
         {

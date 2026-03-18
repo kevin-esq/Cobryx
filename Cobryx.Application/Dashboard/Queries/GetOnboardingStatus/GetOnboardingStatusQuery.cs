@@ -57,10 +57,14 @@ public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQue
         var score = 0;
         var milestone = OnboardingMilestone.EstablishingFoundation;
 
-        if (businessCompleted) score += 20;
-        if (firstUserInvited) score += 20;
-        if (firstLoanCreated || hasDemoLoans) score += 30;
-        if (firstPaymentRegistered || hasDemoPayments) score += 30;
+        if (businessCompleted)
+            score += 20;
+        if (firstUserInvited)
+            score += 20;
+        if (firstLoanCreated || hasDemoLoans)
+            score += 30;
+        if (firstPaymentRegistered || hasDemoPayments)
+            score += 30;
 
         var isDemoProgress = (hasDemoLoans || hasDemoPayments) && !firstLoanCreated && !firstPaymentRegistered;
 

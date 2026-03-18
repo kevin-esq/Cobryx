@@ -58,7 +58,8 @@ public class StripeSubscriptionSyncService
         Guid tenantId,
         CancellationToken ct = default)
     {
-        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct))
+            return;
         var subscription = await GetSubscriptionAsync(tenantId, ct);
         if (subscription == null)
         {
@@ -78,7 +79,8 @@ public class StripeSubscriptionSyncService
     /// </summary>
     public async Task HandleInvoicePaidAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
     {
-        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct))
+            return;
         var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
         if (subscription == null)
         {
@@ -94,9 +96,11 @@ public class StripeSubscriptionSyncService
     /// </summary>
     public async Task HandleInvoicePaymentFailedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
     {
-        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct))
+            return;
         var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
+        if (subscription == null)
+            return;
 
         await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.InvoicePaymentFailed, ct);
     }
@@ -106,9 +110,11 @@ public class StripeSubscriptionSyncService
     /// </summary>
     public async Task HandleSubscriptionUpdatedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
     {
-        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct))
+            return;
         var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
+        if (subscription == null)
+            return;
 
         await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.SubscriptionUpdated, ct);
     }
@@ -118,9 +124,11 @@ public class StripeSubscriptionSyncService
     /// </summary>
     public async Task HandleSubscriptionDeletedAsync(string stripeEventId, string stripeSubscriptionId, CancellationToken ct = default)
     {
-        if (await IsAlreadyProcessedAsync(stripeEventId, ct)) return;
+        if (await IsAlreadyProcessedAsync(stripeEventId, ct))
+            return;
         var subscription = await GetSubscriptionByStripeIdAsync(stripeSubscriptionId, ct);
-        if (subscription == null) return;
+        if (subscription == null)
+            return;
 
         await SyncAuthoritativeStateAsync(stripeEventId, stripeSubscriptionId, subscription, StripeConstants.Events.SubscriptionDeleted, ct);
     }
@@ -205,11 +213,13 @@ public class StripeSubscriptionSyncService
                 await _growthService.RecordMRRTransitionAsync(subscription.TenantId, newMrr, mrrChangeType, eventType);
             }
 
-            if (transaction != null) await transaction.CommitAsync(ct);
+            if (transaction != null)
+                await transaction.CommitAsync(ct);
         }
         catch (Exception ex)
         {
-            if (transaction != null) await transaction.RollbackAsync(ct);
+            if (transaction != null)
+                await transaction.RollbackAsync(ct);
             _logger.LogError(ex, "Failed to sync authoritative state for Subscription {StripeSubscriptionId}. Rollback occurred.", stripeSubscriptionId);
             throw;
         }

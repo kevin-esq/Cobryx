@@ -53,7 +53,8 @@ public class LoanAccrualEngine : ILoanAccrualEngine
                 .Take(BatchSize)
                 .ToListAsync(ct);
 
-            if (loans.Count == 0) break;
+            if (loans.Count == 0)
+                break;
 
             foreach (var loan in loans)
             {
@@ -117,7 +118,8 @@ public class LoanAccrualEngine : ILoanAccrualEngine
     private static decimal CalculateDailyInterest(Loan loan)
     {
         var policy = loan.Agreement?.InterestPolicy;
-        if (policy == null || !policy.IsActive) return 0;
+        if (policy == null || !policy.IsActive)
+            return 0;
 
         var dailyRate = policy.CalculateDailyRate();
 

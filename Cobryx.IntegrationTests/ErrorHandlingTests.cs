@@ -5,12 +5,12 @@ using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.IntegrationTests.Helpers;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Cobryx.IntegrationTests.Helpers;
 
 namespace Cobryx.IntegrationTests;
 
@@ -33,7 +33,8 @@ public class ErrorHandlingTests : IClassFixture<CobryxWebApplicationFactory>, IA
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var conn = db.Database.GetDbConnection();
-        if (conn.State == System.Data.ConnectionState.Open) await conn.CloseAsync();
+        if (conn.State == System.Data.ConnectionState.Open)
+            await conn.CloseAsync();
         await conn.OpenAsync();
 
         await db.Database.EnsureCreatedAsync();

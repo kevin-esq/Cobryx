@@ -1,4 +1,5 @@
 using Cobryx.Domain.Lending;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,7 +21,7 @@ public class CreditConfiguration : IEntityTypeConfiguration<Credit>
             .WithOne()
             .HasForeignKey("CreditId")
             .OnDelete(DeleteBehavior.Restrict);
-            
+
         // The relationship to Installments is already handled in BaseLendingInstrumentConfiguration
         // via builder.HasMany(x => x.Installments).WithOne(x => x.Instrument).HasForeignKey(x => x.CreditId)
     }

@@ -32,7 +32,8 @@ public class FinancialOutboxWorker(
             .Take(500)
             .ToListAsync(ct);
 
-        if (outboxEvents.Count == 0) return;
+        if (outboxEvents.Count == 0)
+            return;
 
         _logger.LogInformation("Processing {Count} financial outbox events...", outboxEvents.Count);
 

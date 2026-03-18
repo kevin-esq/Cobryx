@@ -59,7 +59,7 @@ public class CollectionCase
         AssignedAgentId = agentId;
         UpdatedAt = DateTime.UtcNow;
     }
-    
+
     public void MarkContacted(DateTime contactTime)
     {
         LastContactedAt = contactTime;

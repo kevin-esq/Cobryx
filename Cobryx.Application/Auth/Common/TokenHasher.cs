@@ -13,7 +13,8 @@ public static class TokenHasher
 
     public static string GetHmacHash(string token, string secret)
     {
-        if (string.IsNullOrEmpty(secret)) return string.Empty;
+        if (string.IsNullOrEmpty(secret))
+            return string.Empty;
 
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(token));

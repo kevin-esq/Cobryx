@@ -1,6 +1,6 @@
+using Cobryx.Domain.Lending.Enums;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Lending.Enums;
 
 namespace Cobryx.Domain.Lending;
 

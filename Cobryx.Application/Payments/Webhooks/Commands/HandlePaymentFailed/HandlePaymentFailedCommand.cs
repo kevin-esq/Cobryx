@@ -34,7 +34,8 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             {
                 var stripeCustId = stripeCustIdProp.GetString();
                 var customer = await _dbContext.Customers.FirstOrDefaultAsync(c => c.StripeCustomerId == stripeCustId, ct);
-                if (customer == null) return Result.Failure(DomainErrorCode.Customer.NotFound);
+                if (customer == null)
+                    return Result.Failure(DomainErrorCode.Customer.NotFound);
                 customerId = customer.Id;
             }
             else

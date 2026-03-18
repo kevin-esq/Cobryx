@@ -65,15 +65,19 @@ public class OnboardBusinessHandler : IRequestHandler<OnboardBusinessCommand, Re
         var tenantId = _tenantProvider.GetTenantId();
         var userId = _userProvider.GetUserId();
 
-        if (tenantId == null || userId == null) throw new UnauthorizedContextException();
+        if (tenantId == null || userId == null)
+            throw new UnauthorizedContextException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) throw new UserNotFoundException(userId.Value);
+        if (user == null)
+            throw new UserNotFoundException(userId.Value);
 
-        if (!user.RequiresOnboarding) throw new OnboardingCompletedException();
+        if (!user.RequiresOnboarding)
+            throw new OnboardingCompletedException();
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) throw new TenantNotFoundException(tenantId.Value);
+        if (tenant == null)
+            throw new TenantNotFoundException(tenantId.Value);
 
         if (tenant.OnboardingStatus == TenantOnboardingStatus.Completed)
         {

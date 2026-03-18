@@ -5,12 +5,12 @@ using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Infrastructure.Persistence;
+using Cobryx.IntegrationTests.Helpers;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Cobryx.IntegrationTests.Helpers;
 
 namespace Cobryx.IntegrationTests;
 

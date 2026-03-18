@@ -25,7 +25,8 @@ public class OutboxInterceptor : SaveChangesInterceptor
 
     private static void CaptureEvents(Microsoft.EntityFrameworkCore.DbContext? context)
     {
-        if (context == null) return;
+        if (context == null)
+            return;
 
         var entities = context.ChangeTracker
             .Entries<BaseEntity>()
@@ -33,7 +34,8 @@ public class OutboxInterceptor : SaveChangesInterceptor
             .Select(e => e.Entity)
             .ToList();
 
-        if (entities.Count == 0) return;
+        if (entities.Count == 0)
+            return;
 
         var outboxEvents = entities
             .SelectMany(e =>

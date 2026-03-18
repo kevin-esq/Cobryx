@@ -17,7 +17,8 @@ public class TenantProvider : ITenantProvider
     public Guid? GetTenantId()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null) return null;
+        if (httpContext == null)
+            return null;
 
         if (httpContext.Items.TryGetValue("Cache_TenantId", out var cachedId))
         {

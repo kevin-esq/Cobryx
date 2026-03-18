@@ -34,11 +34,16 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Customer(Guid tenantId, string firstName, string lastName, string phone, string email, Address? address, IdentityDocument? document)
     {
-        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
-        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
-        if (string.IsNullOrWhiteSpace(email)) throw new DomainException(DomainErrorCode.Customer.EmailRequired);
+        if (tenantId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName))
+            throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone))
+            throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
+        if (string.IsNullOrWhiteSpace(email))
+            throw new DomainException(DomainErrorCode.Customer.EmailRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -86,10 +91,14 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string firstName, string lastName, string phone, string email, Address? address, IdentityDocument? document)
     {
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
-        if (string.IsNullOrWhiteSpace(phone)) throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
-        if (string.IsNullOrWhiteSpace(email)) throw new DomainException(DomainErrorCode.Customer.EmailRequired);
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new DomainException(DomainErrorCode.Customer.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName))
+            throw new DomainException(DomainErrorCode.Customer.LastNameRequired);
+        if (string.IsNullOrWhiteSpace(phone))
+            throw new DomainException(DomainErrorCode.Customer.PhoneRequired);
+        if (string.IsNullOrWhiteSpace(email))
+            throw new DomainException(DomainErrorCode.Customer.EmailRequired);
 
         FirstName = firstName;
         LastName = lastName;

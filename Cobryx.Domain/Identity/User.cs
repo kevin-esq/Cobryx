@@ -51,11 +51,16 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public User(Guid tenantId, string firstName, string lastName, EmailAddress email, Guid roleId)
     {
-        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.User.TenantIdRequired);
-        if (string.IsNullOrWhiteSpace(firstName)) throw new DomainException(DomainErrorCode.User.FirstNameRequired);
-        if (string.IsNullOrWhiteSpace(lastName)) throw new DomainException(DomainErrorCode.User.LastNameRequired);
-        if (email == null) throw new DomainException(DomainErrorCode.User.EmailRequired);
-        if (roleId == Guid.Empty) throw new DomainException(DomainErrorCode.User.RoleIdRequired);
+        if (tenantId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.User.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(firstName))
+            throw new DomainException(DomainErrorCode.User.FirstNameRequired);
+        if (string.IsNullOrWhiteSpace(lastName))
+            throw new DomainException(DomainErrorCode.User.LastNameRequired);
+        if (email == null)
+            throw new DomainException(DomainErrorCode.User.EmailRequired);
+        if (roleId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.User.RoleIdRequired);
 
         TenantId = tenantId;
         FirstName = firstName;
@@ -148,7 +153,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateRole(Guid roleId)
     {
-        if (roleId == Guid.Empty) throw new DomainException(DomainErrorCode.User.RoleIdRequired);
+        if (roleId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.User.RoleIdRequired);
         RoleId = roleId;
     }
 
@@ -168,7 +174,8 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         if (activeSessions.Count >= 10)
         {
             var oldest = activeSessions.FirstOrDefault();
-            if (oldest != null) oldest.Revoke();
+            if (oldest != null)
+                oldest.Revoke();
         }
 
         var session = new LoginSession(TenantId, Id, ipAddress, deviceFingerprint, userAgent, deviceName);
@@ -208,13 +215,15 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void CreateProfile(string? phoneNumber = null, string? avatarUrl = null)
     {
-        if (Profile != null) return;
+        if (Profile != null)
+            return;
         Profile = new UserProfile(Id, phoneNumber, avatarUrl);
     }
 
     public bool DetectAndAlertNewDevice(string ipAddress, string? userAgent)
     {
-        if (string.IsNullOrEmpty(userAgent)) return false;
+        if (string.IsNullOrEmpty(userAgent))
+            return false;
 
         var ipParts = ipAddress.Split('.');
         var ipSegment = ipParts.Length >= 2 ? $"{ipParts[0]}.{ipParts[1]}" : ipAddress;

@@ -24,8 +24,10 @@ public class AdminActionAudit : BaseEntity
         string? reason = null,
         string? metadataJson = null)
     {
-        if (adminUserId == Guid.Empty) throw new ArgumentException("AdminUserId is required", nameof(adminUserId));
-        if (string.IsNullOrWhiteSpace(actionName)) throw new ArgumentException("ActionName is required", nameof(actionName));
+        if (adminUserId == Guid.Empty)
+            throw new ArgumentException("AdminUserId is required", nameof(adminUserId));
+        if (string.IsNullOrWhiteSpace(actionName))
+            throw new ArgumentException("ActionName is required", nameof(actionName));
 
         AdminUserId = adminUserId;
         ActionName = actionName;

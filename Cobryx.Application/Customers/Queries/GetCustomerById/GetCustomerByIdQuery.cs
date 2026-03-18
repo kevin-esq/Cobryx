@@ -29,7 +29,8 @@ public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Resu
     public async Task<Result<CustomerDto>> Handle(GetCustomerByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) throw new TenantContextMissingException();
+        if (!tenantId.HasValue)
+            throw new TenantContextMissingException();
 
         var customer = await _customerRepository.Query()
             .AsNoTracking()

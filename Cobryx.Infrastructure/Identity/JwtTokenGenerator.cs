@@ -119,10 +119,12 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
             var jwtToken = (JwtSecurityToken)validatedToken;
             var purpose = jwtToken.Claims.FirstOrDefault(x => x.Type == CobryxClaimTypes.Purpose)?.Value;
-            if (purpose != CobryxClaimTypes.MfaVerification) return null;
+            if (purpose != CobryxClaimTypes.MfaVerification)
+                return null;
 
             var userIdClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return null;
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                return null;
 
             return userId;
         }

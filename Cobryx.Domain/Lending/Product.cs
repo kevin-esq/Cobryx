@@ -27,8 +27,10 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public Product(Guid tenantId, string name, Money basePrice, bool isService = false, bool isLoanProduct = false)
     {
-        if (tenantId == Guid.Empty) throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
-        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
+        if (tenantId == Guid.Empty)
+            throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
 
 
         TenantId = tenantId;
@@ -41,7 +43,8 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void ConfigureLoanRules(decimal? defaultInterestRate, int? maxInstallments)
     {
-        if (!IsLoanProduct) throw new DomainException(DomainErrorCode.Products.NotALoanProduct);
+        if (!IsLoanProduct)
+            throw new DomainException(DomainErrorCode.Products.NotALoanProduct);
         DefaultInterestRate = defaultInterestRate;
         MaxInstallments = maxInstallments;
         UpdateTimestamp();
@@ -49,7 +52,8 @@ public class Product : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void UpdateDetails(string name, string? description, Money basePrice, string? sku)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException(DomainErrorCode.Products.GenericNameRequired);
         Name = name;
         Description = description;
         BasePrice = basePrice ?? throw new DomainException(DomainErrorCode.Products.BasePriceRequired);

@@ -28,7 +28,8 @@ public class PermissionService : IPermissionService
             .Select(u => new { u.Id, u.TenantId, u.PermissionVersion })
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-        if (user == null) return new HashSet<string>();
+        if (user == null)
+            return new HashSet<string>();
 
         string cacheKey = $"perm:{user.TenantId}:{userId}:v{user.PermissionVersion}";
 

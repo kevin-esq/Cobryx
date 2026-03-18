@@ -101,7 +101,8 @@ public static class PipelineBehaviors
 
         private static bool ShouldSave(TResponse response)
         {
-            if (response is null) return false;
+            if (response is null)
+                return false;
 
             if (response is Result result)
             {

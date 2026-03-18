@@ -52,7 +52,8 @@ public class ProductsController : CobryxBaseController
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest request)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var command = new Application.Products.Commands.Create.CreateProductCommand(

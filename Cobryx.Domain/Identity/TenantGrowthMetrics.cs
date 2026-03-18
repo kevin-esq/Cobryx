@@ -118,7 +118,8 @@ public class TenantGrowthMetrics
 
     public bool RecordWow(string outcomeCode, DateTime occurredAt)
     {
-        if (FirstWowAt != null) return false; // First-Wow Guard
+        if (FirstWowAt != null)
+            return false; // First-Wow Guard
 
         FirstWowAt = occurredAt;
         WowOutcomeCode = outcomeCode;
@@ -205,6 +206,7 @@ public class TenantGrowthMetrics
             _ => ChurnRisk.Low
         };
 
-        if (IsChurned) ChurnRisk = ChurnRisk.Churned;
+        if (IsChurned)
+            ChurnRisk = ChurnRisk.Churned;
     }
 }

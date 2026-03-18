@@ -25,7 +25,8 @@ public class GetPendingInvitationsHandler : IRequestHandler<GetPendingInvitation
     public async Task<Result<List<InvitationDto>>> Handle(GetPendingInvitationsQuery request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<List<InvitationDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<List<InvitationDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var invitations = await _context.TenantInvitations
             .Where(x => x.TenantId == tenantId.Value && x.Status == InvitationStatus.Pending)

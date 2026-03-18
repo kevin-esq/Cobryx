@@ -26,7 +26,8 @@ public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, Re
     public async Task<Result> Handle(UpdateMyProfileCommand request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-        if (user == null) return Result.Failure(DomainErrorCode.User.NotFound);
+        if (user == null)
+            return Result.Failure(DomainErrorCode.User.NotFound);
 
         if (user.Profile == null)
         {

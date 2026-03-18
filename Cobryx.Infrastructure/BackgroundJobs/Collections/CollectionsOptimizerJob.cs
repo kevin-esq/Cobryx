@@ -1,7 +1,9 @@
 using Cobryx.Application.Collections.Optimizer;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Collections;

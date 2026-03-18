@@ -33,8 +33,8 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
         }
 
         // Apply ML Optimizer Weights
-        var bestEarlyAction = weights.EmailWeight > weights.SmsWeight 
-            ? CollectionActionType.EmailReminder 
+        var bestEarlyAction = weights.EmailWeight > weights.SmsWeight
+            ? CollectionActionType.EmailReminder
             : CollectionActionType.SmsReminder;
 
         // 1. Early stage (0–3)

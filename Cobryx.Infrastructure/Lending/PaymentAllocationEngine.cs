@@ -47,7 +47,8 @@ public class PaymentAllocationEngine : IPaymentAllocationEngine
         // until the payment amount is exhausted.
         foreach (var category in priorityOrder)
         {
-            if (remaining <= 0) break;
+            if (remaining <= 0)
+                break;
 
             decimal outstanding = category switch
             {

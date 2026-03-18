@@ -15,7 +15,8 @@ public class PaymentApplicationService : IPaymentApplicationService
 
         foreach (var allocationType in applicationOrder)
         {
-            if (remaining <= 0) break;
+            if (remaining <= 0)
+                break;
 
             var (allocationsBatch, remainingAfterType) = ApplyToType(loan, allocationType, remaining);
             allocations.AddRange(allocationsBatch);
@@ -75,7 +76,8 @@ public class PaymentApplicationService : IPaymentApplicationService
 
         foreach (var installment in pendingInstallments)
         {
-            if (remaining <= 0) break;
+            if (remaining <= 0)
+                break;
 
             var available = type == PaymentApplicationType.Interest
                 ? installment.InterestAmount - installment.InterestPaid.Amount

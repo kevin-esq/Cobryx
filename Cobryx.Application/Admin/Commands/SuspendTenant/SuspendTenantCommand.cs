@@ -1,9 +1,10 @@
-using Cobryx.Domain.Identity.Enums;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
+using Cobryx.Domain.Identity.Enums;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Admin.Commands.SuspendTenant;

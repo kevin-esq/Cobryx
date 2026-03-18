@@ -98,16 +98,20 @@ public abstract class CobryxBaseController : ControllerBase
 
     private static int GetErrorStatusCode(string errorCode, int defaultStatusCode)
     {
-        if (errorCode.EndsWith(".ALREADY_EXISTS") || errorCode.EndsWith(".DUPLICATE")) return 409;
-        if (errorCode.EndsWith(".NOT_FOUND")) return 404;
-        if (errorCode.EndsWith(".BUSINESS_RULE_VIOLATION") || errorCode.Contains(".INVALID_STATUS")) return 422;
+        if (errorCode.EndsWith(".ALREADY_EXISTS") || errorCode.EndsWith(".DUPLICATE"))
+            return 409;
+        if (errorCode.EndsWith(".NOT_FOUND"))
+            return 404;
+        if (errorCode.EndsWith(".BUSINESS_RULE_VIOLATION") || errorCode.Contains(".INVALID_STATUS"))
+            return 422;
 
         return defaultStatusCode;
     }
 
     private static Outcome GetFailureOutcomeCode(Outcome? successOutcome)
     {
-        if (successOutcome == null) return Outcome.FromExternal("SYSTEM.OPERATION.FAILED");
+        if (successOutcome == null)
+            return Outcome.FromExternal("SYSTEM.OPERATION.FAILED");
 
         var val = successOutcome.Value;
         var lastDot = val.LastIndexOf('.');

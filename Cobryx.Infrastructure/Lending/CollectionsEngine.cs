@@ -64,7 +64,8 @@ public class CollectionsEngine : ICollectionsEngine
                 .ThenInclude(a => a.LateFeePolicy)
             .FirstOrDefaultAsync(l => l.Id == loanId, ct);
 
-        if (loan == null) return;
+        if (loan == null)
+            return;
 
         var policy = await GetPolicyForTenantAsync(loan.TenantId, ct);
 
@@ -136,11 +137,16 @@ public class CollectionsEngine : ICollectionsEngine
 
     private static DelinquencyStage MapDpdToStage(int dpd, CollectionsPolicy policy)
     {
-        if (dpd <= 0) return DelinquencyStage.Current;
-        if (dpd < policy.ModerateStageDays) return DelinquencyStage.Early;
-        if (dpd < policy.SevereStageDays) return DelinquencyStage.Moderate;
-        if (dpd < policy.DefaultStageDays) return DelinquencyStage.Severe;
-        if (dpd < policy.WriteOffDays) return DelinquencyStage.Default;
+        if (dpd <= 0)
+            return DelinquencyStage.Current;
+        if (dpd < policy.ModerateStageDays)
+            return DelinquencyStage.Early;
+        if (dpd < policy.SevereStageDays)
+            return DelinquencyStage.Moderate;
+        if (dpd < policy.DefaultStageDays)
+            return DelinquencyStage.Severe;
+        if (dpd < policy.WriteOffDays)
+            return DelinquencyStage.Default;
         return DelinquencyStage.WriteOff;
     }
 

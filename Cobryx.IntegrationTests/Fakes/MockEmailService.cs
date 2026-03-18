@@ -31,7 +31,8 @@ public class MockEmailService : IEmailService
 
     private static string? ExtractToken(string? body)
     {
-        if (string.IsNullOrEmpty(body)) return null;
+        if (string.IsNullOrEmpty(body))
+            return null;
         var parts = body.Split("token=");
         return parts.Length > 1 ? parts[1].Split("&")[0] : null;
     }

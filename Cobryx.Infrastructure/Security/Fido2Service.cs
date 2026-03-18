@@ -98,7 +98,8 @@ public class Fido2Service : IFido2Service
     public async Task<bool> CompleteAssertionAsync(User user, AuthenticatorAssertionRawResponse response, AssertionOptions options, CancellationToken cancellationToken = default)
     {
         var credential = user.MfaDevices.FirstOrDefault(d => d.CredentialId == response.Id);
-        if (credential == null) return false;
+        if (credential == null)
+            return false;
 
         var params_ = new MakeAssertionParams
         {

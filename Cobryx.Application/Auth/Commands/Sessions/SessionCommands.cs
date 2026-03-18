@@ -31,10 +31,12 @@ public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<
     public async Task<Result<List<SessionResponse>>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) throw new NotAuthenticatedException();
+        if (userId == null)
+            throw new NotAuthenticatedException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) throw new UserNotFoundException(userId.Value);
+        if (user == null)
+            throw new UserNotFoundException(userId.Value);
 
         var currentSessionId = _currentUserProvider.GetSessionId();
 
@@ -64,10 +66,12 @@ public class RevokeSessionHandler : IRequestHandler<RevokeSessionCommand, Result
     public async Task<Result<bool>> Handle(RevokeSessionCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) throw new NotAuthenticatedException();
+        if (userId == null)
+            throw new NotAuthenticatedException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) throw new UserNotFoundException(userId.Value);
+        if (user == null)
+            throw new UserNotFoundException(userId.Value);
 
         user.RevokeSession(request.SessionId);
         await _userRepository.UpdateAsync(user, cancellationToken);
@@ -94,10 +98,12 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
         var userId = _currentUserProvider.GetUserId();
         var sessionId = _currentUserProvider.GetSessionId();
 
-        if (userId == null || sessionId == null) throw new NotAuthenticatedException();
+        if (userId == null || sessionId == null)
+            throw new NotAuthenticatedException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) throw new UserNotFoundException(userId.Value);
+        if (user == null)
+            throw new UserNotFoundException(userId.Value);
 
         user.RevokeSession(sessionId.Value);
         await _userRepository.UpdateAsync(user, cancellationToken);
@@ -122,10 +128,12 @@ public class LogoutAllHandler : IRequestHandler<LogoutAllCommand, Result>
     public async Task<Result> Handle(LogoutAllCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) throw new NotAuthenticatedException();
+        if (userId == null)
+            throw new NotAuthenticatedException();
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) throw new UserNotFoundException(userId.Value);
+        if (user == null)
+            throw new UserNotFoundException(userId.Value);
 
         foreach (var session in user.Sessions.Where(s => !s.IsRevoked))
         {

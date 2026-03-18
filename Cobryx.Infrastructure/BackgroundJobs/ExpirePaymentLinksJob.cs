@@ -40,7 +40,8 @@ public class ExpirePaymentLinksJob
             .Take(100) // Batch processing
             .ToListAsync(ct);
 
-        if (toExpire.Count == 0) return;
+        if (toExpire.Count == 0)
+            return;
 
         foreach (var link in toExpire)
         {

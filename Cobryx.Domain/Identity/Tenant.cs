@@ -49,7 +49,8 @@ public class Tenant : BaseEntity, IAggregateRoot
     public static Tenant CreateForRegistration(string businessName, string? taxIdCode, string? industry, string? address)
     {
         var tenant = new Tenant(businessName);
-        if (!string.IsNullOrEmpty(taxIdCode)) tenant.TaxId = new TaxId(taxIdCode);
+        if (!string.IsNullOrEmpty(taxIdCode))
+            tenant.TaxId = new TaxId(taxIdCode);
         tenant.Industry = industry;
         tenant.BusinessAddress = address;
         return tenant;
@@ -82,7 +83,8 @@ public class Tenant : BaseEntity, IAggregateRoot
         TaxId = new TaxId(taxIdCode);
         Industry = industry;
         BusinessAddress = address;
-        if (!string.IsNullOrEmpty(phone)) Phone = phone;
+        if (!string.IsNullOrEmpty(phone))
+            Phone = phone;
         OnboardingStatus = TenantOnboardingStatus.Completed;
         UpdateTimestamp();
     }
