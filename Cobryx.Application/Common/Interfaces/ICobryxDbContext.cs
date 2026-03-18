@@ -59,6 +59,7 @@ public interface ICobryxDbContext
     public DbSet<CollectionCase> CollectionCases { get; }
     public DbSet<CollectionAction> CollectionActions { get; }
     public DbSet<CollectionPolicy> CollectionPolicies { get; }
+    public DbSet<CollectionAgent> CollectionAgents { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

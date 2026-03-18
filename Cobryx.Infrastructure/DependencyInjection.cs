@@ -267,6 +267,7 @@ public static class DependencyInjection
         services.AddScoped<ReconciliationEngineJob>();
         services.AddScoped<CheckSystemHealthJob>();
         services.AddScoped<LedgerOutboxWorker>();
+        services.AddScoped<Cobryx.Application.Collections.Assignment.IAssignmentEngine, Cobryx.Infrastructure.Services.Collections.AssignmentEngine>();
         services.AddScoped<DriftDetectionWorker>();
         services.AddScoped<LedgerIntegrityJob>();
         services.AddScoped<LoanAccrualWorker>();

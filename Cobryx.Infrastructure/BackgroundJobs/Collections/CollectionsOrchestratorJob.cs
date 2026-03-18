@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cobryx.Application.Collections.Assignment;
 using Cobryx.Application.Collections.Models;
 using Cobryx.Application.Collections.Strategy;
 using Cobryx.Application.Common.Interfaces;
@@ -13,17 +14,20 @@ public class CollectionsOrchestratorJob
 {
     private readonly ICobryxDbContext _dbContext;
     private readonly ICollectionsStrategyEngine _strategyEngine;
+    private readonly IAssignmentEngine _assignmentEngine;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<CollectionsOrchestratorJob> _logger;
 
     public CollectionsOrchestratorJob(
         ICobryxDbContext dbContext,
         ICollectionsStrategyEngine strategyEngine,
+        IAssignmentEngine assignmentEngine,
         IConnectionMultiplexer redis,
         ILogger<CollectionsOrchestratorJob> logger)
     {
         _dbContext = dbContext;
         _strategyEngine = strategyEngine;
+        _assignmentEngine = assignmentEngine;
         _redis = redis;
         _logger = logger;
     }
@@ -121,6 +125,14 @@ public class CollectionsOrchestratorJob
         }
 
         await _dbContext.SaveChangesAsync(default);
+
+        // 5. AUTO ASSIGNMENT
+        var affectedTenants = delinquentLoans.Select(x => x.TenantId).Distinct().ToList();
+        foreach (var tId in affectedTenants)
+        {
+            await _assignmentEngine.AssignCasesAsync(tId);
+        }
+
         _logger.LogInformation("Collections Orchestrator Job completed successfully.");
     }
 }
