@@ -66,4 +66,31 @@ public class DecisionEngineTests
 
         Assert.False(result.Approved);
     }
+
+    [Fact]
+    public void HighPD_ShouldIncreaseRateExponentially()
+    {
+        var pricingEngine = new PricingEngine();
+        var lowRiskCtx = new PricingContext { ProbabilityOfDefault = 0.1m };
+        var highRiskCtx = new PricingContext { ProbabilityOfDefault = 0.8m };
+
+        var rateLow = pricingEngine.CalculateRate(lowRiskCtx);
+        var rateHigh = pricingEngine.CalculateRate(highRiskCtx);
+
+        Assert.True(rateHigh > rateLow * 2); // Exponential impact
+    }
+
+    [Fact]
+    public void HighUtilization_ShouldReduceLimit()
+    {
+        var creditEngine = new CreditLimitEngine();
+
+        var lowUtilCtx = new CreditContext { MonthlyIncomeEstimate = 10000m, BehaviorScore = 1m, ProbabilityOfDefault = 0.1m, Utilization = 0.1m };
+        var highUtilCtx = new CreditContext { MonthlyIncomeEstimate = 10000m, BehaviorScore = 1m, ProbabilityOfDefault = 0.1m, Utilization = 0.9m };
+
+        var limitLow = creditEngine.Calculate(lowUtilCtx);
+        var limitHigh = creditEngine.Calculate(highUtilCtx);
+
+        Assert.True(limitHigh < limitLow);
+    }
 }

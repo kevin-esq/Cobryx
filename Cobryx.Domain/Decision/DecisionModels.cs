@@ -5,6 +5,7 @@ public class CreditContext
     public decimal ProbabilityOfDefault { get; set; }
     public decimal BehaviorScore { get; set; }
     public decimal MonthlyIncomeEstimate { get; set; }
+    public decimal Utilization { get; set; }
 }
 
 public class PricingContext

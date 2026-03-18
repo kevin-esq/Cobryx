@@ -127,6 +127,7 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles => Set<CustomerRiskProfile>();
     public DbSet<RiskEvent> RiskEvents => Set<RiskEvent>();
+    public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots => Set<Cobryx.Domain.Decision.DecisionSnapshot>();
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots => Set<CustomerRiskSnapshot>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();

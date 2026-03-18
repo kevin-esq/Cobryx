@@ -10,18 +10,18 @@ public class EarlyWarningJob
 {
     private readonly ICobryxDbContext _db;
     private readonly ProbabilityOfDefaultCalculator _pdCalculator;
-    private readonly DecisionEngine _decisionEngine;
+    private readonly DecisionService _decisionService;
     private readonly ILogger<EarlyWarningJob> _logger;
 
     public EarlyWarningJob(
         ICobryxDbContext db,
         ProbabilityOfDefaultCalculator pdCalculator,
-        DecisionEngine decisionEngine,
+        DecisionService decisionService,
         ILogger<EarlyWarningJob> logger)
     {
         _db = db;
         _pdCalculator = pdCalculator;
-        _decisionEngine = decisionEngine;
+        _decisionService = decisionService;
         _logger = logger;
     }
 
@@ -89,14 +89,15 @@ WHERE rn = 1;";
             // thresholds configurable per tenant later
             if (currentPD < threshold && deterioration < 0.1m) continue;
 
-            // Trigger Phase 10 Decision Hook
-            var decision = _decisionEngine.Evaluate(new Cobryx.Domain.Decision.DecisionContext
+            // Trigger Phase 10.5 Decision Hook
+            var decision = await _decisionService.EvaluateAsync(s.CustomerId, new Cobryx.Domain.Decision.DecisionContext
             {
                 Credit = new Cobryx.Domain.Decision.CreditContext
                 {
                     ProbabilityOfDefault = currentPD,
                     BehaviorScore = 1m, // Assume baseline behavior for now
-                    MonthlyIncomeEstimate = 10000m // Placeholder
+                    MonthlyIncomeEstimate = 10000m, // Placeholder
+                    Utilization = 0.5m // Placeholder or calculate based on s.Outstanding / s.CreditLimit
                 },
                 Pricing = new Cobryx.Domain.Decision.PricingContext
                 {
