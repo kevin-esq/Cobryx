@@ -28,6 +28,7 @@ public interface ICobryxDbContext
 
     // Analytics
     public DbSet<Domain.Analytics.LatestLoanSnapshot> LatestLoanSnapshots { get; }
+    public DbSet<Domain.Analytics.LoanBalanceSnapshot> LoanBalanceSnapshots { get; }
     public DbSet<Cobryx.Domain.Analytics.TenantPortfolioAggregate> TenantPortfolioAggregates { get; }
     public DbSet<Domain.Analytics.PortfolioMetricsDaily> PortfolioMetricsDaily { get; }
 
@@ -67,7 +68,10 @@ public interface ICobryxDbContext
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles { get; }
     public DbSet<RiskEvent> RiskEvents { get; }
     public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
+    public DbSet<Cobryx.Domain.ML.ModelOutcome> ModelOutcomes { get; }
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots { get; }
+    public DbSet<Cobryx.Domain.ML.ShadowPrediction> ShadowPredictions { get; }
+    public DbSet<Cobryx.Domain.ML.MlModel> MlModels { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

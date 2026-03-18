@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260318224833_AddModelOutcomes")]
+    partial class AddModelOutcomes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1621,10 +1624,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("InterestRate")
                         .HasColumnType("numeric");
-
-                    b.Property<string>("ModelVersion")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<decimal>("ProbabilityOfDefault")
                         .HasColumnType("numeric");
@@ -4764,10 +4763,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("Defaulted")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("ModelVersion")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<decimal>("PredictedPD")
                         .HasColumnType("numeric");

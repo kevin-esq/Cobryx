@@ -1,4 +1,7 @@
+#pragma warning disable IDE0005
 using System.Reflection;
+using Polly;
+using Polly.Extensions.Http;
 
 using Cobryx.Application.Auth.Services;
 using Cobryx.Application.Common.Interfaces;
@@ -33,6 +36,23 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Domain.Decision.IFraudEngine, Cobryx.Application.Decision.FraudEngine>();
         services.AddScoped<Cobryx.Application.Decision.DecisionEngine>();
         services.AddScoped<Cobryx.Application.Decision.DecisionService>();
+        services.AddScoped<Cobryx.Application.ML.IFeatureStore, Cobryx.Application.ML.RedisFeatureStore>();
+        services.AddScoped<Cobryx.Application.ML.FeatureUpdater>();
+        services.AddScoped<Cobryx.Application.ML.DatasetExporter>();
+        services.AddScoped<Cobryx.Application.ML.Jobs.DatasetExporterJob>();
+        services.AddScoped<Cobryx.Application.ML.ModelRouter>();
+        services.AddScoped<Cobryx.Application.ML.EnsembleService>();
+
+        services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
+        {
+            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+            c.BaseAddress = new System.Uri(url);
+        })
+        .AddTransientHttpErrorPolicy(p =>
+            p.WaitAndRetryAsync(3, retry =>
+                System.TimeSpan.FromMilliseconds(200 * retry)))
+        .AddTransientHttpErrorPolicy(p =>
+            p.CircuitBreakerAsync(5, System.TimeSpan.FromSeconds(30)));
 
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]

@@ -9,6 +9,7 @@ public class DecisionSnapshot
     public decimal CreditLimit { get; private set; }
     public decimal InterestRate { get; private set; }
     public decimal FraudScore { get; private set; }
+    public string ModelVersion { get; private set; } = string.Empty;
 
     public DateTime CreatedAt { get; private set; }
 
@@ -17,6 +18,7 @@ public class DecisionSnapshot
     public DecisionSnapshot(
         Guid customerId,
         decimal pd,
+        string modelVersion,
         decimal limit,
         decimal rate,
         decimal fraudScore)
@@ -24,6 +26,7 @@ public class DecisionSnapshot
         Id = Guid.NewGuid();
         CustomerId = customerId;
         ProbabilityOfDefault = pd;
+        ModelVersion = modelVersion;
         CreditLimit = limit;
         InterestRate = rate;
         FraudScore = fraudScore;
