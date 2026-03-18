@@ -28,6 +28,11 @@ public static class DependencyInjection
         services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
 
         // Risk Engine
+        services.AddScoped<Cobryx.Domain.Decision.ICreditLimitEngine, Cobryx.Application.Decision.CreditLimitEngine>();
+        services.AddScoped<Cobryx.Domain.Decision.IPricingEngine, Cobryx.Application.Decision.PricingEngine>();
+        services.AddScoped<Cobryx.Domain.Decision.IFraudEngine, Cobryx.Application.Decision.FraudEngine>();
+        services.AddScoped<Cobryx.Application.Decision.DecisionEngine>();
+        
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
             {
