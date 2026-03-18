@@ -1,4 +1,3 @@
-using System;
 using Cobryx.Domain.Decision;
 
 namespace Cobryx.Application.Decision;

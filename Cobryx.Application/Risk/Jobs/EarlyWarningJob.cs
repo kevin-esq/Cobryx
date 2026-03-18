@@ -1,4 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Decision;
 using Cobryx.Domain.Analytics.Risk;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -9,15 +10,18 @@ public class EarlyWarningJob
 {
     private readonly ICobryxDbContext _db;
     private readonly ProbabilityOfDefaultCalculator _pdCalculator;
+    private readonly DecisionEngine _decisionEngine;
     private readonly ILogger<EarlyWarningJob> _logger;
 
     public EarlyWarningJob(
         ICobryxDbContext db,
         ProbabilityOfDefaultCalculator pdCalculator,
+        DecisionEngine decisionEngine,
         ILogger<EarlyWarningJob> logger)
     {
         _db = db;
         _pdCalculator = pdCalculator;
+        _decisionEngine = decisionEngine;
         _logger = logger;
     }
 
@@ -82,7 +86,32 @@ WHERE rn = 1;";
             var rawDeterioration = (currentPD - previousPD) + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
             var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
 
+            // thresholds configurable per tenant later
             if (currentPD < threshold && deterioration < 0.1m) continue;
+
+            // Trigger Phase 10 Decision Hook
+            var decision = _decisionEngine.Evaluate(new Cobryx.Domain.Decision.DecisionContext
+            {
+                Credit = new Cobryx.Domain.Decision.CreditContext
+                {
+                    ProbabilityOfDefault = currentPD,
+                    BehaviorScore = 1m, // Assume baseline behavior for now
+                    MonthlyIncomeEstimate = 10000m // Placeholder
+                },
+                Pricing = new Cobryx.Domain.Decision.PricingContext
+                {
+                    ProbabilityOfDefault = currentPD
+                },
+                Fraud = new Cobryx.Domain.Decision.FraudContext
+                {
+                    TransactionsLastHour = 2,
+                    AmountVelocity = 500m,
+                    GeoAnomaly = false
+                }
+            });
+
+            _logger.LogInformation("Decision rendered for Anomaly Loan {LoanId}: Limit {Limit}, Rate {Rate}, Fraud {Fraud}, Approved {Approved}",
+                s.LoanId, decision.CreditLimit, decision.InterestRate, decision.FraudScore, decision.Approved);
 
             var exists = await _db.RiskEvents.AnyAsync(x =>
                 x.CustomerId == s.CustomerId &&
