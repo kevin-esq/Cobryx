@@ -8,7 +8,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-COPY model.pkl .
+COPY model.pkl model_v1.pkl
+COPY model.pkl model_v2.pkl
 
 USER appuser
 

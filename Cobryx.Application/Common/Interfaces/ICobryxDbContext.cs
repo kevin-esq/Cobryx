@@ -70,6 +70,8 @@ public interface ICobryxDbContext
     public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
     public DbSet<Cobryx.Domain.ML.ModelOutcome> ModelOutcomes { get; }
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots { get; }
+    public DbSet<Cobryx.Domain.ML.ShadowPrediction> ShadowPredictions { get; }
+    public DbSet<Cobryx.Domain.ML.MlModel> MlModels { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

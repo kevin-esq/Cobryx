@@ -40,6 +40,8 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Application.ML.FeatureUpdater>();
         services.AddScoped<Cobryx.Application.ML.DatasetExporter>();
         services.AddScoped<Cobryx.Application.ML.Jobs.DatasetExporterJob>();
+        services.AddScoped<Cobryx.Application.ML.ModelRouter>();
+        services.AddScoped<Cobryx.Application.ML.EnsembleService>();
 
         services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
         {

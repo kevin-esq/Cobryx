@@ -39,10 +39,11 @@ public class DecisionMlIntegrationTests
         var dbMock = new Mock<Cobryx.Application.Common.Interfaces.ICobryxDbContext>();
         dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<ModelOutcome>>().Object);
         dbMock.Setup(d => d.DecisionSnapshots).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<DecisionSnapshot>>().Object);
+        dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
 
         var cacheMock = new Mock<Cobryx.Application.Common.Interfaces.ICacheService>();
         
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient);
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService());
 
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext

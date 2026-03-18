@@ -14,9 +14,9 @@ public class MlClient
         _http = http;
     }
 
-    public async Task<(decimal pd, string version)> PredictAsync(object features)
+    public async Task<(decimal pd, string version)> PredictAsync(object features, string modelVersion)
     {
-        var response = await _http.PostAsJsonAsync("/predict", features);
+        var response = await _http.PostAsJsonAsync($"/predict?model={modelVersion}", features);
 
         response.EnsureSuccessStatusCode();
 

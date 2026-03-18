@@ -28,7 +28,7 @@ pipeline = Pipeline([
         colsample_bytree=0.8,
         eval_metric="logloss"
     ))
-])
+], memory=None)
 
 print("4. Train")
 pipeline.fit(X_train, y_train)
