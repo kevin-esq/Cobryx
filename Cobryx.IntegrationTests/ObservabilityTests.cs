@@ -6,6 +6,7 @@ using Cobryx.Api.Contracts.V1.Financial;
 using Cobryx.Application.Common.Observability;
 
 using Cobryx.IntegrationTests.Helpers;
+
 using FluentAssertions;
 
 namespace Cobryx.IntegrationTests;

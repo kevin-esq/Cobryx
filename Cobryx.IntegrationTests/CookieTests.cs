@@ -7,11 +7,12 @@ using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.IntegrationTests.Fakes;
+using Cobryx.IntegrationTests.Helpers;
+
+using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Cobryx.IntegrationTests.Helpers;
-using FluentAssertions;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 

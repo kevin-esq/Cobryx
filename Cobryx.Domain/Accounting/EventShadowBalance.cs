@@ -21,7 +21,8 @@ public class EventShadowBalance : BaseEntity
 
     public void ApplyChange(decimal delta, long sequence)
     {
-        if (sequence <= LastSequence) return;
+        if (sequence <= LastSequence)
+            return;
 
         Balance += delta;
         LastSequence = sequence;

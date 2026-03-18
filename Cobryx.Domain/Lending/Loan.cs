@@ -1,5 +1,5 @@
-using Cobryx.Domain.Lending.Enums;
 using Cobryx.Domain.Events.Lending;
+using Cobryx.Domain.Lending.Enums;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
@@ -16,7 +16,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
     public LegalStatus LegalStatus { get; private set; }
     public RiskStatus RiskStatus { get; private set; }
     public CollectionStage CollectionStage { get; private set; }
-    
+
     public decimal OriginalPrincipal => Principal.Amount;
     public decimal OutstandingPrincipal => CurrentPrincipalBalance;
     public decimal OutstandingFees => CurrentLateFeeBalance;
@@ -56,7 +56,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         PaymentFrequency frequency = PaymentFrequency.Monthly,
         int installmentsCount = 0,
         int graceDays = 0,
-        bool isDemo = false) 
+        bool isDemo = false)
         : base(tenantId, customerId, originalPrincipal, interestRate, interestType, frequency, installmentsCount, graceDays)
     {
         LoanAgreementId = loanAgreementId;
@@ -81,7 +81,8 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
     public void Activate()
     {
-        if (Status != LoanStatus.Draft) return;
+        if (Status != LoanStatus.Draft)
+            return;
         Status = LoanStatus.Active;
         AddDomainEvent(new LoanStatusChangedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();

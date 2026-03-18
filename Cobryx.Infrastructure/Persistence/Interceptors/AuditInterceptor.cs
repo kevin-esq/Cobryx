@@ -31,7 +31,8 @@ public class AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantP
 
     private void OnSavingChanges(DbContext? context)
     {
-        if (context == null) return;
+        if (context == null)
+            return;
 
         var userId = _currentUserProvider.GetUserId();
         var tenantId = _tenantProvider.GetTenantId();
@@ -47,11 +48,13 @@ public class AuditInterceptor(ICurrentUserProvider currentUserProvider, ITenantP
             {
                 if (entry.State == EntityState.Added)
                 {
-                    if (userId.HasValue) baseEntity.SetCreatedBy(userId.Value);
+                    if (userId.HasValue)
+                        baseEntity.SetCreatedBy(userId.Value);
                 }
                 else if (entry.State == EntityState.Modified || entry.HasChangedOwnedEntities())
                 {
-                    if (userId.HasValue) baseEntity.SetUpdatedBy(userId.Value);
+                    if (userId.HasValue)
+                        baseEntity.SetUpdatedBy(userId.Value);
                 }
             }
 
@@ -114,7 +117,8 @@ public class AuditEntry
         foreach (var property in Entry.Properties)
         {
             string propertyName = property.Metadata.Name;
-            if (property.Metadata.IsPrimaryKey()) continue;
+            if (property.Metadata.IsPrimaryKey())
+                continue;
 
             switch (Entry.State)
             {

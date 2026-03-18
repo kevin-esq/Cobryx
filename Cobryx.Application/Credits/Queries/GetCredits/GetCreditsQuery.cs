@@ -29,7 +29,8 @@ public class GetCreditsHandler : IRequestHandler<GetCreditsQuery, Result<Paginat
     public async Task<Result<PaginatedList<CreditDto>>> Handle(GetCreditsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<PaginatedList<CreditDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<PaginatedList<CreditDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var query = _creditRepository.Query()
             .AsNoTracking()

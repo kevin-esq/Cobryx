@@ -1,6 +1,8 @@
 using Asp.Versioning;
+
 using Cobryx.Application.Analytics.Models;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +26,8 @@ public class PortfolioController(ITenantProvider tenantProvider, ICacheService c
     public async Task<IActionResult> GetSummary()
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         var key = $"portfolio:summary:{tenantId}";
         var summary = await _cache.GetAsync<PortfolioSummaryCache>(key);
@@ -44,7 +47,8 @@ public class PortfolioController(ITenantProvider tenantProvider, ICacheService c
     public async Task<IActionResult> GetAging()
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         var key = $"portfolio:aging:{tenantId}";
         var aging = await _cache.GetAsync<PortfolioAgingCache>(key);
@@ -64,7 +68,8 @@ public class PortfolioController(ITenantProvider tenantProvider, ICacheService c
     public async Task<IActionResult> GetCoreKpis()
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         var key = $"portfolio:summary:{tenantId}";
         var summary = await _cache.GetAsync<PortfolioSummaryCache>(key);

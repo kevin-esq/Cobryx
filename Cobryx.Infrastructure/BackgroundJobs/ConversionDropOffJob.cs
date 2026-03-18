@@ -49,7 +49,8 @@ public class ConversionDropOffJob
 
         if (stuckInOnboarding > 0)
         {
-            for (int i = 0; i < stuckInOnboarding; i++) _metrics.RecordOnboardingAbandoned();
+            for (int i = 0; i < stuckInOnboarding; i++)
+                _metrics.RecordOnboardingAbandoned();
             _logger.LogInformation("Detected {Count} tenants stuck in onboarding.", stuckInOnboarding);
         }
 
@@ -59,7 +60,8 @@ public class ConversionDropOffJob
 
         if (slowActivations > 0)
         {
-            for (int i = 0; i < slowActivations; i++) _metrics.RecordSlowActivation();
+            for (int i = 0; i < slowActivations; i++)
+                _metrics.RecordSlowActivation();
         }
 
         var almostLostCount = await _context.TenantGrowthMetrics
@@ -68,7 +70,8 @@ public class ConversionDropOffJob
 
         if (almostLostCount > 0)
         {
-            for (int i = 0; i < almostLostCount; i++) _metrics.RecordTrialExpiredNoWow();
+            for (int i = 0; i < almostLostCount; i++)
+                _metrics.RecordTrialExpiredNoWow();
             _logger.LogWarning("Detected {Count} tenants likely lost (Trial Expired/No Wow > 72h).", almostLostCount);
         }
 

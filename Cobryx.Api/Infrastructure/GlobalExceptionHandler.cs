@@ -33,7 +33,8 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         var targetException = exception ?? exceptionFeature?.Error;
 
-        if (targetException == null) return true;
+        if (targetException == null)
+            return true;
 
         DomainErrorCode errorCode;
         Dictionary<string, object>? metadata = null;
@@ -117,8 +118,10 @@ public class GlobalExceptionHandler : IExceptionHandler
         const string SystemFailed = "SYSTEM.FAILED";
         const string FailedSuffix = ".FAILED";
 
-        if (string.IsNullOrEmpty(errorCode)) return Outcome.FromExternal(SystemFailed, OutcomeCategory.Critical);
-        if (errorCode.EndsWith(FailedSuffix)) return Outcome.FromExternal(errorCode, OutcomeCategory.BusinessError);
+        if (string.IsNullOrEmpty(errorCode))
+            return Outcome.FromExternal(SystemFailed, OutcomeCategory.Critical);
+        if (errorCode.EndsWith(FailedSuffix))
+            return Outcome.FromExternal(errorCode, OutcomeCategory.BusinessError);
 
         var parts = errorCode.Split('.');
         return Outcome.FromExternal($"{parts[0]}{FailedSuffix}", OutcomeCategory.BusinessError);

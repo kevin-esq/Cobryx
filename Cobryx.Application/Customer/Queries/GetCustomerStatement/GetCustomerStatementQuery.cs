@@ -85,7 +85,8 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
         var transactionDtos = transactions.Select(t =>
         {
             var cashImpact = t.Entries.FirstOrDefault(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && a.Code == "1010"))?.Debit ?? 0;
-            if (t.IsReversal) cashImpact = -t.Entries.Where(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && a.Code == "1010")).Sum(e => e.Credit - e.Debit);
+            if (t.IsReversal)
+                cashImpact = -t.Entries.Where(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && a.Code == "1010")).Sum(e => e.Credit - e.Debit);
 
             return new StatementTransactionDto(
                 Date: t.CreatedAt,

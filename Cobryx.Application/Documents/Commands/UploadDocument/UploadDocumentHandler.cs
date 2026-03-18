@@ -25,7 +25,8 @@ public class UploadDocumentHandler(
     public async Task<Result<UploadDocumentResult>> Handle(UploadDocumentCommand request, CancellationToken ct)
     {
         var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
-        if (tenantId == Guid.Empty) throw new TenantContextMissingException();
+        if (tenantId == Guid.Empty)
+            throw new TenantContextMissingException();
 
         // 1. Validate file (size, extension, MIME, magic bytes)
         var validation = _validator.Validate(request.FileStream, request.FileName, request.ContentType);

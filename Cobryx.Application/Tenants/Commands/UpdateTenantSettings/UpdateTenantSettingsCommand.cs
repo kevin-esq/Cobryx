@@ -32,10 +32,12 @@ public class UpdateTenantSettingsHandler : IRequestHandler<UpdateTenantSettingsC
     public async Task<Result> Handle(UpdateTenantSettingsCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) return Result.Failure(DomainErrorCode.Tenant.NotFound);
+        if (tenant == null)
+            return Result.Failure(DomainErrorCode.Tenant.NotFound);
 
         tenant.UpdateBranding(request.LogoUrl, request.PrimaryColor, request.SecondaryColor);
         tenant.UpdateContactInfo(request.OwnerName, request.Phone);

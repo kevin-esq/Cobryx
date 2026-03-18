@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddAccountingModule();
 
         services.AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
+        services.AddScoped<Collections.Strategy.ICollectionsStrategyEngine, Collections.Strategy.CollectionsStrategyEngine>();
 
         return services;
     }

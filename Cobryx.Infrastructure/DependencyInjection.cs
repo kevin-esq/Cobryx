@@ -36,9 +36,9 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -101,69 +101,69 @@ public static class DependencyInjection
         var cachingConfig = configuration.GetSection(Configuration.CachingOptions.SectionName).Get<Configuration.CachingOptions>()
             ?? throw new InvalidOperationException("Caching configuration is missing.");
 
-            services.AddDistributedMemoryCache();
+        services.AddDistributedMemoryCache();
 
-            services.AddSingleton<IDistributedCache>(sp =>
+        services.AddSingleton<IDistributedCache>(sp =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
             {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
-                {
-                    return sp.GetRequiredService<MemoryDistributedCache>();
-                }
-
-                // If not testing, use the Redis cache if configured
-                var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                if (!string.IsNullOrEmpty(cachingOptions.Redis?.ConnectionString))
-                {
-                    // Note: This is an internal detail, but IDistributedCache is resolved.
-                    // Instead of manually constructing RedisCache, we can rely on AddStackExchangeRedisCache
-                    // but we need to ensure it's registered conditionally.
-                    // To keep it simple, we'll just return the memory cache if we can't easily switch here,
-                    // or we check the config earlier if possible.
-                    // Actually, a better way is to move the whole AddStackExchangeRedisCache call inside an if in Program.cs
-                    // but we want to keep logic in DependencyInjection.
-                    var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
-                    {
-                        Configuration = cachingOptions.Redis.ConnectionString,
-                        InstanceName = "Cobryx_"
-                    });
-                    return new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(redisOptions);
-                }
-
                 return sp.GetRequiredService<MemoryDistributedCache>();
-            });
+            }
 
-            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+            // If not testing, use the Redis cache if configured
+            var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+            if (!string.IsNullOrEmpty(cachingOptions.Redis?.ConnectionString))
             {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
+                // Note: This is an internal detail, but IDistributedCache is resolved.
+                // Instead of manually constructing RedisCache, we can rely on AddStackExchangeRedisCache
+                // but we need to ensure it's registered conditionally.
+                // To keep it simple, we'll just return the memory cache if we can't easily switch here,
+                // or we check the config earlier if possible.
+                // Actually, a better way is to move the whole AddStackExchangeRedisCache call inside an if in Program.cs
+                // but we want to keep logic in DependencyInjection.
+                var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
                 {
-                    return new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>().Object;
-                }
+                    Configuration = cachingOptions.Redis.ConnectionString,
+                    InstanceName = "Cobryx_"
+                });
+                return new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(redisOptions);
+            }
 
-                var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                return StackExchange.Redis.ConnectionMultiplexer.Connect(cachingOptions.Redis.ConnectionString);
-            });
+            return sp.GetRequiredService<MemoryDistributedCache>();
+        });
 
-            services.AddSingleton<ICacheService>(sp =>
+        services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
             {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
-                {
-                    // Use a mock or a memory-based implementation of ICacheService if possible
-                    // For now, let's keep it simple or use a dummy for testing
-                    return new RedisCacheService(
-                        sp.GetRequiredService<IDistributedCache>(),
-                        sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
-                        cachingOptions.DefaultTTL);
-                }
+                return new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>().Object;
+            }
 
+            var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+            return StackExchange.Redis.ConnectionMultiplexer.Connect(cachingOptions.Redis.ConnectionString);
+        });
+
+        services.AddSingleton<ICacheService>(sp =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
+            {
+                // Use a mock or a memory-based implementation of ICacheService if possible
+                // For now, let's keep it simple or use a dummy for testing
                 return new RedisCacheService(
-                    sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(),
+                    sp.GetRequiredService<IDistributedCache>(),
                     sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
-                    cachingConfig.DefaultTTL);
-            });
+                    cachingOptions.DefaultTTL);
+            }
+
+            return new RedisCacheService(
+                sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(),
+                sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
+                cachingConfig.DefaultTTL);
+        });
 
         services.AddScoped<IShadowReplayEngine, ShadowReplayEngine>();
         services.AddScoped<AuditInterceptor>();
@@ -267,6 +267,8 @@ public static class DependencyInjection
         services.AddScoped<ReconciliationEngineJob>();
         services.AddScoped<CheckSystemHealthJob>();
         services.AddScoped<LedgerOutboxWorker>();
+        services.AddScoped<Cobryx.Application.Collections.Assignment.IAssignmentEngine, Cobryx.Infrastructure.Services.Collections.AssignmentEngine>();
+        services.AddScoped<Cobryx.Application.Collections.Optimizer.ICollectionOptimizer, Cobryx.Infrastructure.Services.Collections.CollectionOptimizer>();
         services.AddScoped<DriftDetectionWorker>();
         services.AddScoped<LedgerIntegrityJob>();
         services.AddScoped<LoanAccrualWorker>();

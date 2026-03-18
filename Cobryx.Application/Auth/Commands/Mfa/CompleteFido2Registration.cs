@@ -37,10 +37,12 @@ public class CompleteFido2RegistrationHandler : IRequestHandler<CompleteFido2Reg
     public async Task<Result<bool>> Handle(CompleteFido2RegistrationCommand request, CancellationToken cancellationToken)
     {
         var userId = _currentUserProvider.GetUserId();
-        if (userId == null) return Result.Failure<bool>(DomainErrorCode.Auth.NotAuthenticated);
+        if (userId == null)
+            return Result.Failure<bool>(DomainErrorCode.Auth.NotAuthenticated);
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure<bool>(DomainErrorCode.User.NotFound);
+        if (user == null)
+            return Result.Failure<bool>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Completing FIDO2 registration for user: {Email}", user.Email);
 

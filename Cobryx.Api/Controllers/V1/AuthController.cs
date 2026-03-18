@@ -122,11 +122,16 @@ public class AuthController : CobryxBaseController
     {
         // Intentional Mapping: Structured Public Contract -> Flat Internal Command Requirement
         var formattedAddress = $"{request.BusinessAddress.Street} {request.BusinessAddress.HouseNumber}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.ApartmentNumber)) formattedAddress += $", {request.BusinessAddress.ApartmentNumber}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.Neighborhood)) formattedAddress += $", {request.BusinessAddress.Neighborhood}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.PostalCode)) formattedAddress += $", {request.BusinessAddress.PostalCode}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.City)) formattedAddress += $", {request.BusinessAddress.City}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.State)) formattedAddress += $", {request.BusinessAddress.State}";
+        if (!string.IsNullOrEmpty(request.BusinessAddress.ApartmentNumber))
+            formattedAddress += $", {request.BusinessAddress.ApartmentNumber}";
+        if (!string.IsNullOrEmpty(request.BusinessAddress.Neighborhood))
+            formattedAddress += $", {request.BusinessAddress.Neighborhood}";
+        if (!string.IsNullOrEmpty(request.BusinessAddress.PostalCode))
+            formattedAddress += $", {request.BusinessAddress.PostalCode}";
+        if (!string.IsNullOrEmpty(request.BusinessAddress.City))
+            formattedAddress += $", {request.BusinessAddress.City}";
+        if (!string.IsNullOrEmpty(request.BusinessAddress.State))
+            formattedAddress += $", {request.BusinessAddress.State}";
 
         var command = new OnboardBusinessCommand(
             request.TaxId,

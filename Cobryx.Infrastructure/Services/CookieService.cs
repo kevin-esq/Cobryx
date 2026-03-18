@@ -17,7 +17,8 @@ public class CookieService : ICookieService
     public void SetRefreshTokenCookie(string token, DateTime expires)
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return;
+        if (context == null)
+            return;
 
         var cookieOptions = new CookieOptions
         {
@@ -40,7 +41,8 @@ public class CookieService : ICookieService
     public void DeleteRefreshTokenCookie()
     {
         var context = _httpContextAccessor.HttpContext;
-        if (context == null) return;
+        if (context == null)
+            return;
 
         context.Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions
         {

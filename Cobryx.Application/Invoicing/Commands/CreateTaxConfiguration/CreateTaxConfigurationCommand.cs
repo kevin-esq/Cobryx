@@ -23,7 +23,8 @@ public class CreateTaxConfigurationHandler(
     public async Task<Result<Guid>> Handle(CreateTaxConfigurationCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         if (request.IsDefault)
         {

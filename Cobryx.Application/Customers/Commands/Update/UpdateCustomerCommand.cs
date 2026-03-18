@@ -32,7 +32,8 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
     public async Task<Result> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) throw new TenantContextMissingException();
+        if (!tenantId.HasValue)
+            throw new TenantContextMissingException();
 
         var customer = await _customerRepository.GetByIdAsync(request.Id, cancellationToken);
 

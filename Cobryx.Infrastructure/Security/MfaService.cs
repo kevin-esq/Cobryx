@@ -22,7 +22,8 @@ public class MfaService : IMfaService
 
     public bool VerifyCode(string secret, string code)
     {
-        if (string.IsNullOrWhiteSpace(code) || code.Length != 6) return false;
+        if (string.IsNullOrWhiteSpace(code) || code.Length != 6)
+            return false;
 
         var secretBytes = Base32Encoding.ToBytes(secret);
         var totp = new Totp(secretBytes);

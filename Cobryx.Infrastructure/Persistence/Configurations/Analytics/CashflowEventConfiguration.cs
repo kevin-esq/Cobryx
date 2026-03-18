@@ -1,4 +1,5 @@
 using Cobryx.Domain.Analytics;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -17,7 +18,7 @@ public class CashflowEventConfiguration : IEntityTypeConfiguration<CashflowEvent
         builder.Property(x => x.Direction)
                .HasConversion<string>()
                .HasMaxLength(50);
-               
+
         builder.Property(x => x.Source)
                .HasConversion<string>()
                .HasMaxLength(50);

@@ -28,7 +28,8 @@ public class ProjectNotificationOnPaymentCompletedHandler : INotificationHandler
                          n.RelatedEntityId == domainEvent.PaymentId.ToString() &&
                          n.Type == NotificationType.Success, cancellationToken);
 
-        if (exists) return;
+        if (exists)
+            return;
 
         var userNotification = new Notification(
             domainEvent.TenantId,

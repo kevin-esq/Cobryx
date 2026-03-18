@@ -60,7 +60,8 @@ public class CreditSale : BaseEntity, IAggregateRoot, ITenantEntity
 
     public decimal CalculateImplicitInterestRate()
     {
-        if (CashPrice <= 0) return 0;
+        if (CashPrice <= 0)
+            return 0;
         return (CreditPrice - CashPrice) / CashPrice * 100;
     }
 

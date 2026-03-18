@@ -317,6 +317,16 @@ try
             job => job.ExecuteAsync(),
             "0 1 * * *"); // 1:00 AM Daily
 
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Collections.CollectionsOrchestratorJob>(
+            "collections-orchestrator",
+            job => job.ProcessCollectionsAsync(),
+            Cron.Hourly);
+
+        RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Collections.CollectionsOptimizerJob>(
+            "collections-ai-optimizer",
+            job => job.RunHourlyOptimizationAsync(),
+            Cron.Hourly);
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.TenantConnectSyncJob>(
             "stripe-connect-sync",
             job => job.RunAsync(CancellationToken.None),

@@ -77,8 +77,10 @@ public class ObservabilityFilter : IAsyncActionFilter
 
     private static string GetFailedOutcomeCode(string errorCode)
     {
-        if (string.IsNullOrEmpty(errorCode)) return "SYSTEM.FAILED";
-        if (errorCode.EndsWith(".FAILED")) return errorCode;
+        if (string.IsNullOrEmpty(errorCode))
+            return "SYSTEM.FAILED";
+        if (errorCode.EndsWith(".FAILED"))
+            return errorCode;
 
         var parts = errorCode.Split('.');
         return $"{parts[0]}.FAILED";

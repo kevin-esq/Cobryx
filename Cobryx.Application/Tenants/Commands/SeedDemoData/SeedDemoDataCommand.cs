@@ -34,7 +34,8 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
 
         // 1. Check if demo data already exists to avoid duplicates
         var alreadyHasDemo = await dbContext.Set<Loan>().AnyAsync(l => l.TenantId == tenantId && l.IsDemo, cancellationToken);
-        if (alreadyHasDemo) return Result.Success();
+        if (alreadyHasDemo)
+            return Result.Success();
 
         // 2. Create Demo Customer
         var customer = new Cobryx.Domain.Lending.Customer(

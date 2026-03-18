@@ -49,15 +49,18 @@ public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Re
     public async Task<Result<AuthResult>> Handle(VerifyTotpLoginCommand request, CancellationToken cancellationToken)
     {
         var userId = _jwtTokenGenerator.ValidateMfaToken(request.MfaToken);
-        if (userId == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
+        if (userId == null)
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.InvalidToken);
 
         var user = await _userRepository.GetByIdAsync(userId.Value, cancellationToken);
-        if (user == null) return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
+        if (user == null)
+            return Result.Failure<AuthResult>(DomainErrorCode.User.NotFound);
 
         _logger.LogInformation("Verifying TOTP for user: {Email}", user.Email);
 
         var totpDevice = user.MfaDevices.FirstOrDefault(d => d.Type == MfaDeviceType.Totp && d.IsVerified);
-        if (totpDevice == null) return Result.Failure<AuthResult>(DomainErrorCode.Auth.MfaNotConfigured);
+        if (totpDevice == null)
+            return Result.Failure<AuthResult>(DomainErrorCode.Auth.MfaNotConfigured);
 
         bool isValid = _mfaService.VerifyCode(totpDevice.Secret, request.Code);
         if (!isValid)

@@ -25,7 +25,8 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, Result<PaginatedLi
     public async Task<Result<PaginatedList<UserDto>>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<PaginatedList<UserDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<PaginatedList<UserDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var users = await _userRepository.GetByTenantAsync(tenantId.Value, cancellationToken);
 

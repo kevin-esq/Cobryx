@@ -13,7 +13,8 @@ public class UsageService
             return false;
 
         var plan = subscription.Plan;
-        if (plan == null) return false;
+        if (plan == null)
+            return false;
 
         return metricType switch
         {

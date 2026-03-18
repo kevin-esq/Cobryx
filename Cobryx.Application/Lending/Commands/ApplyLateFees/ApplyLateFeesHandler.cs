@@ -38,7 +38,8 @@ public class ApplyLateFeesHandler(
             foreach (var activeLoan in activeLoans)
             {
                 var fullLoan = await _loanRepository.GetByIdWithInstallmentsAsync(activeLoan.Id, ct);
-                if (fullLoan != null) loansToProcess.Add(fullLoan);
+                if (fullLoan != null)
+                    loansToProcess.Add(fullLoan);
             }
         }
 
@@ -49,10 +50,12 @@ public class ApplyLateFeesHandler(
         foreach (var loan in loansToProcess)
         {
             var agreement = await _agreementRepository.GetByIdAsync(loan.LoanAgreementId, ct);
-            if (agreement == null || !agreement.LateFeePolicyId.HasValue) continue;
+            if (agreement == null || !agreement.LateFeePolicyId.HasValue)
+                continue;
 
             var policy = await _policyRepository.GetByIdAsync(agreement.LateFeePolicyId.Value, ct);
-            if (policy == null) continue;
+            if (policy == null)
+                continue;
 
             bool loanUpdated = false;
             var today = DateTime.UtcNow.Date;

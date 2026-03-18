@@ -33,14 +33,17 @@ public class UpgradeSubscriptionHandler : IRequestHandler<UpgradeSubscriptionCom
     public async Task<Result> Handle(UpgradeSubscriptionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
 
-        if (subscription == null) return Result.Failure(DomainErrorCode.Subscription.NotFound);
+        if (subscription == null)
+            return Result.Failure(DomainErrorCode.Subscription.NotFound);
 
         var newPlan = await _planRepository.GetByIdAsync(request.NewPlanId, cancellationToken);
-        if (newPlan == null) return Result.Failure(DomainErrorCode.Subscription.PlanNotFound);
+        if (newPlan == null)
+            return Result.Failure(DomainErrorCode.Subscription.PlanNotFound);
 
         // Validate plan capacity (Downgrade rejection logic)
         var usage = await _usageMetering.GetUsageSnapshotAsync(tenantId.Value, cancellationToken);

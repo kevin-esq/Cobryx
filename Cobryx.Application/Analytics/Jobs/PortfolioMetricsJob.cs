@@ -1,4 +1,5 @@
 using Cobryx.Application.Analytics.Services;
+
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Analytics.Jobs;

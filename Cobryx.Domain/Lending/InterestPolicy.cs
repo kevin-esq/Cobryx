@@ -118,7 +118,8 @@ public class InterestPolicy : BaseEntity, ITenantEntity
 
     public decimal CalculateDailyRate()
     {
-        if (!Rate.HasValue) return 0;
+        if (!Rate.HasValue)
+            return 0;
 
         var annualRate = Rate.Value / 100;
         var divisor = DayCountBasis switch

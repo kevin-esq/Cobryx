@@ -1142,6 +1142,26 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("CashflowEvents", (string)null);
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.Analytics.LatestLoanSnapshot", b =>
+                {
+                    b.Property<int>("DaysPastDue")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("InterestBalance")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("LateFeeBalance")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("LoanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PrincipalBalance")
+                        .HasColumnType("numeric");
+
+                    b.ToTable("LatestLoanSnapshots");
+                });
+
             modelBuilder.Entity("Cobryx.Domain.Analytics.LoanBalanceSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1174,6 +1194,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
 
@@ -1263,6 +1288,212 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_portfolio_metrics_tenant_date");
 
                     b.ToTable("PortfolioMetricsDaily", (string)null);
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Analytics.TenantPortfolioAggregate", b =>
+                {
+                    b.Property<decimal>("Bucket0To30")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Bucket31To60")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Bucket61To90")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Bucket90Plus")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("NplOutstanding")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalInterest")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("TotalLateFees")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("TotalLoans")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalOutstanding")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("TotalPrincipal")
+                        .HasColumnType("numeric");
+
+                    b.ToTable("TenantPortfolioAggregates");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Collections.CollectionAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ActionType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExecutedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CaseId");
+
+                    b.ToTable("CollectionActions");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Collections.CollectionAgent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentLoad")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxCapacity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("CollectionAgents");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Collections.CollectionCase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedAgentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DaysPastDue")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastContactedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LoanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("NextActionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Outstanding")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PriorityScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoanId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "IsClosed", "PriorityScore");
+
+                    b.ToTable("CollectionCases");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Collections.CollectionOutcome", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("AmountRecovered")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<int>("DaysPastDueAtAction")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DaysToRecover")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("WasSuccessful")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DaysPastDueAtAction");
+
+                    b.ToTable("CollectionOutcomes");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.Collections.CollectionPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CallDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EscalationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LegalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReminderDays")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("CollectionPolicies");
                 });
 
             modelBuilder.Entity("Cobryx.Domain.Identity.AdminActionAudit", b =>

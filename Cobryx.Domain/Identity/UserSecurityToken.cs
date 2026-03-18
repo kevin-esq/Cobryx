@@ -34,7 +34,8 @@ public class UserSecurityToken : BaseEntity
 
     public void Use()
     {
-        if (!IsActive) throw new DomainException(DomainErrorCode.Auth.TokenNotActive);
+        if (!IsActive)
+            throw new DomainException(DomainErrorCode.Auth.TokenNotActive);
         UsedAt = DateTime.UtcNow;
         UpdateTimestamp();
     }

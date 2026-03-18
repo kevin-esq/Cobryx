@@ -1,8 +1,11 @@
-using Cobryx.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
-using Xunit.Abstractions;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Infrastructure.Persistence;
+
+using Microsoft.EntityFrameworkCore;
+
 using Moq;
+
+using Xunit.Abstractions;
 
 namespace Cobryx.IntegrationTests.Diagnostics
 {
@@ -18,15 +21,15 @@ namespace Cobryx.IntegrationTests.Diagnostics
                 .Options;
 
             var tenantProviderMock = new Mock<ITenantProvider>();
-            
+
             using var context = new CobryxDbContext(options, tenantProviderMock.Object);
-            
+
             var debugView = context.Model.ToDebugString();
             var debugPath = Path.Combine(Environment.CurrentDirectory, "ef_model_debug.txt");
             var indicesPath = Path.Combine(Environment.CurrentDirectory, "ef_model_indices.txt");
 
             File.WriteAllText(debugPath, debugView);
-            
+
             using var writer = new StreamWriter(indicesPath);
             foreach (var entity in context.Model.GetEntityTypes())
             {

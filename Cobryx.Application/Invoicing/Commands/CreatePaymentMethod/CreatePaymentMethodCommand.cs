@@ -22,7 +22,8 @@ public class CreatePaymentMethodHandler(
     public async Task<Result<Guid>> Handle(CreatePaymentMethodCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         var existing = await _paymentMethodRepository.GetByCodeAsync(tenantId.Value, request.Code, cancellationToken);
         if (existing != null)

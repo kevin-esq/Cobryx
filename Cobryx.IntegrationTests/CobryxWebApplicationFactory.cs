@@ -91,20 +91,23 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             }
 
             var emailDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IEmailService));
-            if (emailDescriptor != null) services.Remove(emailDescriptor);
+            if (emailDescriptor != null)
+                services.Remove(emailDescriptor);
 
             services.AddSingleton<IEmailService, MockEmailService>();
             services.AddSingleton<MockEmailService>(sp => (MockEmailService)sp.GetRequiredService<IEmailService>());
 
             var captchaDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(ICaptchaService));
-            if (captchaDescriptor != null) services.Remove(captchaDescriptor);
+            if (captchaDescriptor != null)
+                services.Remove(captchaDescriptor);
 
             services.AddSingleton<ICaptchaService, MockCaptchaService>();
 
             services.AddSingleton<IAuthAttemptService, MockAuthAttemptService>();
 
             var stripeDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IStripeService));
-            if (stripeDescriptor != null) services.Remove(stripeDescriptor);
+            if (stripeDescriptor != null)
+                services.Remove(stripeDescriptor);
 
             services.AddSingleton<IStripeService, MockStripeService>();
 
@@ -112,7 +115,8 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
             _connection.Open();
 
             var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(CobryxDbContext));
-            if (dbContextDescriptor != null) services.Remove(dbContextDescriptor);
+            if (dbContextDescriptor != null)
+                services.Remove(dbContextDescriptor);
 
             services.AddDbContext<CobryxDbContext>((sp, options) =>
             {
@@ -128,7 +132,8 @@ public class CobryxWebApplicationFactory : WebApplicationFactory<Program>
 
 
             var tenantDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(ITenantProvider));
-            if (tenantDescriptor != null) services.Remove(tenantDescriptor);
+            if (tenantDescriptor != null)
+                services.Remove(tenantDescriptor);
             services.AddSingleton<ITenantProvider, TestTenantProvider>();
 
             services.RemoveAll<IDistributedCache>();

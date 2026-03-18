@@ -22,8 +22,10 @@ public class AccruedCharge : BaseEntity
 
     public AccruedCharge(Guid loanId, ChargeType type, decimal amount, DateTime accrualDate)
     {
-        if (loanId == Guid.Empty) throw new ArgumentException("LoanId is required", nameof(loanId));
-        if (amount < 0) throw new ArgumentException("Amount cannot be negative", nameof(amount));
+        if (loanId == Guid.Empty)
+            throw new ArgumentException("LoanId is required", nameof(loanId));
+        if (amount < 0)
+            throw new ArgumentException("Amount cannot be negative", nameof(amount));
 
         LoanId = loanId;
         Type = type;

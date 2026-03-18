@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Payments.Enums;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Analytics.Services;

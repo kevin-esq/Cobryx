@@ -31,7 +31,8 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
             domainEvent.PaymentId, domainEvent.Amount);
 
         var payment = await _paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);
-        if (payment == null) return;
+        if (payment == null)
+            return;
         if (payment.IsFullyRefunded)
         {
             foreach (var allocation in payment.Allocations)

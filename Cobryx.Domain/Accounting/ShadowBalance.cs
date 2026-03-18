@@ -21,7 +21,8 @@ public class ShadowBalance : BaseEntity
 
     public void ApplyChange(decimal delta, long sequence)
     {
-        if (sequence <= LastSequence) return; // Idempotency
+        if (sequence <= LastSequence)
+            return; // Idempotency
 
         Balance += delta;
         LastSequence = sequence;

@@ -17,7 +17,8 @@ public class ArchitectureTests
 
         foreach (var type in exceptionTypes)
         {
-            if (type.Name == "DomainException" || type.Name == "CobryxException") continue;
+            if (type.Name == "DomainException" || type.Name == "CobryxException")
+                continue;
 
             type.Should().BeAssignableTo<CobryxException>(
                 $"Exception type {type.Name} must inherit from CobryxException to ensure Zero-Text compliance.");

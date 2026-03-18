@@ -38,7 +38,8 @@ public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconcili
         if (tenantId != CobryxDefaults.PlatformTenantId)
         {
             var tenant = await _dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-            if (tenant == null) return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Tenant.NotFound);
+            if (tenant == null)
+                return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Tenant.NotFound);
             stripeAccountId = tenant.StripeAccountId;
 
             if (string.IsNullOrEmpty(stripeAccountId))

@@ -92,16 +92,20 @@ public class PaymentReminderJob
         var daysUntilExpiry = (link.ExpiresAt - now).TotalDays;
 
         // Bucket 1: 3 days before expiry (Friendly proactive heads-up)
-        if (daysUntilExpiry <= 3.1 && daysUntilExpiry > 2.0 && link.ReminderCount == 0) return true;
+        if (daysUntilExpiry <= 3.1 && daysUntilExpiry > 2.0 && link.ReminderCount == 0)
+            return true;
 
         // Bucket 2: 1 day after creation (Nudge if no action taken)
-        if (daysSinceCreation >= 1.0 && daysSinceCreation < 2.0 && link.ReminderCount <= 1) return true;
+        if (daysSinceCreation >= 1.0 && daysSinceCreation < 2.0 && link.ReminderCount <= 1)
+            return true;
 
         // Bucket 3: 7 days after creation (Formal notification)
-        if (daysSinceCreation >= 7.0 && daysSinceCreation < 8.0 && link.ReminderCount <= 2) return true;
+        if (daysSinceCreation >= 7.0 && daysSinceCreation < 8.0 && link.ReminderCount <= 2)
+            return true;
 
         // Bucket 4: 14 days after creation (Escalated final notice)
-        if (daysSinceCreation >= 14.0 && daysSinceCreation < 15.0 && link.ReminderCount <= 3) return true;
+        if (daysSinceCreation >= 14.0 && daysSinceCreation < 15.0 && link.ReminderCount <= 3)
+            return true;
 
         return false;
     }

@@ -91,10 +91,12 @@ public class GetTenantSettingsHandler : IRequestHandler<GetTenantSettingsQuery, 
     public async Task<Result<TenantSettingsDto>> Handle(GetTenantSettingsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<TenantSettingsDto>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<TenantSettingsDto>(DomainErrorCode.Tenant.ContextMissing);
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) return Result.Failure<TenantSettingsDto>(DomainErrorCode.Tenant.NotFound);
+        if (tenant == null)
+            return Result.Failure<TenantSettingsDto>(DomainErrorCode.Tenant.NotFound);
 
         return Result.Success(new TenantSettingsDto(
             tenant.Id,

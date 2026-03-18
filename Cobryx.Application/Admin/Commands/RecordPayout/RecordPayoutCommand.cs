@@ -1,9 +1,10 @@
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Accounting.Enums;
-using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

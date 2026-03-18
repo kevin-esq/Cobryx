@@ -46,7 +46,8 @@ public class CreditsController(ISender sender, Application.Common.Interfaces.ITe
         [FromBody] CreateCreditRequest request)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         // Intentional Mapping: Public Intent -> Internal Domain Implementation
         var command = new Application.Credits.Commands.Create.CreateCreditCommand(

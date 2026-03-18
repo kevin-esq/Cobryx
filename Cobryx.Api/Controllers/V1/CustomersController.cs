@@ -53,7 +53,8 @@ public class CustomersController : CobryxBaseController
     public async Task<IActionResult> Create([FromBody] CreateCustomerRequest request)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null) return Unauthorized();
+        if (tenantId == null)
+            return Unauthorized();
 
         // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var address = request.Address != null

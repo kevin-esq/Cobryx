@@ -1,5 +1,6 @@
 using Cobryx.Application.Analytics.Models;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +18,7 @@ public class PortfolioCacheRefreshJob(
     public async Task RunAsync(CancellationToken ct = default)
     {
         _logger.LogInformation("Starting PortfolioCacheRefreshJob to cache Redis portfolio analytics.");
-        
+
         var date = DateTime.UtcNow.Date;
 
         var metricsList = await _db.PortfolioMetricsDaily

@@ -61,7 +61,8 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
 
         // 4. Connect Guard: Block if tenant is halfway through onboarding or restricted
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
-        if (tenant == null) return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
+        if (tenant == null)
+            return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
 
         if (!tenant.IsConnectActive && !string.IsNullOrEmpty(tenant.StripeAccountId))
         {

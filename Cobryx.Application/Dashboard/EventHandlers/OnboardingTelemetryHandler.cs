@@ -27,7 +27,8 @@ public class OnboardingTelemetryHandler : INotificationHandler<DomainEventNotifi
         var exists = await dbContext.Set<TenantFunnelMetric>()
             .AnyAsync(m => m.TenantId == @event.TenantId && m.MilestoneCode == @event.MilestoneCode, cancellationToken);
 
-        if (exists) return;
+        if (exists)
+            return;
 
         // Get previous milestone to calculate delta
         var previous = await dbContext.Set<TenantFunnelMetric>()

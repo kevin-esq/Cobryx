@@ -41,7 +41,8 @@ public class PasswordHasher : IPasswordHasher
         try
         {
             var parts = passwordHash.Split('.');
-            if (parts.Length != 6 || parts[0] != "v1") return false;
+            if (parts.Length != 6 || parts[0] != "v1")
+                return false;
 
             var iterations = int.Parse(parts[1]);
             var memorySize = int.Parse(parts[2]);
@@ -72,7 +73,8 @@ public class PasswordHasher : IPasswordHasher
         try
         {
             var parts = passwordHash.Split('.');
-            if (parts.Length != 6 || parts[0] != "v1") return true;
+            if (parts.Length != 6 || parts[0] != "v1")
+                return true;
 
             var iterations = int.Parse(parts[1]);
             return iterations < Iterations;

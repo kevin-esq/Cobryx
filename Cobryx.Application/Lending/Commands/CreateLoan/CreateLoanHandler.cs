@@ -2,9 +2,9 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
+using Cobryx.Domain.Lending.Enums;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
-using Cobryx.Domain.Lending.Enums;
 
 using Concordia;
 

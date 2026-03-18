@@ -55,7 +55,8 @@ public class HardeningStressTests(ITestOutputHelper output)
                 tx.Post();
                 context.LedgerTransactions.Add(tx);
 
-                if (i % 5000 == 0) await context.SaveChangesAsync();
+                if (i % 5000 == 0)
+                    await context.SaveChangesAsync();
             }
             await context.SaveChangesAsync();
             swGeneration.Stop();

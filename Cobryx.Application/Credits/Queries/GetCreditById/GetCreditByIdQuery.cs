@@ -24,7 +24,8 @@ public class GetCreditByIdHandler : IRequestHandler<GetCreditByIdQuery, Result<C
     public async Task<Result<CreditDetailDto>> Handle(GetCreditByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<CreditDetailDto>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<CreditDetailDto>(DomainErrorCode.Tenant.ContextMissing);
 
         var credit = await _creditRepository.Query()
             .AsNoTracking()

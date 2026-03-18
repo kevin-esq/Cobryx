@@ -66,10 +66,12 @@ public class GetBusinessSettingsHandler : IRequestHandler<GetBusinessSettingsQue
     public async Task<Result<BusinessSettingsDto>> Handle(GetBusinessSettingsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<BusinessSettingsDto>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<BusinessSettingsDto>(DomainErrorCode.Tenant.ContextMissing);
 
         var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, cancellationToken);
-        if (tenant == null) return Result.Failure<BusinessSettingsDto>(DomainErrorCode.Tenant.NotFound);
+        if (tenant == null)
+            return Result.Failure<BusinessSettingsDto>(DomainErrorCode.Tenant.NotFound);
 
         var s = tenant.Settings;
         return Result.Success(new BusinessSettingsDto(

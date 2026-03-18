@@ -45,7 +45,8 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
     public async Task<Result<Guid>> Handle(ProcessPaymentCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
         var money = new Money(request.Amount, request.Currency);
         var payment = new Payment(
@@ -63,12 +64,15 @@ public class ProcessPaymentHandler : IRequestHandler<ProcessPaymentCommand, Resu
 
             foreach (var invoiceId in request.InvoiceIds)
             {
-                if (remainingAmount <= 0) break;
+                if (remainingAmount <= 0)
+                    break;
 
                 var invoice = await _invoiceRepository.GetByIdAsync(invoiceId, cancellationToken);
-                if (invoice == null || invoice.TenantId != tenantId.Value) continue;
+                if (invoice == null || invoice.TenantId != tenantId.Value)
+                    continue;
 
-                if (invoice.Status == InvoiceStatus.Paid) continue;
+                if (invoice.Status == InvoiceStatus.Paid)
+                    continue;
 
                 decimal unpaidAmount = invoice.Total.Amount - invoice.TotalPaid.Amount;
                 decimal amountToApply = Math.Min(unpaidAmount, remainingAmount);

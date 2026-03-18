@@ -24,7 +24,8 @@ public class GetProductsHandler : IRequestHandler<GetProductsQuery, Result<Pagin
     public async Task<Result<PaginatedList<ProductDto>>> Handle(GetProductsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<PaginatedList<ProductDto>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<PaginatedList<ProductDto>>(DomainErrorCode.Tenant.ContextMissing);
 
         var allProducts = await _productRepository.GetAllAsync(cancellationToken);
         var products = allProducts.Where(p => p.TenantId == tenantId.Value);

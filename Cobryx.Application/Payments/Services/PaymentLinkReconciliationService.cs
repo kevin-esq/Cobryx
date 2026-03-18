@@ -252,7 +252,8 @@ public class PaymentLinkReconciliationService
 
         foreach (var link in stuckLinks)
         {
-            if (string.IsNullOrEmpty(link.StripePaymentIntentId)) continue;
+            if (string.IsNullOrEmpty(link.StripePaymentIntentId))
+                continue;
 
             try
             {

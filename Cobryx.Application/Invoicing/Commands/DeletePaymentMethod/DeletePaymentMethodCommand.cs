@@ -24,7 +24,8 @@ public class DeletePaymentMethodHandler : IRequestHandler<DeletePaymentMethodCom
     public async Task<Result> Handle(DeletePaymentMethodCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var paymentMethod = await _paymentMethodRepository.GetByIdAsync(request.Id, cancellationToken);
         if (paymentMethod == null || paymentMethod.TenantId != tenantId.Value)

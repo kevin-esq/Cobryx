@@ -29,7 +29,8 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, Result<Pag
     public async Task<Result<PaginatedList<AuditLogEntry>>> Handle(GetAuditLogsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure<PaginatedList<AuditLogEntry>>(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure<PaginatedList<AuditLogEntry>>(DomainErrorCode.Tenant.ContextMissing);
 
         var result = await _auditLogQuery.QueryAsync(
             tenantId.Value,

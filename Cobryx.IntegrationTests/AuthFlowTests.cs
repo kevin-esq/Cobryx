@@ -11,13 +11,13 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.IntegrationTests.Fakes;
+using Cobryx.IntegrationTests.Helpers;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Cobryx.IntegrationTests.Helpers;
 
 namespace Cobryx.IntegrationTests;
 
@@ -51,7 +51,8 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var conn = db.Database.GetDbConnection();
-        if (conn.State == System.Data.ConnectionState.Open) await conn.CloseAsync();
+        if (conn.State == System.Data.ConnectionState.Open)
+            await conn.CloseAsync();
         await conn.OpenAsync();
 
         await db.Database.EnsureCreatedAsync();

@@ -25,7 +25,8 @@ public class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, Result
     public async Task<Result> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
     {
         var payment = await _paymentRepository.GetByIdAsync(request.PaymentId, cancellationToken);
-        if (payment == null) return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
+        if (payment == null)
+            return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
 
         var refundAmount = new Money(request.Amount, request.Currency);
 

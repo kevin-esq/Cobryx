@@ -24,7 +24,8 @@ public class DeleteTaxConfigurationHandler : IRequestHandler<DeleteTaxConfigurat
     public async Task<Result> Handle(DeleteTaxConfigurationCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue) return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        if (!tenantId.HasValue)
+            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
         var tax = await _taxRepository.GetByIdAsync(request.Id, cancellationToken);
         if (tax == null || tax.TenantId != tenantId.Value)

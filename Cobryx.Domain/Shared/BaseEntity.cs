@@ -22,7 +22,8 @@ public abstract class BaseEntity
 
     public void SetCreatedBy(Guid userId)
     {
-        if (CreatedBy.HasValue) return;
+        if (CreatedBy.HasValue)
+            return;
         CreatedBy = userId;
     }
 

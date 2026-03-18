@@ -35,7 +35,8 @@ public class LedgerOutboxWorker(
             .Take(100)
             .ToListAsync(ct);
 
-        if (events.Count == 0) return;
+        if (events.Count == 0)
+            return;
 
         _logger.LogInformation("Processing {Count} ledger outbox events...", events.Count);
 

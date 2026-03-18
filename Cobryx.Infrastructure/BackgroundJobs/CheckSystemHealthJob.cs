@@ -119,7 +119,8 @@ public class CheckSystemHealthJob
         }
 
         var metrics = result.Value;
-        if (metrics == null) return;
+        if (metrics == null)
+            return;
 
         // Fintech Thresholds - Elite Standard
         if (metrics.PAR30Percentage > 15.0m) // 15% PAR30
