@@ -15,13 +15,13 @@ public class RedisFeatureStoreTests
         var cacheMock = new Mock<ICacheService>();
         var store = new RedisFeatureStore(cacheMock.Object);
         var customerId = Guid.NewGuid();
-        var vector = new FeatureVector { PD = 0.5m, Utilization = 0.8m };
+        var vector = new FeatureVector { Outstanding = 5000m, Utilization = 0.8m };
 
         cacheMock.Setup(x => x.GetAsync<FeatureVector>($"features:{customerId}", default)).ReturnsAsync(vector);
 
         var retrieved = await store.GetAsync(customerId);
 
-        Assert.Equal(0.5m, retrieved.PD);
+        Assert.Equal(5000m, retrieved.Outstanding);
         Assert.Equal(0.8m, retrieved.Utilization);
         
         await store.SetAsync(customerId, retrieved);

@@ -33,7 +33,7 @@ public class DecisionMlIntegrationTests
         var mlClient = new MlClient(httpClient);
 
         var featureStoreMock = new Mock<IFeatureStore>();
-        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<Guid>())).ReturnsAsync(new FeatureVector { PD = 0.8m });
+        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<Guid>())).ReturnsAsync(new FeatureVector { Outstanding = 1000m });
 
         var engine = new DecisionEngine(new CreditLimitEngine(), new PricingEngine(), new FraudEngine());
         var dbMock = new Mock<Cobryx.Application.Common.Interfaces.ICobryxDbContext>();
