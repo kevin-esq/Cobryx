@@ -7,10 +7,14 @@ public class CreditLimitEngine : ICreditLimitEngine
     public decimal Calculate(CreditContext ctx)
     {
         var baseLimit = ctx.MonthlyIncomeEstimate * 2m;
-        var behaviorMultiplier = 0.5m + ctx.BehaviorScore; // 0.5 - 1.5
+        var behaviorMultiplier = 0.5m + ctx.BehaviorScore;
 
-        var limit = baseLimit * (1 - ctx.ProbabilityOfDefault) * behaviorMultiplier;
+        var limit =
+            baseLimit
+          * (1 - ctx.ProbabilityOfDefault)
+          * behaviorMultiplier
+          * (1 - ctx.Utilization);
 
-        return Math.Clamp(limit, 100m, 50000m);
+        return System.Math.Clamp(limit, 100m, 50000m);
     }
 }

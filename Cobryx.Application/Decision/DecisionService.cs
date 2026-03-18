@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Decision;
 
