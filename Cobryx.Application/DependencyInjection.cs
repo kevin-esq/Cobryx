@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddPaymentsModule();
         services.AddAccountingModule();
 
+        services.AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
+
         return services;
     }
 }

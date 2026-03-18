@@ -1,4 +1,5 @@
 using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Events.Lending;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
@@ -74,6 +75,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
     {
         Status = LoanStatus.Closed;
         ClosedAt = DateTime.UtcNow;
+        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
@@ -81,6 +83,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
     {
         if (Status != LoanStatus.Draft) return;
         Status = LoanStatus.Active;
+        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
@@ -88,6 +91,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
     {
         Status = LoanStatus.Active;
         DisbursementDate = date;
+        AddDomainEvent(new LoanDisbursedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
@@ -116,6 +120,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
         TotalPaid += amount;
         LastPaymentDate = paymentDate;
+        AddDomainEvent(new LoanPaymentAppliedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
@@ -183,6 +188,7 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
     public void MarkAccrued(DateTime date)
     {
         LastAccrualDate = date;
+        AddDomainEvent(new AccrualPostedEvent(Id, 0, DateTime.UtcNow));
         UpdateTimestamp();
     }
 

@@ -24,8 +24,14 @@ public interface ICobryxDbContext
     public DbSet<TenantMRRHistory> TenantMRRHistory { get; }
     public DbSet<AdminActionAudit> AdminActionAudits { get; }
 
+    // Analytics
+    public DbSet<Domain.Analytics.LatestLoanSnapshot> LatestLoanSnapshots { get; }
+    public DbSet<Cobryx.Domain.Analytics.TenantPortfolioAggregate> TenantPortfolioAggregates { get; }
+    public DbSet<Domain.Analytics.PortfolioMetricsDaily> PortfolioMetricsDaily { get; }
+
     // Lending
     public DbSet<Loan> Loans { get; }
+    public DbSet<Installment> Installments { get; }
     public DbSet<LoanDelinquencyState> LoanDelinquencyStates { get; }
     public DbSet<CollectionsPolicy> CollectionsPolicies { get; }
     public DbSet<LoanCollectionsEvent> LoanCollectionsEvents { get; }

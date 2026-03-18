@@ -301,6 +301,17 @@ try
             job => job.ExecuteAsync(CancellationToken.None),
             Cron.Minutely);
 
+        RecurringJob.AddOrUpdate<Cobryx.Application.Analytics.Jobs.PortfolioMetricsJob>(
+            "portfolio-metrics",
+            job => job.RunAsync(),
+            Cron.Daily(0));
+
+        // Runs 30 minutes after Metrics job to ensure DB reflects latest metrics
+        RecurringJob.AddOrUpdate<Cobryx.Application.Analytics.Jobs.PortfolioCacheRefreshJob>(
+            "portfolio-cache-refresh",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Daily(0, 30));
+
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Lending.LoanAccrualWorker>(
             "loan-daily-accrual",
             job => job.ExecuteAsync(),
