@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260318211627_AddRiskEngine")]
+    partial class AddRiskEngine
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1144,9 +1147,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Cobryx.Domain.Analytics.LatestLoanSnapshot", b =>
                 {
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("DaysPastDue")
                         .HasColumnType("integer");
 
@@ -1161,9 +1161,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("PrincipalBalance")
                         .HasColumnType("numeric");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
 
                     b.ToTable("LatestLoanSnapshots");
                 });
@@ -1207,10 +1204,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RecordedAt")
-                        .IsDescending()
-                        .HasDatabaseName("idx_snapshot_recent");
 
                     b.HasIndex("LoanId", "RecordedAt")
                         .HasDatabaseName("idx_snapshot_loan_recorded");
@@ -1342,10 +1335,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("BehaviorScore")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
@@ -1356,13 +1345,11 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("RecordedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("RiskScore")
-                        .HasColumnType("numeric");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId", "RecordedAt")
-                        .HasDatabaseName("idx_risk_snapshot_customer_date");
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("RecordedAt");
 
                     b.ToTable("CustomerRiskSnapshots");
                 });

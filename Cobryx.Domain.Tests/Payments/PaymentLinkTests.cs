@@ -40,7 +40,7 @@ public class PaymentLinkTests
     }
 
     [Fact]
-    public void RecordRecoveryFailure_ShouldBeDeterministic_PerLink()
+    public void RecordRecoveryFailure_Jitter_ShouldVaryAcrossDifferentLinks()
     {
         // Arrange
         var link1 = CreateActiveLink();
@@ -50,8 +50,8 @@ public class PaymentLinkTests
         link1.RecordRecoveryFailure("insufficient_funds");
         link2.RecordRecoveryFailure("insufficient_funds");
 
-        // Assert
-        Assert.Equal(link1.NextRecoveryAttemptAt, link2.NextRecoveryAttemptAt);
+        // Assert: Jitter uses Link Id, so different links have slightly different retry times
+        Assert.NotEqual(link1.NextRecoveryAttemptAt, link2.NextRecoveryAttemptAt);
     }
 
     [Fact]

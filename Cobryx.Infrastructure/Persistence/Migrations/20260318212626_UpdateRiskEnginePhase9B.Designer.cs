@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CobryxDbContext))]
-    partial class CobryxDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260318212626_UpdateRiskEnginePhase9B")]
+    partial class UpdateRiskEnginePhase9B
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1144,9 +1147,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Cobryx.Domain.Analytics.LatestLoanSnapshot", b =>
                 {
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("DaysPastDue")
                         .HasColumnType("integer");
 
@@ -1161,9 +1161,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("PrincipalBalance")
                         .HasColumnType("numeric");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
 
                     b.ToTable("LatestLoanSnapshots");
                 });
@@ -1207,10 +1204,6 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RecordedAt")
-                        .IsDescending()
-                        .HasDatabaseName("idx_snapshot_recent");
 
                     b.HasIndex("LoanId", "RecordedAt")
                         .HasDatabaseName("idx_snapshot_loan_recorded");
