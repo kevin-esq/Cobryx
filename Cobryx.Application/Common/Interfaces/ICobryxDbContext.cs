@@ -74,6 +74,7 @@ public interface ICobryxDbContext
     public DbSet<Cobryx.Domain.ML.MlModel> MlModels { get; }
     public DbSet<Cobryx.Domain.ML.DecisionOutcome> DecisionOutcomes { get; }
     public DbSet<Cobryx.Domain.ML.QValue> QValues { get; }
+    public DbSet<Cobryx.Domain.ML.Experience> Experiences { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

@@ -42,12 +42,17 @@ public class DecisionMlIntegrationTests
         dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
         dbMock.Setup(d => d.QValues).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.QValue>>().Object);
         dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
+        dbMock.Setup(d => d.Experiences).Returns(new Mock<Microsoft.EntityFrameworkCore.DbSet<Cobryx.Domain.ML.Experience>>().Object);
 
         var cacheMock = new Mock<Cobryx.Application.Common.Interfaces.ICacheService>();
         
         var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
         rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object);
+        var ppoClientMock = new Mock<System.Net.Http.HttpMessageHandler>();
+        ppoClientMock.Protected().Setup<Task<System.Net.Http.HttpResponseMessage>>("SendAsync", ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new System.Net.Http.HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.OK, Content = new System.Net.Http.StringContent("{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}") });
+        var ppoClient = new Cobryx.Application.ML.PpoClient(new System.Net.Http.HttpClient(ppoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object, ppoClient);
 
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext

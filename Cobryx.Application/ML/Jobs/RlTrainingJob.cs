@@ -10,9 +10,9 @@ namespace Cobryx.Application.ML.Jobs;
 public class RlTrainingJob
 {
     private readonly ICobryxDbContext _db;
-    private readonly RlEngine _engine;
+    private readonly IRlEngine _engine;
 
-    public RlTrainingJob(ICobryxDbContext db, RlEngine engine)
+    public RlTrainingJob(ICobryxDbContext db, IRlEngine engine)
     {
         _db = db;
         _engine = engine;
