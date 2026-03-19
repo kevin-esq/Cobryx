@@ -17,4 +17,5 @@ public class Experience
     public decimal Reward { get; set; }
 
     public string NextStateJson { get; set; } = "";
+    public bool Done { get; set; }
 }

@@ -46,15 +46,28 @@ def predict(features: FeatureVector, model: Annotated[str, Query()] = "xgb_v1"):
         modelVersion=model
     )
 
-@app.post("/rl/ppo/decide")
-def decide_ppo(features: dict):
+@app.post("/rl/ppo/portfolio")
+def decide_portfolio(state: dict):
+    return {
+        "creditMultiplier": 1.0,
+        "riskTolerance": 0.5,
+        "liquidityBuffer": 0.1
+    }
+
+@app.post("/rl/ppo/combined")
+def decide_combined(payload: dict):
+    features = payload.get("features", {})
+    global_state = payload.get("global_state", {})
+
     import torch
     x = torch.tensor([[
         features["utilization"],
         features["paymentDelay"] / 30.0,
         features["behaviorScore"],
         features["dpdTrend"] / 30.0,
-        features["outstanding"] / 20000.0
+        features["outstanding"] / 20000.0,
+        global_state.get("totalExposure", 0) / 10000000.0,
+        global_state.get("availableLiquidity", 0) / 500000.0
     ]]).float()
 
     mean, value = ppo_model(x)
@@ -64,8 +77,15 @@ def decide_ppo(features: dict):
     interest_adj = float(-0.1 + (action[0][1] + 1) / 2 * 0.4)
 
     return {
-        "creditMultiplier": credit_mult,
-        "interestDelta": interest_adj,
-        "logProb": float(log_prob.item()),
-        "value": float(value.item())
+        "portfolio": {
+            "creditMultiplier": 1.0,
+            "riskTolerance": 0.5,
+            "liquidityBuffer": 0.1
+        },
+        "local": {
+            "creditMultiplier": credit_mult,
+            "interestDelta": interest_adj,
+            "logProb": float(log_prob.item()),
+            "value": float(value.item())
+        }
     }

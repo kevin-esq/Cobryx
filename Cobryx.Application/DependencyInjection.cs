@@ -41,10 +41,13 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Application.ML.DatasetExporter>();
         services.AddScoped<Cobryx.Application.ML.Jobs.DatasetExporterJob>();
         services.AddScoped<Cobryx.Application.ML.Jobs.RlTrainingJob>();
+        services.AddScoped<Cobryx.Application.ML.Jobs.PortfolioTrainingJob>();
         services.AddScoped<Cobryx.Application.ML.ModelRouter>();
         services.AddScoped<Cobryx.Application.ML.EnsembleService>();
         services.AddScoped<Cobryx.Application.ML.RlPolicy>();
         services.AddScoped<Cobryx.Application.ML.IRlEngine, Cobryx.Application.ML.RlEngine>();
+        services.AddScoped<Cobryx.Application.ML.IPortfolioFeatureStore, Cobryx.Application.ML.RedisPortfolioFeatureStore>();
+        services.AddScoped<Cobryx.Application.ML.PortfolioEngine>();
 
         services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
         {
@@ -53,6 +56,17 @@ public static class DependencyInjection
         });
 
         services.AddHttpClient<Cobryx.Application.ML.PpoClient>(c =>
+        {
+            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+            c.BaseAddress = new System.Uri(url);
+        })
+        .AddTransientHttpErrorPolicy(p =>
+            p.WaitAndRetryAsync(3, retry =>
+                System.TimeSpan.FromMilliseconds(200 * retry)))
+        .AddTransientHttpErrorPolicy(p =>
+            p.CircuitBreakerAsync(5, System.TimeSpan.FromSeconds(30)));
+
+        services.AddHttpClient<Cobryx.Application.ML.PortfolioPpoClient>(c =>
         {
             var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
             c.BaseAddress = new System.Uri(url);
