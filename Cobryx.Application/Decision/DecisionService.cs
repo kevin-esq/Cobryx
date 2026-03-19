@@ -15,6 +15,8 @@ public class DecisionService
     private readonly Cobryx.Application.ML.EnsembleService _ensemble;
     private readonly Cobryx.Application.ML.IRlEngine _rlEngine;
     private readonly Cobryx.Application.ML.PpoClient _ppoClient;
+    private readonly Cobryx.Application.ML.PortfolioEngine _portfolioEngine;
+    private readonly Cobryx.Application.ML.IPortfolioFeatureStore _portfolioStore;
 
     public DecisionService(
         DecisionEngine engine,
@@ -25,7 +27,9 @@ public class DecisionService
         Cobryx.Application.ML.ModelRouter router,
         Cobryx.Application.ML.EnsembleService ensemble,
         Cobryx.Application.ML.IRlEngine rlEngine,
-        Cobryx.Application.ML.PpoClient ppoClient)
+        Cobryx.Application.ML.PpoClient ppoClient,
+        Cobryx.Application.ML.PortfolioEngine portfolioEngine,
+        Cobryx.Application.ML.IPortfolioFeatureStore portfolioStore)
     {
         _engine = engine;
         _cache = cache;
@@ -36,6 +40,8 @@ public class DecisionService
         _ensemble = ensemble;
         _rlEngine = rlEngine;
         _ppoClient = ppoClient;
+        _portfolioEngine = portfolioEngine;
+        _portfolioStore = portfolioStore;
     }
 
     public async Task<DecisionResult> EvaluateAsync(
@@ -107,6 +113,16 @@ public class DecisionService
         var interestRate = result.InterestRate;
 
         Cobryx.Domain.ML.DecisionAction? action = null;
+
+        var globalState = await _portfolioStore.GetGlobalStateAsync();
+        decimal globalCreditMultiplier = 1.0m;
+        try
+        {
+            var portfolioAction = await _portfolioEngine.OptimizeAsync(globalState);
+            globalCreditMultiplier = portfolioAction.CreditMultiplier;
+        }
+        catch { }
+
         if (_router.UsePpo())
         {
             try
@@ -122,6 +138,7 @@ public class DecisionService
 
                 creditLimit *= ppo.CreditMultiplier;
                 interestRate += ppo.InterestDelta;
+                creditLimit *= globalCreditMultiplier;
 
                 creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
                 interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
@@ -142,8 +159,8 @@ public class DecisionService
                 action = await _rlEngine.DecideAsync(state);
                 switch (action.Value)
                 {
-                    case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m; interestRate *= 0.8m; break;
-                    case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m; interestRate *= 1.5m; break;
+                    case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m * globalCreditMultiplier; interestRate *= 0.8m; break;
+                    case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m * globalCreditMultiplier; interestRate *= 1.5m; break;
                     case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
                 }
             }
@@ -153,11 +170,18 @@ public class DecisionService
             action = await _rlEngine.DecideAsync(state);
             switch (action.Value)
             {
-                case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m; interestRate *= 0.8m; break;
-                case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m; interestRate *= 1.5m; break;
+                case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m * globalCreditMultiplier; interestRate *= 0.8m; break;
+                case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m * globalCreditMultiplier; interestRate *= 1.5m; break;
                 case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
             }
         }
+
+        // GUARDRAILS DEL PORTAFOLIO MULTI-AGENTE (Hard Blocks Override)
+        if (globalState.TotalExposure > 10000000m)
+            creditLimit = 0m;
+
+        if (globalState.AvailableLiquidity < 100000m)
+            creditLimit *= 0.1m;
 
         result.CreditLimit = creditLimit;
         result.InterestRate = interestRate;

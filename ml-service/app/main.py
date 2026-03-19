@@ -46,6 +46,14 @@ def predict(features: FeatureVector, model: Annotated[str, Query()] = "xgb_v1"):
         modelVersion=model
     )
 
+@app.post("/rl/ppo/portfolio")
+def decide_portfolio(state: dict):
+    return {
+        "creditMultiplier": 1.0,
+        "riskTolerance": 0.5,
+        "liquidityBuffer": 0.1
+    }
+
 @app.post("/rl/ppo/decide")
 def decide_ppo(features: dict):
     import torch
