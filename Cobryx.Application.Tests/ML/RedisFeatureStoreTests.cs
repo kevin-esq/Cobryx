@@ -1,8 +1,7 @@
-#pragma warning disable IDE0005
-using System.Threading.Tasks;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.ML;
 using Cobryx.Domain.ML;
+
 using Moq;
 
 namespace Cobryx.Application.Tests.ML;
@@ -23,8 +22,9 @@ public class RedisFeatureStoreTests
 
         Assert.Equal(5000m, retrieved.Outstanding);
         Assert.Equal(0.8m, retrieved.Utilization);
-        
+
         await store.SetAsync(customerId, retrieved);
-        cacheMock.Verify(x => x.SetAsync($"features:{customerId}", retrieved, TimeSpan.FromHours(6), default), Times.Once);
+        cacheMock.Verify(x => x.SetAsync($"features:{customerId}", retrieved, TimeSpan.FromHours(6), default),
+            Times.Once);
     }
 }

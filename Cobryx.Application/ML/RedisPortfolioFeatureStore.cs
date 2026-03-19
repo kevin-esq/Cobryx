@@ -14,7 +14,7 @@ public class RedisPortfolioFeatureStore : IPortfolioFeatureStore
     public async Task<Cobryx.Domain.ML.PortfolioState> GetGlobalStateAsync()
     {
         var state = await _cache.GetAsync<Cobryx.Domain.ML.PortfolioState>("portfolio:state", default);
-        
+
         // 16.6: Redis State Complexity (histogram, segment exposure, cohort defaults)
         var histogram = await _cache.GetAsync<System.Collections.Generic.Dictionary<string, int>>("portfolio:pd_histogram", default);
         var segmentExposure = await _cache.GetAsync<System.Collections.Generic.Dictionary<string, decimal>>("portfolio:segment_exposure", default);

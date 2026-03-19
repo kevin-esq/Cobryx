@@ -1,49 +1,23 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Decision;
+using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.Decision;
 
-public class DecisionService
+public class DecisionService(
+    DecisionEngine engine,
+    ICacheService cache,
+    ICobryxDbContext db,
+    ML.IFeatureStore featureStore,
+    ML.MlClient mlClient,
+    ML.ModelRouter router,
+    ML.EnsembleService ensemble,
+    ML.IRlEngine rlEngine,
+    ML.PpoClient ppoClient,
+    ML.PortfolioEngine portfolioEngine,
+    ML.IPortfolioFeatureStore portfolioStore,
+    ML.IMacroFeatureStore macroStore)
 {
-    private readonly DecisionEngine _engine;
-    private readonly ICacheService _cache;
-    private readonly ICobryxDbContext _db;
-    private readonly Cobryx.Application.ML.IFeatureStore _featureStore;
-    private readonly Cobryx.Application.ML.MlClient _mlClient;
-
-    private readonly Cobryx.Application.ML.ModelRouter _router;
-    private readonly Cobryx.Application.ML.EnsembleService _ensemble;
-    private readonly Cobryx.Application.ML.IRlEngine _rlEngine;
-    private readonly Cobryx.Application.ML.PpoClient _ppoClient;
-    private readonly Cobryx.Application.ML.PortfolioEngine _portfolioEngine;
-    private readonly Cobryx.Application.ML.IPortfolioFeatureStore _portfolioStore;
-
-    public DecisionService(
-        DecisionEngine engine,
-        ICacheService cache,
-        ICobryxDbContext db,
-        Cobryx.Application.ML.IFeatureStore featureStore,
-        Cobryx.Application.ML.MlClient mlClient,
-        Cobryx.Application.ML.ModelRouter router,
-        Cobryx.Application.ML.EnsembleService ensemble,
-        Cobryx.Application.ML.IRlEngine rlEngine,
-        Cobryx.Application.ML.PpoClient ppoClient,
-        Cobryx.Application.ML.PortfolioEngine portfolioEngine,
-        Cobryx.Application.ML.IPortfolioFeatureStore portfolioStore)
-    {
-        _engine = engine;
-        _cache = cache;
-        _db = db;
-        _featureStore = featureStore;
-        _mlClient = mlClient;
-        _router = router;
-        _ensemble = ensemble;
-        _rlEngine = rlEngine;
-        _ppoClient = ppoClient;
-        _portfolioEngine = portfolioEngine;
-        _portfolioStore = portfolioStore;
-    }
-
     public async Task<DecisionResult> EvaluateAsync(
         Guid customerId,
         DecisionContext ctx,
@@ -51,13 +25,13 @@ public class DecisionService
     {
         var key = $"decision:{customerId}";
 
-        var cached = await _cache.GetAsync<DecisionResult>(key, ct);
+        var cached = await cache.GetAsync<DecisionResult>(key, ct);
 
         if (cached != null)
             return cached;
 
         // ML INFERENCE PIPELINE
-        var features = await _featureStore.GetAsync(customerId);
+        var features = await featureStore.GetAsync(customerId);
 
         var heuristicPd = ctx.Credit.ProbabilityOfDefault;
         decimal prodPd;
@@ -65,7 +39,7 @@ public class DecisionService
 
         try
         {
-            (prodPd, prodVersion) = await _mlClient.PredictAsync(features!, "xgb_v1");
+            (prodPd, prodVersion) = await mlClient.PredictAsync(features, "xgb_v1");
         }
         catch
         {
@@ -74,15 +48,14 @@ public class DecisionService
         }
 
         decimal shadowPd = prodPd;
-        string shadowVersion = "none";
 
-        if (_router.ShouldRunShadow())
+        if (router.ShouldRunShadow())
         {
             try
             {
-                (shadowPd, shadowVersion) = await _mlClient.PredictAsync(features!, "xgb_v2");
+                (shadowPd, var shadowVersion) = await mlClient.PredictAsync(features, "xgb_v2");
 
-                _db.ShadowPredictions.Add(new Cobryx.Domain.ML.ShadowPrediction
+                db.ShadowPredictions.Add(new ShadowPrediction
                 {
                     CustomerId = customerId,
                     ProductionPd = prodPd,
@@ -92,41 +65,47 @@ public class DecisionService
                     CreatedAt = DateTime.UtcNow
                 });
             }
-            catch { }
+            catch (Exception) { /* ignored */ }
         }
 
-        var finalPd = _ensemble.Combine(heuristicPd, prodPd, shadowPd);
+        var finalPd = ensemble.Combine(heuristicPd, prodPd, shadowPd);
 
         ctx.Credit.ProbabilityOfDefault = finalPd;
         ctx.Pricing.ProbabilityOfDefault = finalPd;
 
-        var result = _engine.Evaluate(ctx);
+        var result = engine.Evaluate(ctx);
 
-        var state = new Cobryx.Domain.ML.RlState
+        var state = new RlState
         {
             PdBucket = Math.Round(finalPd, 1),
-            UtilizationBucket = Math.Round(features!.Utilization, 1),
-            BehaviorBucket = Math.Round(features!.BehaviorScore, 1)
+            UtilizationBucket = Math.Round(features.Utilization, 1),
+            BehaviorBucket = Math.Round(features.BehaviorScore, 1)
         };
 
         var creditLimit = result.CreditLimit;
         var interestRate = result.InterestRate;
 
-        Cobryx.Domain.ML.DecisionAction? action = null;
+        DecisionAction? action = null;
 
-        var globalState = await _portfolioStore.GetGlobalStateAsync();
-        var limits = await _cache.GetAsync<Cobryx.Domain.ML.PortfolioLimits>("portfolio:limits", ct) ?? new Cobryx.Domain.ML.PortfolioLimits { MaxExposure = 10000000m };
+        var globalState = await portfolioStore.GetGlobalStateAsync();
+        var macro = await macroStore.GetAsync();
+        var limits = await cache.GetAsync<PortfolioLimits>("portfolio:limits", ct) ??
+                     new PortfolioLimits { MaxExposure = 10000000m };
         decimal globalCreditMultiplier = 1.0m;
-        decimal globalRiskTolerance = 1.0m;
         try
         {
-            var portfolioAction = await _portfolioEngine.OptimizeAsync(globalState);
+            var portfolioAction = await portfolioEngine.OptimizeAsync(globalState);
             globalCreditMultiplier = portfolioAction.CreditMultiplier;
-            globalRiskTolerance = portfolioAction.RiskTolerance;
         }
-        catch { }
+        catch (Exception) { /* ignored */ }
 
-        if (_router.UsePpo())
+        // 17 Audit: Guardrails FIRST (Monetary Tightening)
+        if (macro.InterestRate > 0.15m || macro.Inflation > 0.10m)
+        {
+            return new DecisionResult { Approved = false, CreditLimit = 0m, InterestRate = 0m };
+        }
+
+        if (router.UsePpo())
         {
             try
             {
@@ -134,28 +113,41 @@ public class DecisionService
                 {
                     features = new
                     {
-                        utilization = features!.Utilization,
+                        utilization = features.Utilization,
                         paymentDelay = features.PaymentDelay,
                         behaviorScore = features.BehaviorScore,
                         dpdTrend = features.DpdTrend,
                         outstanding = features.Outstanding
                     },
-                    global_state = globalState
+                    global_state = globalState,
+                    macro = new
+                    {
+                        interestRate = macro.InterestRate,
+                        inflation = macro.Inflation,
+                        creditSpread = macro.CreditSpread,
+                        volatility = macro.MarketVolatility,
+                        regime = macro.Regime,
+                        inflationTMinus1 = macro.InflationTMinus1,
+                        inflationTMinus2 = macro.InflationTMinus2,
+                        rateTrend = macro.RateTrend,
+                        timeToMaturity = 12m
+                    },
+                    model = macro.Country == "MX" ? "ppo_mx" : "ppo_us"
                 };
 
-                var combined = await _ppoClient.DecideCombinedAsync(payload);
+                var combined = await ppoClient.DecideCombinedAsync(payload);
                 var ppo = combined.Local;
                 globalCreditMultiplier = combined.Portfolio.CreditMultiplier;
-                globalRiskTolerance = combined.Portfolio.RiskTolerance;
+                var globalRiskTolerance = combined.Portfolio.RiskTolerance;
 
                 // 1. Global controla el presupuesto
                 creditLimit *= globalCreditMultiplier;
-                
+
                 // 2. Local ajusta dentro del presupuesto
                 creditLimit *= ppo.CreditMultiplier;
                 interestRate += ppo.InterestDelta;
 
-                if ((decimal)finalPd > globalRiskTolerance)
+                if (finalPd > globalRiskTolerance)
                 {
                     creditLimit *= 0.3m;
                 }
@@ -163,7 +155,7 @@ public class DecisionService
                 creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
                 interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
 
-                _db.Experiences.Add(new Cobryx.Domain.ML.Experience
+                db.Experiences.Add(new Experience
                 {
                     CustomerId = customerId,
                     StateJson = System.Text.Json.JsonSerializer.Serialize(features),
@@ -176,23 +168,35 @@ public class DecisionService
             }
             catch
             {
-                action = await _rlEngine.DecideAsync(state);
+                action = await rlEngine.DecideAsync(state);
                 switch (action.Value)
                 {
-                    case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m * globalCreditMultiplier; interestRate *= 0.8m; break;
-                    case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m * globalCreditMultiplier; interestRate *= 1.5m; break;
-                    case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
+                    case DecisionAction.LowRisk:
+                        creditLimit *= 1.5m * globalCreditMultiplier;
+                        interestRate *= 0.8m;
+                        break;
+                    case DecisionAction.HighRisk:
+                        creditLimit *= 0.5m * globalCreditMultiplier;
+                        interestRate *= 1.5m;
+                        break;
+                    case DecisionAction.Reject: creditLimit = 0m; break;
                 }
             }
         }
         else
         {
-            action = await _rlEngine.DecideAsync(state);
+            action = await rlEngine.DecideAsync(state);
             switch (action.Value)
             {
-                case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m * globalCreditMultiplier; interestRate *= 0.8m; break;
-                case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m * globalCreditMultiplier; interestRate *= 1.5m; break;
-                case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
+                case DecisionAction.LowRisk:
+                    creditLimit *= 1.5m * globalCreditMultiplier;
+                    interestRate *= 0.8m;
+                    break;
+                case DecisionAction.HighRisk:
+                    creditLimit *= 0.5m * globalCreditMultiplier;
+                    interestRate *= 1.5m;
+                    break;
+                case DecisionAction.Reject: creditLimit = 0m; break;
             }
         }
 
@@ -207,8 +211,8 @@ public class DecisionService
         result.InterestRate = interestRate;
 
         // persist outcome logic mapping for ML retraining feedback loop
-        var outcome = new Cobryx.Domain.ML.ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
-        _db.ModelOutcomes.Add(outcome);
+        var outcome = new ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
+        db.ModelOutcomes.Add(outcome);
 
         // persist snapshot
         var snapshot = new DecisionSnapshot(
@@ -220,22 +224,22 @@ public class DecisionService
             result.FraudScore
         );
 
-        _db.DecisionSnapshots.Add(snapshot);
+        db.DecisionSnapshots.Add(snapshot);
 
-        _db.DecisionOutcomes.Add(new Cobryx.Domain.ML.DecisionOutcome
+        db.DecisionOutcomes.Add(new DecisionOutcome
         {
             CustomerId = customerId,
             StateKey = state.ToKey(),
-            Action = action ?? Cobryx.Domain.ML.DecisionAction.MediumRisk,
+            Action = action ?? DecisionAction.MediumRisk,
             CreditLimit = creditLimit,
             InterestRate = interestRate,
             ModelVersion = prodVersion
         });
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
 
         // cache
-        await _cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
+        await cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
 
         return result;
     }

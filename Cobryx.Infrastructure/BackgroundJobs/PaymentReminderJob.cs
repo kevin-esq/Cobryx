@@ -114,8 +114,6 @@ public class PaymentReminderJob
     {
         try
         {
-            // Note: In production, URL construction would pull from configuration
-            // and use the bipartite token format: {Salt}.{ShortHash}
             var paymentUrl = $"https://pay.cobryx.com/l/{link.Salt}.{link.TokenHash.Substring(0, 8)}";
 
             var subject = $"Payment Reminder: Action Required for {link.Customer.FirstName}";

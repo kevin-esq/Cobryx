@@ -36,7 +36,6 @@ public class ReconciliationEngineJob(
             try
             {
                 // 2. Determine Window (Last 24 hours with a rolling 15 min buffer)
-                // In production, we'd fetch the last success from ReconciliationAudits table.
                 var to = DateTime.UtcNow.AddMinutes(-5); // Buffer for eventual consistency
                 var from = await GetLastReconciliationPointAsync(tenant.Id, ct);
 
