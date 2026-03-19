@@ -14,6 +14,7 @@ public class DecisionService
     private readonly Cobryx.Application.ML.ModelRouter _router;
     private readonly Cobryx.Application.ML.EnsembleService _ensemble;
     private readonly Cobryx.Application.ML.IRlEngine _rlEngine;
+    private readonly Cobryx.Application.ML.PpoClient _ppoClient;
 
     public DecisionService(
         DecisionEngine engine,
@@ -23,7 +24,8 @@ public class DecisionService
         Cobryx.Application.ML.MlClient mlClient,
         Cobryx.Application.ML.ModelRouter router,
         Cobryx.Application.ML.EnsembleService ensemble,
-        Cobryx.Application.ML.IRlEngine rlEngine)
+        Cobryx.Application.ML.IRlEngine rlEngine,
+        Cobryx.Application.ML.PpoClient ppoClient)
     {
         _engine = engine;
         _cache = cache;
@@ -33,6 +35,7 @@ public class DecisionService
         _router = router;
         _ensemble = ensemble;
         _rlEngine = rlEngine;
+        _ppoClient = ppoClient;
     }
 
     public async Task<DecisionResult> EvaluateAsync(
@@ -100,24 +103,60 @@ public class DecisionService
             BehaviorBucket = Math.Round(features!.BehaviorScore, 1)
         };
 
-        var action = await _rlEngine.DecideAsync(state);
-
         var creditLimit = result.CreditLimit;
         var interestRate = result.InterestRate;
 
-        switch (action)
+        Cobryx.Domain.ML.DecisionAction? action = null;
+        if (_router.UsePpo())
         {
-            case Cobryx.Domain.ML.DecisionAction.LowRisk:
-                creditLimit *= 1.5m;
-                interestRate *= 0.8m;
-                break;
-            case Cobryx.Domain.ML.DecisionAction.HighRisk:
-                creditLimit *= 0.5m;
-                interestRate *= 1.5m;
-                break;
-            case Cobryx.Domain.ML.DecisionAction.Reject:
-                creditLimit = 0m;
-                break;
+            try
+            {
+                var ppo = await _ppoClient.DecideAsync(new
+                {
+                    utilization = features!.Utilization,
+                    paymentDelay = features.PaymentDelay,
+                    behaviorScore = features.BehaviorScore,
+                    dpdTrend = features.DpdTrend,
+                    outstanding = features.Outstanding
+                });
+
+                creditLimit *= ppo.CreditMultiplier;
+                interestRate += ppo.InterestDelta;
+
+                creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
+                interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
+
+                _db.Experiences.Add(new Cobryx.Domain.ML.Experience
+                {
+                    CustomerId = customerId,
+                    StateJson = System.Text.Json.JsonSerializer.Serialize(features),
+                    CreditMultiplier = ppo.CreditMultiplier,
+                    InterestDelta = ppo.InterestDelta,
+                    LogProb = ppo.LogProb,
+                    Value = ppo.Value,
+                    Reward = 0m
+                });
+            }
+            catch
+            {
+                action = await _rlEngine.DecideAsync(state);
+                switch (action.Value)
+                {
+                    case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m; interestRate *= 0.8m; break;
+                    case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m; interestRate *= 1.5m; break;
+                    case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
+                }
+            }
+        }
+        else
+        {
+            action = await _rlEngine.DecideAsync(state);
+            switch (action.Value)
+            {
+                case Cobryx.Domain.ML.DecisionAction.LowRisk: creditLimit *= 1.5m; interestRate *= 0.8m; break;
+                case Cobryx.Domain.ML.DecisionAction.HighRisk: creditLimit *= 0.5m; interestRate *= 1.5m; break;
+                case Cobryx.Domain.ML.DecisionAction.Reject: creditLimit = 0m; break;
+            }
         }
 
         result.CreditLimit = creditLimit;
@@ -143,7 +182,7 @@ public class DecisionService
         {
             CustomerId = customerId,
             StateKey = state.ToKey(),
-            Action = action,
+            Action = action ?? Cobryx.Domain.ML.DecisionAction.MediumRisk,
             CreditLimit = creditLimit,
             InterestRate = interestRate,
             ModelVersion = prodVersion

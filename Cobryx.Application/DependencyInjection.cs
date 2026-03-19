@@ -50,6 +50,12 @@ public static class DependencyInjection
         {
             var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
             c.BaseAddress = new System.Uri(url);
+        });
+
+        services.AddHttpClient<Cobryx.Application.ML.PpoClient>(c =>
+        {
+            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+            c.BaseAddress = new System.Uri(url);
         })
         .AddTransientHttpErrorPolicy(p =>
             p.WaitAndRetryAsync(3, retry =>

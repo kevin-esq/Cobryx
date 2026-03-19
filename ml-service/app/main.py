@@ -4,6 +4,9 @@ from app.schemas import FeatureVector, PredictionResponse
 from app.model import joblib
 import numpy as np
 
+from app.ppo_model import ActorCritic, sample_action
+ppo_model = ActorCritic()
+
 app = FastAPI()
 
 def load_safe(filename):
@@ -42,3 +45,27 @@ def predict(features: FeatureVector, model: Annotated[str, Query()] = "xgb_v1"):
         probabilityOfDefault=float(max(0.0, min(1.0, prob))),
         modelVersion=model
     )
+
+@app.post("/rl/ppo/decide")
+def decide_ppo(features: dict):
+    import torch
+    x = torch.tensor([[
+        features["utilization"],
+        features["paymentDelay"] / 30.0,
+        features["behaviorScore"],
+        features["dpdTrend"] / 30.0,
+        features["outstanding"] / 20000.0
+    ]]).float()
+
+    mean, value = ppo_model(x)
+    _, action, log_prob = sample_action(mean, ppo_model.log_std)
+
+    credit_mult = float(0.2 + (action[0][0] + 1) / 2 * (2.0 - 0.2))
+    interest_adj = float(-0.1 + (action[0][1] + 1) / 2 * 0.4)
+
+    return {
+        "creditMultiplier": credit_mult,
+        "interestDelta": interest_adj,
+        "logProb": float(log_prob.item()),
+        "value": float(value.item())
+    }
