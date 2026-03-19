@@ -58,6 +58,7 @@ def decide_portfolio(state: dict):
 def decide_combined(payload: dict):
     features = payload.get("features", {})
     global_state = payload.get("global_state", {})
+    macro = payload.get("macro", {})
 
     import torch
     x = torch.tensor([[
@@ -67,7 +68,20 @@ def decide_combined(payload: dict):
         features["dpdTrend"] / 30.0,
         features["outstanding"] / 20000.0,
         global_state.get("totalExposure", 0) / 10000000.0,
-        global_state.get("availableLiquidity", 0) / 500000.0
+        global_state.get("availableLiquidity", 0) / 500000.0,
+
+        # 17 Audit: Normalized Macro Features
+        macro.get("interestRate", 0) / 0.2,
+        macro.get("inflation", 0) / 0.2,
+        macro.get("creditSpread", 0) / 0.1,
+        macro.get("volatility", 0) / 0.5,
+
+        # 17 Audit: Non-Markovian History
+        macro.get("inflationTMinus1", 0) / 0.2,
+        macro.get("inflationTMinus2", 0) / 0.2,
+        macro.get("rateTrend", 0) / 0.05,
+
+        macro.get("timeToMaturity", 12) / 36.0
     ]]).float()
 
     mean, value = ppo_model(x)

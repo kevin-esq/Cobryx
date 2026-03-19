@@ -1,8 +1,5 @@
-#pragma warning disable IDE0005
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.ML.Jobs;

@@ -1,7 +1,6 @@
-#pragma warning disable IDE0005
 using System.Reflection;
+
 using Polly;
-using Polly.Extensions.Http;
 
 using Cobryx.Application.Auth.Services;
 using Cobryx.Application.Common.Interfaces;
@@ -31,51 +30,54 @@ public static class DependencyInjection
         services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
 
         // Risk Engine
-        services.AddScoped<Cobryx.Domain.Decision.ICreditLimitEngine, Cobryx.Application.Decision.CreditLimitEngine>();
-        services.AddScoped<Cobryx.Domain.Decision.IPricingEngine, Cobryx.Application.Decision.PricingEngine>();
-        services.AddScoped<Cobryx.Domain.Decision.IFraudEngine, Cobryx.Application.Decision.FraudEngine>();
-        services.AddScoped<Cobryx.Application.Decision.DecisionEngine>();
-        services.AddScoped<Cobryx.Application.Decision.DecisionService>();
-        services.AddScoped<Cobryx.Application.ML.IFeatureStore, Cobryx.Application.ML.RedisFeatureStore>();
-        services.AddScoped<Cobryx.Application.ML.FeatureUpdater>();
-        services.AddScoped<Cobryx.Application.ML.DatasetExporter>();
-        services.AddScoped<Cobryx.Application.ML.Jobs.DatasetExporterJob>();
-        services.AddScoped<Cobryx.Application.ML.Jobs.RlTrainingJob>();
-        services.AddScoped<Cobryx.Application.ML.Jobs.PortfolioTrainingJob>();
-        services.AddScoped<Cobryx.Application.ML.ModelRouter>();
-        services.AddScoped<Cobryx.Application.ML.EnsembleService>();
-        services.AddScoped<Cobryx.Application.ML.RlPolicy>();
-        services.AddScoped<Cobryx.Application.ML.IRlEngine, Cobryx.Application.ML.RlEngine>();
-        services.AddScoped<Cobryx.Application.ML.IPortfolioFeatureStore, Cobryx.Application.ML.RedisPortfolioFeatureStore>();
-        services.AddScoped<Cobryx.Application.ML.PortfolioEngine>();
+        services.AddScoped<Domain.Decision.ICreditLimitEngine, Decision.CreditLimitEngine>();
+        services.AddScoped<Domain.Decision.IPricingEngine, Decision.PricingEngine>();
+        services.AddScoped<Domain.Decision.IFraudEngine, Decision.FraudEngine>();
+        services.AddScoped<Decision.DecisionEngine>();
+        services.AddScoped<Decision.DecisionService>();
+        services.AddScoped<ML.IFeatureStore, ML.RedisFeatureStore>();
+        services.AddScoped<ML.FeatureUpdater>();
+        services.AddScoped<ML.DatasetExporter>();
+        services.AddScoped<ML.Jobs.DatasetExporterJob>();
+        services.AddScoped<ML.Jobs.RlTrainingJob>();
+        services.AddScoped<ML.Jobs.PortfolioTrainingJob>();
+        services.AddScoped<ML.Jobs.MacroIngestionJob>();
+        services.AddScoped<ML.ModelRouter>();
+        services.AddScoped<ML.EnsembleService>();
+        services.AddScoped<ML.RlPolicy>();
+        services.AddScoped<ML.IRlEngine, ML.RlEngine>();
+        services
+            .AddScoped<ML.IPortfolioFeatureStore,
+                ML.RedisPortfolioFeatureStore>();
+        services.AddScoped<ML.PortfolioEngine>();
 
-        services.AddHttpClient<Cobryx.Application.ML.MlClient>(c =>
+        services.AddHttpClient<ML.MlClient>(c =>
         {
-            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
-            c.BaseAddress = new System.Uri(url);
+            var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+            c.BaseAddress = new Uri(url);
         });
 
-        services.AddHttpClient<Cobryx.Application.ML.PpoClient>(c =>
-        {
-            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
-            c.BaseAddress = new System.Uri(url);
-        })
-        .AddTransientHttpErrorPolicy(p =>
-            p.WaitAndRetryAsync(3, retry =>
-                System.TimeSpan.FromMilliseconds(200 * retry)))
-        .AddTransientHttpErrorPolicy(p =>
-            p.CircuitBreakerAsync(5, System.TimeSpan.FromSeconds(30)));
+        services.AddHttpClient<ML.PpoClient>(c =>
+            {
+                var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                c.BaseAddress = new Uri(url);
+            })
+            .AddTransientHttpErrorPolicy(p =>
+                p.WaitAndRetryAsync(3, retry =>
+                    TimeSpan.FromMilliseconds(200 * retry)))
+            .AddTransientHttpErrorPolicy(p =>
+                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
 
-        services.AddHttpClient<Cobryx.Application.ML.PortfolioPpoClient>(c =>
-        {
-            var url = System.Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
-            c.BaseAddress = new System.Uri(url);
-        })
-        .AddTransientHttpErrorPolicy(p =>
-            p.WaitAndRetryAsync(3, retry =>
-                System.TimeSpan.FromMilliseconds(200 * retry)))
-        .AddTransientHttpErrorPolicy(p =>
-            p.CircuitBreakerAsync(5, System.TimeSpan.FromSeconds(30)));
+        services.AddHttpClient<ML.PortfolioPpoClient>(c =>
+            {
+                var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                c.BaseAddress = new Uri(url);
+            })
+            .AddTransientHttpErrorPolicy(p =>
+                p.WaitAndRetryAsync(3, retry =>
+                    TimeSpan.FromMilliseconds(200 * retry)))
+            .AddTransientHttpErrorPolicy(p =>
+                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
 
         services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
             new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
@@ -86,7 +88,7 @@ public static class DependencyInjection
                 (new TrendRiskFactor(), 0.2m)
             }));
 
-        services.AddScoped<Cobryx.Application.Risk.Jobs.EarlyWarningJob>();
+        services.AddScoped<Risk.Jobs.EarlyWarningJob>();
 
         services.AddValidatorsFromAssembly(assembly);
 
@@ -98,8 +100,11 @@ public static class DependencyInjection
         services.AddPaymentsModule();
         services.AddAccountingModule();
 
-        services.AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
-        services.AddScoped<Collections.Strategy.ICollectionsStrategyEngine, Collections.Strategy.CollectionsStrategyEngine>();
+        services
+            .AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
+        services
+            .AddScoped<Collections.Strategy.ICollectionsStrategyEngine,
+                Collections.Strategy.CollectionsStrategyEngine>();
 
         return services;
     }

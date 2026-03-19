@@ -1,0 +1,50 @@
+using Cobryx.Application.Common.Interfaces;
+
+namespace Cobryx.Application.ML.Jobs;
+
+public class MacroIngestionJob(ICacheService cache)
+{
+    public async Task RunAsync()
+    {
+        // Simulate fetching from external financial APIs
+        var newRate = await FetchRate();
+        var newInflation = await FetchInflation();
+        var newSpread = await FetchSpread();
+        var newVolatility = await FetchVolatility();
+
+        var prevMacro = await cache.GetAsync<Cobryx.Domain.ML.MacroState>("macro:state", CancellationToken.None)
+                        ?? new Cobryx.Domain.ML.MacroState();
+
+        // 17 Audit: Suavizado temporal (EWMA) to avoid pure noise.
+        var smoothedInflation = 0.7m * prevMacro.Inflation + 0.3m * newInflation;
+        var smoothedRate = 0.7m * prevMacro.InterestRate + 0.3m * newRate;
+
+        // 17 Audit: Regime Detection
+        var regime = smoothedInflation > 0.08m ? "high_inflation" :
+            newVolatility > 0.3m ? "crisis" : "normal";
+
+        var macro = new Cobryx.Domain.ML.MacroState
+        {
+            InterestRate = smoothedRate,
+            Inflation = smoothedInflation,
+            Unemployment = 0.04m, // mocked
+            CreditSpread = newSpread,
+            MarketVolatility = newVolatility,
+            LiquidityIndex = 1.0m,
+            Regime = regime,
+            Country = "US",
+
+            // Non-Markovian feature cascading
+            InflationTMinus1 = prevMacro.Inflation,
+            InflationTMinus2 = prevMacro.InflationTMinus1,
+            RateTrend = smoothedRate - prevMacro.InterestRate
+        };
+
+        await cache.SetAsync("macro:state", macro);
+    }
+
+    private Task<decimal> FetchRate() => Task.FromResult(0.055m);
+    private Task<decimal> FetchInflation() => Task.FromResult(0.04m);
+    private Task<decimal> FetchSpread() => Task.FromResult(0.02m);
+    private Task<decimal> FetchVolatility() => Task.FromResult(0.15m);
+}

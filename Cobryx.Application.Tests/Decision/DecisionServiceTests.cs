@@ -1,7 +1,10 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Decision;
 using Cobryx.Domain.Decision;
+using Cobryx.Application.ML;
+
 using Microsoft.EntityFrameworkCore;
+
 using Moq;
 using Moq.Protected;
 
@@ -15,22 +18,23 @@ public class DecisionServiceTests
         var cacheMock = new Mock<ICacheService>();
         var dbMock = new Mock<ICobryxDbContext>();
         var dbSetMock = new Mock<DbSet<DecisionSnapshot>>();
-        
+
         dbMock.Setup(d => d.DecisionSnapshots).Returns(dbSetMock.Object);
-        dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.ModelOutcome>>().Object);
-        dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
-        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
-        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Cobryx.Domain.ML.QValue>>().Object);
-        dbMock.Setup(d => d.Experiences).Returns(new Mock<DbSet<Cobryx.Domain.ML.Experience>>().Object);
+        dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Domain.ML.ModelOutcome>>().Object);
+        dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Domain.ML.ShadowPrediction>>().Object);
+        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Domain.ML.DecisionOutcome>>().Object);
+        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Domain.ML.QValue>>().Object);
+        dbMock.Setup(d => d.Experiences).Returns(new Mock<DbSet<Domain.ML.Experience>>().Object);
 
         var cacheStore = new Dictionary<string, DecisionResult>();
-        
+
         cacheMock.Setup(x => x.GetAsync<DecisionResult>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                 .ReturnsAsync((string k, CancellationToken c) => cacheStore.TryGetValue(k, out var v) ? v : null);
-                 
-        cacheMock.Setup(x => x.SetAsync(It.IsAny<string>(), It.IsAny<DecisionResult>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
-                 .Callback((string k, DecisionResult v, TimeSpan? t, CancellationToken c) => cacheStore[k] = v)
-                 .Returns(Task.CompletedTask);
+            .ReturnsAsync((string k, CancellationToken _) => cacheStore.TryGetValue(k, out var v) ? v : null);
+
+        cacheMock.Setup(x => x.SetAsync(It.IsAny<string>(), It.IsAny<DecisionResult>(), It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((string k, DecisionResult v, TimeSpan? _, CancellationToken _) => cacheStore[k] = v)
+            .Returns(Task.CompletedTask);
 
         var engine = new DecisionEngine(
             new CreditLimitEngine(),
@@ -38,45 +42,73 @@ public class DecisionServiceTests
             new FraudEngine()
         );
 
-        var featureStoreMock = new Mock<Cobryx.Application.ML.IFeatureStore>();
-        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<System.Guid>())).ReturnsAsync(new Cobryx.Domain.ML.FeatureVector());
+        var featureStoreMock = new Mock<IFeatureStore>();
+        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new Cobryx.Domain.ML.FeatureVector());
 
-        var mockHttp = new Mock<System.Net.Http.HttpMessageHandler>();
+        var mockHttp = new Mock<HttpMessageHandler>();
         mockHttp.Protected()
-            .Setup<System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>(
+            .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(),
-                ItExpr.IsAny<System.Threading.CancellationToken>()
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
             )
-            .ReturnsAsync(new System.Net.Http.HttpResponseMessage
+            .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = System.Net.HttpStatusCode.OK,
-                Content = new System.Net.Http.StringContent("{\"ProbabilityOfDefault\": 0.1}")
+                Content = new StringContent("{\"ProbabilityOfDefault\": 0.1}")
             });
 
-        var httpClient = new System.Net.Http.HttpClient(mockHttp.Object) { BaseAddress = new System.Uri("http://dummy") };
-        var mlClient = new Cobryx.Application.ML.MlClient(httpClient);
+        var httpClient = new HttpClient(mockHttp.Object)
+            { BaseAddress = new Uri("http://dummy") };
+        var mlClient = new MlClient(httpClient);
 
-        var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
-        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
-        var ppoClientMock = new Mock<System.Net.Http.HttpMessageHandler>();
-        ppoClientMock.Protected().Setup<Task<System.Net.Http.HttpResponseMessage>>("SendAsync", ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new System.Net.Http.HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.OK, Content = new System.Net.Http.StringContent("{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}") });
-        var ppoClient = new Cobryx.Application.ML.PpoClient(new System.Net.Http.HttpClient(ppoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var rlEngineMock = new Mock<IRlEngine>();
+        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>()))
+            .ReturnsAsync(Domain.ML.DecisionAction.MediumRisk);
+        var ppoClientMock = new Mock<HttpMessageHandler>();
+        ppoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}")
+            });
+        var ppoClient = new PpoClient(new HttpClient(ppoClientMock.Object)
+            { BaseAddress = new Uri("http://dummy") });
 
-        var portfolioStoreMock = new Mock<Cobryx.Application.ML.IPortfolioFeatureStore>();
-        portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState { TotalExposure = 500000m, AvailableLiquidity = 500000m });
-        var portfolioPpoClientMock = new Mock<System.Net.Http.HttpMessageHandler>();
-        portfolioPpoClientMock.Protected().Setup<Task<System.Net.Http.HttpResponseMessage>>("SendAsync", ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new System.Net.Http.HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.OK, Content = new System.Net.Http.StringContent("{\"CreditMultiplier\":1.0, \"RiskTolerance\":0.5, \"LiquidityBuffer\":0.1}") });
-        var portfolioPpoClient = new Cobryx.Application.ML.PortfolioPpoClient(new System.Net.Http.HttpClient(portfolioPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
-        var portfolioEngine = new Cobryx.Application.ML.PortfolioEngine(portfolioPpoClient);
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object, ppoClient, portfolioEngine, portfolioStoreMock.Object);
-        
+        var portfolioStoreMock = new Mock<IPortfolioFeatureStore>();
+        portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState
+            { TotalExposure = 500000m, AvailableLiquidity = 500000m });
+        var portfolioPpoClientMock = new Mock<HttpMessageHandler>();
+        portfolioPpoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"CreditMultiplier\":1.0, \"RiskTolerance\":0.5, \"LiquidityBuffer\":0.1}")
+            });
+        var portfolioPpoClient = new PortfolioPpoClient(
+            new HttpClient(portfolioPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var portfolioEngine = new PortfolioEngine(portfolioPpoClient);
+
+        var macroStoreMock = new Mock<IMacroFeatureStore>();
+        macroStoreMock.Setup(x => x.GetAsync()).ReturnsAsync(new Cobryx.Domain.ML.MacroState
+        {
+            InterestRate = 0.05m, Inflation = 0.03m, CreditSpread = 0.02m, MarketVolatility = 0.15m
+        });
+
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
+            new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
+            ppoClient, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext
         {
-            Credit = new CreditContext { ProbabilityOfDefault = 0.1m, BehaviorScore = 1m, MonthlyIncomeEstimate = 10000m, Utilization = 0.5m },
+            Credit = new CreditContext
+                { ProbabilityOfDefault = 0.1m, BehaviorScore = 1m, MonthlyIncomeEstimate = 10000m, Utilization = 0.5m },
             Pricing = new PricingContext { ProbabilityOfDefault = 0.1m },
             Fraud = new FraudContext()
         };
@@ -87,12 +119,15 @@ public class DecisionServiceTests
         // Verify save and calculate hit only once
         dbSetMock.Verify(x => x.Add(It.IsAny<DecisionSnapshot>()), Times.Once);
         dbMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        cacheMock.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<DecisionResult>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()), Times.Once);
-        
+        cacheMock.Verify(
+            x => x.SetAsync(It.IsAny<string>(), It.IsAny<DecisionResult>(), It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+
         // Ensure result is exactly cached
         Assert.Equal(result1.CreditLimit, result2.CreditLimit);
         Assert.Equal(result1.InterestRate, result2.InterestRate);
     }
+
     [Fact]
     public async Task MlFailure_ShouldFallbackToHeuristic()
     {
@@ -103,45 +138,76 @@ public class DecisionServiceTests
 
         dbSetMock.Setup(d => d.Add(It.IsAny<DecisionSnapshot>())).Callback<DecisionSnapshot>(s => capturedSnapshot = s);
         dbMock.Setup(d => d.DecisionSnapshots).Returns(dbSetMock.Object);
-        dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.ModelOutcome>>().Object);
-        dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Cobryx.Domain.ML.ShadowPrediction>>().Object);
-        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Cobryx.Domain.ML.DecisionOutcome>>().Object);
-        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Cobryx.Domain.ML.QValue>>().Object);
+        dbMock.Setup(d => d.ModelOutcomes).Returns(new Mock<DbSet<Domain.ML.ModelOutcome>>().Object);
+        dbMock.Setup(d => d.ShadowPredictions).Returns(new Mock<DbSet<Domain.ML.ShadowPrediction>>().Object);
+        dbMock.Setup(d => d.DecisionOutcomes).Returns(new Mock<DbSet<Domain.ML.DecisionOutcome>>().Object);
+        dbMock.Setup(d => d.QValues).Returns(new Mock<DbSet<Domain.ML.QValue>>().Object);
 
         var engine = new DecisionEngine(new CreditLimitEngine(), new PricingEngine(), new FraudEngine());
-        var featureStoreMock = new Mock<Cobryx.Application.ML.IFeatureStore>();
-        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<System.Guid>())).ReturnsAsync(new Cobryx.Domain.ML.FeatureVector());
+        var featureStoreMock = new Mock<IFeatureStore>();
+        featureStoreMock.Setup(x => x.GetAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new Cobryx.Domain.ML.FeatureVector());
 
         // Simulate failing HTTP Request (e.g., Timeout or 500)
-        var mockHttp = new Mock<System.Net.Http.HttpMessageHandler>();
+        var mockHttp = new Mock<HttpMessageHandler>();
         mockHttp.Protected()
-            .Setup<System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>>(
+            .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
-                ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(),
-                ItExpr.IsAny<System.Threading.CancellationToken>()
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
             )
-            .ThrowsAsync(new System.Net.Http.HttpRequestException("ML Service Unreachable"));
+            .ThrowsAsync(new HttpRequestException("ML Service Unreachable"));
 
-        var httpClient = new System.Net.Http.HttpClient(mockHttp.Object) { BaseAddress = new System.Uri("http://dummy") };
-        var mlClient = new Cobryx.Application.ML.MlClient(httpClient);
+        var httpClient = new HttpClient(mockHttp.Object)
+            { BaseAddress = new Uri("http://dummy") };
+        var mlClient = new MlClient(httpClient);
 
-        var rlEngineMock = new Mock<Cobryx.Application.ML.IRlEngine>();
-        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>())).ReturnsAsync(Cobryx.Domain.ML.DecisionAction.MediumRisk);
-        var ppoClientMock = new Mock<System.Net.Http.HttpMessageHandler>();
-        ppoClientMock.Protected().Setup<Task<System.Net.Http.HttpResponseMessage>>("SendAsync", ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new System.Net.Http.HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.OK, Content = new System.Net.Http.StringContent("{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}") });
-        var ppoClient = new Cobryx.Application.ML.PpoClient(new System.Net.Http.HttpClient(ppoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var rlEngineMock = new Mock<IRlEngine>();
+        rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Domain.ML.RlState>()))
+            .ReturnsAsync(Domain.ML.DecisionAction.MediumRisk);
+        var ppoClientMock = new Mock<HttpMessageHandler>();
+        ppoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}")
+            });
+        var ppoClient = new PpoClient(new HttpClient(ppoClientMock.Object)
+            { BaseAddress = new Uri("http://dummy") });
 
-        var portfolioStoreMock = new Mock<Cobryx.Application.ML.IPortfolioFeatureStore>();
-        portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState { TotalExposure = 500000m, AvailableLiquidity = 500000m });
-        var portfolioPpoClientMock = new Mock<System.Net.Http.HttpMessageHandler>();
-        portfolioPpoClientMock.Protected().Setup<Task<System.Net.Http.HttpResponseMessage>>("SendAsync", ItExpr.IsAny<System.Net.Http.HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new System.Net.Http.HttpResponseMessage { StatusCode = System.Net.HttpStatusCode.OK, Content = new System.Net.Http.StringContent("{\"CreditMultiplier\":1.0, \"RiskTolerance\":0.5, \"LiquidityBuffer\":0.1}") });
-        var portfolioPpoClient = new Cobryx.Application.ML.PortfolioPpoClient(new System.Net.Http.HttpClient(portfolioPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
-        var portfolioEngine = new Cobryx.Application.ML.PortfolioEngine(portfolioPpoClient);
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient, new Cobryx.Application.ML.ModelRouter(), new Cobryx.Application.ML.EnsembleService(), rlEngineMock.Object, ppoClient, portfolioEngine, portfolioStoreMock.Object);
+        var portfolioStoreMock = new Mock<IPortfolioFeatureStore>();
+        portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState
+            { TotalExposure = 500000m, AvailableLiquidity = 500000m });
+        var portfolioPpoClientMock = new Mock<HttpMessageHandler>();
+        portfolioPpoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"CreditMultiplier\":1.0, \"RiskTolerance\":0.5, \"LiquidityBuffer\":0.1}")
+            });
+        var portfolioPpoClient = new PortfolioPpoClient(
+            new HttpClient(portfolioPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var portfolioEngine = new PortfolioEngine(portfolioPpoClient);
 
-        var ctx = new DecisionContext { Credit = new CreditContext { ProbabilityOfDefault = 0.2m }, Pricing = new PricingContext(), Fraud = new FraudContext() };
+        var macroStoreMock = new Mock<IMacroFeatureStore>();
+        macroStoreMock.Setup(x => x.GetAsync()).ReturnsAsync(new Cobryx.Domain.ML.MacroState
+        {
+            InterestRate = 0.05m, Inflation = 0.03m, CreditSpread = 0.02m, MarketVolatility = 0.15m
+        });
+
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
+            new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
+            ppoClient, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+
+        var ctx = new DecisionContext
+        {
+            Credit = new CreditContext { ProbabilityOfDefault = 0.2m }, Pricing = new PricingContext(),
+            Fraud = new FraudContext()
+        };
 
         await service.EvaluateAsync(Guid.NewGuid(), ctx);
 

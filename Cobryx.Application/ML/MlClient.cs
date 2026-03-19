@@ -1,7 +1,4 @@
-#pragma warning disable IDE0005
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 
 namespace Cobryx.Application.ML;
 

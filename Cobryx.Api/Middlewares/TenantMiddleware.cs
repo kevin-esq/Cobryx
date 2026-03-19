@@ -25,7 +25,8 @@ public class TenantMiddleware
         {
             var claimTenantId = context.User.FindFirst(CobryxClaimTypes.TenantId)?.Value;
 
-            if (context.Request.Headers.TryGetValue(TenantHeader, out Microsoft.Extensions.Primitives.StringValues value) &&
+            if (context.Request.Headers.TryGetValue(TenantHeader,
+                    out Microsoft.Extensions.Primitives.StringValues value) &&
                 value != claimTenantId)
             {
                 _logger.LogWarning("Security Alert: Tenant mismatch (Token: {TokenId}, Header: {HeaderId})",
@@ -58,7 +59,7 @@ public class TenantMiddleware
             }
 
             _logger.LogWarning("Request blocked: Tenant context missing for path {Path}", context.Request.Path);
-            throw new Cobryx.Domain.Exceptions.Tenants.TenantContextMissingException();
+            throw new Domain.Exceptions.Tenants.TenantContextMissingException();
         }
 
         if (Guid.TryParse(tenantId, out var id))
