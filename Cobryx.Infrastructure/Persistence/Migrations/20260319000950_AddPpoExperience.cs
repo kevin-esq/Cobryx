@@ -1,8 +1,4 @@
-#pragma warning disable IDE0005
-using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-
-#nullable disable
 
 namespace Cobryx.Infrastructure.Persistence.Migrations
 {
