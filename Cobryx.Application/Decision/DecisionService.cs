@@ -22,17 +22,23 @@ public class DecisionService(
     public async Task<DecisionResult> EvaluateAsync(
         Guid customerId,
         DecisionContext ctx,
+        FeatureVector? overrideFeatures = null,
+        MacroState? overrideMacro = null,
+        PortfolioState? overridePortfolio = null,
+        int? overrideSeed = null,
+        bool isReplay = false,
         CancellationToken ct = default)
     {
+        var seed = overrideSeed ?? new Random().Next();
         var key = $"decision:{customerId}";
 
-        var cached = await cache.GetAsync<DecisionResult>(key, ct);
+        var cached = isReplay ? null : await cache.GetAsync<DecisionResult>(key, ct);
 
         if (cached != null)
             return cached;
 
         // ML INFERENCE PIPELINE
-        var features = await featureStore.GetAsync(customerId);
+        var features = overrideFeatures ?? await featureStore.GetAsync(customerId);
 
         var heuristicPd = ctx.Credit.ProbabilityOfDefault;
         decimal prodPd;
@@ -88,8 +94,8 @@ public class DecisionService(
 
         DecisionAction? action = null;
 
-        var globalState = await portfolioStore.GetGlobalStateAsync();
-        var macro = await macroStore.GetAsync();
+        var globalState = overridePortfolio ?? await portfolioStore.GetGlobalStateAsync();
+        var macro = overrideMacro ?? await macroStore.GetAsync();
         var limits = await cache.GetAsync<PortfolioLimits>("portfolio:limits", ct) ??
                      new PortfolioLimits { MaxExposure = 10000000m };
         decimal globalCreditMultiplier = 1.0m;
@@ -144,16 +150,36 @@ public class DecisionService(
                 creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
                 interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
 
-                db.Experiences.Add(new Experience
+                if (!isReplay)
                 {
-                    CustomerId = customerId,
-                    StateJson = System.Text.Json.JsonSerializer.Serialize(features),
-                    CreditMultiplier = mcMetrics.AverageCreditMultiplier,
-                    InterestDelta = mcMetrics.AverageInterestDelta,
-                    LogProb = 0m,
-                    Value = 0m,
-                    Reward = 0m
-                });
+                    db.Experiences.Add(new Experience
+                    {
+                        CustomerId = customerId,
+                        StateJson = System.Text.Json.JsonSerializer.Serialize(features),
+                        CreditMultiplier = mcMetrics.AverageCreditMultiplier,
+                        InterestDelta = mcMetrics.AverageInterestDelta,
+                        LogProb = 0m,
+                        Value = 0m,
+                        Reward = 0m
+                    });
+
+                    var rawResultJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        creditMultipliers = mcMetrics.RawCreditMultipliers,
+                        interestDeltas = mcMetrics.RawInterestDeltas
+                    });
+
+                    db.DecisionDistributionLogs.Add(new Domain.ML.DecisionDistributionLog
+                    {
+                        CustomerId = customerId,
+                        Timestamp = DateTime.UtcNow,
+                        CreditMultipliers = mcMetrics.RawCreditMultipliers,
+                        InterestDeltas = mcMetrics.RawInterestDeltas,
+                        VaR95 = mcMetrics.VaR95CreditMultiplier,
+                        CVaR95 = mcMetrics.ExpectedShortfallCredit,
+                        ScenarioSetJson = rawResultJson
+                    });
+                }
             }
             catch
             {
@@ -199,36 +225,58 @@ public class DecisionService(
         result.CreditLimit = creditLimit;
         result.InterestRate = interestRate;
 
-        // persist outcome logic mapping for ML retraining feedback loop
-        var outcome = new ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
-        db.ModelOutcomes.Add(outcome);
-
-        // persist snapshot
-        var snapshot = new DecisionSnapshot(
-            customerId,
-            finalPd,
-            prodVersion,
-            result.CreditLimit,
-            result.InterestRate,
-            result.FraudScore
-        );
-
-        db.DecisionSnapshots.Add(snapshot);
-
-        db.DecisionOutcomes.Add(new DecisionOutcome
+        if (!isReplay)
         {
-            CustomerId = customerId,
-            StateKey = state.ToKey(),
-            Action = action ?? DecisionAction.MediumRisk,
-            CreditLimit = creditLimit,
-            InterestRate = interestRate,
-            ModelVersion = prodVersion
-        });
+            // persist outcome logic mapping for ML retraining feedback loop
+            var outcome = new ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
+            db.ModelOutcomes.Add(outcome);
 
-        await db.SaveChangesAsync(ct);
+            // persist snapshot
+            var dbSnapshot = new DecisionSnapshot(
+                customerId,
+                finalPd,
+                prodVersion,
+                result.CreditLimit,
+                result.InterestRate,
+                result.FraudScore
+            );
 
-        // cache
-        await cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
+            db.DecisionSnapshots.Add(dbSnapshot);
+
+            db.DecisionOutcomes.Add(new DecisionOutcome
+            {
+                CustomerId = customerId,
+                StateKey = state.ToKey(),
+                Action = action ?? DecisionAction.MediumRisk,
+                CreditLimit = creditLimit,
+                InterestRate = interestRate,
+                ModelVersion = prodVersion
+            });
+
+            // PHASE 18B: CAPTURE HOOK FOR REPLAY ENGINE
+            db.ReplaySnapshots.Add(new ReplaySnapshot
+            {
+                CustomerId = customerId,
+                OriginalTimestamp = DateTime.UtcNow,
+                FeatureVectorJson = System.Text.Json.JsonSerializer.Serialize(features),
+                MacroStateJson = System.Text.Json.JsonSerializer.Serialize(macro),
+                PortfolioStateJson = System.Text.Json.JsonSerializer.Serialize(globalState),
+                OriginalCreditLimit = result.CreditLimit,
+                OriginalInterestRate = result.InterestRate,
+                ModelVersion = prodVersion,
+                // Gaps Closed
+                RandomSeed = seed,
+                ModelHash = prodVersion, // Usually a SHA of the weights
+                FeatureVersion = "1.0",
+                ScenarioVersion = "1.0",
+                // Real outcome will be appended asynchronously when loan matures/defaults.
+            });
+
+            await db.SaveChangesAsync(ct);
+
+            // cache
+            await cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
+        }
 
         return result;
     }

@@ -15,6 +15,10 @@ public class MonteCarloMetrics
 
     public decimal AverageInterestDelta { get; set; }
     public decimal VaR95InterestDelta { get; set; }
+
+    // Arrays para persistir en Postgres
+    public decimal[] RawCreditMultipliers { get; set; } = [];
+    public decimal[] RawInterestDeltas { get; set; } = [];
 }
 
 public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
@@ -41,7 +45,10 @@ public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
             ExpectedShortfallCredit = tailSize > 0 ? credits.Take(tailSize).Average() : 1.0m,
 
             AverageInterestDelta = rates.Count > 0 ? rates.Average() : 0.0m,
-            VaR95InterestDelta = tailSize > 0 ? rates[tailSize] : 0.0m
+            VaR95InterestDelta = tailSize > 0 ? rates[tailSize] : 0.0m,
+
+            RawCreditMultipliers = credits.ToArray(),
+            RawInterestDeltas = rates.ToArray()
         };
     }
 }

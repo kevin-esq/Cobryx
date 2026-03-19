@@ -46,9 +46,10 @@ namespace Cobryx.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services,
+        IConfiguration configuration)
     {
-        services.AddOptions<Cobryx.Application.Common.Configuration.AppOptions>()
+        services.AddOptions<AppOptions>()
             .Bind(configuration.GetSection("App"))
             .ValidateDataAnnotations()
             .ValidateOnStart();
@@ -59,24 +60,24 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         // Options with startup validation
-        services.AddOptions<Configuration.JwtOptions>()
-            .Bind(configuration.GetSection(Configuration.JwtOptions.SectionName))
+        services.AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddOptions<Configuration.Fido2Options>()
-            .Bind(configuration.GetSection(Configuration.Fido2Options.SectionName))
+        services.AddOptions<Fido2Options>()
+            .Bind(configuration.GetSection(Fido2Options.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddOptions<Configuration.CaptchaOptions>()
-            .Bind(configuration.GetSection(Configuration.CaptchaOptions.SectionName))
+        services.AddOptions<CaptchaOptions>()
+            .Bind(configuration.GetSection(CaptchaOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddOptions<Configuration.ClamAvOptions>()
-            .Bind(configuration.GetSection(Configuration.ClamAvOptions.SectionName))
+        services.AddOptions<ClamAvOptions>()
+            .Bind(configuration.GetSection(ClamAvOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddOptions<Configuration.CachingOptions>()
-            .Bind(configuration.GetSection(Configuration.CachingOptions.SectionName))
+        services.AddOptions<CachingOptions>()
+            .Bind(configuration.GetSection(CachingOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -98,45 +99,45 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogQueryService, AuditLogQueryService>();
         services.AddScoped<IAlertingService, ProductionAlertingService>();
 
-        var cachingConfig = configuration.GetSection(Configuration.CachingOptions.SectionName).Get<Configuration.CachingOptions>()
-            ?? throw new InvalidOperationException("Caching configuration is missing.");
+        var cachingConfig = configuration.GetSection(CachingOptions.SectionName)
+                                .Get<CachingOptions>()
+                            ?? throw new InvalidOperationException("Caching configuration is missing.");
 
         services.AddDistributedMemoryCache();
 
         services.AddSingleton<IDistributedCache>(sp =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
-            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
+                cfg.GetValue<bool>("Caching:UseInMemory"))
             {
                 return sp.GetRequiredService<MemoryDistributedCache>();
             }
 
             // If not testing, use the Redis cache if configured
-            var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-            if (!string.IsNullOrEmpty(cachingOptions.Redis?.ConnectionString))
+            CachingOptions cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+            if (string.IsNullOrEmpty(cachingOptions.Redis.ConnectionString))
+                return sp.GetRequiredService<MemoryDistributedCache>();
+            // Note: This is an internal detail, but IDistributedCache is resolved.
+            // Instead of manually constructing RedisCache, we can rely on AddStackExchangeRedisCache
+            // but we need to ensure it's registered conditionally.
+            // To keep it simple, we'll just return the memory cache if we can't easily switch here,
+            // or we check the config earlier if possible.
+            // Actually, a better way is to move the whole AddStackExchangeRedisCache call inside an if in Program.cs
+            // but we want to keep logic in DependencyInjection.
+            var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
             {
-                // Note: This is an internal detail, but IDistributedCache is resolved.
-                // Instead of manually constructing RedisCache, we can rely on AddStackExchangeRedisCache
-                // but we need to ensure it's registered conditionally.
-                // To keep it simple, we'll just return the memory cache if we can't easily switch here,
-                // or we check the config earlier if possible.
-                // Actually, a better way is to move the whole AddStackExchangeRedisCache call inside an if in Program.cs
-                // but we want to keep logic in DependencyInjection.
-                var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
-                {
-                    Configuration = cachingOptions.Redis.ConnectionString,
-                    InstanceName = "Cobryx_"
-                });
-                return new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(redisOptions);
-            }
-
-            return sp.GetRequiredService<MemoryDistributedCache>();
+                Configuration = cachingOptions.Redis.ConnectionString,
+                InstanceName = "Cobryx_"
+            });
+            return new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(redisOptions);
         });
 
         services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
-            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
+                cfg.GetValue<bool>("Caching:UseInMemory"))
             {
                 return new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>().Object;
             }
@@ -149,7 +150,8 @@ public static class DependencyInjection
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || cfg.GetValue<bool>("Caching:UseInMemory"))
+            if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
+                cfg.GetValue<bool>("Caching:UseInMemory"))
             {
                 // Use a mock or a memory-based implementation of ICacheService if possible
                 // For now, let's keep it simple or use a dummy for testing
@@ -160,7 +162,7 @@ public static class DependencyInjection
             }
 
             return new RedisCacheService(
-                sp.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>(),
+                sp.GetRequiredService<IDistributedCache>(),
                 sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
                 cachingConfig.DefaultTTL);
         });
@@ -239,12 +241,12 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Domain.Services.UsageService>();
         services.AddScoped<Cobryx.Domain.Services.DocumentService>();
         services.AddScoped<IDocumentStorage, R2StorageProvider>();
-        services.AddScoped<IVirusScanner, Services.Security.ClamAvScanner>();
-        services.AddSingleton<Services.Security.ScannerCircuitBreaker>();
+        services.AddScoped<IVirusScanner, ClamAvScanner>();
+        services.AddSingleton<ScannerCircuitBreaker>();
 
         services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
-        services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>();
+        services.AddScoped<IInvoiceNumberService, InvoiceNumberService>();
         services.AddScoped<IMfaService, MfaService>();
         services.AddScoped<IFido2Service, Fido2Service>();
         services.AddScoped<ISecurityAuditService, SecurityAuditService>();
@@ -258,7 +260,8 @@ public static class DependencyInjection
                 sp.GetRequiredService<Cobryx.Application.Common.Observability.CobryxMetrics>()));
         services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
         services.AddScoped<IPermissionService, PermissionService>();
-        services.AddScoped<IGrowthIntelligenceService, Cobryx.Infrastructure.Services.Growth.GrowthIntelligenceService>();
+        services
+            .AddScoped<IGrowthIntelligenceService, Services.Growth.GrowthIntelligenceService>();
         services.AddScoped<IDatabaseDiagnosticService, DatabaseDiagnosticService>();
         services.AddScoped<ConversionDropOffJob>();
         services.AddScoped<ExpirePaymentLinksJob>();
@@ -267,12 +270,18 @@ public static class DependencyInjection
         services.AddScoped<ReconciliationEngineJob>();
         services.AddScoped<CheckSystemHealthJob>();
         services.AddScoped<LedgerOutboxWorker>();
-        services.AddScoped<Cobryx.Application.Collections.Assignment.IAssignmentEngine, Cobryx.Infrastructure.Services.Collections.AssignmentEngine>();
-        services.AddScoped<Cobryx.Application.Collections.Optimizer.ICollectionOptimizer, Cobryx.Infrastructure.Services.Collections.CollectionOptimizer>();
+        services
+            .AddScoped<Application.Collections.Assignment.IAssignmentEngine,
+                Services.Collections.AssignmentEngine>();
+        services
+            .AddScoped<Application.Collections.Optimizer.ICollectionOptimizer,
+                Services.Collections.CollectionOptimizer>();
         services.AddScoped<DriftDetectionWorker>();
         services.AddScoped<LedgerIntegrityJob>();
         services.AddScoped<LoanAccrualWorker>();
         services.AddScoped<FinancialOutboxWorker>();
+        services.AddScoped<RiskAggregationJob>();
+        services.AddScoped<Application.ML.ReplayEngine>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
@@ -285,7 +294,9 @@ public static class DependencyInjection
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings();
 
-            if (configuration.GetValue<bool>("Hangfire:UseMemoryStorage") || configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" || string.IsNullOrEmpty(connectionString))
+            if (configuration.GetValue<bool>("Hangfire:UseMemoryStorage") ||
+                configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
+                string.IsNullOrEmpty(connectionString))
             {
                 config.UseMemoryStorage();
             }
@@ -312,44 +323,46 @@ public static class DependencyInjection
         services.AddHostedService<HangfireMetricsExporter>();
 
         services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
-        {
-            var jwtOptions = configuration.GetSection(Configuration.JwtOptions.SectionName).Get<Configuration.JwtOptions>()
-                ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
-
-            options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtOptions.Issuer,
-                ValidAudience = jwtOptions.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
-                ClockSkew = TimeSpan.Zero
-            };
-
-            options.Events = new JwtBearerEvents
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
             {
-                OnMessageReceived = context =>
+                var jwtOptions = configuration.GetSection(JwtOptions.SectionName)
+                                     .Get<JwtOptions>()
+                                 ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
+
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    var token = context.Request.Cookies[CobryxClaimTypes.AccessTokenCookieName];
-                    if (!string.IsNullOrEmpty(token))
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtOptions.Issuer,
+                    ValidAudience = jwtOptions.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
                     {
-                        context.Token = token;
+                        var token = context.Request.Cookies[CobryxClaimTypes.AccessTokenCookieName];
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
                     }
-                    return Task.CompletedTask;
-                }
-            };
-        });
+                };
+            });
 
         services.Configure<Microsoft.AspNetCore.Builder.CookiePolicyOptions>(options =>
         {
-            options.CheckConsentNeeded = context => false;
+            options.CheckConsentNeeded = _ => false;
             options.MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
             options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
             options.Secure = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;

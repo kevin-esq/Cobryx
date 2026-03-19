@@ -67,17 +67,23 @@ public interface ICobryxDbContext
     // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles { get; }
     public DbSet<RiskEvent> RiskEvents { get; }
-    public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
-    public DbSet<Cobryx.Domain.ML.ModelOutcome> ModelOutcomes { get; }
+    public DbSet<Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
+    public DbSet<Domain.ML.ModelOutcome> ModelOutcomes { get; }
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots { get; }
-    public DbSet<Cobryx.Domain.ML.ShadowPrediction> ShadowPredictions { get; }
-    public DbSet<Cobryx.Domain.ML.MlModel> MlModels { get; }
-    public DbSet<Cobryx.Domain.ML.DecisionOutcome> DecisionOutcomes { get; }
-    public DbSet<Cobryx.Domain.ML.QValue> QValues { get; }
-    public DbSet<Cobryx.Domain.ML.Experience> Experiences { get; }
+    public DbSet<Domain.ML.ShadowPrediction> ShadowPredictions { get; }
+    public DbSet<Domain.ML.MlModel> MlModels { get; }
+    public DbSet<Domain.ML.DecisionOutcome> DecisionOutcomes { get; }
+    public DbSet<Domain.ML.QValue> QValues { get; }
+    public DbSet<Domain.ML.Experience> Experiences { get; }
+    public DbSet<Domain.ML.DecisionDistributionLog> DecisionDistributionLogs { get; }
+    public DbSet<Domain.ML.ReplaySnapshot> ReplaySnapshots { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);
-    public Task<IDbContextTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted, CancellationToken ct = default);
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(
+        System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted,
+        CancellationToken ct = default);
+
     public DatabaseFacade Database { get; }
 }

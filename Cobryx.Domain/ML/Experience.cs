@@ -2,9 +2,9 @@ namespace Cobryx.Domain.ML;
 
 public class Experience
 {
-    public System.Guid Id { get; set; } = System.Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid();
 
-    public System.Guid CustomerId { get; set; }
+    public Guid CustomerId { get; set; }
 
     public string StateJson { get; set; } = "";
 
@@ -18,4 +18,5 @@ public class Experience
 
     public string NextStateJson { get; set; } = "";
     public bool Done { get; set; }
+    public string Source { get; set; } = "production";
 }
