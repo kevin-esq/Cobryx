@@ -115,11 +115,14 @@ public class DecisionService
         Cobryx.Domain.ML.DecisionAction? action = null;
 
         var globalState = await _portfolioStore.GetGlobalStateAsync();
+        var limits = await _cache.GetAsync<Cobryx.Domain.ML.PortfolioLimits>("portfolio:limits", ct) ?? new Cobryx.Domain.ML.PortfolioLimits { MaxExposure = 10000000m };
         decimal globalCreditMultiplier = 1.0m;
+        decimal globalRiskTolerance = 1.0m;
         try
         {
             var portfolioAction = await _portfolioEngine.OptimizeAsync(globalState);
             globalCreditMultiplier = portfolioAction.CreditMultiplier;
+            globalRiskTolerance = portfolioAction.RiskTolerance;
         }
         catch { }
 
@@ -127,18 +130,35 @@ public class DecisionService
         {
             try
             {
-                var ppo = await _ppoClient.DecideAsync(new
+                var payload = new
                 {
-                    utilization = features!.Utilization,
-                    paymentDelay = features.PaymentDelay,
-                    behaviorScore = features.BehaviorScore,
-                    dpdTrend = features.DpdTrend,
-                    outstanding = features.Outstanding
-                });
+                    features = new
+                    {
+                        utilization = features!.Utilization,
+                        paymentDelay = features.PaymentDelay,
+                        behaviorScore = features.BehaviorScore,
+                        dpdTrend = features.DpdTrend,
+                        outstanding = features.Outstanding
+                    },
+                    global_state = globalState
+                };
 
+                var combined = await _ppoClient.DecideCombinedAsync(payload);
+                var ppo = combined.Local;
+                globalCreditMultiplier = combined.Portfolio.CreditMultiplier;
+                globalRiskTolerance = combined.Portfolio.RiskTolerance;
+
+                // 1. Global controla el presupuesto
+                creditLimit *= globalCreditMultiplier;
+                
+                // 2. Local ajusta dentro del presupuesto
                 creditLimit *= ppo.CreditMultiplier;
                 interestRate += ppo.InterestDelta;
-                creditLimit *= globalCreditMultiplier;
+
+                if ((decimal)finalPd > globalRiskTolerance)
+                {
+                    creditLimit *= 0.3m;
+                }
 
                 creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
                 interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
@@ -177,7 +197,7 @@ public class DecisionService
         }
 
         // GUARDRAILS DEL PORTAFOLIO MULTI-AGENTE (Hard Blocks Override)
-        if (globalState.TotalExposure > 10000000m)
+        if (globalState.TotalExposure > limits.MaxExposure)
             creditLimit = 0m;
 
         if (globalState.AvailableLiquidity < 100000m)

@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<Cobryx.Application.ML.DatasetExporter>();
         services.AddScoped<Cobryx.Application.ML.Jobs.DatasetExporterJob>();
         services.AddScoped<Cobryx.Application.ML.Jobs.RlTrainingJob>();
+        services.AddScoped<Cobryx.Application.ML.Jobs.PortfolioTrainingJob>();
         services.AddScoped<Cobryx.Application.ML.ModelRouter>();
         services.AddScoped<Cobryx.Application.ML.EnsembleService>();
         services.AddScoped<Cobryx.Application.ML.RlPolicy>();

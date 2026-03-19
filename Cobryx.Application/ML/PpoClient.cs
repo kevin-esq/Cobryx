@@ -19,6 +19,20 @@ public class PpoClient
 
         return (await res.Content.ReadFromJsonAsync<PpoResponse>())!;
     }
+
+    public async Task<CombinedPpoResponse> DecideCombinedAsync(object payload)
+    {
+        var res = await _http.PostAsJsonAsync("/rl/ppo/combined", payload);
+        res.EnsureSuccessStatusCode();
+
+        return (await res.Content.ReadFromJsonAsync<CombinedPpoResponse>())!;
+    }
+}
+
+public class CombinedPpoResponse
+{
+    public Cobryx.Domain.ML.PortfolioAction Portfolio { get; set; } = new();
+    public PpoResponse Local { get; set; } = new();
 }
 
 public class PpoResponse
