@@ -103,3 +103,52 @@ def decide_combined(payload: dict):
             "value": float(value.item())
         }
     }
+
+@app.post("/rl/ppo/montecarlo")
+def montecarlo(payload: dict):
+    import torch
+
+    scenarios = payload.get("scenarios", [])
+    features = payload.get("features", {})
+    global_state = payload.get("global_state", {})
+    macro = payload.get("macro", {})
+
+    if not scenarios:
+        return {"creditMultipliers": [], "interestDeltas": [], "values": [], "logProbs": []}
+
+    with torch.no_grad():
+        X = torch.tensor([
+            [
+                features.get("utilization", 0),
+                features.get("paymentDelay", 0) / 30.0,
+                features.get("behaviorScore", 0),
+                features.get("dpdTrend", 0) / 30.0,
+                features.get("outstanding", 0) / 20000.0,
+                global_state.get("totalExposure", 0) / 10000000.0,
+                global_state.get("availableLiquidity", 0) / 500000.0,
+
+                # 18 Audit: Stochastic Macro Parameters per Scenario
+                s.get("interestRate", 0) / 0.2,
+                s.get("inflation", 0) / 0.2,
+                macro.get("creditSpread", 0) / 0.1,
+                macro.get("volatility", 0) / 0.5,
+
+                # Constant history for the moment of decision
+                macro.get("inflationTMinus1", 0) / 0.2,
+                macro.get("inflationTMinus2", 0) / 0.2,
+                macro.get("rateTrend", 0) / 0.05,
+
+                macro.get("timeToMaturity", 12) / 36.0
+            ]
+            for s in scenarios
+        ]).float()
+
+        mean, values = ppo_model(X)
+        _, actions, log_probs = sample_action(mean, ppo_model.log_std)
+
+        return {
+            "creditMultipliers": (0.2 + (actions[:, 0] + 1) / 2 * (2.0 - 0.2)).tolist(),
+            "interestDeltas": (-0.1 + (actions[:, 1] + 1) / 2 * 0.4).tolist(),
+            "values": values.squeeze(-1).tolist(),
+            "logProbs": log_probs.sum(dim=1).tolist()
+        }

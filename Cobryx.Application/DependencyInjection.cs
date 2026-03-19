@@ -46,9 +46,20 @@ public static class DependencyInjection
         services.AddScoped<ML.EnsembleService>();
         services.AddScoped<ML.RlPolicy>();
         services.AddScoped<ML.IRlEngine, ML.RlEngine>();
-        services
-            .AddScoped<ML.IPortfolioFeatureStore,
-                ML.RedisPortfolioFeatureStore>();
+        services.AddScoped<ML.ScenarioGenerator>();
+        services.AddScoped<ML.MonteCarloEvaluator>();
+        services.AddScoped<ML.IPortfolioFeatureStore, ML.RedisPortfolioFeatureStore>();
+
+        services.AddHttpClient<ML.MonteCarloPpoClient>(c =>
+            {
+                var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                c.BaseAddress = new Uri(url);
+            })
+            .AddTransientHttpErrorPolicy(p =>
+                p.WaitAndRetryAsync(3, retry =>
+                    TimeSpan.FromMilliseconds(200 * retry)))
+            .AddTransientHttpErrorPolicy(p =>
+                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
         services.AddScoped<ML.PortfolioEngine>();
 
         services.AddHttpClient<ML.MlClient>(c =>

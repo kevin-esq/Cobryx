@@ -13,7 +13,8 @@ public class DecisionService(
     ML.ModelRouter router,
     ML.EnsembleService ensemble,
     ML.IRlEngine rlEngine,
-    ML.PpoClient ppoClient,
+    ML.ScenarioGenerator scenarioGenerator,
+    ML.MonteCarloEvaluator monteCarlo,
     ML.PortfolioEngine portfolioEngine,
     ML.IPortfolioFeatureStore portfolioStore,
     ML.IMacroFeatureStore macroStore)
@@ -92,10 +93,12 @@ public class DecisionService(
         var limits = await cache.GetAsync<PortfolioLimits>("portfolio:limits", ct) ??
                      new PortfolioLimits { MaxExposure = 10000000m };
         decimal globalCreditMultiplier = 1.0m;
+        decimal globalRiskTolerance = 1.0m;
         try
         {
             var portfolioAction = await portfolioEngine.OptimizeAsync(globalState);
             globalCreditMultiplier = portfolioAction.CreditMultiplier;
+            globalRiskTolerance = portfolioAction.RiskTolerance;
         }
         catch (Exception) { /* ignored */ }
 
@@ -109,43 +112,29 @@ public class DecisionService(
         {
             try
             {
-                var payload = new
+                var payloadFeatures = new
                 {
-                    features = new
-                    {
-                        utilization = features.Utilization,
-                        paymentDelay = features.PaymentDelay,
-                        behaviorScore = features.BehaviorScore,
-                        dpdTrend = features.DpdTrend,
-                        outstanding = features.Outstanding
-                    },
-                    global_state = globalState,
-                    macro = new
-                    {
-                        interestRate = macro.InterestRate,
-                        inflation = macro.Inflation,
-                        creditSpread = macro.CreditSpread,
-                        volatility = macro.MarketVolatility,
-                        regime = macro.Regime,
-                        inflationTMinus1 = macro.InflationTMinus1,
-                        inflationTMinus2 = macro.InflationTMinus2,
-                        rateTrend = macro.RateTrend,
-                        timeToMaturity = 12m
-                    },
-                    model = macro.Country == "MX" ? "ppo_mx" : "ppo_us"
+                    utilization = features.Utilization,
+                    paymentDelay = features.PaymentDelay,
+                    behaviorScore = features.BehaviorScore,
+                    dpdTrend = features.DpdTrend,
+                    outstanding = features.Outstanding
                 };
 
-                var combined = await ppoClient.DecideCombinedAsync(payload);
-                var ppo = combined.Local;
-                globalCreditMultiplier = combined.Portfolio.CreditMultiplier;
-                var globalRiskTolerance = combined.Portfolio.RiskTolerance;
+                var scenarios = scenarioGenerator.Generate(macro, 50);
+
+                var mcMetrics = await monteCarlo.EvaluateAsync(
+                    payloadFeatures,
+                    globalState,
+                    macro,
+                    scenarios);
 
                 // 1. Global controla el presupuesto
                 creditLimit *= globalCreditMultiplier;
 
-                // 2. Local ajusta dentro del presupuesto
-                creditLimit *= ppo.CreditMultiplier;
-                interestRate += ppo.InterestDelta;
+                // 2. Local ajusta dentro del presupuesto (VaR-aware conservatism)
+                creditLimit *= mcMetrics.VaR95CreditMultiplier;
+                interestRate += mcMetrics.AverageInterestDelta;
 
                 if (finalPd > globalRiskTolerance)
                 {
@@ -159,10 +148,10 @@ public class DecisionService(
                 {
                     CustomerId = customerId,
                     StateJson = System.Text.Json.JsonSerializer.Serialize(features),
-                    CreditMultiplier = ppo.CreditMultiplier,
-                    InterestDelta = ppo.InterestDelta,
-                    LogProb = ppo.LogProb,
-                    Value = ppo.Value,
+                    CreditMultiplier = mcMetrics.AverageCreditMultiplier,
+                    InterestDelta = mcMetrics.AverageInterestDelta,
+                    LogProb = 0m,
+                    Value = 0m,
                     Reward = 0m
                 });
             }

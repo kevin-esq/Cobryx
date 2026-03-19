@@ -66,17 +66,18 @@ public class DecisionServiceTests
         var rlEngineMock = new Mock<IRlEngine>();
         rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Cobryx.Domain.ML.RlState>()))
             .ReturnsAsync(Domain.ML.DecisionAction.MediumRisk);
-        var ppoClientMock = new Mock<HttpMessageHandler>();
-        ppoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+        var mcPpoClientMock = new Mock<HttpMessageHandler>();
+        mcPpoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = System.Net.HttpStatusCode.OK,
                 Content = new StringContent(
-                    "{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}")
+                    "{\"CreditMultipliers\":[1.0], \"InterestDeltas\":[0.0], \"LogProbs\":[0.0], \"Values\":[0.0]}")
             });
-        var ppoClient = new PpoClient(new HttpClient(ppoClientMock.Object)
-            { BaseAddress = new Uri("http://dummy") });
+        var mcClient = new MonteCarloPpoClient(new HttpClient(mcPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var scenarioGen = new ScenarioGenerator();
+        var monteCarlo = new MonteCarloEvaluator(mcClient);
 
         var portfolioStoreMock = new Mock<IPortfolioFeatureStore>();
         portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState
@@ -102,7 +103,7 @@ public class DecisionServiceTests
 
         var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
             new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
-            ppoClient, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
 
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext
@@ -165,17 +166,18 @@ public class DecisionServiceTests
         var rlEngineMock = new Mock<IRlEngine>();
         rlEngineMock.Setup(x => x.DecideAsync(It.IsAny<Domain.ML.RlState>()))
             .ReturnsAsync(Domain.ML.DecisionAction.MediumRisk);
-        var ppoClientMock = new Mock<HttpMessageHandler>();
-        ppoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+        var mcPpoClientMock = new Mock<HttpMessageHandler>();
+        mcPpoClientMock.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = System.Net.HttpStatusCode.OK,
                 Content = new StringContent(
-                    "{\"CreditMultiplier\":1.0, \"InterestDelta\":0.0, \"LogProb\":0, \"Value\":0}")
+                    "{\"CreditMultipliers\":[1.0], \"InterestDeltas\":[0.0], \"LogProbs\":[0.0], \"Values\":[0.0]}")
             });
-        var ppoClient = new PpoClient(new HttpClient(ppoClientMock.Object)
-            { BaseAddress = new Uri("http://dummy") });
+        var mcClient = new MonteCarloPpoClient(new HttpClient(mcPpoClientMock.Object) { BaseAddress = new Uri("http://dummy") });
+        var scenarioGen = new ScenarioGenerator();
+        var monteCarlo = new MonteCarloEvaluator(mcClient);
 
         var portfolioStoreMock = new Mock<IPortfolioFeatureStore>();
         portfolioStoreMock.Setup(x => x.GetGlobalStateAsync()).ReturnsAsync(new Cobryx.Domain.ML.PortfolioState
@@ -201,7 +203,7 @@ public class DecisionServiceTests
 
         var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
             new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
-            ppoClient, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
 
         var ctx = new DecisionContext
         {
