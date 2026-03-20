@@ -37,7 +37,6 @@ public class DecisionService(
         if (cached != null)
             return cached;
 
-        // ML INFERENCE PIPELINE
         var features = overrideFeatures ?? await featureStore.GetAsync(customerId);
 
         var heuristicPd = ctx.Credit.ProbabilityOfDefault;
@@ -108,7 +107,6 @@ public class DecisionService(
         }
         catch (Exception) { /* ignored */ }
 
-        // 17 Audit: Guardrails FIRST (Monetary Tightening)
         if (macro.InterestRate > 0.15m || macro.Inflation > 0.10m)
         {
             return new DecisionResult { Approved = false, CreditLimit = 0m, InterestRate = 0m };
@@ -135,10 +133,7 @@ public class DecisionService(
                     macro,
                     scenarios);
 
-                // 1. Global controla el presupuesto
                 creditLimit *= globalCreditMultiplier;
-
-                // 2. Local ajusta dentro del presupuesto (VaR-aware conservatism)
                 creditLimit *= mcMetrics.VaR95CreditMultiplier;
                 interestRate += mcMetrics.AverageInterestDelta;
 
@@ -215,7 +210,6 @@ public class DecisionService(
             }
         }
 
-        // GUARDRAILS DEL PORTAFOLIO MULTI-AGENTE (Hard Blocks Override)
         if (globalState.TotalExposure > limits.MaxExposure)
             creditLimit = 0m;
 
@@ -227,11 +221,9 @@ public class DecisionService(
 
         if (!isReplay)
         {
-            // persist outcome logic mapping for ML retraining feedback loop
             var outcome = new ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
             db.ModelOutcomes.Add(outcome);
 
-            // persist snapshot
             var dbSnapshot = new DecisionSnapshot(
                 customerId,
                 finalPd,
@@ -253,7 +245,6 @@ public class DecisionService(
                 ModelVersion = prodVersion
             });
 
-            // PHASE 18B: CAPTURE HOOK FOR REPLAY ENGINE
             db.ReplaySnapshots.Add(new ReplaySnapshot
             {
                 CustomerId = customerId,
@@ -264,17 +255,14 @@ public class DecisionService(
                 OriginalCreditLimit = result.CreditLimit,
                 OriginalInterestRate = result.InterestRate,
                 ModelVersion = prodVersion,
-                // Gaps Closed
                 RandomSeed = seed,
                 ModelHash = prodVersion, // Usually a SHA of the weights
                 FeatureVersion = "1.0",
                 ScenarioVersion = "1.0",
-                // Real outcome will be appended asynchronously when loan matures/defaults.
             });
 
             await db.SaveChangesAsync(ct);
 
-            // cache
             await cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
         }
 
