@@ -282,6 +282,7 @@ public static class DependencyInjection
         services.AddScoped<FinancialOutboxWorker>();
         services.AddScoped<RiskAggregationJob>();
         services.AddScoped<Application.ML.ReplayEngine>();
+        services.AddScoped<Application.ML.GuardrailEngine>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

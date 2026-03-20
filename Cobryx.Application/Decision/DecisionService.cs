@@ -18,7 +18,8 @@ public class DecisionService(
     ML.MonteCarloEvaluator monteCarlo,
     ML.PortfolioEngine portfolioEngine,
     ML.IPortfolioFeatureStore portfolioStore,
-    ML.IMacroFeatureStore macroStore)
+    ML.IMacroFeatureStore macroStore,
+    ML.GuardrailEngine guardrailEngine)
 {
     public async Task<DecisionResult> EvaluateAsync(
         Guid customerId,
@@ -143,9 +144,6 @@ public class DecisionService(
                     creditLimit *= 0.3m;
                 }
 
-                creditLimit = Math.Clamp(creditLimit, 0m, RiskLimits.MaxCreditLimit);
-                interestRate = Math.Clamp(interestRate, RiskLimits.MinInterestRate, RiskLimits.MaxInterestRate);
-
                 if (!isReplay)
                 {
                     db.Experiences.Add(new Experience
@@ -211,11 +209,7 @@ public class DecisionService(
             }
         }
 
-        if (globalState.TotalExposure > RiskLimits.MaxPortfolioExposure)
-            creditLimit = 0m;
-
-        if (globalState.AvailableLiquidity < RiskLimits.MinLiquidityThreshold)
-            creditLimit *= 0.1m;
+        (creditLimit, interestRate) = guardrailEngine.Apply(creditLimit, interestRate, globalState);
 
         result.CreditLimit = creditLimit;
         result.InterestRate = interestRate;
