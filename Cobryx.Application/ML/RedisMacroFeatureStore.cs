@@ -14,7 +14,7 @@ public class RedisMacroFeatureStore(ICacheService cache) : IMacroFeatureStore
             { 
                 InterestRate = 0.05m,
                 Inflation = 0.03m,
-                Regime = "normal",
+                Regime = Cobryx.Domain.ML.MarketRegime.Normal,
                 Country = "US"
             };
         }

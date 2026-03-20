@@ -12,8 +12,8 @@ public class MacroState
     public decimal LiquidityIndex { get; set; }
     
     // Phase 17 Audit Additions
-    public string Regime { get; set; } = "normal"; // high_inflation, crisis, normal
-    public string Country { get; set; } = "US"; 
+    public MarketRegime Regime { get; set; } = MarketRegime.Normal;
+    public string Country { get; set; } = "US";
     
     // Non-Markovian Memory (Audit Fix 3)
     public decimal InflationTMinus1 { get; set; }

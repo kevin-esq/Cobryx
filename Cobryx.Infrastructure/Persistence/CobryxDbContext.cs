@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using System.Text.Json;
 
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
@@ -7,6 +6,8 @@ using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Analytics.Risk;
 using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Collections;
+using Cobryx.Domain.Decision;
+using Cobryx.Domain.ML;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
@@ -19,14 +20,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cobryx.Infrastructure.Persistence;
 
-public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider) : DbContext(options), ICobryxDbContext, IUnitOfWork
+public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantProvider tenantProvider)
+    : DbContext(options), ICobryxDbContext, IUnitOfWork
 {
     private readonly ITenantProvider _tenantProvider = tenantProvider;
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        WriteIndented = false
-    };
-
     private static readonly SemaphoreSlim _sqliteLock = new(1, 1);
 
     public Guid CurrentTenantId => _tenantProvider.GetTenantId() ?? Guid.Empty;
@@ -48,13 +45,15 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
             foreach (var entry in ex.Entries)
             {
                 var databaseValues = await entry.GetDatabaseValuesAsync(cancellationToken);
-                Serilog.Log.Error("CONCURRENCY ERROR: Entity {EntityName}, State {State}, Id {Id}. Current Version: {CurrentVersion}, DB Version: {DbVersion}",
+                Serilog.Log.Error(
+                    "CONCURRENCY ERROR: Entity {EntityName}, State {State}, Id {Id}. Current Version: {CurrentVersion}, DB Version: {DbVersion}",
                     entry.Entity.GetType().Name,
                     entry.State,
                     entry.Property("Id").CurrentValue,
                     entry.Property("Version").CurrentValue,
                     databaseValues?.GetValue<long>("Version"));
             }
+
             throw;
         }
         catch (DbUpdateException ex)
@@ -74,7 +73,7 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
             }
 
             var logPath = "/tmp/ef_failure_diag.txt";
-            System.IO.File.WriteAllText(logPath, builder.ToString());
+            File.WriteAllText(logPath, builder.ToString());
             throw;
         }
         finally
@@ -103,8 +102,9 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
         }
     }
 
-    public async Task<IDbContextTransaction> BeginTransactionAsync(System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted, CancellationToken ct = default) => await Database.BeginTransactionAsync(isolationLevel, ct);
-
+    public async Task<IDbContextTransaction> BeginTransactionAsync(
+        System.Data.IsolationLevel isolationLevel = System.Data.IsolationLevel.ReadCommitted,
+        CancellationToken ct = default) => await Database.BeginTransactionAsync(isolationLevel, ct);
 
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -112,7 +112,10 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations => Set<Domain.Payments.PaymentAllocation>();
+
+    public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations =>
+        Set<Domain.Payments.PaymentAllocation>();
+
     // Payment Links
     public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
 
@@ -127,14 +130,16 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles => Set<CustomerRiskProfile>();
     public DbSet<RiskEvent> RiskEvents => Set<RiskEvent>();
-    public DbSet<Cobryx.Domain.Decision.DecisionSnapshot> DecisionSnapshots => Set<Cobryx.Domain.Decision.DecisionSnapshot>();
-    public DbSet<Cobryx.Domain.ML.ModelOutcome> ModelOutcomes => Set<Cobryx.Domain.ML.ModelOutcome>();
+    public DbSet<DecisionSnapshot> DecisionSnapshots => Set<DecisionSnapshot>();
+    public DbSet<ModelOutcome> ModelOutcomes => Set<ModelOutcome>();
     public DbSet<CustomerRiskSnapshot> CustomerRiskSnapshots => Set<CustomerRiskSnapshot>();
-    public DbSet<Cobryx.Domain.ML.ShadowPrediction> ShadowPredictions => Set<Cobryx.Domain.ML.ShadowPrediction>();
-    public DbSet<Cobryx.Domain.ML.MlModel> MlModels => Set<Cobryx.Domain.ML.MlModel>();
-    public DbSet<Cobryx.Domain.ML.DecisionOutcome> DecisionOutcomes => Set<Cobryx.Domain.ML.DecisionOutcome>();
-    public DbSet<Cobryx.Domain.ML.QValue> QValues => Set<Cobryx.Domain.ML.QValue>();
-    public DbSet<Cobryx.Domain.ML.Experience> Experiences => Set<Cobryx.Domain.ML.Experience>();
+    public DbSet<ShadowPrediction> ShadowPredictions => Set<ShadowPrediction>();
+    public DbSet<MlModel> MlModels => Set<MlModel>();
+    public DbSet<DecisionOutcome> DecisionOutcomes => Set<DecisionOutcome>();
+    public DbSet<QValue> QValues => Set<QValue>();
+    public DbSet<Experience> Experiences => Set<Experience>();
+    public DbSet<DecisionDistributionLog> DecisionDistributionLogs => Set<DecisionDistributionLog>();
+    public DbSet<ReplaySnapshot> ReplaySnapshots => Set<ReplaySnapshot>();
     public DbSet<LatestLoanSnapshot> LatestLoanSnapshots => Set<LatestLoanSnapshot>();
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();

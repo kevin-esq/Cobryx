@@ -20,8 +20,8 @@ public class MacroIngestionJob(ICacheService cache)
         var smoothedRate = 0.7m * prevMacro.InterestRate + 0.3m * newRate;
 
         // 17 Audit: Regime Detection
-        var regime = smoothedInflation > 0.08m ? "high_inflation" :
-            newVolatility > 0.3m ? "crisis" : "normal";
+        var regime = smoothedInflation > 0.08m ? Cobryx.Domain.ML.MarketRegime.HighInflation :
+            newVolatility > 0.3m ? Cobryx.Domain.ML.MarketRegime.Crisis : Cobryx.Domain.ML.MarketRegime.Normal;
 
         var macro = new Cobryx.Domain.ML.MacroState
         {

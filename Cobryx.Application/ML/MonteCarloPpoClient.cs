@@ -12,6 +12,14 @@ public class MonteCarloResponse
     public List<decimal> LogProbs { get; set; } = new();
 }
 
+public class PpoDecisionResponse
+{
+    public decimal CreditMultiplier { get; set; }
+    public decimal InterestDelta { get; set; }
+    public decimal LogProb { get; set; }
+    public decimal Value { get; set; }
+}
+
 public class MonteCarloPpoClient(HttpClient http)
 {
     public async Task<MonteCarloResponse> EvaluateBatchAsync(
@@ -32,5 +40,18 @@ public class MonteCarloPpoClient(HttpClient http)
         res.EnsureSuccessStatusCode();
 
         return (await res.Content.ReadFromJsonAsync<MonteCarloResponse>())!;
+    }
+
+    public async Task<PpoDecisionResponse> DecideAsync(object state)
+    {
+        var res = await http.PostAsJsonAsync("/rl/ppo/decide", new { state });
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<PpoDecisionResponse>())!;
+    }
+
+    public async Task TrainAsync(object batchPayload)
+    {
+        var res = await http.PostAsJsonAsync("/rl/ppo/train", batchPayload);
+        res.EnsureSuccessStatusCode();
     }
 }
