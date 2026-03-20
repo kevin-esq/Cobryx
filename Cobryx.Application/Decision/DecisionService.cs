@@ -10,9 +10,8 @@ public class DecisionService(
     ICacheService cache,
     ICobryxDbContext db,
     ML.IFeatureStore featureStore,
-    ML.MlClient mlClient,
+    IRiskEvaluator riskEvaluator,
     ML.ModelRouter router,
-    ML.EnsembleService ensemble,
     ML.IRlEngine rlEngine,
     ML.ScenarioGenerator scenarioGenerator,
     ML.MonteCarloEvaluator monteCarlo,
@@ -41,42 +40,7 @@ public class DecisionService(
 
         var features = overrideFeatures ?? await featureStore.GetAsync(customerId);
 
-        var heuristicPd = ctx.Credit.ProbabilityOfDefault;
-        decimal prodPd;
-        string prodVersion;
-
-        try
-        {
-            (prodPd, prodVersion) = await mlClient.PredictAsync(features, "xgb_v1");
-        }
-        catch
-        {
-            prodPd = heuristicPd;
-            prodVersion = "fallback-heuristic";
-        }
-
-        decimal shadowPd = prodPd;
-
-        if (router.ShouldRunShadow())
-        {
-            try
-            {
-                (shadowPd, var shadowVersion) = await mlClient.PredictAsync(features, "xgb_v2");
-
-                db.ShadowPredictions.Add(new ShadowPrediction
-                {
-                    CustomerId = customerId,
-                    ProductionPd = prodPd,
-                    ShadowPd = shadowPd,
-                    ProductionModelVersion = prodVersion,
-                    ShadowModelVersion = shadowVersion,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            catch (Exception) { /* ignored */ }
-        }
-
-        var finalPd = ensemble.Combine(heuristicPd, prodPd, shadowPd);
+        var (finalPd, prodVersion) = await riskEvaluator.EvaluateRiskAsync(customerId, ctx, features);
 
         ctx.Credit.ProbabilityOfDefault = finalPd;
         ctx.Pricing.ProbabilityOfDefault = finalPd;

@@ -283,6 +283,7 @@ public static class DependencyInjection
         services.AddScoped<RiskAggregationJob>();
         services.AddScoped<Application.ML.ReplayEngine>();
         services.AddScoped<Application.ML.GuardrailEngine>();
+        services.AddScoped<Application.Decision.IRiskEvaluator, Application.Decision.DefaultRiskEvaluator>();
 
         services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
