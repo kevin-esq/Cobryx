@@ -101,9 +101,12 @@ public class DecisionServiceTests
             InterestRate = 0.05m, Inflation = 0.03m, CreditSpread = 0.02m, MarketVolatility = 0.15m
         });
 
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
-            new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
-            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+        var riskEvaluator = new DefaultRiskEvaluator(mlClient, new ModelRouter(), new EnsembleService(), dbMock.Object);
+        var guardrailEngine = new GuardrailEngine();
+
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, riskEvaluator,
+            new ModelRouter(), rlEngineMock.Object,
+            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object, guardrailEngine);
 
         var customerId = Guid.NewGuid();
         var ctx = new DecisionContext
@@ -201,9 +204,12 @@ public class DecisionServiceTests
             InterestRate = 0.05m, Inflation = 0.03m, CreditSpread = 0.02m, MarketVolatility = 0.15m
         });
 
-        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, mlClient,
-            new ModelRouter(), new EnsembleService(), rlEngineMock.Object,
-            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object);
+        var riskEvaluator = new DefaultRiskEvaluator(mlClient, new ModelRouter(), new EnsembleService(), dbMock.Object);
+        var guardrailEngine = new GuardrailEngine();
+
+        var service = new DecisionService(engine, cacheMock.Object, dbMock.Object, featureStoreMock.Object, riskEvaluator,
+            new ModelRouter(), rlEngineMock.Object,
+            scenarioGen, monteCarlo, portfolioEngine, portfolioStoreMock.Object, macroStoreMock.Object, guardrailEngine);
 
         var ctx = new DecisionContext
         {
