@@ -1,14 +1,16 @@
+using Cobryx.Domain.Config;
+
 namespace Cobryx.Application.ML;
 
 public class ModelRouter
 {
     public bool ShouldRunShadow()
     {
-        return Random.Shared.NextDouble() < 0.3; // 30% shadow traffic
+        return Random.Shared.NextDouble() < ExperimentConfig.ShadowTrafficPercentage;
     }
 
     public bool UsePpo()
     {
-        return Random.Shared.NextDouble() < 0.05; // 5% PPO
+        return Random.Shared.NextDouble() < ExperimentConfig.PpoTrafficPercentage;
     }
 }
