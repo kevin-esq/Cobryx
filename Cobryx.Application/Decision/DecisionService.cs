@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Decision;
 using Cobryx.Domain.ML;
+using Cobryx.Domain.Config;
 
 namespace Cobryx.Application.Decision;
 
@@ -96,7 +97,7 @@ public class DecisionService(
         var globalState = overridePortfolio ?? await portfolioStore.GetGlobalStateAsync();
         var macro = overrideMacro ?? await macroStore.GetAsync();
         var limits = await cache.GetAsync<PortfolioLimits>("portfolio:limits", ct) ??
-                     new PortfolioLimits { MaxExposure = 10000000m };
+                     new PortfolioLimits { MaxExposure = RiskLimits.MaxPortfolioExposure };
         decimal globalCreditMultiplier = 1.0m;
         decimal globalRiskTolerance = 1.0m;
         try
@@ -142,8 +143,8 @@ public class DecisionService(
                     creditLimit *= 0.3m;
                 }
 
-                creditLimit = Math.Clamp(creditLimit, 0m, 200000m);
-                interestRate = Math.Clamp(interestRate, 0.05m, 0.45m);
+                creditLimit = Math.Clamp(creditLimit, 0m, RiskLimits.MaxCreditLimit);
+                interestRate = Math.Clamp(interestRate, RiskLimits.MinInterestRate, RiskLimits.MaxInterestRate);
 
                 if (!isReplay)
                 {
@@ -210,10 +211,10 @@ public class DecisionService(
             }
         }
 
-        if (globalState.TotalExposure > limits.MaxExposure)
+        if (globalState.TotalExposure > RiskLimits.MaxPortfolioExposure)
             creditLimit = 0m;
 
-        if (globalState.AvailableLiquidity < 100000m)
+        if (globalState.AvailableLiquidity < RiskLimits.MinLiquidityThreshold)
             creditLimit *= 0.1m;
 
         result.CreditLimit = creditLimit;
