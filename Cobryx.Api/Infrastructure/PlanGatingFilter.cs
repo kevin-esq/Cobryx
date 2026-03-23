@@ -30,7 +30,6 @@ public class PlanGatingFilter(
             return;
         }
 
-        // 1. Feature Check
         var featureAttr = context.ActionDescriptor.EndpointMetadata.OfType<RequiresFeatureAttribute>().FirstOrDefault();
         if (featureAttr != null)
         {
@@ -46,7 +45,6 @@ public class PlanGatingFilter(
             }
         }
 
-        // 2. Limit Check (Using Enforcement Service with DB Locks for consistency)
         var limitAttr = context.ActionDescriptor.EndpointMetadata.OfType<RequiresLimitAttribute>().FirstOrDefault();
         if (limitAttr != null)
         {

@@ -38,7 +38,6 @@ public class DunningOrchestratorJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // 1. Fetch eligible PaymentLinks for recovery
         // Active links that have a scheduled retry time and haven't exceeded attempts/deadline
         var pendingRecoveries = await db.Set<PaymentLink>()
             .Include(l => l.Loan)
@@ -58,7 +57,7 @@ public class DunningOrchestratorJob
 
         foreach (var link in pendingRecoveries)
         {
-            // 2. Atomic Guard: Try to acquire the recovery lock
+            // Atomic Guard: Try to acquire the recovery lock
             if (!link.TryAcquireRecoveryLock())
             {
                 _logger.LogWarning("Dunning Engine: Skipped Link {LinkId}, already in progress.", link.Id);
@@ -67,7 +66,6 @@ public class DunningOrchestratorJob
 
             try
             {
-                // 3. Delegate to Orchestration Engine
                 // We pass null for failure code because this is a retry of a PREVIOUS failure
                 await _orchestrationService.HandlePaymentFailureAsync(
                     link.CustomerId,
@@ -86,7 +84,6 @@ public class DunningOrchestratorJob
             }
         }
 
-        // 4. Persistence
         await _unitOfWork.SaveChangesAsync(ct);
     }
 }

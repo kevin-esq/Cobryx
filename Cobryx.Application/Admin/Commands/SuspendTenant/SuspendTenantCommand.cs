@@ -34,10 +34,8 @@ public class SuspendTenantHandler(ICobryxDbContext dbContext, ICurrentUserProvid
 
         var oldStatus = tenant.Status;
 
-        // 1. Domain Action
         tenant.Suspend();
 
-        // 2. Audit Trail
         var adminUserId = _currentUserProvider.GetUserId() ?? Guid.Empty;
         var audit = new AdminActionAudit(
             adminUserId: adminUserId,

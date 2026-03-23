@@ -122,7 +122,6 @@ public class LedgerIntegrityTests
             await contextAlter.SaveChangesAsync();
         }
 
-        // Pass 2: Default Rescan (Incremental)
         using (var context2 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service2 = CreateService(context2);
@@ -133,7 +132,6 @@ public class LedgerIntegrityTests
             Assert.True(report2.IsHealthy); // Healthy from an incremental delta perspective
         }
 
-        // Pass 3: Forced Full Rescan
         using (var context3 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service3 = CreateService(context3);

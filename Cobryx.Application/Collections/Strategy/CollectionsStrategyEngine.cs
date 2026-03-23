@@ -36,7 +36,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             ? CollectionActionType.EmailReminder
             : CollectionActionType.SmsReminder;
 
-        // 1. Early stage (0–3)
         if (dpd <= 3)
         {
             return new CollectionDecision
@@ -48,7 +47,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             };
         }
 
-        // 2. Medium risk logic
         if (dpd <= 7)
         {
             if (riskScore < 40 || trend.Delta > 5)
@@ -71,7 +69,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             };
         }
 
-        // 3. Escalation logic
         if (dpd <= 30)
         {
             var highExposure = outstanding > 10000;
@@ -87,7 +84,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             };
         }
 
-        // 4. Legal
         return new CollectionDecision
         {
             Stage = CollectionStage.Legal,

@@ -24,7 +24,6 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
 
     public async Task<Result> Handle(HandlePaymentFailedCommand request, CancellationToken ct)
     {
-        // 1. Extract CustomerId from Metadata
         if (!request.StripeObject.TryGetProperty("metadata", out var metadata) ||
             !metadata.TryGetProperty("CustomerId", out var customerIdProp) ||
             !Guid.TryParse(customerIdProp.GetString(), out var customerId))
@@ -44,7 +43,6 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             }
         }
 
-        // 2. Extract Amount and Failure Code
         decimal amount = 0;
         string currency = "USD";
         string? failureCode = null;
@@ -68,7 +66,6 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             }
         }
 
-        // 3. Delegate to Orchestration Engine
         var stripePaymentIntentId = request.StripeObject.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
 
         return await _orchestrationService.HandlePaymentFailureAsync(

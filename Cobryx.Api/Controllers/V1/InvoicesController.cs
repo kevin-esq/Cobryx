@@ -82,7 +82,6 @@ public class InvoicesController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Domain Command
         var command = new Application.Invoicing.Commands.CreateInvoice.CreateInvoiceCommand(
             request.CustomerId,
             request.DueDate,

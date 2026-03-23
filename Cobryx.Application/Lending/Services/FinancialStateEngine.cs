@@ -46,7 +46,7 @@ public class FinancialStateEngine
 
         var now = _clock.UtcNow;
 
-        // 1. BANK-GRADE: Link to Ledger Truth
+        // BANK-GRADE: Link to Ledger Truth
         // We fetch the current balances from the Ledger to ensure the entity is in sync
         var ledgerBalances = await GetLoanLedgerBalancesAsync(loan.Id, ct);
 
@@ -88,7 +88,7 @@ public class FinancialStateEngine
 
     private async Task<LoanLedgerBalances> GetLoanLedgerBalancesAsync(Guid loanId, CancellationToken ct)
     {
-        // 1. BANK-GRADE: Filter by specifically receivable-eligible accounts
+        // BANK-GRADE: Filter by specifically receivable-eligible accounts
         // We only count Principal (1210), Interest (4010), and Fees (4020).
         // We EXCLUDE Platform Fees, Recoveries, and Internal Suspense.
         var receivableAccountCodes = new[] { "1210", "4010", "4020" };
@@ -127,7 +127,7 @@ public class FinancialStateEngine
         if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff)
             return;
 
-        // 1. BANK-GRADE: Guard Rails
+        // BANK-GRADE: Guard Rails
         if (loan.Status == LoanStatus.Closed)
         {
             _logger.LogWarning("Blocking charge-off for Loan {LoanId}: Loan is already CLOSED.", loanId);

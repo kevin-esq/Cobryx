@@ -16,7 +16,7 @@ public class TenantMRRHistory
     public MRRChangeType ChangeType { get; private set; }
     public string? Reason { get; private set; }
 
-    private TenantMRRHistory() { } // EF Core
+    private TenantMRRHistory() { }
 
     public TenantMRRHistory(Guid tenantId, decimal mrr, MRRChangeType changeType, string? reason = null)
     {

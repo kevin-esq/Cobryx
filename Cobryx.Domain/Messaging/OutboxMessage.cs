@@ -26,7 +26,7 @@ public class OutboxMessage : BaseEntity, ITenantEntity
     public long? LedgerSequenceId { get; private set; }
     public string? PartitionKey { get; private set; }
 
-    private OutboxMessage() { } // EF Core
+    private OutboxMessage() { }
 
     // Standard Constructor
     public OutboxMessage(Guid tenantId, string type, string payload, string? correlationId = null)

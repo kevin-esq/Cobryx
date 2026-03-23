@@ -28,7 +28,7 @@ public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
 
     public async Task<Result<FinancialMetricsDto>> Handle(GetFinancialMetricsQuery request, CancellationToken ct)
     {
-        // 1. BANK-GRADE: Base Filter
+        // BANK-GRADE: Base Filter
         var loansQuery = _dbContext.Loans
             .AsNoTracking()
             .Where(l => l.Status == LoanStatus.Active);
@@ -41,7 +41,6 @@ public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
         var activeLoans = await loansQuery.ToListAsync(ct);
         var loanIds = activeLoans.Select(l => l.Id).ToList();
 
-        // 2. Fetch Ledger Principal Balances for these loans
         // We only count account '1210' (Principal)
         var principalEntries = await _dbContext.LedgerEntries
             .AsNoTracking()
@@ -61,7 +60,6 @@ public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
         var par30 = loanBalances.Where(x => x.Dpd > 30).Sum(x => x.Principal);
         var par90 = loanBalances.Where(x => x.Dpd > 90).Sum(x => x.Principal);
 
-        // 3. Recovery and Charge-Off Metrics (Lifetime)
         var recoveryQuery = _dbContext.LedgerEntries
             .AsNoTracking()
             .Join(_dbContext.LedgerAccounts.Where(a => a.Code == "4030"), e => e.AccountId, a => a.Id, (e, a) => e);

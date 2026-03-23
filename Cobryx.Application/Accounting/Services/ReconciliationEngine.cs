@@ -40,7 +40,6 @@ public class ReconciliationEngine(
         var (available, pending) = await _stripeService.GetBalanceAsync(stripeAccountId, ct);
         var ledgerBalance = await GetLedgerBalanceAsync(tenantId, ct);
 
-        // 2. Windowed Scan of PaymentIntents
         var drifts = new List<DriftDetail>();
         var totalDriftsManaged = 0;
         var totalRepaired = 0;
@@ -188,7 +187,6 @@ public class ReconciliationEngine(
         if (ledgerExists)
             return null; // In-sync
 
-        // 2. Apply Timing Tolerance (Soft Drift if < 15 mins)
         var age = DateTime.UtcNow - intent.Created;
         if (age < _timingTolerance)
         {
@@ -201,7 +199,6 @@ public class ReconciliationEngine(
             );
         }
 
-        // 3. Hard Discrepancy: Missing Payment in Ledger
         return new DriftDetail(
             intent.Id,
             DriftType.MissingPayment,
@@ -311,7 +308,6 @@ public class ReconciliationEngine(
     {
         try
         {
-            // 1. Check if it's a Loan Payment (Metadata contains LoanId)
             if (intent.Metadata.TryGetValue("LoanId", out var loanIdStr) && Guid.TryParse(loanIdStr, out var loanId))
             {
                 var loan = await _dbContext.Loans

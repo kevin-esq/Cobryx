@@ -107,7 +107,7 @@ public class TenantGrowthMetrics
 
     public ChurnRisk ChurnRisk { get; private set; }
 
-    private TenantGrowthMetrics() { } // EF Core
+    private TenantGrowthMetrics() { }
 
     public TenantGrowthMetrics(Guid tenantId, DateTime createdAt)
     {

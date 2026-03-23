@@ -72,7 +72,6 @@ public class CollectionsOrchestratorJob
                         weights = deserialized;
                 }
 
-                // 1. STRATEGY EVALUATION
                 var decision = _strategyEngine.Evaluate(
                     snapshot.DaysPastDue,
                     snapshot.Outstanding,
@@ -81,7 +80,6 @@ public class CollectionsOrchestratorJob
                     trend,
                     weights);
 
-                // 2. CASE MANAGEMENT
                 var collectionCase = await _dbContext.CollectionCases
                     .FirstOrDefaultAsync(c => c.LoanId == snapshot.LoanId && !c.IsClosed);
 
@@ -102,7 +100,6 @@ public class CollectionsOrchestratorJob
                     collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, decision.NextActionAt);
                 }
 
-                // 3. ACTION LOGGING
                 if (collectionCase.NextActionAt == null || collectionCase.NextActionAt <= System.DateTime.UtcNow)
                 {
                     var action = new CollectionAction(
@@ -116,7 +113,6 @@ public class CollectionsOrchestratorJob
                     collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, System.DateTime.UtcNow.AddDays(1));
                 }
 
-                // 4. REDIS PRIORITY QUEUE (ZSET + HASH)
                 var priorityKey = $"portfolio:collections:priority:{tenantId}";
                 var dataKey = $"portfolio:collections:data:{snapshot.LoanId}";
 
@@ -140,7 +136,6 @@ public class CollectionsOrchestratorJob
 
         await _dbContext.SaveChangesAsync(default);
 
-        // 5. AUTO ASSIGNMENT
         var affectedTenants = delinquentLoans.Select(x => x.TenantId).Distinct().ToList();
         foreach (var tId in affectedTenants)
         {

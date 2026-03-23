@@ -43,7 +43,6 @@ public class SupportController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> Create([FromBody] CreateSupportTicketRequest request)
     {
-        // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Support.Commands.Create.CreateSupportTicketCommand(
             request.Subject,
             request.Description,

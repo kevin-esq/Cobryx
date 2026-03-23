@@ -75,7 +75,6 @@ public class TaxesController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> CreateTax([FromBody] CreateTaxRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Domain Implementation
         var command = new Application.Invoicing.Commands.CreateTaxConfiguration.CreateTaxConfigurationCommand(
             request.Name,
             request.Rate,

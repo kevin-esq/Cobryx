@@ -13,7 +13,6 @@ public static class AccountingInfrastructureModule
 {
     public static IServiceCollection AddAccountingInfrastructure(this IServiceCollection services)
     {
-        // Repositories
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
         // Ledger & Replay

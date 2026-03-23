@@ -41,7 +41,6 @@ public class LoanPaymentService
         if (amount <= 0)
             throw new DomainException(Cobryx.Domain.Shared.DomainErrorCode.Loans.InvalidPaymentAmount);
 
-        // 1. Transactional Atomicity
         var strategy = _context.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
@@ -55,21 +54,16 @@ public class LoanPaymentService
                     .FirstOrDefaultAsync(l => l.Id == loanId, ct)
                     ?? throw new DomainException(Cobryx.Domain.Shared.DomainErrorCode.Loans.CreditSaleNotFound);
 
-                // 2. Flush Accruals (Ensure balances are current)
                 // We must catch up interest and fees to today's date before allocating the payment.
                 await _accrualEngine.ProcessLoanAccrualAsync(loan, DateTime.UtcNow.Date, ct);
 
-                // 3. Allocate Payment
                 var paymentId = Guid.NewGuid();
                 var allocation = await _allocationEngine.AllocateAsync(loan, amount, paymentId, ct);
 
-                // 4. Record Allocation Audit
                 _context.LoanPaymentAllocations.Add(allocation);
 
-                // 5. Post to Ledger
                 await _postingEngine.PostLoanPaymentAllocationAsync(loan, allocation, reference, ct: ct);
 
-                // 6. Update Loan Projection
                 loan.ApplyAllocation(allocation);
 
                 await _context.SaveChangesAsync(ct);

@@ -40,7 +40,7 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
         if (tenant == null)
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
 
-        // 1. Ensure Stripe Account exists
+        // Ensure Stripe Account exists
         if (string.IsNullOrEmpty(tenant.StripeAccountId))
         {
             // Fetch Primary Admin / Owner Email
@@ -78,7 +78,6 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
             }
         }
 
-        // 2. Generate Onboarding Link
         try
         {
             var url = await _stripeService.CreateConnectOnboardingLinkAsync(

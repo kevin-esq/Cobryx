@@ -21,7 +21,6 @@ public static class LendingInfrastructureModule
         services.AddScoped<ILateFeePolicyRepository, PolicyRepository>();
         services.AddScoped<IPaymentApplicationPolicyRepository, PolicyRepository>();
 
-        // Domain Services
         services.AddScoped<IAmortizationService, AmortizationService>();
         services.AddScoped<IScheduleGenerator, ScheduleGenerator>();
         services.AddScoped<IPaymentApplicationService, PaymentApplicationService>();

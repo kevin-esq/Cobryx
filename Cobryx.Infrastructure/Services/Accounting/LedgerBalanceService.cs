@@ -35,7 +35,6 @@ public class LedgerBalanceService : ILedgerBalanceService
     {
         var key = GetCacheKey(tenantId, accountId);
 
-        // 1. Try Redis Hot Path (Hash based)
         var cachedHash = await _cache.GetHashAllAsync(key, ct);
 
         // Fetch latest snapshot to validate cache freshness
@@ -65,7 +64,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
         var sw = Stopwatch.StartNew();
 
-        // 3. Fallback: Snapshot + Delta
         var baseBalance = latestSnapshot?.Balance ?? 0m;
         var baseSequence = latestSnapshot?.JournalSequenceId ?? -1L;
 
@@ -93,7 +91,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
         var result = new BalanceResult(finalBalance, latestEntrySequence);
 
-        // 4. Sync Cache
         await UpdateCacheInternalAsync(tenantId, accountId, finalBalance, latestEntrySequence, ct);
 
         sw.Stop();

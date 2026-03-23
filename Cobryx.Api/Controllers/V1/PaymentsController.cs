@@ -49,7 +49,6 @@ public class PaymentsController : CobryxBaseController
     public async Task<IActionResult> ProcessPayment(
         [FromBody] ProcessPaymentRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Domain Command
         var command = new Application.Payments.Commands.ProcessPayment.ProcessPaymentCommand(
             request.CustomerId,
             request.PaymentMethodId,

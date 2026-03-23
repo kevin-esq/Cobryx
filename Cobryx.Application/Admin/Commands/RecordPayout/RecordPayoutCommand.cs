@@ -30,11 +30,9 @@ public class RecordPayoutHandler(ICobryxDbContext dbContext, ILogger<RecordPayou
             return Result.Success();
         }
 
-        // 1. Ensure System Accounts
         var stripeCashAcc = await GetOrCreateAccountAsync(request.TenantId, "1010", "Stripe Cash", LedgerAccountType.Asset, request.Currency, ct);
         var bankAcc = await GetOrCreateAccountAsync(request.TenantId, "1020", "Physical Bank", LedgerAccountType.Asset, request.Currency, ct);
 
-        // 2. Create Ledger Transaction
         var transaction = new LedgerTransaction(
             request.TenantId,
             $"Stripe Payout: {request.Reference}",

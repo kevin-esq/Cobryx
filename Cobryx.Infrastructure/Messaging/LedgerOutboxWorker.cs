@@ -28,7 +28,6 @@ public class LedgerOutboxWorker(
     [AutomaticRetry(Attempts = 3)]
     public async Task ProcessEventsAsync(CancellationToken ct)
     {
-        // 1. Fetch unprocessed events
         var events = await _context.OutboxMessages
             .Where(o => !o.IsProcessed && o.LedgerSequenceId != null)
             .OrderBy(o => o.LedgerSequenceId)
@@ -69,13 +68,11 @@ public class LedgerOutboxWorker(
             }
         }
 
-        // 2. Publish to external stream
         if (cdcEvents.Count > 0)
         {
             await _publisher.PublishAsync(cdcEvents, ct);
         }
 
-        // 3. Save processed status
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("Successfully processed {Count} ledger outbox events.", cdcEvents.Count);

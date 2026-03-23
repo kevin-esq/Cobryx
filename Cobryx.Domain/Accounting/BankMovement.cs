@@ -22,7 +22,7 @@ public class BankMovement : BaseEntity, ITenantEntity
 
     public string? RawPayload { get; private set; }
 
-    private BankMovement() { } // EF Core
+    private BankMovement() { }
 
     public BankMovement(
         Guid tenantId,

@@ -56,7 +56,6 @@ public class LoansController : CobryxBaseController
     public async Task<IActionResult> Create(
         [FromBody] CreateLoanRequest request)
     {
-        // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Lending.Commands.CreateLoan.CreateLoanCommand(
             request.CustomerId,
             request.Amount,
@@ -101,7 +100,6 @@ public class LoansController : CobryxBaseController
             return HandleResult(result, LendingApiOutcomes.LoanScheduleRetrieved);
         }
 
-        // Intentional Mapping: Application DTO -> Public Contract
         var mapped = new AmortizationScheduleContract(
             result.Value.LoanId,
             result.Value.LoanNumber,
@@ -157,7 +155,6 @@ public class LoansController : CobryxBaseController
         Guid id,
         [FromBody] LoanPaymentRequest request)
     {
-        // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Lending.Commands.RegisterPayment.RegisterPaymentCommand(
             id,
             request.Amount,

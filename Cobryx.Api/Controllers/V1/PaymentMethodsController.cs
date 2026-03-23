@@ -70,7 +70,6 @@ public class PaymentMethodsController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> CreatePaymentMethod([FromBody] CreatePaymentMethodRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Implementation
         var command = new CreatePaymentMethodCommand(
             request.Name,
             request.Code,

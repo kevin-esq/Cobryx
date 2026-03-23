@@ -30,7 +30,6 @@ public class DriftDetectionWorker
     {
         _logger.LogInformation("Starting Shadow Drift Detection Pass...");
 
-        // 1. Lag Monitoring & Alerting
         var latestLedgerSeq = await _context.LedgerEntries.MaxAsync(e => (long?)e.JournalSequenceId, ct) ?? 0L;
         var latestShadowSeq = await _context.ShadowBalances.MaxAsync(s => (long?)s.LastSequence, ct) ?? 0L;
 
@@ -48,7 +47,6 @@ public class DriftDetectionWorker
             _logger.LogWarning("SRE LAG WARNING: {Lag} sequences behind.", lag);
         }
 
-        // 2. Pinpoint Drift Detection
         var shadowBalances = await _context.ShadowBalances
             .AsNoTracking()
             .ToListAsync(ct);

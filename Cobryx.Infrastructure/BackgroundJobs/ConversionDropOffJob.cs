@@ -24,7 +24,6 @@ public class ConversionDropOffJob
 
     public async Task ExecuteAsync()
     {
-        // 0. Recalculate Engagement Scores for all active tenants
         var growthService = _context as IGrowthIntelligenceService; // This is a bit hacky if not registered, but let's assume implementation detail
                                                                     // Better: inject IGrowthIntelligenceService
                                                                     // I will use the injected metrics directly where possible since I cannot easily change the constructor here without checking DI
@@ -33,7 +32,6 @@ public class ConversionDropOffJob
         var dayAgo = now.AddDays(-1);
         var threeDaysAgo = now.AddDays(-3);
 
-        // 1. Logo Churn Report
         var churnedCount = await _context.TenantGrowthMetrics
             .Where(x => x.IsChurned && x.ChurnedAt > dayAgo)
             .CountAsync();
@@ -80,7 +78,6 @@ public class ConversionDropOffJob
             .Where(x => x.FirstWowAt != null && x.ConvertedToPaidAt == null && x.LastActivityAt < sevenDaysAgo)
             .CountAsync();
 
-        // 5. Churn Risk Categorization
         var highRiskCount = await _context.TenantGrowthMetrics
             .Where(x => !x.IsChurned && x.EngagementScore < 20)
             .CountAsync();
@@ -90,7 +87,6 @@ public class ConversionDropOffJob
             _metrics.FeatureActivation.Add(highRiskCount, new KeyValuePair<string, object?>("feature", "CHURN_RISK.HIGH"));
         }
 
-        // 6. Whale Risk: Revenue Concentration (Top 10%)
         var totalMrr = await _context.TenantGrowthMetrics.SumAsync(x => x.CurrentMRR);
         if (totalMrr > 0)
         {
@@ -109,7 +105,6 @@ public class ConversionDropOffJob
             _logger.LogInformation("Portfolio Revenue Concentration (Top 10%): {Concentration:P2}", concentration / 100.0);
         }
 
-        // 7. Expansion Velocity (TTE)
         var tteStats = await _context.TenantGrowthMetrics
             .Where(x => x.TTESeconds.HasValue)
             .Select(x => x.TTESeconds!.Value)

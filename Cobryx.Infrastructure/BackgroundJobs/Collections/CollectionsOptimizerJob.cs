@@ -39,7 +39,7 @@ public class CollectionsOptimizerJob
         var lockKey = "portfolio:collections:optimizer:lock";
         var token = System.Guid.NewGuid().ToString();
 
-        // 1. Idempotency Lock
+        // Idempotency Lock
         var acquired = await db.LockTakeAsync(lockKey, token, System.TimeSpan.FromMinutes(5));
         if (!acquired)
         {
@@ -57,7 +57,6 @@ public class CollectionsOptimizerJob
                     var key = $"portfolio:collections:weights:{tenantId}";
                     var json = System.Text.Json.JsonSerializer.Serialize(weights);
 
-                    // 2. Atomic Overwrite with Redis Transaction
                     var tran = db.CreateTransaction();
                     _ = tran.KeyDeleteAsync(key);
                     _ = tran.StringSetAsync(key, json, System.TimeSpan.FromDays(1));

@@ -35,7 +35,6 @@ public class SubscriptionGateMiddleware
         CobryxMetrics metrics,
         IClock clock)
     {
-        // 1. Skip non-mutation methods unless explicitly gated
         var isReadOnly = HttpMethods.IsGet(context.Request.Method) ||
                          HttpMethods.IsHead(context.Request.Method) ||
                          HttpMethods.IsOptions(context.Request.Method);
@@ -51,7 +50,6 @@ public class SubscriptionGateMiddleware
             }
         }
 
-        // 2. Skip unauthenticated paths
         var path = context.Request.Path.Value?.ToLower();
         if (path != null && (
             path.StartsWith(ApiEndpoints.Health) ||
@@ -67,7 +65,6 @@ public class SubscriptionGateMiddleware
             return;
         }
 
-        // 3. Skip endpoints marked with [AllowExpiredSubscription]
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata.GetMetadata<AllowExpiredSubscriptionAttribute>() != null)
         {
@@ -75,7 +72,6 @@ public class SubscriptionGateMiddleware
             return;
         }
 
-        // 4. Extract tenant ID from context (set by TenantMiddleware from JWT claims)
         if (!context.Items.TryGetValue("Cache_TenantId", out var tenantIdObj) ||
             tenantIdObj is not Guid tenantId ||
             tenantId == Guid.Empty)
@@ -85,7 +81,6 @@ public class SubscriptionGateMiddleware
             return;
         }
 
-        // 5. Check subscription status — cache first, DB fallback
         var now = clock.UtcNow;
         var accessInfo = await GetSubscriptionAccessInfo(tenantId, now, subscriptionRepository, cacheService, metrics);
         var isBlocked = accessInfo?.IsBlocked;

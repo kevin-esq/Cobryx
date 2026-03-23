@@ -85,7 +85,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
         // Waterfall recovery: we iterate through every missing day until targetDate is reached.
         while (nextDate <= targetDate)
         {
-            // 1. Calculate Ordinary Interest: derived from current OutstandingPrincipal.
             var dailyInterest = CalculateDailyInterest(loan);
             if (dailyInterest > 0)
             {
@@ -94,7 +93,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
                 chargesCreated++;
             }
 
-            // 2. Assess Late Fees: Policy-driven assessment based on DPD (Days Past Due).
             if (policy.EnableLateFees)
             {
                 // We increment chargesCreated based on whether a new fee was actually generated.

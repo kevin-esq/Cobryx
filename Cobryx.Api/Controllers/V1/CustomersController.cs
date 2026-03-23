@@ -56,7 +56,6 @@ public class CustomersController : CobryxBaseController
         if (tenantId == null)
             return Unauthorized();
 
-        // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var address = request.Address != null
             ? new Address(
                 request.Address.Street,
@@ -196,7 +195,6 @@ public class CustomersController : CobryxBaseController
     [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiErrorResponse), 404)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCustomerRequest request)
     {
-        // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var address = request.Address != null
             ? new Address(
                 request.Address.Street,

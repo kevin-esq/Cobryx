@@ -17,7 +17,7 @@ public class LedgerAccount : BaseEntity
     public string Currency { get; private set; } = string.Empty;
     public bool IsSystem { get; private set; } // Prevents deletion of core accounts
 
-    private LedgerAccount() { } // EF Core
+    private LedgerAccount() { }
 
     public LedgerAccount(
         Guid tenantId,

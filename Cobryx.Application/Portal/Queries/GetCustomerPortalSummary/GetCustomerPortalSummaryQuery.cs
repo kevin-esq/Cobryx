@@ -39,7 +39,7 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
 
     public async Task<Result<CustomerPortalSummaryDto>> Handle(GetCustomerPortalSummaryQuery request, CancellationToken ct)
     {
-        // 1. BANK-GRADE: Security Isolation & Existence Check
+        // BANK-GRADE: Security Isolation & Existence Check
         var customerExists = await _dbContext.Customers
             .AnyAsync(c => c.Id == request.CustomerId && c.TenantId == request.TenantId, ct);
 
@@ -48,7 +48,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
             return Result.Failure<CustomerPortalSummaryDto>(DomainErrorCode.Customer.NotFound);
         }
 
-        // 2. Fetch Loans for this customer
         var loans = await _dbContext.Loans
             .Include(l => l.Installments)
             .Where(l => l.CustomerId == request.CustomerId && l.TenantId == request.TenantId && l.Status == LoanStatus.Active)
@@ -61,7 +60,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
 
         var loanIds = loans.Select(l => l.Id).ToList();
 
-        // 2. Fetch Ledger Balances (Truth)
         // We look for transactions associated with these loans
         var transactions = await _dbContext.LedgerTransactions
             .Where(t => t.TenantId == request.TenantId && t.LoanId.HasValue && loanIds.Contains(t.LoanId.Value) && t.IsPosted)
@@ -82,7 +80,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
         // Accurate Ledger Balance: Sum of all entries in Principal/Interest/Fee accounts for these loans.
         var totalBalance = entries.Sum(e => e.Debit - e.Credit); // For Asset accounts, this works.
 
-        // 3. Prepare Loan Summaries
         var loanSummaries = loans.Select(l => new PortalLoanSummaryDto(
             l.Id,
             l.LoanNumber,
@@ -92,7 +89,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
             l.FinancialStatus.ToString()
         )).ToList();
 
-        // 4. Prepare Transaction History
         // BANK-GRADE: Filter to only show customer-relevant types and hide internal ids.
         var recentTransactions = transactions
             .Where(t => t.Description.Contains("Payment") || t.IsReversal)
@@ -112,7 +108,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
                 );
             }).ToList();
 
-        // 5. Next Payment Info
         var nextInstallment = loans
             .SelectMany(l => l.Installments)
             .Where(i => i.Status != InstallmentStatus.Paid && i.DueDate >= DateTime.UtcNow.Date)

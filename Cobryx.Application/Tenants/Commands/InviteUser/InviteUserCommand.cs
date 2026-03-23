@@ -68,20 +68,17 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         if (!tenantId.HasValue)
             return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
 
-        // 1. Check if user already exists
         if (await _userRepository.ExistsByEmailAsync(request.Email, ct))
         {
             return Result.Failure<Guid>(DomainErrorCode.User.AlreadyExists);
         }
 
-        // 2. Validate Role
         var role = await _roleRepository.GetByNameAsync(request.RoleName, ct);
         if (role == null || role.Name == Role.Constants.Owner)
         {
             return Result.Failure<Guid>(DomainErrorCode.Auth.InvalidRole);
         }
 
-        // 3. Handle existing invitation
         var dbContext = (DbContext)_unitOfWork;
         var normalizedEmail = request.Email.ToLowerInvariant();
         var existingInvite = await dbContext.Set<TenantInvitation>()
@@ -104,7 +101,6 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // 4. Send Email
         var inviteUrl = $"{_appOptions.AppUrl}/enroll?token={rawToken}&email={Uri.EscapeDataString(request.Email)}";
         await _emailService.SendEmailAsync(
             request.Email,

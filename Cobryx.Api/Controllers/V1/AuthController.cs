@@ -120,7 +120,6 @@ public class AuthController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> Onboard([FromBody] OnboardRequest request, CancellationToken cancellationToken)
     {
-        // Intentional Mapping: Structured Public Contract -> Flat Internal Command Requirement
         var formattedAddress = $"{request.BusinessAddress.Street} {request.BusinessAddress.HouseNumber}";
         if (!string.IsNullOrEmpty(request.BusinessAddress.ApartmentNumber))
             formattedAddress += $", {request.BusinessAddress.ApartmentNumber}";
@@ -221,7 +220,6 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        // Intentional Mapping: Internal AuthResult -> Public AuthResponseContract
         var mappedResult = result.IsSuccess && result.Value != null
             ? new AuthResponseContract(
                 result.Value.Token,
@@ -271,7 +269,6 @@ public class AuthController : CobryxBaseController
             _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
         }
 
-        // Intentional Mapping
         var mappedResult = result.IsSuccess && result.Value != null
             ? new AuthResponseContract(
                 result.Value.Token,

@@ -31,13 +31,12 @@ public class CheckSystemHealthJob
     {
         _logger.LogInformation("Starting scheduled system health check...");
 
-        // 1. Audit Ledger Integrity (Critical Path)
+        // Audit Ledger Integrity (Critical Path)
         await AuditLedgerHealthAsync(ct);
 
-        // 2. Audit Infrastructure Pressure (SRE Phase 6)
+        // Audit Infrastructure Pressure (SRE Phase 6)
         await AuditInfrastructureHealthAsync(ct);
 
-        // 3. Audit Financial Risk (Core Growth Path)
         await AuditFinancialMetricsAsync(ct);
 
         _logger.LogInformation("System health check completed.");

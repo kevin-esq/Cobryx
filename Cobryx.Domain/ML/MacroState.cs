@@ -11,7 +11,6 @@ public class MacroState
 
     public decimal LiquidityIndex { get; set; }
     
-    // Phase 17 Audit Additions
     public MarketRegime Regime { get; set; } = MarketRegime.Normal;
     public string Country { get; set; } = "US";
     

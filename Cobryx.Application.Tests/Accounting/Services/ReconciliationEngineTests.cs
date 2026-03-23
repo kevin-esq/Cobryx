@@ -134,7 +134,6 @@ public class ReconciliationEngineTests
         var intentId = "pi_repair_123";
         var loanId = Guid.NewGuid();
 
-        // 1. Setup a Loan and System Accounts in memory
         var customerId = Guid.NewGuid();
         var agreementId = Guid.NewGuid();
         var loan = new Loan(_tenantId, customerId, agreementId, "L-100", new Money(1000m, "USD"));
@@ -164,10 +163,8 @@ public class ReconciliationEngineTests
                 })
             ]);
 
-        // 1. First Pass: Detect but don't repair
         await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // 2. Second Pass: Confirm and Repair
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
         Assert.Equal(ReconciliationStatus.Repaired, audit.Status);
@@ -190,10 +187,8 @@ public class ReconciliationEngineTests
                 new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
             ]);
 
-        // 1. First Run: Detect but don't repair (not confirmed yet)
         await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // 2. Second Run: Should see it as Confirmed
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
         Assert.Contains("ConfirmedDrift", audit.DriftDetailsJson);

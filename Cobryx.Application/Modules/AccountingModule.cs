@@ -9,7 +9,6 @@ public static class AccountingModule
 {
     public static IServiceCollection AddAccountingModule(this IServiceCollection services)
     {
-        // Application Services
         services.AddScoped<FinancialPostingEngine>();
         services.AddScoped<ReconciliationEngine>();
         services.AddScoped<ILedgerIntegrityService, LedgerIntegrityService>();

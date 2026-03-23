@@ -28,7 +28,6 @@ public class ManualReversalHandler(
         if (string.IsNullOrWhiteSpace(request.Reason))
             return Result.Failure(DomainErrorCode.Common.ReasonRequired);
 
-        // 1. Find original transaction
         var originalTx = await _dbContext.LedgerTransactions
             .Include(t => t.Entries)
             .FirstOrDefaultAsync(t => t.Id == request.TransactionId, ct);
@@ -39,7 +38,7 @@ public class ManualReversalHandler(
         if (originalTx.IsReversal)
             return Result.Failure(DomainErrorCode.Accounting.CannotReverseReversal);
 
-        // 2. BANK-GRADE: Execution through core engine
+        // BANK-GRADE: Execution through core engine
         // This ensures the reversal is mirrored and platform fees are handled proportionally.
         var reversalId = await _postingEngine.PostReversalAsync(
             originalTx.Id,
@@ -47,13 +46,11 @@ public class ManualReversalHandler(
             request.Reason,
             ct);
 
-        // 3. Update Financial State (if linked to a loan)
         if (originalTx.LoanId.HasValue)
         {
             await _stateEngine.UpdateStatusAsync(originalTx.LoanId.Value, $"Manual Reversal: {request.Reason}", ct);
         }
 
-        // 4. Audit Trail
         var adminUserId = _currentUserProvider.GetUserId() ?? Guid.Empty;
         var audit = new AdminActionAudit(
             adminUserId: adminUserId,

@@ -12,7 +12,6 @@ public class PpoTrainingJob(
 
     public async Task RunAsync()
     {
-        // 1. Intelligent Sampling (Hybrid Learning)
         var simulationBatch = await db.Experiences
             .Where(x => x.Source == "simulation" && (x.Done || x.Reward != 0))
             .OrderByDescending(x => x.Reward < -1000 ? 1 : 0) // Priority to high loss/crisis
@@ -33,7 +32,6 @@ public class PpoTrainingJob(
 
         if (hybridBatch.Count == 0) return;
 
-        // 2. Format payload for Python API
         var payload = hybridBatch.Select(x => new
         {
             state = JsonSerializer.Deserialize<object>(x.StateJson, JsonOptions),
@@ -42,7 +40,6 @@ public class PpoTrainingJob(
             done = x.Done
         });
 
-        // 3. Trigger Training Pipeline
         await ppo.TrainAsync(payload);
     }
 }

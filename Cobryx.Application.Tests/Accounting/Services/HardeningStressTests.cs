@@ -30,7 +30,6 @@ public class HardeningStressTests(ITestOutputHelper output)
     [Fact]
     public async Task MillionScale_DenseTenant_Benchmark()
     {
-        // 1. Setup 100,000 entries (200,000 lines) for a single tenant
         var tenantId = Guid.NewGuid();
         Guid accountId;
         Guid suspenseId;
@@ -63,7 +62,6 @@ public class HardeningStressTests(ITestOutputHelper output)
             _output.WriteLine($"Generated 20k entries in {swGeneration.ElapsedMilliseconds}ms");
         }
 
-        // 2. Verified Streaming Full Scan Performance
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service = new LedgerIntegrityService(context, _metrics, _loggerMock.Object);

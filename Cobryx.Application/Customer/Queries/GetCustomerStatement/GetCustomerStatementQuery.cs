@@ -39,7 +39,6 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
 
     public async Task<Result<CustomerStatementDto>> Handle(GetCustomerStatementQuery request, CancellationToken ct)
     {
-        // 1. Fetch Customer Detail
         var customer = await _dbContext.Customers
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.TenantId == request.TenantId, ct);
@@ -47,7 +46,6 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
         if (customer == null)
             return Result.Failure<CustomerStatementDto>(DomainErrorCode.Customer.NotFound);
 
-        // 2. Fetch Active and Recently Closed Loans
         var loans = await _dbContext.Loans
             .AsNoTracking()
             .Where(l => l.CustomerId == request.CustomerId && l.TenantId == request.TenantId)
@@ -56,7 +54,6 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
 
         var loanIds = loans.Select(l => l.Id).ToList();
 
-        // 3. Fetch Ledger Transactions for these loans
         var transactions = await _dbContext.LedgerTransactions
             .AsNoTracking()
             .Include(t => t.Entries)
@@ -64,13 +61,11 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
 
-        // 4. Calculate Aggregate Metrics
         var totalBalance = transactions
             .SelectMany(t => t.Entries)
             .Where(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && (a.Code == "1210" || a.Code == "4010" || a.Code == "4020")))
             .Sum(e => e.Debit - e.Credit);
 
-        // 5. Prepare DTOS
         var loanDtos = loans.Select(l => new StatementLoanDto(
             Id: l.Id,
             LoanNumber: l.LoanNumber,

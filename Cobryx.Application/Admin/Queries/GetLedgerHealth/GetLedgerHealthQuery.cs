@@ -26,7 +26,6 @@ public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedge
     {
         var issues = new List<string>();
 
-        // 1. Check for Imbalanced Transactions (Sum(Debit) != Sum(Credit))
         // We group entries by TransactionId and check the balance.
         var imbalancedTxs = await _dbContext.LedgerEntries
             .GroupBy(e => e.TransactionId)
@@ -46,7 +45,6 @@ public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedge
                 msg, string.Join(", ", imbalancedTxs.Take(3).Select(x => x.TransactionId)));
         }
 
-        // 2. Check for Orphaned Entries (Entries without a valid Transaction reference)
         // Note: EF Core usually prevents this via Foreign Keys, but for production "sealing", we check.
         var orphanedEntries = await _dbContext.LedgerEntries
             .Where(e => !_dbContext.LedgerTransactions.Select(t => t.Id).Contains(e.TransactionId))
@@ -59,7 +57,6 @@ public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedge
             _logger.LogError("LEDGER HEALTH: {Message}", msg);
         }
 
-        // 3. Check for Entries with Invalid Account IDs
         var invalidAccountEntries = await _dbContext.LedgerEntries
             .Where(e => !_dbContext.LedgerAccounts.Select(a => a.Id).Contains(e.AccountId))
             .CountAsync(ct);

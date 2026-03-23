@@ -65,7 +65,6 @@ public class PaymentLinkReconciliationService
             return;
         }
 
-        // 2. Use an explicit transaction for absolute financial integrity (RepeatableRead to prevent race anomalies)
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try
         {
@@ -92,7 +91,6 @@ public class PaymentLinkReconciliationService
 
             _context.Payments.Add(payment);
 
-            // 5. Create Ledger Transaction (Deterministic Posting)
             if (link.LoanId.HasValue)
             {
                 var loan = await _context.Loans
@@ -122,7 +120,6 @@ public class PaymentLinkReconciliationService
                 }
             }
 
-            // 6. Update Financial State (Inside transaction for absolute atomicity)
             if (link.LoanId.HasValue)
             {
                 await _stateEngine.UpdateStatusAsync(link.LoanId.Value, "Payment Received", ct);
@@ -175,7 +172,7 @@ public class PaymentLinkReconciliationService
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try
         {
-            // 1. BANK-GRADE: Finding the original transaction (PAY or REC)
+            // BANK-GRADE: Finding the original transaction (PAY or REC)
             var referencePay = $"PAY-STRIPE-{paymentIntentId}";
             var referenceRec = $"REC-STRIPE-{paymentIntentId}";
 

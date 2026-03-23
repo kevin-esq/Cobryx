@@ -12,7 +12,7 @@ public class JournalCheckpoint : BaseEntity, ITenantEntity
     public int EntryCount { get; private set; }
     public string HashVersion { get; private set; } = "v1";
 
-    private JournalCheckpoint() { } // EF Core
+    private JournalCheckpoint() { }
 
     public JournalCheckpoint(Guid tenantId, Guid lastProcessedEntryId, long lastProcessedSequenceId, DateTime lastEntryCreatedAt, string lastFingerprint, int entryCount)
     {

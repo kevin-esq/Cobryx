@@ -141,7 +141,6 @@ public class DbInitializer
 
     public static async Task SeedPlatformTenantAsync(CobryxDbContext dbContext)
     {
-        // 1. Ensure Platform Tenant exists
         var platformId = CobryxDefaults.PlatformTenantId;
         var platformTenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == platformId);
 
@@ -153,7 +152,6 @@ public class DbInitializer
             dbContext.Tenants.Add(platformTenant);
         }
 
-        // 2. Ensure System Accounts for Platform
         var accounts = new[]
         {
             new { Code = "1010", Name = "Platform Cash", Type = LedgerAccountType.Asset, Role = LedgerAccountRole.Available },

@@ -36,17 +36,16 @@ public class AttachPaymentMethodHandler : IRequestHandler<AttachPaymentMethodCom
 
         try
         {
-            // 1. Ensure Stripe Customer exists
+            // Ensure Stripe Customer exists
             if (string.IsNullOrEmpty(customer.StripeCustomerId))
             {
                 var stripeId = await _stripeService.CreateCustomerAsync(customer.Email, customer.FullName, ct);
                 customer.SetStripeCustomerId(stripeId);
             }
 
-            // 2. Attach Payment Method in Stripe
+            // Attach Payment Method in Stripe
             await _stripeService.AttachPaymentMethodAsync(customer.StripeCustomerId!, request.PaymentMethodId, ct);
 
-            // 3. Mark as Default if it's the first or per application policy
             // In this version, we set as default to enable AutoPay path easily
             customer.SetDefaultPaymentMethod(request.PaymentMethodId);
 

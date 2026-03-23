@@ -43,7 +43,6 @@ public class InvitationCleanupJob
         var now = _clock.UtcNow;
         var batchSize = _appOptions.MaxInvitationCleanupBatchSize;
 
-        // 1. Batch Expire: Pending > ExpiresAt
         var sqlExpire = @"
             SELECT * FROM ""TenantInvitations"" 
             WHERE ""Status"" = 0 AND ""ExpiresAt"" < @p0
@@ -67,7 +66,6 @@ public class InvitationCleanupJob
             _logger.LogInformation("Batch-marked {Count} invitations as Expired (Distributed-safe)", toExpire.Count);
         }
 
-        // 2. Batch Delete: Non-Pending > 30 days old
         var retentionThreshold = now.AddDays(-30);
 
         var sqlDelete = @"

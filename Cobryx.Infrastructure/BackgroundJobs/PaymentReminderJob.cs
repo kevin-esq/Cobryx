@@ -38,7 +38,6 @@ public class PaymentReminderJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // 1. Fetch eligible links with Customer info
         // We only care about links that haven't reached the escalation cap and aren't in cooldown
         var activeLinks = await db.Set<PaymentLink>()
             .Include(l => l.Customer)
@@ -51,7 +50,7 @@ public class PaymentReminderJob
 
         foreach (var link in activeLinks)
         {
-            // 2. Stop Gaps: Bank-Grade policy enforcement
+            // Stop Gaps: Bank-Grade policy enforcement
             if (link.LoanId.HasValue)
             {
                 var loan = await db.Set<Loan>().FindAsync(new object[] { link.LoanId.Value }, ct);
@@ -76,7 +75,6 @@ public class PaymentReminderJob
                     continue;
             }
 
-            // 3. Bucket Logic (Deterministic dispatch based on link age and expiry)
             if (ShouldSendReminder(link, now))
             {
                 await ProcessReminderAsync(link, ct);

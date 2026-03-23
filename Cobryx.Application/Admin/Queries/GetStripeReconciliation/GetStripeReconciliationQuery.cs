@@ -31,7 +31,7 @@ public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconcili
 
     public async Task<Result<StripeReconciliationDto>> Handle(GetStripeReconciliationQuery request, CancellationToken ct)
     {
-        // 1. Resolve Target Tenant and Stripe Account
+        // Resolve Target Tenant and Stripe Account
         var tenantId = request.TenantId ?? CobryxDefaults.PlatformTenantId;
         string? stripeAccountId = null;
 
@@ -46,7 +46,6 @@ public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconcili
                 return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Common.GeneralError); // "Tenant has no Stripe Account"
         }
 
-        // 2. Fetch Ledger Balance (Account 1010 - Cash)
         var cashAccount = await _dbContext.LedgerAccounts
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == "1010", ct);
@@ -59,11 +58,10 @@ public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconcili
             .Where(e => e.AccountId == cashAccount.Id)
             .SumAsync(e => e.Debit - e.Credit, ct);
 
-        // 3. Fetch Stripe Actual Balance
+        // Fetch Stripe Actual Balance
         var (available, pending) = await _stripeService.GetBalanceAsync(stripeAccountId, ct);
         var totalStripe = available + pending;
 
-        // 4. Calculate Discrepancy
         var discrepancy = ledgerBalance - totalStripe;
         var status = Math.Abs(discrepancy) < 0.01m ? "SYNCED" : "DISCREPANCY";
 

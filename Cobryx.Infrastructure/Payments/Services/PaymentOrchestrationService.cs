@@ -53,7 +53,6 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
         if (customer == null)
             return Result.Failure(DomainErrorCode.Customer.NotFound);
 
-        // 1. Resolve & Lock PaymentLink to prevent double-charging
         PaymentLink? link = null;
         if (paymentLinkId.HasValue)
         {
@@ -72,7 +71,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
                 return Result.Success();
             }
 
-            // 2. Fintech-Grade Guard: Validate if it's safe to charge
+            // Fintech-Grade Guard: Validate if it's safe to charge
             if (link.LoanId.HasValue)
             {
                 var loan = await _dbContext.Loans.FirstOrDefaultAsync(l => l.Id == link.LoanId.Value, ct);

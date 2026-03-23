@@ -51,21 +51,18 @@ public class Phase4InstitutionalTests
         var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
 
-        // 1. Exact Match target
         var tx1 = new LedgerTransaction(_tenantId, "Stripe Payout", "PAYOUT-001");
         tx1.AddEntry(acc.Id, 1000m, 0); // Net Inbound
         tx1.AddEntry(acc.Id, 0, 1000m);
         tx1.Post();
         context.LedgerTransactions.Add(tx1);
 
-        // 2. Strong Match target (Amount match + Date window)
         var tx2 = new LedgerTransaction(_tenantId, "Manual Wire", "WIRE-999");
         tx2.AddEntry(acc.Id, 500m, 0);
         tx2.AddEntry(acc.Id, 0, 500m);
         tx2.Post();
         context.LedgerTransactions.Add(tx2);
 
-        // 3. Movements
         var m1 = new BankMovement(_tenantId, 1000m, "USD", BankMovementDirection.Inbound, DateTime.UtcNow, DateTime.UtcNow, "Plaid", "p1", "PAYOUT-001");
         var m2 = new BankMovement(_tenantId, 500m, "USD", BankMovementDirection.Inbound, DateTime.UtcNow.AddHours(2), DateTime.UtcNow.AddHours(2), "Plaid", "p2", "WRONG-REF");
 
@@ -103,7 +100,6 @@ public class Phase4InstitutionalTests
             await context.SaveChangesAsync();
         }
 
-        // Pass 1: Scan Block 1 and create Checkpoint
         string fingerprint1;
         using (var context1 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
@@ -141,7 +137,6 @@ public class Phase4InstitutionalTests
             await context2.SaveChangesAsync();
         }
 
-        // Pass 2: Incremental Scan
         using (var context3 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service = new LedgerIntegrityService(context3, new CobryxMetrics(), Mock.Of<ILogger<LedgerIntegrityService>>());
@@ -153,7 +148,6 @@ public class Phase4InstitutionalTests
             Assert.Equal(1, report.TotalEntriesScanned); // Only scanned the 1 new entry
         }
 
-        // Pass 3: Forced Full Replay
         using (var context4 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var service = new LedgerIntegrityService(context4, new CobryxMetrics(), Mock.Of<ILogger<LedgerIntegrityService>>());

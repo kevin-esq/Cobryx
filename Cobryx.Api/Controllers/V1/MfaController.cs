@@ -61,7 +61,6 @@ public class MfaController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> ActivateTotp([FromBody] EnableMfaRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Implementation
         var command = new EnableMfaCommand(request.Code, request.Secret);
         var result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaEnabled);
@@ -82,7 +81,6 @@ public class MfaController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> VerifyTotp([FromBody] VerifyMfaRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Implementation
         var command = new VerifyTotpLoginCommand(request.PersistenceToken, request.Code);
         var result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaVerified);
@@ -130,7 +128,6 @@ public class MfaController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> CompleteFido2Registration([FromBody] CompleteFido2RegistrationRequest request)
     {
-        // Intentional Mapping: Business Contract -> Internal Library Types
         var response = request.RegistrationData.Response.Deserialize<AuthenticatorAttestationRawResponse>();
         var options = request.Challenge.Options.Deserialize<CredentialCreateOptions>();
 
@@ -160,7 +157,6 @@ public class MfaController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> InitiateFido2Assertion([FromBody] InitiateFido2AssertionRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Implementation
         var command = new InitiateFido2AssertionCommand(request.PersistenceToken);
         var result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaInitiated);
@@ -181,7 +177,6 @@ public class MfaController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> CompleteFido2Assertion([FromBody] CompleteFido2AssertionRequest request)
     {
-        // Intentional Mapping: Business Contract -> Internal Library Types
         var response = request.VerificationData.Response.Deserialize<AuthenticatorAssertionRawResponse>();
         var optionsData = request.Challenge.Options.Deserialize<AssertionOptions>();
 

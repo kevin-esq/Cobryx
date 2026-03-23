@@ -23,13 +23,10 @@ public static class DependencyInjection
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Standard Concordia (Mediator) & Validation
-        // Explicit call to Source Generated registrations to assist IDE/OmniSharp resolution
         ConcordiaGeneratedRegistrations.AddConcordiaHandlers(services);
         services.AddScoped<IMediator, Mediator>();
         services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
 
-        // Risk Engine
         services.AddScoped<Domain.Decision.ICreditLimitEngine, Decision.CreditLimitEngine>();
         services.AddScoped<Domain.Decision.IPricingEngine, Decision.PricingEngine>();
         services.AddScoped<Domain.Decision.IFraudEngine, Decision.FraudEngine>();
@@ -105,10 +102,8 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
 
-        // Core Business Services
         services.AddScoped<IAuthService, AuthService>();
 
-        // Fintech & Payments Engine
         services.AddLendingModule();
         services.AddPaymentsModule();
         services.AddAccountingModule();

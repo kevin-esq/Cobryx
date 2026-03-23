@@ -17,7 +17,7 @@ public class LedgerEntry : BaseEntity, ITenantEntity
     public decimal Debit { get; private set; }
     public decimal Credit { get; private set; }
 
-    private LedgerEntry() { } // EF Core
+    private LedgerEntry() { }
 
     internal LedgerEntry(Guid tenantId, Guid transactionId, Guid accountId, decimal debit, decimal credit, string currency = "USD", string referenceId = "")
     {

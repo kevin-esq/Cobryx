@@ -9,7 +9,7 @@ public class ShadowBalance : BaseEntity
     public decimal Balance { get; private set; }
     public long LastSequence { get; private set; }
 
-    private ShadowBalance() { } // EF Core
+    private ShadowBalance() { }
 
     public ShadowBalance(Guid tenantId, Guid accountId, decimal balance, long lastSequence)
     {

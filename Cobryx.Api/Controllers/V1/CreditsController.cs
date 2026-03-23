@@ -49,7 +49,6 @@ public class CreditsController(ISender sender, Application.Common.Interfaces.ITe
         if (tenantId == null)
             return Unauthorized();
 
-        // Intentional Mapping: Public Intent -> Internal Domain Implementation
         var command = new Application.Credits.Commands.Create.CreateCreditCommand(
             tenantId.Value,
             request.CustomerId,

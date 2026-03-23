@@ -14,7 +14,6 @@ public static class PaymentsInfrastructureModule
 {
     public static IServiceCollection AddPaymentsInfrastructure(this IServiceCollection services)
     {
-        // Repositories
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
 

@@ -41,7 +41,6 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var currentUserId = _currentUserProvider.GetUserId() ?? throw new DomainException(DomainErrorCode.Auth.NotAuthenticated);
 
-        // 1. Fetch target user and role
         var targetUser = await _userRepository.GetByIdAsync(request.UserId, ct);
         if (targetUser == null || targetUser.TenantId != tenantId)
         {
@@ -54,7 +53,6 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
             return Result.Failure(DomainErrorCode.Auth.RoleNotFound);
         }
 
-        // 2. Safety: Owner Immutability
         // Cannot assign Owner role, and cannot change an Owner's role
         var targetRole = await _roleRepository.GetByIdAsync(targetUser.RoleId, ct);
         if (newRole.Name == Role.Constants.Owner || targetRole?.Name == Role.Constants.Owner)
@@ -62,7 +60,6 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
             return Result.Failure(DomainErrorCode.Auth.Forbidden);
         }
 
-        // 3. Safety: Last Admin Protection (Total count >= 1)
         if (targetRole?.Name == Role.Constants.Admin && newRole.Name != Role.Constants.Admin)
         {
             var adminCount = await _userRepository.CountAdminsInTenantAsync(tenantId, ct);
@@ -72,14 +69,12 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
             }
         }
 
-        // 4. Execution
         var oldRoleName = targetRole?.Name ?? "Unknown";
         targetUser.UpdateRole(newRole.Id);
         targetUser.IncrementPermissionVersion();
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // 5. Audit Logging
         _logger.LogInformation(
             "[AUDIT] Role changed: TargetUser {TargetId}, OldRole {OldRole}, NewRole {NewRole}, ChangedBy {AdminId}, Tenant {TenantId}",
             targetUser.Id, oldRoleName, newRole.Name, currentUserId, tenantId);

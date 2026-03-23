@@ -25,7 +25,6 @@ public class FinancialOutboxWorker(
     [AutomaticRetry(Attempts = 0)] // We handle retries internally via RetryCount
     public async Task ProcessEventsAsync(CancellationToken ct)
     {
-        // 1. Fetch batch using FOR UPDATE SKIP LOCKED pattern for high-concurrency safety.
         var outboxEvents = await _context.OutboxMessages
             .Where(e => !e.IsProcessed && e.RetryCount < 10 && e.LedgerSequenceId != null)
             .OrderBy(e => e.LedgerSequenceId)
@@ -37,12 +36,10 @@ public class FinancialOutboxWorker(
 
         _logger.LogInformation("Processing {Count} financial outbox events...", outboxEvents.Count);
 
-        // 2. Publish Batch
         try
         {
             await _eventBus.PublishBatchAsync(outboxEvents, ct);
 
-            // 3. Mark as Published
             foreach (var @event in outboxEvents)
             {
                 @event.MarkAsProcessed(DateTime.UtcNow);
@@ -65,7 +62,6 @@ public class FinancialOutboxWorker(
             }
         }
 
-        // 4. Atomic Commit
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("Batch processing completed. Published: {Published}", outboxEvents.Count(e => e.IsProcessed));

@@ -103,16 +103,13 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
 
     private static async Task<(Guid customerId, Guid agreementId)> SeedBaseDataAsync(CobryxDbContext context, Guid tenantId)
     {
-        // 0. Tenant (Required for FKs)
         var tenant = new Tenant("Integ Tenant", "integ@test.com");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, tenantId);
         context.Tenants.Add(tenant);
 
-        // 1. Interest Policy
         var interestPolicy = InterestPolicy.CreateExplicit(tenantId, "Standard Interest", "STD-INT", 12.0m);
         context.InterestPolicies.Add(interestPolicy);
 
-        // 2. System Accounts (Required by PostingEngine)
         var codes = new[] { "1010", "1210", "4010", "4020", "5010", "4030" };
         foreach (var code in codes)
         {
@@ -128,23 +125,19 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
             context.LedgerAccounts.Add(acc);
         }
 
-        // 3. Customer
         var customerId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "123456789", "test@user.com", null, null);
         typeof(Customer).GetProperty("Id")!.SetValue(customer, customerId);
         context.Customers.Add(customer);
 
-        // 4. Payment Application Policy
         var applicationPolicy = PaymentApplicationPolicy.CreateStandard(tenantId, "Standard Application", "STD-APP", true);
         context.PaymentApplicationPolicies.Add(applicationPolicy);
 
-        // 5. Late Fee Policy
         var lateFeePolicy = LateFeePolicy.CreateFixed(tenantId, "Standard Late Fee", 10.0m);
         context.LateFeePolicies.Add(lateFeePolicy);
 
         await context.SaveChangesAsync();
 
-        // 6. Loan Agreement
         var agreementId = Guid.NewGuid();
         var agreement = new LoanAgreement(
             tenantId,

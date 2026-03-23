@@ -32,7 +32,6 @@ public class ExpirePaymentLinksJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // 1. Find Active/Processing links that are past due
         var toExpire = await db.Set<PaymentLink>()
             .Where(l => (l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing)
                         && l.ExpiresAt < now)

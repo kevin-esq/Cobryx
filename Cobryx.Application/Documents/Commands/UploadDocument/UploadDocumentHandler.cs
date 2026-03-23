@@ -28,18 +28,15 @@ public class UploadDocumentHandler(
         if (tenantId == Guid.Empty)
             throw new TenantContextMissingException();
 
-        // 1. Validate file (size, extension, MIME, magic bytes)
         var validation = _validator.Validate(request.FileStream, request.FileName, request.ContentType);
         if (!validation.IsSuccess)
         {
             return Result.Failure<UploadDocumentResult>(validation.Error!);
         }
 
-        // 2. Upload to storage
         request.FileStream.Position = 0;
         var blobPath = await _storage.UploadAsync(request.FileStream, request.FileName, request.ContentType);
 
-        // 3. Create entity with PendingScan
         var document = new DocumentMetadata(
             tenantId,
             request.EntityId,
@@ -51,7 +48,6 @@ public class UploadDocumentHandler(
             request.UploadedBy,
             _clock.UtcNow);
 
-        // 4. Persist — OutboxInterceptor captures DocumentUploadedEvent raised in constructor
         var db = (Microsoft.EntityFrameworkCore.DbContext)_unitOfWork;
         await db.Set<DocumentMetadata>().AddAsync(document, ct);
 

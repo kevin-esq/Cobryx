@@ -37,7 +37,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         if (string.IsNullOrWhiteSpace(request.Token))
             return Result.Failure<string>(DomainErrorCode.Auth.TokenMissing);
 
-        // 1. Parse Bipartite Token: {Salt}.{RawToken}
         var parts = request.Token.Split('.', 2);
         if (parts.Length != 2)
             return Result.Failure<string>(DomainErrorCode.PaymentLink.NotFound);
@@ -45,21 +44,19 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         var salt = parts[0];
         var rawToken = parts[1];
 
-        // 2. Efficient Lookup by Salt
         var link = await _context.PaymentLinks
             .FirstOrDefaultAsync(l => l.Salt == salt, ct);
 
         if (link == null)
             return Result.Failure<string>(DomainErrorCode.PaymentLink.NotFound);
 
-        // 3. Secure Verification with Server Secret
         if (!link.ValidateToken(rawToken, _stripeOptions.PaymentLinkSecret))
         {
             await _context.SaveChangesAsync(ct);
             return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus);
         }
 
-        // 4. Connect Guard: Block if tenant is halfway through onboarding or restricted
+        // Connect Guard: Block if tenant is halfway through onboarding or restricted
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
         if (tenant == null)
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
@@ -69,7 +66,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             return Result.Failure<string>(DomainErrorCode.PaymentLink.ConnectNotActive);
         }
 
-        // 4. Return existing secret if already processing (Intent Reuse)
         if (link.Status == PaymentLinkStatus.Processing && !string.IsNullOrEmpty(link.StripePaymentIntentId))
         {
             try
@@ -93,7 +89,7 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             }
         }
 
-        // 3. Create Stripe PaymentIntent
+        // Create Stripe PaymentIntent
         var metadata = new Dictionary<string, string>
         {
             { "payment_link_id", link.Id.ToString() },
@@ -117,7 +113,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             appFee,
             ct);
 
-        // 4. Update Link State
         link.MarkAsProcessing(intentId);
 
         await _context.SaveChangesAsync(ct);

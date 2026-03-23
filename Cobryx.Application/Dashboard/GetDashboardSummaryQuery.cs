@@ -93,7 +93,6 @@ public class GetDashboardSummaryQueryHandler(IUnitOfWork unitOfWork, ITenantProv
         var tenantId = _tenantProvider.GetTenantId();
         var dbContext = (DbContext)_unitOfWork;
 
-        // 1. Fetch Core Data
         var loans = await dbContext.Set<Loan>()
             .Where(l => l.TenantId == tenantId && !l.IsDeleted && l.Status != LoanStatus.Closed)
             .ToListAsync(cancellationToken);

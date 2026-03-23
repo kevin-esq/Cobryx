@@ -37,7 +37,6 @@ public class GetPaymentLinkByTokenHandler : IRequestHandler<GetPaymentLinkByToke
         if (string.IsNullOrWhiteSpace(request.Token))
             return Result.Failure<PaymentLinkDto>(DomainErrorCode.Auth.TokenMissing);
 
-        // 1. Parse Bipartite Token: {Salt}.{RawToken}
         var parts = request.Token.Split('.', 2);
         if (parts.Length != 2)
             return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
@@ -45,7 +44,6 @@ public class GetPaymentLinkByTokenHandler : IRequestHandler<GetPaymentLinkByToke
         var salt = parts[0];
         var rawToken = parts[1];
 
-        // 2. Efficient Lookup by Salt
         var link = await _context.PaymentLinks
             .Include(l => l.Customer)
             .FirstOrDefaultAsync(l => l.Salt == salt, ct);
@@ -53,7 +51,6 @@ public class GetPaymentLinkByTokenHandler : IRequestHandler<GetPaymentLinkByToke
         if (link == null)
             return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
 
-        // 3. Secure Verification with Server Secret
         if (!link.ValidateToken(rawToken, _stripeOptions.PaymentLinkSecret))
         {
             await _context.SaveChangesAsync(ct);

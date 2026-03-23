@@ -45,7 +45,6 @@ public class SessionsController : CobryxBaseController
             return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
         }
 
-        // Intentional Mapping: Internal DTO -> Public API Contract
         var mappedResult = result.Value?.Select(s => new SessionContract(
             s.Id,
             s.IpAddress,

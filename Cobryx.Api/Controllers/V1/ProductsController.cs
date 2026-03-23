@@ -55,7 +55,6 @@ public class ProductsController : CobryxBaseController
         if (tenantId == null)
             return Unauthorized();
 
-        // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var command = new Application.Products.Commands.Create.CreateProductCommand(
             tenantId.Value,
             request.Name,

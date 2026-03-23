@@ -43,21 +43,19 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         if (tenantId == null || tenantId == Guid.Empty)
             return Result.Failure<string>(DomainErrorCode.Common.UnauthorizedContext);
 
-        // 0. BANK-GRADE: Stripe Connect Runtime Resilience
+        // BANK-GRADE: Stripe Connect Runtime Resilience
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
         if (tenant == null || tenant.IsPaymentRestricted)
         {
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError); // "Payments are currently restricted for this business."
         }
 
-        // 1. Validate Customer
         var customer = await _context.Customers
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId && c.TenantId == tenantId, ct);
 
         if (customer == null)
             return Result.Failure<string>(DomainErrorCode.Customer.NotFound);
 
-        // 2. Validate Loan (if provided)
         if (request.LoanId.HasValue)
         {
             var loanExists = await _context.Loans
@@ -66,7 +64,7 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
                 return Result.Failure<string>(DomainErrorCode.Loans.NotFound);
         }
 
-        // 3. Idempotency check for ExternalReference
+        // Idempotency check for ExternalReference
         if (!string.IsNullOrWhiteSpace(request.ExternalReference))
         {
             var existingLink = await _context.PaymentLinks
@@ -82,11 +80,9 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
             }
         }
 
-        // 4. Generate Raw Token
         var rawToken = GenerateSecureToken();
         var expiresAt = DateTime.UtcNow.AddDays(request.ExpiryDays ?? 7);
 
-        // 5. Create Payment Link
         var paymentLink = new PaymentLink(
             tenantId.Value,
             request.CustomerId,
@@ -101,7 +97,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         _context.PaymentLinks.Add(paymentLink);
         await _context.SaveChangesAsync(ct);
 
-        // 6. Return bipartite token (Salt + RawToken)
         // This allows efficient lookup by Salt, then verification by HMAC
         return Result.Success($"{paymentLink.Salt}.{rawToken}");
     }

@@ -69,7 +69,6 @@ public class CollectionsEngine : ICollectionsEngine
 
         var policy = await GetPolicyForTenantAsync(loan.TenantId, ct);
 
-        // 1. Calculate DPD (Bank Grade Methodology):
         // DPD is calculated from the Due Date of the OLDEST unpaid installment.
         // This prevents "payment hopping" and ensures accurate risk assessment.
         var oldestUnpaid = loan.Installments
@@ -86,10 +85,8 @@ public class CollectionsEngine : ICollectionsEngine
             oldestDueDate = oldestUnpaid.DueDate;
         }
 
-        // 2. Determine Stage based on Policy
         var stage = MapDpdToStage(dpd, policy);
 
-        // 3. Update Materialized State
         var state = loan.DelinquencyState;
         if (state == null)
         {
@@ -107,16 +104,13 @@ public class CollectionsEngine : ICollectionsEngine
         var oldStage = state.Stage;
         state.UpdateState(dpd, oldestDueDate, stage, DateTime.UtcNow, today.Date);
 
-        // 4. Handle Escalations / Events
         if (stage != oldStage)
         {
             await HandleStageTransitionAsync(loan, oldStage, stage, dpd, ct);
         }
 
-        // 5. Automated Late Fees
         // Handled by LoanAccrualEngine, honors CollectionsPolicy.EnableLateFees.
 
-        // 6. Automated Write-Off:
         // When a loan exceeds the policy's WriteOffDays (e.g., 120 or 180 DPD),
         // the system automatically posts a Charge-Off to the ledger to remove it from active assets.
         if (policy.EnableAutoWriteOff && dpd >= policy.WriteOffDays && !loan.IsWrittenOff)
