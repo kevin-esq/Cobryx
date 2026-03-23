@@ -61,7 +61,7 @@ public record DashboardSummaryDto
 /// </summary>
 public record ImpactSignalDto(
     string Code,
-    string Level // Success, Info, Warning, Critical
+    string Level
 );
 
 /// <summary>

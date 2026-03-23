@@ -24,8 +24,7 @@ public class ConversionDropOffJob
 
     public async Task ExecuteAsync()
     {
-        var growthService = _context as IGrowthIntelligenceService; // This is a bit hacky if not registered, but let's assume implementation detail
-                                                                    // I will use the injected metrics directly where possible since I cannot easily change the constructor here without checking DI
+        var growthService = _context as IGrowthIntelligenceService;
 
         var now = DateTime.UtcNow;
         var dayAgo = now.AddDays(-1);

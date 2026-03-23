@@ -49,7 +49,6 @@ public class HangfireMetricsExporter : BackgroundService
                 _failedJobs = statistics.Failed;
                 _deletedJobs = statistics.Deleted;
 
-                // Elite: Wait-to-Work Ratio
                 var succeededJobs = monitoringApi.SucceededJobs(0, 20);
                 double totalWaitTime = 0;
                 double totalWorkTime = 0;
@@ -57,10 +56,8 @@ public class HangfireMetricsExporter : BackgroundService
 
                 foreach (var job in succeededJobs)
                 {
-                    // or better: look at the state history if we really needed precision.
                     var work = job.Value.TotalDuration;
 
-                    // Simple fallback: if we don't have precise wait, we skip or use a default.
                     if (work.HasValue && work.Value > 0)
                     {
                         totalWorkTime += work.Value;

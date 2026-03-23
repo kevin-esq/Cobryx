@@ -21,8 +21,8 @@ public class DatasetExporter
 
         var rows = data.Select(x => new
         {
-            utilization = x.PrincipalBalance / (x.PrincipalBalance + 1m), // fallback
-            paymentDelay = 0m,     // TODO: join payments
+            utilization = x.PrincipalBalance / (x.PrincipalBalance + 1m),
+            paymentDelay = 0m,
             behaviorScore = 0.5m,
             dpdTrend = (decimal)x.DaysPastDue,
             outstanding = x.PrincipalBalance + x.InterestBalance + x.LateFeeBalance,
@@ -40,7 +40,6 @@ public class DatasetExporter
 
         foreach (var r in rows)
         {
-            // invariant format
             csv.AppendLine(System.FormattableString.Invariant($"{r.utilization:F4},{r.paymentDelay:F4},{r.behaviorScore:F4},{r.dpdTrend:F4},{r.outstanding:F4},{r.label}"));
         }
 

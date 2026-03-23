@@ -46,7 +46,6 @@ public class ScanDocumentHandler(
             return;
         }
 
-        // Idempotency guard — only scan PendingScan documents
         if (document.ScanStatus != ScanStatus.PendingScan)
         {
             _logger.LogInformation("ScanDocument: Document {DocumentId} already in state {Status}, skipping",

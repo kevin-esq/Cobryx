@@ -90,7 +90,6 @@ public class LedgerIntegrityService(
         await foreach (var entry in orderedEntryQuery.AsAsyncEnumerable().WithCancellation(ct))
         {
             scannedInThisRun++;
-            // Optimization: Reduce string allocations by using a more direct approach if possible,
             var entryData = string.Create(System.Globalization.CultureInfo.InvariantCulture,
                 $"{entry.Id}|{entry.TransactionId}|{entry.AccountId}|{entry.Debit}|{entry.Credit}|{entry.CreatedAt:O}");
 
@@ -101,7 +100,6 @@ public class LedgerIntegrityService(
             lastProcessedSequenceId = entry.JournalSequenceId;
             currentLastDate = entry.CreatedAt;
 
-            // Micro-Checkpoint every 10k items to protect against state loss during hours-long replays
             if (scannedInThisRun % 10000 == 0)
             {
                 _logger.LogInformation("Streaming Micro-Checkpoint: {Count} entries sealed (Tenant: {TenantId})", scannedInThisRun, tenantId);

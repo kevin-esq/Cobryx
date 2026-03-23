@@ -203,7 +203,6 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // to prevent EF Core from discovering derived types arbitrarily due to reflection order.
         modelBuilder.Entity<BaseLendingInstrument>().ToTable("LendingInstruments");
         modelBuilder.Entity<Credit>().HasBaseType<BaseLendingInstrument>().ToTable("Credits");
         modelBuilder.Entity<Loan>().HasBaseType<BaseLendingInstrument>().ToTable("Loans");

@@ -5,7 +5,6 @@ namespace Cobryx.Application.Tests.Risk;
 
 public class EarlyWarningJobTests
 {
-    // A mock database setup would typically wrap this, but we validate the invariant directly using the isolated factors.
     [Fact]
     public void NonDelinquentHighPD_ShouldTriggerEarlyWarning()
     {
@@ -28,7 +27,6 @@ public class EarlyWarningJobTests
 
         var pd = calculator.Calculate(context);
 
-        // Even with DPD = 0, the Utilization and PaymentDelay should cause a positive PD shift
         Assert.True(pd > 0.1m);
     }
 }

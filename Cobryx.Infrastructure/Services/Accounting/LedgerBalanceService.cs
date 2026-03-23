@@ -49,7 +49,6 @@ public class LedgerBalanceService : ILedgerBalanceService
         {
             if (decimal.TryParse(bStr, out var bVal) && long.TryParse(sStr, out var sVal))
             {
-                // Cache is only valid if it's at least as fresh as the latest materialized snapshot
                 if (latestSnapshot == null || sVal >= latestSnapshot.JournalSequenceId)
                 {
                     _metrics.BalanceCacheHits.Add(1);
@@ -99,7 +98,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
     public async Task<BalanceResult> GetHistoricalBalanceAsync(Guid tenantId, Guid accountId, long journalSequenceId, CancellationToken ct = default)
     {
-        // Historical queries bypass cache to ensure deterministic results at a specific sequence
         var snapshot = await _context.AccountBalanceSnapshots
             .AsNoTracking()
             .Where(s => s.TenantId == tenantId && s.AccountId == accountId && s.JournalSequenceId <= journalSequenceId)

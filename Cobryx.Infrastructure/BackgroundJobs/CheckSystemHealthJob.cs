@@ -31,10 +31,8 @@ public class CheckSystemHealthJob
     {
         _logger.LogInformation("Starting scheduled system health check...");
 
-        // Audit Ledger Integrity (Critical Path)
         await AuditLedgerHealthAsync(ct);
 
-        // Audit Infrastructure Pressure (SRE Phase 6)
         await AuditInfrastructureHealthAsync(ct);
 
         await AuditFinancialMetricsAsync(ct);
@@ -55,7 +53,7 @@ public class CheckSystemHealthJob
             await _alertingService.SendAlertAsync(
                 "SRE_Wraparound",
                 $"EMERGENCY: Postgres Wraparound Risk is {wraparoundRisk:P2}. DATABASE SHUTDOWN RISK IMMINENT.",
-                AlertLevel.Critical, // Note: Use Emergency if available, or stay with Critical + high priority
+                AlertLevel.Critical,
                 new { Risk = wraparoundRisk, Recommendation = "VACUUM FREEZE is urgent." },
                 ct);
         }
@@ -108,7 +106,6 @@ public class CheckSystemHealthJob
 
     private async Task AuditFinancialMetricsAsync(CancellationToken ct)
     {
-        // For the automated job, we audit aggregated metrics first.
         var result = await _sender.Send(new GetFinancialMetricsQuery(null), ct);
         if (result.IsFailure)
         {
@@ -120,7 +117,6 @@ public class CheckSystemHealthJob
         if (metrics == null)
             return;
 
-        // Fintech Thresholds - Elite Standard
         if (metrics.PAR30Percentage > 15.0m)
         {
             await _alertingService.SendAlertAsync(
@@ -130,7 +126,7 @@ public class CheckSystemHealthJob
                 metrics,
                 ct);
         }
-        else if (metrics.PAR30Percentage > 10.0m) // 10% PAR30 warning
+        else if (metrics.PAR30Percentage > 10.0m)
         {
             await _alertingService.SendAlertAsync(
                 "RiskMonitor",

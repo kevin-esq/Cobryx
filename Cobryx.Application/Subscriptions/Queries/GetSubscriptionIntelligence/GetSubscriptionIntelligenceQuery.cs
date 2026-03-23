@@ -50,7 +50,6 @@ public class GetSubscriptionIntelligenceHandler : IRequestHandler<GetSubscriptio
         var isNearAnyLimit = usageMetrics.Values.Any(u => u.IsNearLimit);
         var isPastDue = subscription.Status == SubscriptionStatus.PastDue;
 
-        // Upgrade recommended if near limits, past due, or on a low tier (simplified)
         var upgradeRecommended = isNearAnyLimit || isPastDue || subscription.Plan.Tier == PlanTier.Free;
 
         return Result.Success(new SubscriptionIntelligenceDto(

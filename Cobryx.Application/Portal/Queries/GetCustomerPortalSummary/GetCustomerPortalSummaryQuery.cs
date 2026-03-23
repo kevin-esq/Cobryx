@@ -39,7 +39,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
 
     public async Task<Result<CustomerPortalSummaryDto>> Handle(GetCustomerPortalSummaryQuery request, CancellationToken ct)
     {
-        // BANK-GRADE: Security Isolation & Existence Check
         var customerExists = await _dbContext.Customers
             .AnyAsync(c => c.Id == request.CustomerId && c.TenantId == request.TenantId, ct);
 
@@ -71,10 +70,7 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
             .Where(e => transactionIds.Contains(e.TransactionId))
             .ToListAsync(ct);
 
-        // but for a simple "Outstanding Balance" we can look at the Principal/Interest/Fee accounts.
-        // Actually, for DPD calculation, we just need to know if the Ledger confirms the entity's balances.rest Arrears + Late Fees.
 
-        // Accurate Ledger Balance: Sum of all entries in Principal/Interest/Fee accounts for these loans.
         var totalBalance = entries.Sum(e => e.Debit - e.Credit);
 
         var loanSummaries = loans.Select(l => new PortalLoanSummaryDto(
@@ -86,7 +82,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
             l.FinancialStatus.ToString()
         )).ToList();
 
-        // BANK-GRADE: Filter to only show customer-relevant types and hide internal ids.
         var recentTransactions = transactions
             .Where(t => t.Description.Contains("Payment") || t.IsReversal)
             .Select(t =>

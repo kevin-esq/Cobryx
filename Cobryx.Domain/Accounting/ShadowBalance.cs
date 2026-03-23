@@ -22,7 +22,7 @@ public class ShadowBalance : BaseEntity
     public void ApplyChange(decimal delta, long sequence)
     {
         if (sequence <= LastSequence)
-            return; // Idempotency
+            return;
 
         Balance += delta;
         LastSequence = sequence;

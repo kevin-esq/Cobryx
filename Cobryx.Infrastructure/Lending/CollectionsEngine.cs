@@ -67,7 +67,6 @@ public class CollectionsEngine : ICollectionsEngine
 
         var policy = await GetPolicyForTenantAsync(loan.TenantId, ct);
 
-        // DPD is calculated from the Due Date of the OLDEST unpaid installment.
         var oldestUnpaid = loan.Installments
             .Where(i => i.Status != InstallmentStatus.Paid)
             .OrderBy(i => i.DueDate)
@@ -91,7 +90,6 @@ public class CollectionsEngine : ICollectionsEngine
             _context.LoanDelinquencyStates.Add(state);
         }
 
-        // Idempotency check: Don't evaluate twice on the same day
         if (state.LastEvaluatedDate?.Date == today.Date)
         {
             _logger.LogInformation("Loan {LoanId} already evaluated for {Today}. Skipping.", loan.Id, today.Date);

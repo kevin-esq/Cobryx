@@ -110,7 +110,6 @@ public class DecisionMlIntegrationTests
 
         var result = await service.EvaluateAsync(customerId, ctx);
 
-        // Final PD = (0.1 * 0.3) + (0.9 * 0.7) = 0.03 + 0.63 = 0.66m.
         Assert.True(result.InterestRate > 0.15m);
     }
 }

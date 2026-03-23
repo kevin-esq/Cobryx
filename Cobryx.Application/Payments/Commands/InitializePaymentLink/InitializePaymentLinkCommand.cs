@@ -56,7 +56,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus);
         }
 
-        // Connect Guard: Block if tenant is halfway through onboarding or restricted
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
         if (tenant == null)
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
@@ -71,7 +70,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             try
             {
                 var status = await _stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
-                // BANK-GRADE: Only reuse if it's still payable
                 if (status is "requires_payment_method" or "requires_confirmation" or "requires_action" or "processing")
                 {
                     var secret = await _stripeService.GetPaymentIntentClientSecretAsync(link.StripePaymentIntentId, ct);
@@ -88,7 +86,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             }
         }
 
-        // Create Stripe PaymentIntent
         var metadata = new Dictionary<string, string>
         {
             { "payment_link_id", link.Id.ToString() },
@@ -101,7 +98,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         decimal? appFee = null;
         if (tenant.IsConnectActive)
         {
-            // BANK-GRADE: Calculate application fee (e.g., 1.5%)
             appFee = Math.Round(link.AmountSnapshot.Amount * 0.015m, 2);
         }
 

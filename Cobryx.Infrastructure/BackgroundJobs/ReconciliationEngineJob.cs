@@ -25,7 +25,6 @@ public class ReconciliationEngineJob(
     {
         _logger.LogInformation("Reconciliation Job: Starting global scan.");
 
-        // Fetch all tenants with Stripe capability
         var tenants = await _dbContext.Tenants
             .AsNoTracking()
             .Where(t => t.IsConnectActive || t.Id == CobryxDefaults.PlatformTenantId)

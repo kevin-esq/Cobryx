@@ -46,12 +46,9 @@ public class FinancialStateEngine
 
         var now = _clock.UtcNow;
 
-        // BANK-GRADE: Link to Ledger Truth
         var ledgerBalances = await GetLoanLedgerBalancesAsync(loan.Id, ct);
 
-        // Note: In refined systems, this would trigger a reconciliation warning if drift > 0.01
 
-        // This is a subtle but critical change: DPD is now indirectly tied to whether
 
         var oldStatus = loan.FinancialStatus;
         loan.UpdateFinancialRiskStatus();
@@ -59,7 +56,7 @@ public class FinancialStateEngine
         if (loan.FinancialDaysPastDue >= 180 && loan.FinancialStatus != FinancialStatus.ChargedOff)
         {
             await ExecuteChargeOffAsync(loan.Id, "Automated: 180+ Days Past Due", ct);
-            return; // ExecuteChargeOffAsync handles the save and audit
+            return;
         }
 
         if (loan.FinancialStatus != oldStatus)
@@ -83,7 +80,6 @@ public class FinancialStateEngine
 
     private async Task<LoanLedgerBalances> GetLoanLedgerBalancesAsync(Guid loanId, CancellationToken ct)
     {
-        // BANK-GRADE: Filter by specifically receivable-eligible accounts
         var receivableAccountCodes = new[] { "1210", "4010", "4020" };
 
         var entries = await _context.LedgerEntries
@@ -120,7 +116,6 @@ public class FinancialStateEngine
         if (loan == null || loan.FinancialStatus == FinancialStatus.ChargedOff)
             return;
 
-        // BANK-GRADE: Guard Rails
         if (loan.Status == LoanStatus.Closed)
         {
             _logger.LogWarning("Blocking charge-off for Loan {LoanId}: Loan is already CLOSED.", loanId);

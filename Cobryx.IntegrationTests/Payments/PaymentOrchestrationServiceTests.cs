@@ -89,7 +89,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
             100,
             "USD",
             It.Is<string>(d => d.Contains("Automated Recovery")),
-            null, // stripeAccountId
+            null,
             expectedIdempotencyKey,
             null,
             It.IsAny<CancellationToken>()), Times.Once);
@@ -132,7 +132,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.Customers.Add(customer);
         await _dbContext.SaveChangesAsync();
 
-        // Simulate Stripe authentication_required error
         _stripeMock.Setup(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new global::Stripe.StripeException("authentication_required")
             {

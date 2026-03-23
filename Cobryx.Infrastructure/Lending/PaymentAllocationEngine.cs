@@ -30,7 +30,6 @@ public class PaymentAllocationEngine : IPaymentAllocationEngine
 
         _logger.LogInformation("Allocating payment of {Amount} for Loan {LoanId}", paymentAmount, loan.Id);
 
-        // adjust precision if mapping from external source, but here we assume decimals are passed correctly
         var remaining = paymentAmount;
 
         var principalApplied = 0m;

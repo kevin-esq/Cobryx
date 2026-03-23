@@ -40,7 +40,6 @@ public class RecordPayoutHandler(ICobryxDbContext dbContext, ILogger<RecordPayou
 
         transaction.AddEntry(bankAcc.Id, request.Amount, 0);
 
-        // Credit Stripe Cash (Asset Decreases)
         transaction.AddEntry(stripeCashAcc.Id, 0, request.Amount);
 
         transaction.Post();

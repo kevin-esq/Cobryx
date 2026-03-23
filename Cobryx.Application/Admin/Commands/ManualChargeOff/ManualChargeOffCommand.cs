@@ -23,7 +23,6 @@ public class ManualChargeOffHandler(
         if (string.IsNullOrWhiteSpace(request.Reason))
             return Result.Failure(DomainErrorCode.Common.ReasonRequired);
 
-        // BANK-GRADE: Reuse core pathways for consistency
         await _stateEngine.ExecuteChargeOffAsync(request.LoanId, request.Reason, ct);
 
         var adminUserId = _currentUserProvider.GetUserId() ?? Guid.Empty;

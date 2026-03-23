@@ -24,7 +24,6 @@ public class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage
         builder.HasIndex(x => new { x.IsProcessed, x.LedgerSequenceId })
                .HasDatabaseName("IX_OutboxMessages_LedgerQueue");
 
-        // Indexes for performance/auditing
         builder.HasIndex(x => x.CorrelationId);
         builder.HasIndex(x => x.EntityId);
     }

@@ -71,7 +71,6 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
                 return Result.Success();
             }
 
-            // Fintech-Grade Guard: Validate if it's safe to charge
             if (link.LoanId.HasValue)
             {
                 var loan = await _dbContext.Loans.FirstOrDefaultAsync(l => l.Id == link.LoanId.Value, ct);
@@ -97,14 +96,12 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
         {
             var failureType = ClassifyFailure(stripeFailureCode);
 
-            // STRIPE-GRADE: Try Auto-Charge if it's a soft decline and AutoPay is ON
             if (failureType == FailureType.SoftDecline && customer.AutoPayEnabled && !string.IsNullOrEmpty(customer.DefaultPaymentMethodId))
             {
                 _logger.LogInformation("Attempting automated recovery charge for Customer {CustomerId} due to {Code}", customerId, stripeFailureCode);
 
                 try
                 {
-                    // BANK-GRADE: Idempotency Key {LinkID}_{AttemptCount}
                     int currentAttempt = (link?.RecoveryAttemptCount ?? 0) + 1;
                     string? idempotencyKey = link != null ? $"recovery_{link.Id}_{currentAttempt}" : null;
 

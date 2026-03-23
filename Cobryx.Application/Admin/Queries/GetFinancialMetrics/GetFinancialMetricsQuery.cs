@@ -28,7 +28,6 @@ public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
 
     public async Task<Result<FinancialMetricsDto>> Handle(GetFinancialMetricsQuery request, CancellationToken ct)
     {
-        // BANK-GRADE: Base Filter
         var loansQuery = _dbContext.Loans
             .AsNoTracking()
             .Where(l => l.Status == LoanStatus.Active);

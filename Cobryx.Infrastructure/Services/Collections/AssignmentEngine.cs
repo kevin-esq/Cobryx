@@ -29,7 +29,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
 
         try
         {
-            // Fetch Unassigned critical cases
             var unassignedCases = await _dbContext.CollectionCases
                 .Where(c => c.TenantId == tenantId && !c.IsClosed && c.AssignedAgentId == null && c.PriorityScore > 0)
                 .OrderByDescending(c => c.PriorityScore)

@@ -90,7 +90,6 @@ public class BankReconciliationEngine(
             {
                 var batchMatches = candidates.Where(t => t.ReferenceId == movement.ExternalRef).ToList();
 
-                // Sum only the side that matches movement direction (Debits for Inbound, Credits for Outbound)
                 decimal totalSideAmount = movement.Direction == BankMovementDirection.Inbound
                     ? batchMatches.SelectMany(static t => t.Entries).Sum(static e => Math.Max(0, e.Debit - e.Credit))
                     : batchMatches.SelectMany(static t => t.Entries).Sum(static e => Math.Max(0, e.Credit - e.Debit));
@@ -113,7 +112,6 @@ public class BankReconciliationEngine(
             report.UnmatchedCount++;
         }
 
-        // Final Seal: Capture Ledger Fingerprint for SOC2 Audit
         var integrityReport = await _integrityService.VerifyJournalIntegrityAsync(tenantId, ct: ct);
 
         var audit = new ReconciliationAudit(
@@ -139,7 +137,7 @@ public class BankReconciliationEngine(
 
     private async Task<int> ApplyPressureBackoffAsync(int currentTotalJitterMs, CancellationToken ct)
     {
-        const int HardCapMs = 10_000; // SRE SLA Guard
+        const int HardCapMs = 10_000;
         if (currentTotalJitterMs >= HardCapMs)
             return 0;
 

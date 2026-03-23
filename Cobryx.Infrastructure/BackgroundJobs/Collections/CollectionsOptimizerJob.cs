@@ -39,7 +39,6 @@ public class CollectionsOptimizerJob
         var lockKey = "portfolio:collections:optimizer:lock";
         var token = System.Guid.NewGuid().ToString();
 
-        // Idempotency Lock
         var acquired = await db.LockTakeAsync(lockKey, token, System.TimeSpan.FromMinutes(5));
         if (!acquired)
         {

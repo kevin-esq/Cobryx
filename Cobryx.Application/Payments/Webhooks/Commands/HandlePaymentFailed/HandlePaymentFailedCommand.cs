@@ -28,7 +28,6 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             !metadata.TryGetProperty("CustomerId", out var customerIdProp) ||
             !Guid.TryParse(customerIdProp.GetString(), out var customerId))
         {
-            // Fallback: Try to find customer by StripeCustomerId if metadata is missing
             if (request.StripeObject.TryGetProperty("customer", out var stripeCustIdProp))
             {
                 var stripeCustId = stripeCustIdProp.GetString();

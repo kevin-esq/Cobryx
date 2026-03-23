@@ -62,7 +62,7 @@ public class PortfolioController(ITenantProvider tenantProvider, ICacheService c
     /// <summary>
     /// Ultra-fast endpoint for the home dashboard returning the 4 most critical business operations metrics.
     /// </summary>
-    [HttpGet("../dashboard/kpis")] // Maps to /api/v1/dashboard/kpis
+    [HttpGet("../dashboard/kpis")]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetCoreKpis()

@@ -38,7 +38,6 @@ public class DunningOrchestratorJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // Active links that have a scheduled retry time and haven't exceeded attempts/deadline
         var pendingRecoveries = await db.Set<PaymentLink>()
             .Include(l => l.Loan)
             .Where(l => l.Status == PaymentLinkStatus.Active)
@@ -46,7 +45,6 @@ public class DunningOrchestratorJob
             .Where(l => l.RecoveryAttemptCount < l.MaxRecoveryAttempts)
             .Where(l => l.RecoveryDeadline == null || l.RecoveryDeadline > now)
             .Where(l => !l.RecoveryInProgress)
-            // Lightweight efficiency guard: ignore disputed or closed loans at the scan level
             .Where(l => l.Loan == null || (l.Loan.Status != LoanStatus.Disputed && l.Loan.Status != LoanStatus.Closed))
             .ToListAsync(ct);
 
@@ -57,7 +55,6 @@ public class DunningOrchestratorJob
 
         foreach (var link in pendingRecoveries)
         {
-            // Atomic Guard: Try to acquire the recovery lock
             if (!link.TryAcquireRecoveryLock())
             {
                 _logger.LogWarning("Dunning Engine: Skipped Link {LinkId}, already in progress.", link.Id);

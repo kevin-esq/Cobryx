@@ -119,7 +119,7 @@ public class TenantGrowthMetrics
     public bool RecordWow(string outcomeCode, DateTime occurredAt)
     {
         if (FirstWowAt != null)
-            return false; // First-Wow Guard
+            return false;
 
         FirstWowAt = occurredAt;
         WowOutcomeCode = outcomeCode;

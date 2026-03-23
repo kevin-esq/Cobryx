@@ -22,13 +22,11 @@ public class PortfolioTrainingJob(
 
         var volatilityPenalty = globalState.AveragePd * 10000m;
 
-        // 17 Audit: Macro Penalty Calibration
         var macroPenalty = (macroState.Inflation * globalState.TotalExposure) +
                            (macroState.MarketVolatility * globalState.TotalExposure * 2m);
 
         _ = totalRevenue - totalDefaultsLoss - capitalCost - liquidityPenalty - volatilityPenalty -
                            macroPenalty;
 
-        // In a real system, push globalReward and (globalState -> nextState) to the multi-agent PyTorch Replay Buffer.
     }
 }

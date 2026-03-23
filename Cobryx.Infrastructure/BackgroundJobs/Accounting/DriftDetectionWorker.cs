@@ -53,7 +53,6 @@ public class DriftDetectionWorker
 
         foreach (var shadow in shadowBalances)
         {
-            // Only compare if we have the exact snapshot sequence ready in the ledger
             var ledgerResult = await _balanceService.GetHistoricalBalanceAsync(shadow.TenantId, shadow.AccountId, shadow.LastSequence, ct);
 
             if (Math.Abs(ledgerResult.Balance - shadow.Balance) > 0.0001m)

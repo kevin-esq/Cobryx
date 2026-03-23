@@ -303,8 +303,6 @@ public static class DependencyInjection
 
         services.AddHangfireServer(options =>
         {
-            // Limit workers to ensure we don't exhaust the DB connection pool (MaxPoolSize=35)
-            // Reduced to 5 in dev/local to provide more overhead for API and Metrics polling
             options.WorkerCount = 5;
         });
 

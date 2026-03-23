@@ -67,7 +67,6 @@ public class StripeSubscriptionSyncService
             return;
         }
 
-        // Store the Stripe Customer ID if not already set (Lazy association)
         if (string.IsNullOrWhiteSpace(subscription.StripeCustomerId))
             subscription.SetStripeCustomerId(stripeCustomerId);
 
@@ -146,11 +145,9 @@ public class StripeSubscriptionSyncService
     {
         var oldStatus = subscription.Status;
 
-        // Fetch current state from Stripe (source of truth)
         var stripeState = await _stripeService.GetSubscriptionStateAsync(stripeSubscriptionId, ct);
         var status = MapStripeStatus(stripeState.Status);
 
-        // Resolve PlanId from StripePriceId
         var plan = await Db.Set<SubscriptionPlan>()
             .FirstOrDefaultAsync(p => p.StripePriceId == stripeState.PriceId, ct);
 
@@ -222,7 +219,6 @@ public class StripeSubscriptionSyncService
             throw;
         }
 
-        // Bust subscription gate cache immediately after state change (Outside transaction to allow partial success of cache invalidation)
     }
 
     private async Task<TenantSubscription?> GetSubscriptionAsync(Guid tenantId, CancellationToken ct)

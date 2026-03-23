@@ -118,9 +118,6 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
             await conn.OpenAsync(ct);
 
             using var cmd = conn.CreateCommand();
-            // sync_time is cumulative in milliseconds. We measure delta or just latest average if possible.
-            // For simple SRE metrics, we can report the raw cumulative or try to derive a rate if we tracked previous.
-            // Elite: use pg_stat_wal available in PG 14+
             cmd.CommandText = "SELECT (sync_time / NULLIF(syncs, 0)) / 1000.0 FROM pg_stat_wal;";
 
             var result = await cmd.ExecuteScalarAsync(ct);
@@ -144,7 +141,6 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
         await GetLedgerDeadTupleRatioAsync(ct);
         await GetWalSyncDurationAsync(ct);
 
-        // Alert if critical Risk
         if (xidRisk > 0.85)
         {
             _logger.LogCritical("EMERGENCY DB PRESSURE: Postgres Wraparound Risk Ratio is at {Ratio:P2}!", xidRisk);

@@ -87,7 +87,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         var stateEngine = scope.ServiceProvider.GetRequiredService<FinancialStateEngine>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<PaymentLinkReconciliationService>>();
 
-        // MOCK Stripe Service to return 'succeeded'
         var mockStripe = new Mock<IStripeService>();
         mockStripe
             .Setup(x => x.GetPaymentIntentStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -105,7 +104,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         var link = new PaymentLink(tenantId, customerId, new Money(500, "MXN"), "token_stuck", DateTime.UtcNow.AddDays(1), "secret_stuck", loan.Id, "Ref-Stuck");
 
         link.MarkAsProcessing(paymentIntentId);
-        // Force UpdatedAt to be old (using reflection because it's set by BaseEntity)
         typeof(BaseEntity).GetProperty("UpdatedAt")!.SetValue(link, DateTime.UtcNow.AddHours(-2));
 
         context.PaymentLinks.Add(link);

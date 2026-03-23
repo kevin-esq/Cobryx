@@ -67,7 +67,6 @@ public class PaymentLinkTests
     public void RecordRecoveryFailure_ShouldTransitionToManualReview_WhenDeadlineReached()
     {
         var link = CreateActiveLink();
-        // Since we can't easily mock DateTime.UtcNow in this simple unit test without more infra,
 
         link.RecordRecoveryFailure("soft_fail");
 

@@ -43,7 +43,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         if (tenantId == null || tenantId == Guid.Empty)
             return Result.Failure<string>(DomainErrorCode.Common.UnauthorizedContext);
 
-        // BANK-GRADE: Stripe Connect Runtime Resilience
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
         if (tenant == null || tenant.IsPaymentRestricted)
         {
@@ -64,7 +63,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
                 return Result.Failure<string>(DomainErrorCode.Loans.NotFound);
         }
 
-        // Idempotency check for ExternalReference
         if (!string.IsNullOrWhiteSpace(request.ExternalReference))
         {
             var existingLink = await _context.PaymentLinks
@@ -72,9 +70,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
 
             if (existingLink != null)
             {
-                // Re-hashing is the only way to get a new raw token if needed, 
-                // For now, let's return the existing one if we can't get the raw token (we can't since it's hashed).
-                // Protocol: If exists, we expire the old one and create a new one to provide a fresh token.
                 existingLink.Expire();
             }
         }

@@ -14,7 +14,6 @@ public class MacroState
     public MarketRegime Regime { get; set; } = MarketRegime.Normal;
     public string Country { get; set; } = "US";
     
-    // Non-Markovian Memory (Audit Fix 3)
     public decimal InflationTMinus1 { get; set; }
     public decimal InflationTMinus2 { get; set; }
     public decimal RateTrend { get; set; }

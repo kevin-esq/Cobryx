@@ -43,7 +43,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
 
         while (true)
         {
-            // is behind the targetDate. This allows for safe recovery after system downtime.
             var loans = await _dbContext.Loans
                 .Include(l => l.Agreement)
                 .ThenInclude(a => a.InterestPolicy)
@@ -80,7 +79,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
         var nextDate = loan.LastAccrualDate.AddDays(1).Date;
         var policy = await GetCollectionsPolicyAsync(loan.TenantId, ct);
 
-        // Waterfall recovery: we iterate through every missing day until targetDate is reached.
         while (nextDate <= targetDate)
         {
             var dailyInterest = CalculateDailyInterest(loan);

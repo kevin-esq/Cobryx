@@ -49,7 +49,6 @@ public class PaymentReminderJob
 
         foreach (var link in activeLinks)
         {
-            // Stop Gaps: Bank-Grade policy enforcement
             if (link.LoanId.HasValue)
             {
                 var loan = await db.Set<Loan>().FindAsync(new object[] { link.LoanId.Value }, ct);

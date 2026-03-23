@@ -38,7 +38,6 @@ public class ManualReversalHandler(
         if (originalTx.IsReversal)
             return Result.Failure(DomainErrorCode.Accounting.CannotReverseReversal);
 
-        // BANK-GRADE: Execution through core engine
         var reversalId = await _postingEngine.PostReversalAsync(
             originalTx.Id,
             request.Amount,

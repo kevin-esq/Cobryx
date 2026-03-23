@@ -47,7 +47,6 @@ public class ProductionAlertingService : IAlertingService
             _logger.LogInformation(logMessage);
         }
 
-        // Dispatch to High-Priority Channels (Critical/Degraded only)
         if (level >= AlertLevel.Degraded)
         {
             await DispatchToCommunicationsAsync(source, message, level, metadataJson, ct);

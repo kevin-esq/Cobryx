@@ -54,7 +54,6 @@ public class CreateCheckoutSessionHandler : IRequestHandler<CreateCheckoutSessio
         if (subscription == null)
             return Result.Failure<string>(DomainErrorCode.Subscription.NotFound);
 
-        // Use stored StripeCustomerId or create a new one
         if (string.IsNullOrWhiteSpace(subscription.StripeCustomerId))
         {
             var tenant = await dbContext.Set<Tenant>()

@@ -40,7 +40,6 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
         if (tenant == null)
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
 
-        // Ensure Stripe Account exists
         if (string.IsNullOrEmpty(tenant.StripeAccountId))
         {
             var owner = await _context.Users

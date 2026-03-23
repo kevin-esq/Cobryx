@@ -24,7 +24,6 @@ public class ReconciliationEngine(
     private readonly CobryxMetrics _metrics = metrics;
     private readonly ILogger<ReconciliationEngine> _logger = logger;
 
-    // Institutional timing tolerance: 15 minutes lag for webhooks
     private static readonly TimeSpan _timingTolerance = TimeSpan.FromMinutes(15);
 
     public async Task<ReconciliationAudit> ReconcileAsync(
@@ -60,14 +59,12 @@ public class ReconciliationEngine(
                 {
                     totalDriftsManaged++;
 
-                    // MULTI-PASS: Check if this drift was already detected in the previous run
                     var isConfirmed = await IsDriftConfirmedAsync(tenantId, intent.Id, ct);
                     if (isConfirmed)
                     {
                         drift = drift with { Status = ReconciliationStatus.ConfirmedDrift };
                     }
 
-                    // AUTO-HEALING: Attempt repair for high-confidence confirmed drifts
                     if (drift.Type == DriftType.MissingPayment && isConfirmed)
                     {
                         var repaired = await AutoRepairDriftAsync(intent, tenantId, ct);
@@ -193,7 +190,7 @@ public class ReconciliationEngine(
                 ct);
 
         if (ledgerExists)
-            return null; // In-sync
+            return null;
 
         var age = DateTime.UtcNow - intent.Created;
         if (age < _timingTolerance)
@@ -253,9 +250,6 @@ public class ReconciliationEngine(
     private async Task<DriftDetail?> AnalyzeBalanceTransactionAsync(StripeBalanceTransactionDto tx, Guid tenantId,
         CancellationToken ct)
     {
-        // payout -> PAYOUT-STRIPE-{ID}
-        // refund -> REF-STRIPE-{ID}
-        // stripe_fee -> FEE-STRIPE-{BT_ID}
 
         var referenceId = tx.Type switch
         {
@@ -266,7 +260,7 @@ public class ReconciliationEngine(
         };
 
         if (referenceId == null)
-            return null; // Only interested in institutional movements
+            return null;
 
         var ledgerTx = await _dbContext.LedgerTransactions
             .AsNoTracking()
@@ -275,7 +269,6 @@ public class ReconciliationEngine(
 
         if (ledgerTx == null)
         {
-            // Apply 15m tolerance for settlement too (soft drift)
             var age = DateTime.UtcNow - tx.Created;
             if (age < _timingTolerance)
             {
@@ -289,12 +282,9 @@ public class ReconciliationEngine(
                 "missing_settlement");
         }
 
-        var ledgerAmount = ledgerTx.Entries.Sum(e => e.Debit - e.Credit); // Simplified for simple movements
-        // For BTs, the Net amount is what landed/left the account
+        var ledgerAmount = ledgerTx.Entries.Sum(e => e.Debit - e.Credit);
         var stripeNet = tx.Net / 100m;
 
-        // In Cobryx, movements are recorded with their absolute impact.
-        // We'll use a tolerance of 0.01 for rounding.
         if (Math.Abs(Math.Abs(stripeNet) - Math.Abs(ledgerAmount)) > 0.01m)
         {
             return new DriftDetail(tx.Id, DriftType.AmountMismatch, ReconciliationSeverity.Critical,
@@ -315,7 +305,6 @@ public class ReconciliationEngine(
         if (lastAudit == null || string.IsNullOrEmpty(lastAudit.DriftDetailsJson))
             return false;
 
-        // Simple check: was this ExternalId in the last report?
         return lastAudit.DriftDetailsJson.Contains(externalId);
     }
 

@@ -151,9 +151,6 @@ public class Phase4InstitutionalTests
             var report = await service.VerifyJournalIntegrityAsync(_tenantId, forceFullReplay: true);
 
             Assert.NotEqual(fingerprint1, report.JournalFingerprint);
-            // It might still be "healthy" balance-wise if we only changed one field, 
-            // but the fingerprint will definitely be different from what it would have been.
-            // In our case, the balance Pass 2 (Transactions) would also detect it.
             Assert.Equal(1, report.ImbalancedTransactionsCount);
             Assert.False(report.IsHealthy);
         }

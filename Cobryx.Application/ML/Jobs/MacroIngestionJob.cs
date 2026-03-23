@@ -14,11 +14,9 @@ public class MacroIngestionJob(ICacheService cache)
         var prevMacro = await cache.GetAsync<Cobryx.Domain.ML.MacroState>("macro:state", CancellationToken.None)
                         ?? new Cobryx.Domain.ML.MacroState();
 
-        // 17 Audit: Suavizado temporal (EWMA) to avoid pure noise.
         var smoothedInflation = 0.7m * prevMacro.Inflation + 0.3m * newInflation;
         var smoothedRate = 0.7m * prevMacro.InterestRate + 0.3m * newRate;
 
-        // 17 Audit: Regime Detection
         var regime = smoothedInflation > 0.08m ? Cobryx.Domain.ML.MarketRegime.HighInflation :
             newVolatility > 0.3m ? Cobryx.Domain.ML.MarketRegime.Crisis : Cobryx.Domain.ML.MarketRegime.Normal;
 

@@ -57,7 +57,6 @@ public class PaymentLinkReconciliationService
             return;
         }
 
-        // 1.5 BANK-GRADE: Transversal Suspension Guard
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
         if (tenant == null || tenant.IsPaymentRestricted)
         {
@@ -99,7 +98,6 @@ public class PaymentLinkReconciliationService
 
                 if (loan != null)
                 {
-                    // BANK-GRADE: Check if loan is ChargedOff for recovery accounting
                     if (loan.FinancialStatus == FinancialStatus.ChargedOff)
                     {
                         await _postingEngine.PostRecoveryAsync(
@@ -132,7 +130,6 @@ public class PaymentLinkReconciliationService
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ReferenceId") == true || ex.InnerException?.Message.Contains("23505") == true)
         {
-            // BANK-GRADE: Idempotency Hit
             _logger.LogWarning("Idempotency Hit for PaymentLink {LinkId} (PI: {IntentId}). Transaction already exists.", link.Id, paymentIntentId);
             await transaction.RollbackAsync(ct);
         }
@@ -157,7 +154,6 @@ public class PaymentLinkReconciliationService
         var link = await _context.PaymentLinks
             .FirstOrDefaultAsync(l => l.StripePaymentIntentId == paymentIntentId, ct);
 
-        // 1.5 BANK-GRADE: Transversal Suspension Guard (for Refund)
         if (link != null)
         {
             var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
@@ -171,7 +167,6 @@ public class PaymentLinkReconciliationService
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try
         {
-            // BANK-GRADE: Finding the original transaction (PAY or REC)
             var referencePay = $"PAY-STRIPE-{paymentIntentId}";
             var referenceRec = $"REC-STRIPE-{paymentIntentId}";
 
@@ -203,7 +198,6 @@ public class PaymentLinkReconciliationService
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ReferenceId") == true || ex.InnerException?.Message.Contains("23505") == true)
         {
-            // BANK-GRADE: Idempotency Hit for Refund
             _logger.LogWarning("Idempotency Hit for Refund (PI: {IntentId}). Transaction already exists.", paymentIntentId);
             await transaction.RollbackAsync(ct);
         }
@@ -226,7 +220,6 @@ public class PaymentLinkReconciliationService
 
         _logger.LogInformation("Starting stuck link recovery for links stuck since: {Cutoff}", cutoff);
 
-        // BANK-GRADE: Batch processing (50 at a time) to prevent memory pressure
         var stuckLinks = await _context.PaymentLinks
             .Where(l => l.Status == PaymentLinkStatus.Processing && l.UpdatedAt < cutoff)
             .Where(l => l.LastRecoveryAttemptAt == null || l.LastRecoveryAttemptAt < recoveryThrottle)
@@ -253,14 +246,11 @@ public class PaymentLinkReconciliationService
                 link.RecordRecoveryAttempt();
                 await _context.SaveChangesAsync(ct);
 
-                // Bank-Grade: Check real status in Stripe
                 var status = await _stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
 
                 if (status == "succeeded")
                 {
                     _logger.LogInformation("Link {LinkId} was successful in Stripe. Reconciling...", link.Id);
-                    // To get the exact application fee, we'd need to fetch the Intent details.
-                    // Let's re-calculate to keep it simple but accurate to our formula.
                     decimal? appFee = null;
                     var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
                     if (tenant?.IsConnectActive == true)

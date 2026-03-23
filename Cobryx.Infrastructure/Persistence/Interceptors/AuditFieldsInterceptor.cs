@@ -26,7 +26,6 @@ public class AuditFieldsInterceptor : SaveChangesInterceptor
 
         foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
         {
-            // Fix for EF Core misidentifying new entities with set Guids as Modified instead of Added
             if (entry.State == EntityState.Modified && entry.Entity.Version == 0)
             {
                 entry.State = EntityState.Added;

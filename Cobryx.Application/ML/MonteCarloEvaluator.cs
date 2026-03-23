@@ -8,7 +8,6 @@ public class MonteCarloMetrics
 
     public decimal VaR95CreditMultiplier { get; set; }
 
-    // Cola extrema: Pérdida esperada en el 5% de los peores mundos
     public decimal ExpectedShortfallCredit { get; set; }
 
     public decimal AverageInterestDelta { get; set; }

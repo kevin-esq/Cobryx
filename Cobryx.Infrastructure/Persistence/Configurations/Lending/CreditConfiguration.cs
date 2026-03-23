@@ -22,6 +22,5 @@ public class CreditConfiguration : IEntityTypeConfiguration<Credit>
             .HasForeignKey("CreditId")
             .OnDelete(DeleteBehavior.Restrict);
 
-        // via builder.HasMany(x => x.Installments).WithOne(x => x.Instrument).HasForeignKey(x => x.CreditId)
     }
 }

@@ -22,7 +22,6 @@ public class PortfolioAnalyticsService : IPortfolioAnalyticsService
 
     public async Task CalculateAllNightlyMetricsAsync(DateTime date, CancellationToken ct = default)
     {
-        // Multi-Tenant Batch Aggregation using Window SQL Functions for O(1) query scalability
         var batchQuery = @"
 WITH latest_snapshots AS (
     SELECT

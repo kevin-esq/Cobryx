@@ -39,7 +39,6 @@ public class SyncSubscriptionHandler : IRequestHandler<SyncSubscriptionCommand, 
 
         _logger.LogInformation("Initiating manual Stripe sync for Tenant {TenantId}", tenantId);
 
-        // Implementation is delegated to the repository to handle provider-specific locking (e.g., FOR UPDATE)
         var subscription = await _subscriptionRepository.GetByTenantIdWithLockAsync(tenantId.Value, cancellationToken);
 
         if (subscription == null)

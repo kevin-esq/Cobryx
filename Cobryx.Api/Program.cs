@@ -281,12 +281,12 @@ try
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.Messaging.ProcessOutboxJob>(
             "process-outbox-events",
             job => job.RunAsync(CancellationToken.None),
-            "*/10 * * * * *"); // Every 10 seconds
+            "*/10 * * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.Messaging.LedgerOutboxWorker>(
             "ledger-cdc-outbox",
             job => job.ProcessEventsAsync(CancellationToken.None),
-            "*/5 * * * * *"); // Every 5 seconds for high-fidelity ledger stream
+            "*/5 * * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Accounting.LedgerIntegrityJob>(
             "ledger-integrity-scan",
@@ -303,7 +303,6 @@ try
             job => job.RunAsync(),
             Cron.Daily(0));
 
-        // Runs 30 minutes after Metrics job to ensure DB reflects latest metrics
         RecurringJob.AddOrUpdate<Cobryx.Application.Analytics.Jobs.PortfolioCacheRefreshJob>(
             "portfolio-cache-refresh",
             job => job.RunAsync(CancellationToken.None),
@@ -347,22 +346,22 @@ try
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.FinancialReconciliationJob>(
             "financial-reconciliation-recovery",
             job => job.RunAsync(CancellationToken.None),
-            "*/30 * * * *"); // Every 30 minutes
+            "*/30 * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocumentsJob>(
             "cleanup-stale-documents",
             job => job.RunAsync(CancellationToken.None),
-            "*/5 * * * *"); // Every 5 minutes
+            "*/5 * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.InvitationCleanupJob>(
             "invitation-cleanup",
             job => job.RunAsync(CancellationToken.None),
-            "*/10 * * * *"); // Every 10 minutes
+            "*/10 * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.ExpirePaymentLinksJob>(
             "payment-link-expiration",
             job => job.RunAsync(CancellationToken.None),
-            "*/15 * * * *"); // Every 15 minutes
+            "*/15 * * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.PaymentReminderJob>(
             "payment-collections-reminders",
@@ -372,7 +371,7 @@ try
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.CheckSystemHealthJob>(
             "system-health-check",
             job => job.RunAsync(CancellationToken.None),
-            "*/15 * * * *"); // Every 15 minutes
+            "*/15 * * * *");
     }
 }
 catch (Exception ex)

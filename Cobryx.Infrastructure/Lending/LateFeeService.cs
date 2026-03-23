@@ -27,15 +27,12 @@ public class LateFeeService : ILateFeeService
         if (dpd <= policy.GracePeriodDays)
             return 0;
 
-        // Institutional rule: 
-        // Fixed: apply only on the exact day grace period ends (dpd == grace + 1)
 
         if (policy.Type == LateFeeType.Fixed && dpd != policy.GracePeriodDays + 1)
         {
             return 0;
         }
 
-        // Check if already assessed for this day to maintain idempotency
         if (loan.AccruedCharges.Any(c => c.Type == ChargeType.LateFee && c.AccrualDate.Date == date.Date))
         {
             return 0;

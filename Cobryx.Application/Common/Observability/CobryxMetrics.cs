@@ -88,14 +88,12 @@ public sealed class CobryxMetrics : IDisposable
     public Histogram<double> LedgerSnapshotAge { get; }
     public Counter<long> LedgerCacheAtomicRejectTotal { get; }
 
-    // SRE metrics
     public Histogram<double> ShadowReplayLag { get; }
     public Counter<long> ShadowReplayEventsProcessed { get; }
     public Counter<long> ShadowDriftDetected { get; }
     public Counter<long> ShadowReplayThroughput { get; }
     public Counter<long> ShadowReplayRebuildTotal { get; }
 
-    // Elite SRE Infrastructure Metrics
     public ObservableGauge<double> PostgresWraparoundRiskRatio { get; }
     public ObservableGauge<double> PostgresWalSyncDurationSeconds { get; }
     public ObservableGauge<double> PostgresDeadTupleRatio { get; }
@@ -309,7 +307,6 @@ public sealed class CobryxMetrics : IDisposable
         LedgerCacheAtomicRejectTotal = _meter.CreateCounter<long>("ledger_cache_atomic_reject_total",
             description: "Total number of Redis cache updates rejected due to stale sequence");
 
-        // SRE
         ShadowReplayLag = _meter.CreateHistogram<double>("shadow_replay_lag_seconds", unit: "s",
             description: "Lag between primary ledger and shadow replay engine");
         ShadowReplayEventsProcessed = _meter.CreateCounter<long>("shadow_replay_events_processed_total",
@@ -321,7 +318,6 @@ public sealed class CobryxMetrics : IDisposable
         ShadowReplayRebuildTotal = _meter.CreateCounter<long>("shadow_replay_rebuild_total",
             description: "Total number of times shadow state was rebuilt");
 
-        // Elite SRE Infrastructure
         PostgresWraparoundRiskRatio = _meter.CreateObservableGauge("postgres_wraparound_risk_ratio",
             () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");
         PostgresWalSyncDurationSeconds = _meter.CreateObservableGauge("postgres_wal_sync_duration_seconds",

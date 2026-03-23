@@ -233,7 +233,6 @@ public class StripeService : IStripeService
 
         var balance = await service.GetAsync(requestOptions, cancellationToken: ct);
 
-        // Summing across all currency balances (defaulting to primary or total in USD equivalent if multi-currency)
         var available = balance.Available.Sum(b => b.Amount) / 100m;
         var pending = balance.Pending.Sum(b => b.Amount) / 100m;
 
@@ -247,7 +246,7 @@ public class StripeService : IStripeService
         {
             Customer = customerId,
             PaymentMethodTypes = new List<string> { "card" },
-            Usage = "off_session", // Critical for AutoPay/Scheduled charges
+            Usage = "off_session",
         }, cancellationToken: ct);
 
         return intent.ClientSecret;

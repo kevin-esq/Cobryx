@@ -49,7 +49,6 @@ public class Permission : BaseEntity, IAggregateRoot
         public const string UsersView = "users.view";
         public const string UsersManage = "users.manage";
 
-        // System & Audit
         public const string AuditView = "audit.view";
         public const string DashboardView = "dashboard.view";
         public const string SubscriptionView = "subscription.view";

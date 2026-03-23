@@ -147,7 +147,6 @@ public class SubscriptionGateMiddleware
             var cached = await cacheService.GetAsync<SubscriptionAccessEntry>(cacheKey);
             if (cached != null)
             {
-                // Stale guard: reject entries older than TTL (clock drift / frozen cache)
                 if ((now - cached.CheckedAtUtc) > CacheTtl)
                 {
                     _logger.LogInformation("Stale cache entry for tenant {TenantId}, falling through to DB", tenantId);
