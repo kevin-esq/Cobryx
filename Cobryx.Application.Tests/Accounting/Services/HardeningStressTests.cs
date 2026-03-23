@@ -72,7 +72,6 @@ public class HardeningStressTests(ITestOutputHelper output)
             _output.WriteLine($"Streaming Full Scan (20k) took {swFull.ElapsedMilliseconds}ms.");
             Assert.True(report.IsHealthy);
             Assert.Equal(40000, report.TotalEntriesScanned);
-            // Target: < 5000ms (Streaming overhead should be minimal)
             Assert.True(swFull.ElapsedMilliseconds < 5000, "Full scan at 20k should be efficient");
         }
     }
@@ -86,7 +85,6 @@ public class HardeningStressTests(ITestOutputHelper output)
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         context.BankMovements.Add(movement);
 
-        // Case: 10 small transitions matching the same ReferenceId
         for (int i = 1; i <= 10; i++)
         {
             var tx = new LedgerTransaction(tenantId, $"Item {i}", "REF-BATCH");
@@ -103,7 +101,6 @@ public class HardeningStressTests(ITestOutputHelper output)
         var engine = new BankReconciliationEngine(context, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
         var report = await engine.ReconcileBankMovementsAsync(tenantId);
 
-        // Check confidence calculation: 0.85 - (0 * 0.03) - (log10(10)*0.05) = 0.85 - 0.05 = 0.80
         Assert.All(report.MatchedItems, m => Assert.InRange(m.Confidence, 0.79m, 0.81m));
         _output.WriteLine($"Logarithmic Match Confidence for batch of 10: {report.MatchedItems.First().Confidence}");
     }
@@ -131,7 +128,6 @@ public class HardeningStressTests(ITestOutputHelper output)
         _integrityServiceMock.Setup(s => s.VerifyJournalIntegrityAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new IntegrityReport(true, 1, 0, 0, "FINGERPRINT", [], false));
 
-        // Run two reconciliation engines simultaneously
         using (var context1 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         using (var context2 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {

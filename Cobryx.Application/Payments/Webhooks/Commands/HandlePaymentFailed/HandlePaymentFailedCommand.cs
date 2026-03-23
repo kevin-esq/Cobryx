@@ -55,7 +55,7 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             failureCode = "invoice_payment_failed";
             description = $"Invoice {request.StripeObject.GetProperty("number").GetString()} payment failed.";
         }
-        else // PaymentIntent
+        else
         {
             amount = request.StripeObject.GetProperty("amount").GetInt64() / 100m;
             currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? "USD";
@@ -75,7 +75,7 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             currency,
             description,
             stripePaymentIntentId,
-            null, // PaymentLinkId resolved internally if needed
+            null,
             ct);
     }
 }

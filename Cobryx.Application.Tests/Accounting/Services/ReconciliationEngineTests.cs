@@ -40,10 +40,9 @@ public class ReconciliationEngineTests
 
         _dbContext = new CobryxDbContext(options, tenantProviderMock.Object);
         _postingEngine = new FinancialPostingEngine(_dbContext, _postingLoggerMock.Object);
-        _metrics = new CobryxMetrics(); // Instantiate directly for tests
+        _metrics = new CobryxMetrics();
         _engine = new ReconciliationEngine(_dbContext, _stripeMock.Object, _postingEngine, _metrics, _loggerMock.Object);
 
-        // Default: empty balance transactions to avoid breaking existing tests
         _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
     }
@@ -86,7 +85,6 @@ public class ReconciliationEngineTests
         _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
-                // Created 5 mins ago (within 15 min tolerance)
                 new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), [])
             ]);
 
@@ -105,7 +103,6 @@ public class ReconciliationEngineTests
         var to = DateTime.UtcNow;
         var intentId = "pi_synced_123";
 
-        // Create Ledger Transaction to match (Standard constructor uses 4 args)
         var tx = new LedgerTransaction(_tenantId, "Sync Test", $"PAY-STRIPE-{intentId}");
         _dbContext.LedgerTransactions.Add(tx);
         await _dbContext.SaveChangesAsync();
@@ -137,7 +134,6 @@ public class ReconciliationEngineTests
         var customerId = Guid.NewGuid();
         var agreementId = Guid.NewGuid();
         var loan = new Loan(_tenantId, customerId, agreementId, "L-100", new Money(1000m, "USD"));
-        // Force ID via reflection or just use the object
         typeof(Loan).GetProperty("Id")!.SetValue(loan, loanId);
         _dbContext.Loans.Add(loan);
 
@@ -168,7 +164,7 @@ public class ReconciliationEngineTests
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
         Assert.Equal(ReconciliationStatus.Repaired, audit.Status);
-        Assert.Equal(0, audit.DetectedDriftsCount); // Drifts are cleared if repaired
+        Assert.Equal(0, audit.DetectedDriftsCount);
 
         var txExists = await _dbContext.LedgerTransactions.AnyAsync(t => t.ReferenceId == $"PAY-STRIPE-{intentId}");
         Assert.True(txExists);
@@ -202,11 +198,10 @@ public class ReconciliationEngineTests
         var btId = "bt_settlement_123";
         var sourceId = "pi_source_123";
 
-        // Create Ledger Transaction with mismatched amount
         var tx = new LedgerTransaction(_tenantId, "Mismatched Settlement", $"PAYOUT-STRIPE-{sourceId}");
         var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         _dbContext.LedgerAccounts.Add(cashAcc);
-        tx.AddEntry(cashAcc.Id, 95.00m, 0); // Only 95 recorded
+        tx.AddEntry(cashAcc.Id, 95.00m, 0);
         _dbContext.LedgerTransactions.Add(tx);
         await _dbContext.SaveChangesAsync();
 
@@ -216,7 +211,6 @@ public class ReconciliationEngineTests
         _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
-                // BT shows 100 net
                 new(btId, 10500, 500, 10000, "usd", "payout", "payout", "available", DateTime.UtcNow, DateTime.UtcNow, sourceId, [])
             ]);
 

@@ -37,7 +37,6 @@ public class StripeIdempotencyTests : IClassFixture<CobryxWebApplicationFactory>
         var stripeCustomerId = "cus_test";
         var stripeSubscriptionId = "sub_test";
 
-        // Pre-seed tenant and subscription
         var tenant = new Tenant("Test Business", "test@test.com");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, tenantId);
         dbContext.Tenants.Add(tenant);

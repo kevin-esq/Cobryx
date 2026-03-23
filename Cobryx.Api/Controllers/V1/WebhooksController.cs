@@ -253,7 +253,6 @@ public class WebhooksController : CobryxBaseController
 
         _logger.LogInformation("Processing account.updated for Stripe Account: {AccountId}", account.Id);
 
-        // We need DB context to update the tenant
         // Since we are in a controller, we use the inherited Sender property.
         await Sender.Send(new Application.Tenants.Commands.UpdateTenantConnectCapabilities.UpdateTenantConnectCapabilitiesCommand(
             account.Id,

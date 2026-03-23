@@ -215,7 +215,7 @@ public class DecisionService(
                 OriginalInterestRate = result.InterestRate,
                 ModelVersion = prodVersion,
                 RandomSeed = seed,
-                ModelHash = prodVersion, // Usually a SHA of the weights
+                ModelHash = prodVersion,
                 FeatureVersion = "1.0",
                 ScenarioVersion = "1.0",
             });

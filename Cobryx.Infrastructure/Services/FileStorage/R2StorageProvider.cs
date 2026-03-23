@@ -25,7 +25,7 @@ public class R2StorageProvider : IDocumentStorage
         var config = new AmazonS3Config
         {
             ServiceURL = serviceUrl,
-            ForcePathStyle = true // Required for R2
+            ForcePathStyle = true
         };
 
         _s3Client = new AmazonS3Client(accessKey, secretKey, config);

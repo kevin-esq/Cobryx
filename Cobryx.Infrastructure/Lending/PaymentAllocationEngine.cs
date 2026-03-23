@@ -43,8 +43,6 @@ public class PaymentAllocationEngine : IPaymentAllocationEngine
 
         var priorityOrder = policy.GetPriorityOrder();
 
-        // Waterfall Allocation Loop: we iterate through each bucket (Fees, Interest, Principal)
-        // until the payment amount is exhausted.
         foreach (var category in priorityOrder)
         {
             if (remaining <= 0)
@@ -83,8 +81,8 @@ public class PaymentAllocationEngine : IPaymentAllocationEngine
             principalApplied,
             interestApplied,
             feesApplied,
-            remaining, // Record any overpayment/excess funds as UnappliedAmount.
-            0 // SnapshotSequence is managed by the FinancialPostingEngine during ledger commit.
+            remaining,
+            0
         );
 
         return Task.FromResult(allocation);

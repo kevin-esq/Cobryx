@@ -56,7 +56,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
                 caseToAssign.AssignAgent(agent.Id);
                 agent.CurrentLoad++;
 
-                // Track load in Redis too for realtime dashboards
                 await db.HashIncrementAsync($"portfolio:collections:agents:load:{tenantId}", agent.Id.ToString(), 1);
 
                 agentIndex = (agentIndex + 1) % activeAgents.Count;

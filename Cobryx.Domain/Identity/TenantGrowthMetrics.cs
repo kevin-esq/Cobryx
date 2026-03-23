@@ -183,7 +183,7 @@ public class TenantGrowthMetrics
         }
 
         CurrentMRR = newMrr;
-        LifetimeRevenue += Math.Max(0, delta); // Simple approximation for lifetime
+        LifetimeRevenue += Math.Max(0, delta);
 
         IsChurned = newMrr == 0 && changeType == MRRChangeType.Churn;
         if (IsChurned)
@@ -198,7 +198,6 @@ public class TenantGrowthMetrics
     {
         EngagementScore = Math.Clamp(score, 0, 100);
 
-        // Map score to categorical risk
         ChurnRisk = EngagementScore switch
         {
             < 20 => ChurnRisk.High,

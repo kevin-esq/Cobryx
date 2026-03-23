@@ -31,8 +31,6 @@ public class PaymentLinksController : CobryxBaseController
     {
         var result = await Sender.Send(command);
 
-        // Note: Success returns the RAW token which the tenant should 
-        // immediately send to the customer (via email/SMS).
         return HandleResult(result, Outcome.FromExternal("PAYMENT_LINK.CREATE"));
     }
 }

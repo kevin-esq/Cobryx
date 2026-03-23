@@ -53,7 +53,6 @@ public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Resu
             return Result.Failure(DomainErrorCode.Auth.RoleNotFound);
         }
 
-        // Cannot assign Owner role, and cannot change an Owner's role
         var targetRole = await _roleRepository.GetByIdAsync(targetUser.RoleId, ct);
         if (newRole.Name == Role.Constants.Owner || targetRole?.Name == Role.Constants.Owner)
         {

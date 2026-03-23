@@ -21,7 +21,6 @@ public class LateFeeService : ILateFeeService
         if (policy == null || !policy.IsActive)
             return 0;
 
-        // Ensure DPD is calculated for the target accrual date
         loan.UpdateFinancialRiskStatus(date);
 
         var dpd = loan.FinancialDaysPastDue;
@@ -30,7 +29,6 @@ public class LateFeeService : ILateFeeService
 
         // Institutional rule: 
         // Fixed: apply only on the exact day grace period ends (dpd == grace + 1)
-        // Daily: apply every day as long as dpd > grace
 
         if (policy.Type == LateFeeType.Fixed && dpd != policy.GracePeriodDays + 1)
         {
@@ -43,9 +41,6 @@ public class LateFeeService : ILateFeeService
             return 0;
         }
 
-        // policy.CalculateLateFee expects (effectiveDaysLate, balance)
-        // Note: The policy logic in CalculateLateFee subtracts GracePeriodDays again, 
-        // so we pass the raw dpd.
         var fee = policy.CalculateLateFee(dpd, loan.OutstandingPrincipal);
 
         if (fee > 0)

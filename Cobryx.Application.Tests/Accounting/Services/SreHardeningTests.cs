@@ -56,7 +56,6 @@ public class SreHardeningTests
 
             await context.SaveChangesAsync();
 
-            // Simulate a drift: Ledger thinks balance is 1200, Shadow thinks 1000
             _mockBalanceService.Setup(b => b.GetHistoricalBalanceAsync(tenantId, accountId, 500L, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new BalanceResult(1200m, 500L));
 
@@ -70,7 +69,6 @@ public class SreHardeningTests
     }
 }
 
-// Minimal async testing helpers (usually provided in test base)
 internal class TestAsyncEnumerator<T> : IAsyncEnumerator<T>
 {
     private readonly IEnumerator<T> _inner;

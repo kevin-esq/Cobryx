@@ -17,11 +17,10 @@ public class FileSignatureValidator
     /// <summary>Maximum file size in bytes (10 MB).</summary>
     public const long MaxFileSize = 10 * 1024 * 1024;
 
-    // Archive bomb protection thresholds
     private const int MaxArchiveEntries = 100;
-    private const long MaxUncompressedSize = 50 * 1024 * 1024; // 50 MB
+    private const long MaxUncompressedSize = 50 * 1024 * 1024;
     private const double MaxCompressionRatio = 100.0;
-    private const int MaxNestingDepth = 1; // No archives inside archives
+    private const int MaxNestingDepth = 1;
 
     private static readonly Dictionary<string, byte[][]> MimeSignatures = new()
     {
@@ -100,7 +99,6 @@ public class FileSignatureValidator
             }
         }
 
-        // Archive bomb protection for ZIP-based files
         if (ZipBasedExtensions.Contains(extension))
         {
             var archiveResult = ValidateArchiveSafety(fileStream, fileName);
@@ -137,7 +135,6 @@ public class FileSignatureValidator
             {
                 totalUncompressed += entry.Length;
 
-                // Check total uncompressed size
                 if (totalUncompressed > MaxUncompressedSize)
                 {
                     _logger.LogWarning("Archive bomb: {FileName} total uncompressed size exceeds {MaxMB}MB",
@@ -145,7 +142,6 @@ public class FileSignatureValidator
                     return Result.Failure(DomainErrorCode.Documents.SuspiciousArchive);
                 }
 
-                // Check compression ratio per entry
                 if (entry.CompressedLength > 0)
                 {
                     var ratio = (double)entry.Length / entry.CompressedLength;
@@ -157,7 +153,6 @@ public class FileSignatureValidator
                     }
                 }
 
-                // Detect nested archives
                 var entryExt = Path.GetExtension(entry.FullName);
                 if (ZipBasedExtensions.Contains(entryExt))
                 {

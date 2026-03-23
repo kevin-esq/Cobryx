@@ -85,7 +85,7 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         ProductSnapshot = productSnapshot;
         IsRecoverable = isRecoverable;
         RecoveryValue = recoveryValue;
-        PaymentApplicationPolicyId = paymentApplicationPolicyId ?? Guid.Empty; // Should be set during creation flow
+        PaymentApplicationPolicyId = paymentApplicationPolicyId ?? Guid.Empty;
         IsSigned = false;
     }
 

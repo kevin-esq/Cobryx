@@ -72,8 +72,8 @@ public class LedgerIntegrityTests
         context.LedgerAccounts.Add(acc);
 
         var tx = new LedgerTransaction(_tenantId, "Imbalanced Tx", "REF-2");
-        tx.AddEntry(acc.Id, 110, 0); // 110 Debit
-        tx.AddEntry(acc.Id, 0, 100);  // 100 Credit -> 10 imbalance
+        tx.AddEntry(acc.Id, 110, 0);
+        tx.AddEntry(acc.Id, 0, 100);
         context.LedgerTransactions.Add(tx);
         await context.SaveChangesAsync();
 
@@ -85,7 +85,6 @@ public class LedgerIntegrityTests
         Assert.Equal(1, report.ImbalancedTransactionsCount);
         Assert.True(report.CircuitBreakerTripped);
 
-        // Refresh context for verification
         using var contextVerify = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         var tenant = await contextVerify.Tenants.FindAsync(_tenantId);
         Assert.True(tenant?.FinancialSafeMode);
@@ -114,7 +113,6 @@ public class LedgerIntegrityTests
             originalFingerprint = report1.JournalFingerprint;
         }
 
-        // Simulate illegal database alteration (direct entry modification)
         using (var contextAlter = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var entry = await contextAlter.LedgerEntries.FirstAsync();
@@ -127,9 +125,8 @@ public class LedgerIntegrityTests
             var service2 = CreateService(context2);
             var report2 = await service2.VerifyJournalIntegrityAsync(_tenantId);
 
-            // Assert: Fingerprint is the SAME as originalHealthy because it used the checkpoint
             Assert.Equal(originalFingerprint, report2.JournalFingerprint);
-            Assert.True(report2.IsHealthy); // Healthy from an incremental delta perspective
+            Assert.True(report2.IsHealthy);
         }
 
         using (var context3 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
@@ -137,15 +134,13 @@ public class LedgerIntegrityTests
             var service3 = CreateService(context3);
             var report3 = await service3.VerifyJournalIntegrityAsync(_tenantId, forceFullReplay: true);
 
-            // Assert: Detects the alteration
             Assert.NotEqual(originalFingerprint, report3.JournalFingerprint);
             Assert.False(report3.IsHealthy);
         }
-        _loggerMock.VerifyLog(LogLevel.Information, "Integrity Scan completed. Healthy: false*", Times.Never()); // It's still "healthy" balance-wise (if we changed both), but fingerprint changed
+        _loggerMock.VerifyLog(LogLevel.Information, "Integrity Scan completed. Healthy: false*", Times.Never());
     }
 }
 
-// Helper for verifying logs
 public static class LoggerExtensions
 {
     public static void VerifyLog<T>(this Mock<ILogger<T>> loggerMock, LogLevel level, string message, Times times)

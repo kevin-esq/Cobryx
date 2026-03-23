@@ -166,7 +166,7 @@ public class ObservabilityTests(CobryxWebApplicationFactory factory) : IClassFix
             delay += 100;
         }
 
-        recordedModule.Should().Be("Other"); // Matches PRODUCT -> Other in GetModule
+        recordedModule.Should().Be("Other");
     }
 
     private string CreateMockToken()

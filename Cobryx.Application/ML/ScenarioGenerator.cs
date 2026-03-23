@@ -14,7 +14,6 @@ public class ScenarioGenerator
         {
             scenarios.Add(new Scenario
             {
-                // Agregamos ruido Gaussiano/Uniforme a la realidad actual
                 Inflation = Math.Max(0m, macro.Inflation + RandomShock(0.04m)),
                 InterestRate = Math.Max(0m, macro.InterestRate + RandomShock(0.03m)),
                 DefaultRate = 0.05m + RandomShock(0.05m),
@@ -32,11 +31,11 @@ public class ScenarioGenerator
             new Scenario
             {
                 Inflation = 0.15m, InterestRate = 0.20m, DefaultRate = 0.30m, LiquidityShock = -0.5m
-            }, // Hyperinflation crisis
+            },
             new Scenario
             {
                 Inflation = -0.02m, InterestRate = 0.01m, DefaultRate = 0.15m, LiquidityShock = -0.8m
-            } // Deflationary depression
+            }
         };
     }
 

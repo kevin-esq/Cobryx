@@ -151,7 +151,6 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
                 }
             }
 
-            // FALLBACK: Generate Manual Retry Link if it's a hard decline or all retries failed
             return await GenerateRetryLinkAsync(customer, amount, currency, description, ct);
         }
         finally

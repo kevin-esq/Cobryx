@@ -54,7 +54,6 @@ public class LoanPaymentService
                     .FirstOrDefaultAsync(l => l.Id == loanId, ct)
                     ?? throw new DomainException(Cobryx.Domain.Shared.DomainErrorCode.Loans.CreditSaleNotFound);
 
-                // We must catch up interest and fees to today's date before allocating the payment.
                 await _accrualEngine.ProcessLoanAccrualAsync(loan, DateTime.UtcNow.Date, ct);
 
                 var paymentId = Guid.NewGuid();

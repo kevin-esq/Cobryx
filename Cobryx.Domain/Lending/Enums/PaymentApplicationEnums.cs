@@ -9,6 +9,6 @@ public enum PaymentApplicationType
 
 public enum PaymentApplicationMode
 {
-    Standard = 1,  // LateFees -> Interest -> Principal
+    Standard = 1,
     Custom = 2
 }

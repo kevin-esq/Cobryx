@@ -28,14 +28,11 @@ public class EconomyEnvironment(int seed)
 
         foreach (var c in Customers.Where(x => !x.IsDefaulted))
         {
-            // Apply RL Action
             var credit = c.Outstanding * action.CreditMultiplier;
             var interest = 0.2m + action.InterestDelta;
 
-            // Updated Exposure
             c.Outstanding += credit;
 
-            // Borrower Behavior Simulation
             if (BorrowerBehavior.WillDefault(c, Macro, _rng))
             {
                 c.IsDefaulted = true;
@@ -49,12 +46,10 @@ public class EconomyEnvironment(int seed)
             }
         }
 
-        // Global Portfolio Update
         Portfolio.TotalExposure = Customers.Sum(x => x.Outstanding);
         Portfolio.DefaultRate =
             Customers.Count == 0 ? 0 : Customers.Count(x => x.IsDefaulted) / (decimal)Customers.Count;
 
-        // Macro Dynamics Step with Regime
         Macro.Regime = _regimeEngine.Next();
 
         if (Macro.Regime == MarketRegime.Crisis)
@@ -81,7 +76,7 @@ public class EconomyEnvironment(int seed)
         return new StepResult
         {
             Reward = reward,
-            Done = false, // Add logic if max episodes or mass default
+            Done = false,
             NextState = BuildState()
         };
     }
@@ -124,7 +119,7 @@ public class EconomyEnvironment(int seed)
         {
             AvgPd = avgPd,
             Exposure = Portfolio.TotalExposure,
-            Liquidity = 5000000m - Portfolio.TotalExposure, // Stub
+            Liquidity = 5000000m - Portfolio.TotalExposure,
             Inflation = Macro.Inflation,
             InterestRate = Macro.InterestRate,
             Unemployment = Macro.Unemployment,
@@ -140,7 +135,7 @@ public class EconomyEnvironment(int seed)
             pop.Add(new SimulatedCustomer
             {
                 Id = Guid.NewGuid(),
-                CreditScore = 0.5m + ((decimal)_rng.NextDouble() * 0.4m), // 0.5 - 0.9
+                CreditScore = 0.5m + ((decimal)_rng.NextDouble() * 0.4m),
                 Income = 1000m + ((decimal)_rng.NextDouble() * 9000m),
                 Utilization = (decimal)_rng.NextDouble(),
                 Outstanding = 500m + ((decimal)_rng.NextDouble() * 2000m),

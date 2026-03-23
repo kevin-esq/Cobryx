@@ -49,8 +49,6 @@ public class LedgerOutboxWorker(
                 {
                     cdcEvents.Add(cdcEvent);
 
-                    // Incremental Balance Cache Update (CDC Pipeline)
-                    // We apply the delta directly to Redis after successful DB commit
                     await _balanceService.UpdateCacheAsync(
                         cdcEvent.TenantId,
                         cdcEvent.AccountId,

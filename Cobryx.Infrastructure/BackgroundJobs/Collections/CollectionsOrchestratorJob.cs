@@ -56,12 +56,10 @@ public class CollectionsOrchestratorJob
                 var snapshot = data.Snapshot;
                 var tenantId = data.TenantId;
 
-                // Mocks for Phase 10 logic
                 var riskProfile = new CustomerRiskProfile { Score = 50 };
                 var behaviorProfile = new PaymentBehaviorProfile { MissedPayments = 1, PaymentConsistencyScore = 0.8m };
                 var trend = new DpdTrend { CurrentDpd = snapshot.DaysPastDue, PreviousDpd = System.Math.Max(0, snapshot.DaysPastDue - 1) };
 
-                // ML Weights
                 var db = _redis.GetDatabase();
                 var weightsJson = await db.StringGetAsync($"portfolio:collections:weights:{tenantId}");
                 var weights = new Cobryx.Application.Collections.Optimizer.StrategyWeights();
@@ -109,7 +107,6 @@ public class CollectionsOrchestratorJob
 
                     _dbContext.CollectionActions.Add(action);
 
-                    // Push next action date 24h into the future
                     collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, System.DateTime.UtcNow.AddDays(1));
                 }
 

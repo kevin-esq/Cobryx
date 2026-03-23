@@ -2,7 +2,7 @@ namespace Cobryx.Domain.ML;
 
 public class MacroState
 {
-    public decimal InterestRate { get; set; }        // FED / Banxico rate
+    public decimal InterestRate { get; set; }
     public decimal Inflation { get; set; }
     public decimal Unemployment { get; set; }
 

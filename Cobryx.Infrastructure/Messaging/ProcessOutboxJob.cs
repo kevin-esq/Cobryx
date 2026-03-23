@@ -50,7 +50,7 @@ public class ProcessOutboxJob : BackgroundService
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var events = await dbContext.OutboxMessages
-            .Where(m => !m.IsProcessed && m.LedgerSequenceId == null) // Process generic domain events only
+            .Where(m => !m.IsProcessed && m.LedgerSequenceId == null)
             .OrderBy(m => m.OccurredOnUtc)
             .ThenBy(m => m.Id)
             .Take(20)

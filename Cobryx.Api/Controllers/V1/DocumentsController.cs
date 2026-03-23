@@ -38,7 +38,7 @@ public class DocumentsController : CobryxBaseController
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiSuccessResponse<UploadDocumentResult>), 202)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
-    [RequestSizeLimit(11 * 1024 * 1024)] // Slightly above 10MB to account for multipart overhead
+    [RequestSizeLimit(11 * 1024 * 1024)]
     public async Task<IActionResult> Upload(
         [FromForm] Guid entityId,
         [FromForm] string entityType,

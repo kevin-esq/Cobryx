@@ -46,9 +46,7 @@ public class BankReconciliationEngine(
 
         foreach (var movement in unmatchedMovements)
         {
-            // Level 0: Pressure-Aware Backoff (Stay outside of DB transactions)
             totalJitterAppliedMs += await ApplyPressureBackoffAsync(totalJitterAppliedMs, ct);
-            // Level 1: Exact Match (Ref + Amount)
             if (!string.IsNullOrEmpty(movement.ExternalRef))
             {
                 var exactMatch = ledgerTransactions.FirstOrDefault(t =>
@@ -63,7 +61,6 @@ public class BankReconciliationEngine(
                 }
             }
 
-            // Level 2: Strong Match (Amount + Date Window ± 1 day)
             var strongMatches = ledgerTransactions.Where(t =>
                 t.Entries.Any(e => Math.Abs(e.Debit - e.Credit) == movement.Amount) &&
                 Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays) <= 1.5)
@@ -84,7 +81,6 @@ public class BankReconciliationEngine(
                 continue;
             }
 
-            // Level 3: Aggregate Match (1:N settlements)
             var candidates = ledgerTransactions
                 .Where(t => !report.MatchedItems.Any(m => m.LedgerTransactionId == t.Id))
                 .Where(t => Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays) <= 3.0)
@@ -101,8 +97,6 @@ public class BankReconciliationEngine(
 
                 if (batchMatches.Count > 1 && totalSideAmount == movement.Amount)
                 {
-                    // Heuristic: Logarithmic Decay
-                    // confidence = 0.85 - (dateDrift * 0.03) - (log10(batchCount) * 0.05)
                     var maxDateDrift = (decimal)batchMatches.Max(t => Math.Abs((t.EffectiveDate - movement.BookingDate).TotalDays));
                     var confidence = 0.85m - (maxDateDrift * 0.03m) - ((decimal)Math.Log10(batchMatches.Count) * 0.05m);
                     confidence = Math.Clamp(confidence, 0.1m, 0.84m);
@@ -127,7 +121,7 @@ public class BankReconciliationEngine(
             Guid.NewGuid(),
             unmatchedMovements.FirstOrDefault()?.BookingDate ?? DateTime.UtcNow,
             unmatchedMovements.LastOrDefault()?.BookingDate ?? DateTime.UtcNow,
-            0, 0, 0, // Balances not tracked in this engine pass
+            0, 0, 0,
             integrityReport.IsHealthy ? ReconciliationStatus.Synced : ReconciliationStatus.HardDrift,
             integrityReport.IsHealthy ? ReconciliationSeverity.Info : ReconciliationSeverity.Critical,
             report.UnmatchedCount,
@@ -152,7 +146,6 @@ public class BankReconciliationEngine(
         var wraparoundRisk = await _diagnosticService.GetWraparoundRiskRatioAsync(ct);
         var deadTupleRatio = await _diagnosticService.GetLedgerDeadTupleRatioAsync(ct);
 
-        // Thresholds: Risk > 0.70 or Dead Tuples > 20%
         if (wraparoundRisk > 0.70 || deadTupleRatio > 0.20)
         {
             var jitter = Random.Shared.Next(100, 501);

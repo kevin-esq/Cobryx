@@ -37,7 +37,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
         var cachedHash = await _cache.GetHashAllAsync(key, ct);
 
-        // Fetch latest snapshot to validate cache freshness
         var latestSnapshot = await _context.AccountBalanceSnapshots
             .AsNoTracking()
             .Where(s => s.TenantId == tenantId && s.AccountId == accountId)
@@ -83,7 +82,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
         var finalBalance = baseBalance + delta;
 
-        // Find the absolute latest sequence ID for this account to tag the cache correctly
         var latestEntrySequence = await _context.LedgerEntries
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId && e.AccountId == accountId)
@@ -123,7 +121,6 @@ public class LedgerBalanceService : ILedgerBalanceService
     {
         var key = GetCacheKey(tenantId, accountId);
 
-        // Get current balance from hash to apply delta
         var cached = await _cache.GetHashAllAsync(key, ct);
         decimal currentBalance = 0;
 
@@ -133,7 +130,6 @@ public class LedgerBalanceService : ILedgerBalanceService
         }
         else
         {
-            // If cache miss, we must recompute to ensure integrity
             await GetBalanceAsync(tenantId, accountId, ct);
             return;
         }
@@ -181,7 +177,6 @@ public class LedgerBalanceService : ILedgerBalanceService
 
     public async Task<bool> VerifyBalanceIntegrityAsync(Guid tenantId, Guid accountId, CancellationToken ct = default)
     {
-        // Deep Verify: Sum of ALL entries ever recorded
         var deepSum = await _context.LedgerEntries
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId && e.AccountId == accountId)

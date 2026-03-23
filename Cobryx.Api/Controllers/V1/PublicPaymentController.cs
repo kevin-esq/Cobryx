@@ -52,8 +52,6 @@ public class PublicPaymentController : CobryxBaseController
     {
         var result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
 
-        // We can create a specialized query for just status later if needed for perf,
-        // but for MVP this is secure and functional.
         return HandleResult((Result<PaymentLinkDto>)result, Outcome.FromExternal("PORTAL.PAYMENT.STATUS"));
     }
 }

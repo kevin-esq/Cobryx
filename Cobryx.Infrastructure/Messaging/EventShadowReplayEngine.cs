@@ -59,18 +59,14 @@ public class EventShadowReplayEngine(
 
         var accounts = await GetTenantSystemAccountsAsync(@event.TenantId, ct);
 
-        // Debit Cash (Asset Increases)
         await ApplyShadowChangeAsync(@event.TenantId, accounts.CashAccountId, split.PrincipalAmount + split.InterestAmount + split.FeeAmount, @event.LedgerSequenceId!.Value, ct);
 
-        // Credit Principal (Asset Decreases)
         if (split.PrincipalAmount > 0)
             await ApplyShadowChangeAsync(@event.TenantId, accounts.PrincipalAccountId, -split.PrincipalAmount, @event.LedgerSequenceId!.Value, ct);
 
-        // Credit Interest (Revenue Increases)
         if (split.InterestAmount > 0)
             await ApplyShadowChangeAsync(@event.TenantId, accounts.InterestAccountId, split.InterestAmount, @event.LedgerSequenceId!.Value, ct);
 
-        // Credit Fees (Revenue Increases)
         if (split.FeeAmount > 0)
             await ApplyShadowChangeAsync(@event.TenantId, accounts.FeeAccountId, split.FeeAmount, @event.LedgerSequenceId!.Value, ct);
     }
@@ -83,7 +79,6 @@ public class EventShadowReplayEngine(
 
         var accounts = await GetTenantSystemAccountsAsync(@event.TenantId, ct);
 
-        // Movement from Asset (Principal) to Expense (Loss)
         await ApplyShadowChangeAsync(@event.TenantId, accounts.PrincipalAccountId, -payload.TotalOutstanding, @event.LedgerSequenceId!.Value, ct);
         await ApplyShadowChangeAsync(@event.TenantId, accounts.LossExpenseId, payload.TotalOutstanding, @event.LedgerSequenceId!.Value, ct);
     }

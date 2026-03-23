@@ -166,7 +166,7 @@ public static class ApiResponseFactory
             TraceId = traceId
         };
 
-        response.Success = false; // Guaranteed explicit override
+        response.Success = false;
         return response;
     }
 }

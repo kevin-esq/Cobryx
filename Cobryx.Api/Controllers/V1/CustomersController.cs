@@ -122,7 +122,7 @@ public class CustomersController : CobryxBaseController
                 c.Document?.Value,
                 c.Address?.City,
                 c.Address?.State,
-                true)).ToList(), // Assuming active for now as soft-delete logic is being finalized
+                true)).ToList(),
             result.Value.TotalCount,
             result.Value.Page,
             result.Value.TotalPages);

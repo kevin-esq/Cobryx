@@ -16,9 +16,9 @@ public record GetAgingReportQuery : IRequest<AgingReportResponse>
 public record AgingReportResponse
 {
     public decimal TotalPrincipalOutstanding { get; init; }
-    public decimal PAR30 { get; init; } // Portfolio at Risk > 30 days (%)
-    public decimal PAR90 { get; init; } // Portfolio at Risk > 90 days (%)
-    public decimal NPLRatio { get; init; } // Non-Performing Loan Ratio (%)
+    public decimal PAR30 { get; init; }
+    public decimal PAR90 { get; init; }
+    public decimal NPLRatio { get; init; }
 
     public List<AgingBucket> Buckets { get; init; } = new();
 }

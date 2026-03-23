@@ -51,7 +51,7 @@ public class ClamAvScanner : IVirusScanner
                     _circuitBreaker.RecordSuccess();
                     return true;
                 case ClamScanResults.VirusDetected:
-                    _circuitBreaker.RecordSuccess(); // Scanner worked — virus is valid result
+                    _circuitBreaker.RecordSuccess();
                     _logger.LogWarning("Virus detected in file!");
                     return false;
                 case ClamScanResults.Error:
@@ -65,7 +65,7 @@ public class ClamAvScanner : IVirusScanner
         }
         catch (ScannerUnavailableException)
         {
-            throw; // Don't double-record
+            throw;
         }
         catch (Exception ex)
         {

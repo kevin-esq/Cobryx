@@ -54,7 +54,6 @@ public class DbInitializer
                     isNew = true;
                 }
 
-                // Determine target permissions for this specific role
                 IEnumerable<Permission> targetPermissions;
                 if (role.Name == Role.Constants.Owner)
                 {
@@ -88,7 +87,6 @@ public class DbInitializer
                     targetPermissions = Enumerable.Empty<Permission>();
                 }
 
-                // Sync permissions
                 foreach (var p in targetPermissions)
                 {
                     if (!role.Permissions.Any(ep => ep.Name == p.Name))
@@ -147,7 +145,6 @@ public class DbInitializer
         if (platformTenant == null)
         {
             platformTenant = new Tenant("Cobryx Platform", CobryxDefaults.Currency);
-            // We force the ID via reflection since it's a fixed constant
             typeof(Tenant).GetProperty("Id")!.SetValue(platformTenant, platformId);
             dbContext.Tenants.Add(platformTenant);
         }

@@ -33,7 +33,6 @@ public class CollectionsController : ControllerBase
         var db = _redis.GetDatabase();
         var priorityKey = $"portfolio:collections:priority:{tenantId}";
 
-        // Fetch top N loanIds by priority score (descending)
         var topEntries = await db.SortedSetRangeByRankWithScoresAsync(priorityKey, 0, limit - 1, Order.Descending);
 
         var results = new List<object>();

@@ -60,7 +60,6 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
 
         var loanIds = loans.Select(l => l.Id).ToList();
 
-        // We look for transactions associated with these loans
         var transactions = await _dbContext.LedgerTransactions
             .Where(t => t.TenantId == request.TenantId && t.LoanId.HasValue && loanIds.Contains(t.LoanId.Value) && t.IsPosted)
             .OrderByDescending(t => t.EffectiveDate)
@@ -74,11 +73,9 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
 
         // but for a simple "Outstanding Balance" we can look at the Principal/Interest/Fee accounts.
         // Actually, for DPD calculation, we just need to know if the Ledger confirms the entity's balances.rest Arrears + Late Fees.
-        // We'll use the Loan entity's recalculated balances if they are synced, 
-        // but the 'GetCustomerBalance' requirement specifically asked for Ledger-backed.
 
         // Accurate Ledger Balance: Sum of all entries in Principal/Interest/Fee accounts for these loans.
-        var totalBalance = entries.Sum(e => e.Debit - e.Credit); // For Asset accounts, this works.
+        var totalBalance = entries.Sum(e => e.Debit - e.Credit);
 
         var loanSummaries = loans.Select(l => new PortalLoanSummaryDto(
             l.Id,
@@ -95,8 +92,7 @@ public class GetCustomerPortalSummaryHandler(ICobryxDbContext dbContext) : IRequ
             .Select(t =>
             {
                 var txEntries = entries.Where(e => e.TransactionId == t.Id).ToList();
-                var amount = txEntries.Sum(e => e.Credit); // For the customer, a payment/refund is a credit to their debt? 
-                                                           // Actually, let's keep it simple: Absolute amount for the view.
+                var amount = txEntries.Sum(e => e.Credit);
 
                 return new PortalTransactionDto(
                     t.Id,

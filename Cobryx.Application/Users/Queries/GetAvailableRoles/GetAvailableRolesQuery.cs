@@ -21,7 +21,6 @@ public class GetAvailableRolesHandler : IRequestHandler<GetAvailableRolesQuery, 
     {
         var roles = await _roleRepository.GetAllAsync(ct);
 
-        // Exclude Owner from basic role listing for enterprise safety
         return roles
             .Where(r => r.Name != Role.Constants.Owner)
             .Select(r => new RoleDto(r.Id, r.Name, r.Description))

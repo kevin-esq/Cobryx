@@ -22,7 +22,6 @@ public class RiskAggregationJob(
 
         if (!logs.Any()) return;
 
-        // Flatten all multipliers to get global aggregate VaR
         var allMultipliers = logs.SelectMany(x => x.CreditMultipliers).OrderBy(x => x).ToList();
 
         if (!allMultipliers.Any()) return;
@@ -36,7 +35,6 @@ public class RiskAggregationJob(
         await cache.SetAsync("risk:var:1h", globalVar95, TimeSpan.FromMinutes(60), ct);
         await cache.SetAsync("risk:cvar:1h", globalCVar95, TimeSpan.FromMinutes(60), ct);
 
-        // Bonus metrics mapping
         var averageMultiplier = allMultipliers.Average();
         await cache.SetAsync("risk:exposure_multiplier_avg:1h", averageMultiplier, TimeSpan.FromMinutes(60), ct);
 

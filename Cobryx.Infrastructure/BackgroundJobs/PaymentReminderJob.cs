@@ -38,7 +38,6 @@ public class PaymentReminderJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // We only care about links that haven't reached the escalation cap and aren't in cooldown
         var activeLinks = await db.Set<PaymentLink>()
             .Include(l => l.Customer)
             .Where(l => l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing)
@@ -55,7 +54,6 @@ public class PaymentReminderJob
             {
                 var loan = await db.Set<Loan>().FindAsync(new object[] { link.LoanId.Value }, ct);
 
-                // Stop if loan is functionally dead
                 if (loan == null ||
                     loan.Status == LoanStatus.Closed ||
                     loan.Status == LoanStatus.Cancelled ||
@@ -63,13 +61,11 @@ public class PaymentReminderJob
                     loan.Status == LoanStatus.Disputed)
                     continue;
 
-                // Stop if loan is in a specialized protection state
                 if (loan.LegalStatus == LegalStatus.Restructured ||
                     loan.LegalStatus == LegalStatus.InLegal ||
                     loan.LegalStatus == LegalStatus.PaymentPlanActive)
                     continue;
 
-                // Stop if risk indicates no further automated action
                 if (loan.FinancialStatus == FinancialStatus.ChargedOff ||
                     loan.FinancialStatus == FinancialStatus.Recovered)
                     continue;
@@ -89,19 +85,15 @@ public class PaymentReminderJob
         var daysSinceCreation = (now - link.CreatedAt).TotalDays;
         var daysUntilExpiry = (link.ExpiresAt - now).TotalDays;
 
-        // Bucket 1: 3 days before expiry (Friendly proactive heads-up)
         if (daysUntilExpiry <= 3.1 && daysUntilExpiry > 2.0 && link.ReminderCount == 0)
             return true;
 
-        // Bucket 2: 1 day after creation (Nudge if no action taken)
         if (daysSinceCreation >= 1.0 && daysSinceCreation < 2.0 && link.ReminderCount <= 1)
             return true;
 
-        // Bucket 3: 7 days after creation (Formal notification)
         if (daysSinceCreation >= 7.0 && daysSinceCreation < 8.0 && link.ReminderCount <= 2)
             return true;
 
-        // Bucket 4: 14 days after creation (Escalated final notice)
         if (daysSinceCreation >= 14.0 && daysSinceCreation < 15.0 && link.ReminderCount <= 3)
             return true;
 

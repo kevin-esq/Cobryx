@@ -45,7 +45,6 @@ public class UpgradeSubscriptionHandler : IRequestHandler<UpgradeSubscriptionCom
         if (newPlan == null)
             return Result.Failure(DomainErrorCode.Subscription.PlanNotFound);
 
-        // Validate plan capacity (Downgrade rejection logic)
         var usage = await _usageMetering.GetUsageSnapshotAsync(tenantId.Value, cancellationToken);
         if (usage.InvoicesCount > newPlan.MaxInvoices)
             return Result.Failure(DomainErrorCode.Subscription.DowngradeNotAllowed);

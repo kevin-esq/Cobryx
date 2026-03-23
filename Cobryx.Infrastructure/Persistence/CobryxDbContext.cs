@@ -116,10 +116,8 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<Cobryx.Domain.Payments.PaymentAllocation> PaymentAllocations =>
         Set<Domain.Payments.PaymentAllocation>();
 
-    // Payment Links
     public DbSet<PaymentLink> PaymentLinks => Set<PaymentLink>();
 
-    // Analytics
     public DbSet<LoanBalanceSnapshot> LoanBalanceSnapshots => Set<LoanBalanceSnapshot>();
     public DbSet<CollectionCase> CollectionCases => Set<CollectionCase>();
     public DbSet<CollectionAction> CollectionActions => Set<CollectionAction>();
@@ -127,7 +125,6 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<CollectionAgent> CollectionAgents => Set<CollectionAgent>();
     public DbSet<CollectionOutcome> CollectionOutcomes => Set<CollectionOutcome>();
 
-    // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles => Set<CustomerRiskProfile>();
     public DbSet<RiskEvent> RiskEvents => Set<RiskEvent>();
     public DbSet<DecisionSnapshot> DecisionSnapshots => Set<DecisionSnapshot>();
@@ -193,7 +190,6 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<EventShadowBalance> EventShadowBalances => Set<EventShadowBalance>();
     public DbSet<FinancialStatusAudit> FinancialStatusAudits => Set<FinancialStatusAudit>();
 
-    // Lending Domain
     public DbSet<BaseLendingInstrument> LendingInstruments => Set<BaseLendingInstrument>();
     public DbSet<Credit> Credits => Set<Credit>();
     public DbSet<Loan> Loans => Set<Loan>();
@@ -207,7 +203,6 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Explicitly register the TPT hierarchy BEFORE applying assembly configurations
         // to prevent EF Core from discovering derived types arbitrarily due to reflection order.
         modelBuilder.Entity<BaseLendingInstrument>().ToTable("LendingInstruments");
         modelBuilder.Entity<Credit>().HasBaseType<BaseLendingInstrument>().ToTable("Credits");
@@ -244,7 +239,6 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
                         .IsConcurrencyToken();
                 }
 
-                // Ignore legacy shadow properties that cause SQLite issues
                 modelBuilder.Entity(entityType.ClrType).Ignore("RowVersion");
                 modelBuilder.Entity(entityType.ClrType).Ignore("xmin");
             }

@@ -65,7 +65,6 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         Salt = Guid.NewGuid().ToString("N");
         RecoveryDeadline = DateTime.UtcNow.AddDays(14);
 
-        // Note: Raw token is hashed immediately and not stored
         SetToken(rawToken, serverSecret);
     }
 
@@ -133,7 +132,6 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         PaidAmount = amount;
         Status = PaymentLinkStatus.Paid;
 
-        // Finalize
         UpdateTimestamp();
     }
 
@@ -151,7 +149,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         if (Status == PaymentLinkStatus.Processing)
         {
             if (Status == PaymentLinkStatus.ManualReview)
-                return; // Protection
+                return;
 
             Status = PaymentLinkStatus.Active;
             UpdateTimestamp();
@@ -164,7 +162,6 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         LastRecoveryAttemptAt = DateTime.UtcNow;
         RecoveryFailureReason = reason;
 
-        // Dunning Matrix: 1h, 8h, 24h, 3d, 7d
         var baseNextAttempt = RecoveryAttemptCount switch
         {
             1 => DateTime.UtcNow.AddHours(1),
@@ -177,10 +174,9 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
 
         if (baseNextAttempt.HasValue)
         {
-            // Apply deterministic jitter (±10%) based on Id to prevent synchronized peaks
             var seed = BitConverter.ToInt32(Id.ToByteArray(), 0);
             var random = new Random(seed + RecoveryAttemptCount);
-            var jitterFactor = (random.NextDouble() * 0.2) - 0.1; // -10% to +10%
+            var jitterFactor = (random.NextDouble() * 0.2) - 0.1;
 
             var interval = baseNextAttempt.Value - DateTime.UtcNow;
             NextRecoveryAttemptAt = baseNextAttempt.Value.AddTicks((long)(interval.Ticks * jitterFactor));
@@ -231,7 +227,6 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
 
     private string ComputeHmac(string rawToken, string serverSecret)
     {
-        // Composite Key: secret + salt
         var key = Encoding.UTF8.GetBytes(serverSecret + Salt);
         using var hmac = new HMACSHA256(key);
 

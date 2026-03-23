@@ -43,13 +43,12 @@ public class LoanAccrualEngine : ILoanAccrualEngine
 
         while (true)
         {
-            // Implementation of 'Sequential Catch-up': we fetch loans whose LastAccrualDate
             // is behind the targetDate. This allows for safe recovery after system downtime.
             var loans = await _dbContext.Loans
                 .Include(l => l.Agreement)
                 .ThenInclude(a => a.InterestPolicy)
                 .Where(l => l.Status == LoanStatus.Active && l.LastAccrualDate < targetDate)
-                .OrderBy(l => l.Id) // Sorted by Id for predictable batching
+                .OrderBy(l => l.Id)
                 .Take(BatchSize)
                 .ToListAsync(ct);
 
@@ -69,7 +68,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
                 }
             }
 
-            // Explicitly await SaveChangesAsync
             await _dbContext.SaveChangesAsync(ct);
         }
 
@@ -95,7 +93,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
 
             if (policy.EnableLateFees)
             {
-                // We increment chargesCreated based on whether a new fee was actually generated.
                 chargesCreated += (int)Math.Min(1, _lateFeeService.AssessLateFee(loan, nextDate));
             }
 
@@ -121,8 +118,6 @@ public class LoanAccrualEngine : ILoanAccrualEngine
 
         var dailyRate = policy.CalculateDailyRate();
 
-        // High-precision rounding is deferred to the FinancialPostingEngine to avoid
-        // compounding errors during daily aggregation.
         return loan.OutstandingPrincipal * dailyRate;
     }
 }

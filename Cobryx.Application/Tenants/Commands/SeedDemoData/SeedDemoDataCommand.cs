@@ -51,7 +51,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
             tenantId,
             customer.Id,
             500000,
-            Guid.NewGuid(), // Interest Policy
+            Guid.NewGuid(),
             PaymentFrequency.Monthly,
             12,
             _clock.UtcNow.AddDays(-60),

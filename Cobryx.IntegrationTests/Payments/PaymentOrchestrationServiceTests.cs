@@ -91,7 +91,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
             It.Is<string>(d => d.Contains("Automated Recovery")),
             null, // stripeAccountId
             expectedIdempotencyKey,
-            null, // lastCursor
+            null,
             It.IsAny<CancellationToken>()), Times.Once);
 
         await _dbContext.Entry(link).ReloadAsync();
@@ -144,7 +144,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
 
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
-            "card_declined", // Initial code
+            "card_declined",
             100,
             "USD",
             "3DS Simulation");
@@ -161,7 +161,7 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.Customers.Add(customer);
 
         var link = new PaymentLink(tenantId, customer.Id, new Money(100, "USD"), "token", DateTime.UtcNow.AddDays(1), "secret");
-        link.TryAcquireRecoveryLock(); // Manually lock it
+        link.TryAcquireRecoveryLock();
         _dbContext.PaymentLinks.Add(link);
         await _dbContext.SaveChangesAsync();
 

@@ -41,7 +41,6 @@ public class SubscriptionGateMiddleware
 
         if (isReadOnly)
         {
-            // Check if this specific endpoint requires active subscription even for reads
             var ep = context.GetEndpoint();
             if (ep?.Metadata.GetMetadata<RequiresActiveSubscriptionAttribute>() == null)
             {
@@ -76,7 +75,6 @@ public class SubscriptionGateMiddleware
             tenantIdObj is not Guid tenantId ||
             tenantId == Guid.Empty)
         {
-            // No tenant context — let other middleware/auth handle this
             await _next(context);
             return;
         }
@@ -111,9 +109,6 @@ public class SubscriptionGateMiddleware
             return;
         }
 
-        // isBlocked == null means both Redis AND DB failed
-        // For billing/upgrade endpoints: already handled above via attribute
-        // For everything else: fail-closed (reject) to prevent unauthorized access
         if (isBlocked == null)
         {
             _logger.LogError("Subscription gate: unable to verify subscription for tenant {TenantId}. Failing closed.", tenantId);
@@ -147,7 +142,6 @@ public class SubscriptionGateMiddleware
     {
         var cacheKey = $"{CacheKeyPrefix}{tenantId}";
 
-        // Try cache first (fail-open on Redis error)
         try
         {
             var cached = await cacheService.GetAsync<SubscriptionAccessEntry>(cacheKey);
@@ -178,7 +172,6 @@ public class SubscriptionGateMiddleware
 
             if (subscription == null)
             {
-                // No subscription record — block by default
                 var entry = new SubscriptionAccessEntry(true, "unknown", now);
                 await TryCacheResult(cacheService, cacheKey, entry);
                 return entry;
@@ -194,7 +187,7 @@ public class SubscriptionGateMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "DB unavailable for subscription gate. Cannot verify tenant {TenantId}", tenantId);
-            return null; // Both Redis and DB failed
+            return null;
         }
     }
 

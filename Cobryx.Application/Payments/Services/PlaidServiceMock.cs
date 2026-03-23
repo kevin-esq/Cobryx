@@ -11,7 +11,6 @@ public class PlaidServiceMock : IBankProviderService
 {
     public Task<List<BankMovement>> FetchRecentMovementsAsync(Guid tenantId, DateTime since, CancellationToken ct = default)
     {
-        // Simulation of fetching bank-side data
         var movements = new List<BankMovement>
         {
             new BankMovement(
@@ -23,7 +22,7 @@ public class PlaidServiceMock : IBankProviderService
                 DateTime.UtcNow.AddDays(-1),
                 "Plaid",
                 "plaid_trans_001",
-                "PAYOUT-STRIPE-001"), // Exact Match target
+                "PAYOUT-STRIPE-001"),
 
             new BankMovement(
                 tenantId,
@@ -34,7 +33,7 @@ public class PlaidServiceMock : IBankProviderService
                 DateTime.UtcNow.AddDays(-2),
                 "Plaid",
                 "plaid_trans_002",
-                "ST-002"), // Strong Match (Date Window) target
+                "ST-002"),
 
             new BankMovement(
                 tenantId,
@@ -45,7 +44,7 @@ public class PlaidServiceMock : IBankProviderService
                 DateTime.UtcNow.AddDays(-3),
                 "Plaid",
                 "plaid_trans_003",
-                null) // Unmatched target
+                null)
         };
 
         return Task.FromResult(movements);

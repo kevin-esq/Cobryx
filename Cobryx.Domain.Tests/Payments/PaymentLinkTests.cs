@@ -27,12 +27,10 @@ public class PaymentLinkTests
         link.RecordRecoveryFailure("insufficient_funds");
         Assert.Equal(1, link.RecoveryAttemptCount);
         Assert.NotNull(link.NextRecoveryAttemptAt);
-        // Bounds: 54m to 66m
         Assert.True(link.NextRecoveryAttemptAt >= now.AddMinutes(53) && link.NextRecoveryAttemptAt <= now.AddMinutes(67));
         Assert.Equal(PaymentLinkStatus.Active, link.Status);
 
         link.RecordRecoveryFailure("insufficient_funds");
-        // Bounds: 7.2h to 8.8h
         Assert.True(link.NextRecoveryAttemptAt >= now.AddHours(7) && link.NextRecoveryAttemptAt <= now.AddHours(9));
     }
 
@@ -45,7 +43,6 @@ public class PaymentLinkTests
         link1.RecordRecoveryFailure("insufficient_funds");
         link2.RecordRecoveryFailure("insufficient_funds");
 
-        // Assert: Jitter uses Link Id, so different links have slightly different retry times
         Assert.NotEqual(link1.NextRecoveryAttemptAt, link2.NextRecoveryAttemptAt);
     }
 
@@ -59,7 +56,6 @@ public class PaymentLinkTests
             link.RecordRecoveryFailure("soft_fail");
         }
 
-        // 6th fail should transition
         link.RecordRecoveryFailure("final_fail");
 
         Assert.Equal(6, link.RecoveryAttemptCount);
@@ -71,10 +67,7 @@ public class PaymentLinkTests
     public void RecordRecoveryFailure_ShouldTransitionToManualReview_WhenDeadlineReached()
     {
         var link = CreateActiveLink();
-        // Manually manipulate internal state if possible, but it's private set.
-        // We can check if the deadline logic works by checking if it uses it.
         // Since we can't easily mock DateTime.UtcNow in this simple unit test without more infra,
-        // we trust the conditional logic: if (RecoveryAttemptCount >= MaxRecoveryAttempts || DateTime.UtcNow > RecoveryDeadline)
 
         link.RecordRecoveryFailure("soft_fail");
 
@@ -95,7 +88,6 @@ public class PaymentLinkTests
         Assert.False(secondAcquire);
         Assert.True(link.RecoveryInProgress);
 
-        // Release
         link.ReleaseRecoveryLock();
         Assert.False(link.RecoveryInProgress);
         Assert.True(link.TryAcquireRecoveryLock());

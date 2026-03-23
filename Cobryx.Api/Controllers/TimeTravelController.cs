@@ -21,8 +21,6 @@ public class TimeTravelController(
         var result = await replayEngine.ReplayAsync(snapshot);
 
         // Optionally, one could save the diffs back to DB or an audit log.
-        // db.ReplaySnapshots.Update(result);
-        // await db.SaveChangesAsync();
 
         return Ok(result);
     }

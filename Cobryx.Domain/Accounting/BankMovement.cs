@@ -11,14 +11,14 @@ public class BankMovement : BaseEntity, ITenantEntity
     public DateTime BookingDate { get; private set; }
     public DateTime ValueDate { get; private set; }
 
-    public string Provider { get; private set; } = string.Empty; // Plaid, Swift, etc.
+    public string Provider { get; private set; } = string.Empty;
     public string ProviderTransactionId { get; private set; } = string.Empty;
     public string? ExternalRef { get; private set; }
 
     public BankMovementStatus Status { get; private set; }
     public Guid? MatchedLedgerTransactionId { get; private set; }
     public decimal? MatchingConfidence { get; private set; }
-    public string? MatchingType { get; private set; } // Exact, Strong, Aggregate
+    public string? MatchingType { get; private set; }
 
     public string? RawPayload { get; private set; }
 

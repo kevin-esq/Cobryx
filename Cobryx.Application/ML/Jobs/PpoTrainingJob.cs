@@ -14,7 +14,7 @@ public class PpoTrainingJob(
     {
         var simulationBatch = await db.Experiences
             .Where(x => x.Source == "simulation" && (x.Done || x.Reward != 0))
-            .OrderByDescending(x => x.Reward < -1000 ? 1 : 0) // Priority to high loss/crisis
+            .OrderByDescending(x => x.Reward < -1000 ? 1 : 0)
             .Take(512)
             .ToListAsync();
 

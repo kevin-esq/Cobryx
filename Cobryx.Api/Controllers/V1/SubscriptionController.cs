@@ -101,7 +101,6 @@ public class SubscriptionController : CobryxBaseController
         var command = new CreateCheckoutSessionCommand(request.PlanId, request.SuccessUrl, request.CancelUrl);
         var result = await Sender.Send(command, ct);
 
-        // Map Result<string> to Result<CheckoutUrlResponse>
         var mappedResult = result.IsSuccess
             ? Result.Success(new CheckoutUrlResponse(result.Value!))
             : Result.Failure<CheckoutUrlResponse>(result.Error!);
@@ -127,7 +126,6 @@ public class SubscriptionController : CobryxBaseController
     {
         var result = await Sender.Send(new CreatePortalSessionCommand(request.ReturnUrl), ct);
 
-        // Map Result<string> to Result<CheckoutUrlResponse>
         var mappedResult = result.IsSuccess
             ? Result.Success(new CheckoutUrlResponse(result.Value!))
             : Result.Failure<CheckoutUrlResponse>(result.Error!);

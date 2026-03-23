@@ -169,7 +169,6 @@ public class StripeSubscriptionSyncService
             Db.Set<ProcessedStripeEvent>().Add(new ProcessedStripeEvent(stripeEventId, eventType, _clock.UtcNow));
             await _unitOfWork.SaveChangesAsync(ct);
 
-            // Bust subscription gate cache immediately after state change
             try
             {
                 await _cacheService.RemoveAsync($"subscription_access:{subscription.TenantId}", ct);
@@ -183,7 +182,6 @@ public class StripeSubscriptionSyncService
                 "Subscription synced for Tenant {TenantId}. {OldStatus} -> {NewStatus}. Event: {EventType}, EventId: {EventId}",
                 subscription.TenantId, oldStatus, subscription.Status, eventType, stripeEventId);
 
-            // Determine MRR Transaction
             var mrrChangeType = MRRChangeType.None;
             var newMrr = plan?.Price.Amount ?? 0;
 

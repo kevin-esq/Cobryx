@@ -73,7 +73,7 @@ public class GetPaymentLinkByTokenHandler : IRequestHandler<GetPaymentLinkByToke
             link.AmountSnapshot,
             link.Status.ToString(),
             link.ExpiresAt,
-            link.LoanId.HasValue ? "Loan Info" : null // We can expand this with a join if needed
+            link.LoanId.HasValue ? "Loan Info" : null
         );
 
         return Result.Success(dto);

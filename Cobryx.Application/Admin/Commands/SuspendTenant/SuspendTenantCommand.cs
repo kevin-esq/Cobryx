@@ -29,7 +29,7 @@ public class SuspendTenantHandler(ICobryxDbContext dbContext, ICurrentUserProvid
 
         if (tenant.Status == TenantStatus.Suspended)
         {
-            return Result.Success(); // Idempotent
+            return Result.Success();
         }
 
         var oldStatus = tenant.Status;

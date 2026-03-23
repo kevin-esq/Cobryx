@@ -55,7 +55,6 @@ public class LedgerIntegrityService(
         var imbalancedTransactions = await _dbContext.LedgerEntries
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId)
-            // If incremental, only check transactions affected by new entries
             .Where(e => !(!forceFullReplay && checkpoint != null) || e.JournalSequenceId > checkpoint.LastProcessedSequenceId)
             .GroupBy(e => e.TransactionId)
             .Select(g => new { TransactionId = g.Key, Balance = g.Sum(e => e.Debit - e.Credit) })
@@ -92,7 +91,6 @@ public class LedgerIntegrityService(
         {
             scannedInThisRun++;
             // Optimization: Reduce string allocations by using a more direct approach if possible,
-            // but keep the format identical for fingerprint stability.
             var entryData = string.Create(System.Globalization.CultureInfo.InvariantCulture,
                 $"{entry.Id}|{entry.TransactionId}|{entry.AccountId}|{entry.Debit}|{entry.Credit}|{entry.CreatedAt:O}");
 
@@ -121,7 +119,6 @@ public class LedgerIntegrityService(
         }
         else if (scannedInThisRun > 0 || (forceFullReplay && scannedInThisRun == 0))
         {
-            // Final seal for this run
             await UpdateCheckpointInternalAsync(tenantId, lastProcessedEntryId, lastProcessedSequenceId, currentLastDate, currentFingerprint, (checkpoint?.EntryCount ?? 0) + scannedInThisRun, ct);
         }
 
@@ -170,10 +167,6 @@ public class LedgerIntegrityService(
     {
         _logger.LogInformation("Starting Global Sequence Gap Detection (LAG-Optimized)");
 
-        // Using raw SQL for LAG partitioning/ordering efficiency
-        // This query identifies the Sequence ID where a gap *starts* (i.e., the ID before the skip)
-        // Note: We use Set<LedgerEntry>() to access the IQueryable but this won't return LedgerEntries.
-        // In EF Core 8 we can use SqlQueryRaw for primitive types.
 
         var gaps = await _dbContext.LedgerEntries
             .AsNoTracking()

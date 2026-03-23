@@ -68,8 +68,8 @@ WHERE rn = 1;";
                 {
                     DaysPastDue = s.DaysPastDue,
                     Outstanding = s.Outstanding,
-                    CreditLimit = s.Outstanding == 0 ? 1m : (s.Outstanding * 2m), // safe fallback 200% util
-                    Utilization = 1m, // the factor eval internally will compute it based on CreditLimit / Outstanding
+                    CreditLimit = s.Outstanding == 0 ? 1m : (s.Outstanding * 2m),
+                    Utilization = 1m,
                     PaymentDelayDays = 0,
                     PreviousPaymentDelayDays = 0,
                     PreviousUtilization = 0
@@ -79,25 +79,23 @@ WHERE rn = 1;";
                 pdCache[s.LoanId] = currentPD;
             }
 
-            var previousPD = currentPD * 0.9m; // stub for true historical pd
+            var previousPD = currentPD * 0.9m;
             var deltaUtilization = 0m; 
             var deltaPaymentDelay = 0m;
 
             var rawDeterioration = (currentPD - previousPD) + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
             var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
 
-            // thresholds configurable per tenant later
             if (currentPD < threshold && deterioration < 0.1m) continue;
 
-            // Trigger Phase 10.5 Decision Hook
             var decision = await _decisionService.EvaluateAsync(s.CustomerId, new Cobryx.Domain.Decision.DecisionContext
             {
                 Credit = new Cobryx.Domain.Decision.CreditContext
                 {
                     ProbabilityOfDefault = currentPD,
-                    BehaviorScore = 1m, // Assume baseline behavior for now
-                    MonthlyIncomeEstimate = 10000m, // Placeholder
-                    Utilization = 0.5m // Placeholder or calculate based on s.Outstanding / s.CreditLimit
+                    BehaviorScore = 1m,
+                    MonthlyIncomeEstimate = 10000m,
+                    Utilization = 0.5m
                 },
                 Pricing = new Cobryx.Domain.Decision.PricingContext
                 {
@@ -125,7 +123,7 @@ WHERE rn = 1;";
             _logger.LogInformation("EarlyWarning triggered for Loan {LoanId} with PD {PD} and Deterioration {Deterioration}", s.LoanId, currentPD, deterioration);
 
             var riskEvent = new RiskEvent(
-                s.CustomerId, // Fixed CustomerId matching!
+                s.CustomerId,
                 RiskEventType.BalanceIncrease,
                 currentPD
             );

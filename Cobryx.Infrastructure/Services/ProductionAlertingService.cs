@@ -88,8 +88,8 @@ public class ProductionAlertingService : IAlertingService
 
     private static string GetColor(AlertLevel level) => level switch
     {
-        AlertLevel.Critical => "#FF0000", // Red
-        AlertLevel.Degraded => "#FFA500", // Orange
-        _ => "#32CD32" // LimeGreen
+        AlertLevel.Critical => "#FF0000",
+        AlertLevel.Degraded => "#FFA500",
+        _ => "#32CD32"
     };
 }

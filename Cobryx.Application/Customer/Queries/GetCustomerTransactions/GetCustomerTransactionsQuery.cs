@@ -32,12 +32,8 @@ public class GetCustomerTransactionsHandler(ICobryxDbContext dbContext) : IReque
 
         var dtos = transactions.Select(t =>
         {
-            // Calculate total amount from entries (Debit - Credit for assets, or just absolute sum of impact)
-            // For customer view, we focus on the CASH impact or the principal impact.
-            // Conventional: Debit cash = positive payment.
             var cashImpact = t.Entries.FirstOrDefault(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && a.Code == "1010"))?.Debit ?? 0;
 
-            // If it's a reversal, the cash impact might be zero or negative.
             if (t.IsReversal)
             {
                 cashImpact = -t.Entries.Where(e => _dbContext.LedgerAccounts.Any(a => a.Id == e.AccountId && a.Code == "1010")).Sum(e => e.Credit - e.Debit);

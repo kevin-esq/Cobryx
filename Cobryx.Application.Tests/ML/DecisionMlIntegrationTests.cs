@@ -110,9 +110,7 @@ public class DecisionMlIntegrationTests
 
         var result = await service.EvaluateAsync(customerId, ctx);
 
-        // Context PD (heuristic) was 0.1m. ML returned 0.9m.
         // Final PD = (0.1 * 0.3) + (0.9 * 0.7) = 0.03 + 0.63 = 0.66m.
-        // So CreditEngine limit should be strictly constrained by high risk
-        Assert.True(result.InterestRate > 0.15m); // Pricing reflects high risk
+        Assert.True(result.InterestRate > 0.15m);
     }
 }

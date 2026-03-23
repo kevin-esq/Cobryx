@@ -66,7 +66,6 @@ public class DunningOrchestratorJob
 
             try
             {
-                // We pass null for failure code because this is a retry of a PREVIOUS failure
                 await _orchestrationService.HandlePaymentFailureAsync(
                     link.CustomerId,
                     link.RecoveryFailureReason,
@@ -80,7 +79,7 @@ public class DunningOrchestratorJob
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Dunning Engine: Failed to process recovery for Link {LinkId}", link.Id);
-                link.ReleaseRecoveryLock(); // Ensure it's not stuck if the service itself crashes
+                link.ReleaseRecoveryLock();
             }
         }
 

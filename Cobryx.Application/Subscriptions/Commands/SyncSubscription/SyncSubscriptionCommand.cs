@@ -39,7 +39,6 @@ public class SyncSubscriptionHandler : IRequestHandler<SyncSubscriptionCommand, 
 
         _logger.LogInformation("Initiating manual Stripe sync for Tenant {TenantId}", tenantId);
 
-        // Lock the subscription row to prevent race conditions during sync
         // Implementation is delegated to the repository to handle provider-specific locking (e.g., FOR UPDATE)
         var subscription = await _subscriptionRepository.GetByTenantIdWithLockAsync(tenantId.Value, cancellationToken);
 
@@ -55,7 +54,6 @@ public class SyncSubscriptionHandler : IRequestHandler<SyncSubscriptionCommand, 
             return Result.Failure(DomainErrorCode.Subscription.NotActiveInStripe);
         }
 
-        // We use a synthetic event ID for manual sync to avoid collision with webhooks
         var syntheticEventId = $"manual_sync_{DateTime.UtcNow.Ticks}";
 
         await _syncService.SyncAuthoritativeStateAsync(

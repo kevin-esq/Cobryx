@@ -35,7 +35,8 @@ public class ReconciliationEngine(
         CancellationToken ct = default)
     {
         var runId = Guid.NewGuid();
-        _logger.LogInformation("Starting Stripe-grade Reconciliation Run {RunId} for Tenant {TenantId}", runId, tenantId);
+        _logger.LogInformation("Starting Stripe-grade Reconciliation Run {RunId} for Tenant {TenantId}", runId,
+            tenantId);
 
         var (available, pending) = await _stripeService.GetBalanceAsync(stripeAccountId, ct);
         var ledgerBalance = await GetLedgerBalanceAsync(tenantId, ct);
@@ -73,16 +74,20 @@ public class ReconciliationEngine(
                         if (repaired)
                         {
                             totalRepaired++;
-                            _metrics.ReconciliationAutoRepairedTotal.Add(1, new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()));
+                            _metrics.ReconciliationAutoRepairedTotal.Add(1,
+                                new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()));
                             drift = drift with { Type = DriftType.None, Message = drift.Message + " [AUTO-REPAIRED]" };
-                            _logger.LogInformation("Drift {Id} auto-repaired successfully after confirmation.", intent.Id);
+                            _logger.LogInformation("Drift {Id} auto-repaired successfully after confirmation.",
+                                intent.Id);
                         }
                     }
 
                     if (drift.Type != DriftType.None)
                     {
                         drifts.Add(drift);
-                        _metrics.ReconciliationDriftTotal.Add(1, new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()), new KeyValuePair<string, object?>("type", drift.Type.ToString()));
+                        _metrics.ReconciliationDriftTotal.Add(1,
+                            new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()),
+                            new KeyValuePair<string, object?>("type", drift.Type.ToString()));
                     }
                 }
             }
@@ -95,7 +100,8 @@ public class ReconciliationEngine(
         foreach (var sd in settlementDrifts)
         {
             drifts.Add(sd);
-            _metrics.SettlementDriftTotal.Add(1, new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()), new KeyValuePair<string, object?>("type", sd.Type.ToString()));
+            _metrics.SettlementDriftTotal.Add(1, new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()),
+                new KeyValuePair<string, object?>("type", sd.Type.ToString()));
 
             if (sd.Type == DriftType.AmountMismatch)
             {
@@ -175,14 +181,16 @@ public class ReconciliationEngine(
             .SumAsync(e => e.Debit - e.Credit, ct);
     }
 
-    private async Task<DriftDetail?> AnalyzeIntentAsync(StripePaymentIntentDto intent, Guid tenantId, CancellationToken ct)
+    private async Task<DriftDetail?> AnalyzeIntentAsync(StripePaymentIntentDto intent, Guid tenantId,
+        CancellationToken ct)
     {
         var referencePay = $"PAY-STRIPE-{intent.Id}";
         var referenceRec = $"REC-STRIPE-{intent.Id}";
 
         var ledgerExists = await _dbContext.LedgerTransactions
             .AsNoTracking()
-            .AnyAsync(t => t.TenantId == tenantId && (t.ReferenceId == referencePay || t.ReferenceId == referenceRec), ct);
+            .AnyAsync(t => t.TenantId == tenantId && (t.ReferenceId == referencePay || t.ReferenceId == referenceRec),
+                ct);
 
         if (ledgerExists)
             return null; // In-sync
@@ -221,7 +229,8 @@ public class ReconciliationEngine(
 
         while (hasMore)
         {
-            var transactions = await _stripeService.ListBalanceTransactionsAsync(from, to, stripeAccountId, lastCursor, ct);
+            var transactions =
+                await _stripeService.ListBalanceTransactionsAsync(from, to, stripeAccountId, lastCursor, ct);
             if (transactions.Count == 0)
                 break;
 
@@ -241,13 +250,14 @@ public class ReconciliationEngine(
         return settlementDrifts;
     }
 
-    private async Task<DriftDetail?> AnalyzeBalanceTransactionAsync(StripeBalanceTransactionDto tx, Guid tenantId, CancellationToken ct)
+    private async Task<DriftDetail?> AnalyzeBalanceTransactionAsync(StripeBalanceTransactionDto tx, Guid tenantId,
+        CancellationToken ct)
     {
         // payout -> PAYOUT-STRIPE-{ID}
         // refund -> REF-STRIPE-{ID}
         // stripe_fee -> FEE-STRIPE-{BT_ID}
 
-        string? referenceId = tx.Type switch
+        var referenceId = tx.Type switch
         {
             "payout" => $"PAYOUT-STRIPE-{tx.SourceId ?? tx.Id}",
             "refund" => $"REF-STRIPE-{tx.SourceId ?? tx.Id}",
@@ -269,10 +279,14 @@ public class ReconciliationEngine(
             var age = DateTime.UtcNow - tx.Created;
             if (age < _timingTolerance)
             {
-                return new DriftDetail(tx.Id, DriftType.TimingLag, ReconciliationSeverity.Info, $"Settlement {tx.Type} recently created. Webhook in transit.", "settlement_lag", ReconciliationStatus.SoftDrift);
+                return new DriftDetail(tx.Id, DriftType.TimingLag, ReconciliationSeverity.Info,
+                    $"Settlement {tx.Type} recently created. Webhook in transit.", "settlement_lag",
+                    ReconciliationStatus.SoftDrift);
             }
 
-            return new DriftDetail(tx.Id, DriftType.MissingPayment, ReconciliationSeverity.Error, $"Settlement {tx.Type} ({tx.Amount / 100m} {tx.Currency.ToUpper()}) missing from Ledger.", "missing_settlement", ReconciliationStatus.HardDrift);
+            return new DriftDetail(tx.Id, DriftType.MissingPayment, ReconciliationSeverity.Error,
+                $"Settlement {tx.Type} ({tx.Amount / 100m} {tx.Currency.ToUpper()}) missing from Ledger.",
+                "missing_settlement");
         }
 
         var ledgerAmount = ledgerTx.Entries.Sum(e => e.Debit - e.Credit); // Simplified for simple movements
@@ -283,7 +297,8 @@ public class ReconciliationEngine(
         // We'll use a tolerance of 0.01 for rounding.
         if (Math.Abs(Math.Abs(stripeNet) - Math.Abs(ledgerAmount)) > 0.01m)
         {
-            return new DriftDetail(tx.Id, DriftType.AmountMismatch, ReconciliationSeverity.Critical, $"Settlement Amount Mismatch: Stripe Net={stripeNet}, Ledger={ledgerAmount}", "amount_inconsistency", ReconciliationStatus.HardDrift);
+            return new DriftDetail(tx.Id, DriftType.AmountMismatch, ReconciliationSeverity.Critical,
+                $"Settlement Amount Mismatch: Stripe Net={stripeNet}, Ledger={ledgerAmount}", "amount_inconsistency");
         }
 
         return null;
@@ -315,7 +330,8 @@ public class ReconciliationEngine(
 
                 if (loan != null)
                 {
-                    _logger.LogInformation("Auto-Repair: Re-posting missing payment {IntentId} for Loan {LoanId}", intent.Id, loanId);
+                    _logger.LogInformation("Auto-Repair: Re-posting missing payment {IntentId} for Loan {LoanId}",
+                        intent.Id, loanId);
 
                     var amount = intent.Amount / 100m;
                     await _postingEngine.PostLoanPaymentAsync(loan, amount, $"STRIPE-{intent.Id}", null, ct);

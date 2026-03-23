@@ -51,7 +51,7 @@ public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconcili
             .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == "1010", ct);
 
         if (cashAccount == null)
-            return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Common.GeneralError); // "Cash account not found"
+            return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Common.GeneralError);
 
         var ledgerBalance = await _dbContext.LedgerEntries
             .AsNoTracking()

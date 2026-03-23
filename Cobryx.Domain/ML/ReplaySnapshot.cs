@@ -22,15 +22,12 @@ public class ReplaySnapshot
     public decimal DeltaCredit { get; set; }
     public decimal DeltaInterest { get; set; }
 
-    // GAP 1: Determinism
     public int RandomSeed { get; set; }
 
-    // GAP 2: Versioning
     public string ModelHash { get; set; } = "";
     public string FeatureVersion { get; set; } = "1.0";
     public string ScenarioVersion { get; set; } = "1.0";
 
-    // GAP 3: True Reality Outcomes
     public bool? RealOutcomeDefaulted { get; set; }
     public decimal? RealOutcomeRecovered { get; set; }
     public decimal? RealOutcomeProfit { get; set; }

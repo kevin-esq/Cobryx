@@ -43,20 +43,18 @@ public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboard
         // Ensure Stripe Account exists
         if (string.IsNullOrEmpty(tenant.StripeAccountId))
         {
-            // Fetch Primary Admin / Owner Email
             var owner = await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Role.Name == Role.Constants.Owner, ct);
 
             if (owner == null)
             {
-                // Fallback to any Admin if no explicit Owner found
                 owner = await _context.Users
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Role.Name == Role.Constants.Admin, ct);
             }
 
-            var onboardingEmail = owner?.Email.Value ?? "onboarding@cobryx.com"; // Final fallback to system if misconfigured
+            var onboardingEmail = owner?.Email.Value ?? "onboarding@cobryx.com";
 
             try
             {

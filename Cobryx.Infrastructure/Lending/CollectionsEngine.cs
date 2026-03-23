@@ -39,8 +39,6 @@ public class CollectionsEngine : ICollectionsEngine
     {
         _logger.LogInformation("Starting Daily Collections Evaluation for {Today}", today);
 
-        // We fetch active or suspended IDs first to minimize memory footprint
-        // during the initial fetch. Full entity loading happens inside EvaluateLoanAsync.
         var loanIds = await _context.Loans
             .Where(l => l.Status == LoanStatus.Active || l.Status == LoanStatus.Suspended)
             .Select(l => l.Id)
@@ -70,7 +68,6 @@ public class CollectionsEngine : ICollectionsEngine
         var policy = await GetPolicyForTenantAsync(loan.TenantId, ct);
 
         // DPD is calculated from the Due Date of the OLDEST unpaid installment.
-        // This prevents "payment hopping" and ensures accurate risk assessment.
         var oldestUnpaid = loan.Installments
             .Where(i => i.Status != InstallmentStatus.Paid)
             .OrderBy(i => i.DueDate)
@@ -109,10 +106,7 @@ public class CollectionsEngine : ICollectionsEngine
             await HandleStageTransitionAsync(loan, oldStage, stage, dpd, ct);
         }
 
-        // Handled by LoanAccrualEngine, honors CollectionsPolicy.EnableLateFees.
 
-        // When a loan exceeds the policy's WriteOffDays (e.g., 120 or 180 DPD),
-        // the system automatically posts a Charge-Off to the ledger to remove it from active assets.
         if (policy.EnableAutoWriteOff && dpd >= policy.WriteOffDays && !loan.IsWrittenOff)
         {
             await _postingEngine.PostChargeOffAsync(loan, $"Automated Write-Off at {dpd} DPD", ct);

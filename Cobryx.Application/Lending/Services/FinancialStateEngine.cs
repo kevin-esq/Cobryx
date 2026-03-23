@@ -47,20 +47,15 @@ public class FinancialStateEngine
         var now = _clock.UtcNow;
 
         // BANK-GRADE: Link to Ledger Truth
-        // We fetch the current balances from the Ledger to ensure the entity is in sync
         var ledgerBalances = await GetLoanLedgerBalancesAsync(loan.Id, ct);
 
-        // If there's a drift, we trust the Ledger (Accounting is Truth)
         // Note: In refined systems, this would trigger a reconciliation warning if drift > 0.01
-        // For now, we sync the entity to the ledger.
 
         // This is a subtle but critical change: DPD is now indirectly tied to whether
-        // the Ledger says the balance is 0 or not.
 
         var oldStatus = loan.FinancialStatus;
         loan.UpdateFinancialRiskStatus();
 
-        // If a loan reaches 180 days past due, it is automatically charged off.
         if (loan.FinancialDaysPastDue >= 180 && loan.FinancialStatus != FinancialStatus.ChargedOff)
         {
             await ExecuteChargeOffAsync(loan.Id, "Automated: 180+ Days Past Due", ct);
@@ -89,8 +84,6 @@ public class FinancialStateEngine
     private async Task<LoanLedgerBalances> GetLoanLedgerBalancesAsync(Guid loanId, CancellationToken ct)
     {
         // BANK-GRADE: Filter by specifically receivable-eligible accounts
-        // We only count Principal (1210), Interest (4010), and Fees (4020).
-        // We EXCLUDE Platform Fees, Recoveries, and Internal Suspense.
         var receivableAccountCodes = new[] { "1210", "4010", "4020" };
 
         var entries = await _context.LedgerEntries

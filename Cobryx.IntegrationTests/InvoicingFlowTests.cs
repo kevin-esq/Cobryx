@@ -62,7 +62,6 @@ public class InvoicingFlowTests(CobryxWebApplicationFactory factory) : IClassFix
 
         var result = await sender.Send(command);
         result.IsSuccess.Should().BeTrue();
-        // This is where the magic happens - the handler should have called SaveChanges
         var outboxCountAfter = await db.OutboxMessages.CountAsync();
         Console.WriteLine($"DEBUG: Outbox count after process: {outboxCountAfter}");
 

@@ -21,12 +21,11 @@ public class StartupValidationTests(WebApplicationFactory<Program> factory) : IC
         {
             builder.ConfigureAppConfiguration((context, config) =>
             {
-                // Wipe out production/test config and provide empty settings
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    { "JwtSettings:Secret", "" }, // Required
-                    { "Stripe:SecretKey", "" }, // Required
-                    { "Email:FromAddress", "" } // Required
+                    { "JwtSettings:Secret", "" },
+                    { "Stripe:SecretKey", "" },
+                    { "Email:FromAddress", "" }
                 });
             });
         });

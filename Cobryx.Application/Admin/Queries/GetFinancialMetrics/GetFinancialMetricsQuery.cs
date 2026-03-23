@@ -41,14 +41,12 @@ public class GetFinancialMetricsHandler(ICobryxDbContext dbContext)
         var activeLoans = await loansQuery.ToListAsync(ct);
         var loanIds = activeLoans.Select(l => l.Id).ToList();
 
-        // We only count account '1210' (Principal)
         var principalEntries = await _dbContext.LedgerEntries
             .AsNoTracking()
             .Where(e => loanIds.Contains(e.TransactionId) || _dbContext.LedgerTransactions.Where(t => loanIds.Contains(t.LoanId ?? Guid.Empty)).Select(t => t.Id).Contains(e.TransactionId))
             .Join(_dbContext.LedgerAccounts.Where(a => a.Code == "1210"), e => e.AccountId, a => a.Id, (e, a) => e)
             .ToListAsync(ct);
 
-        // Map principal by LoanId
         var loanBalances = activeLoans.Select(loan =>
         {
             var txIds = _dbContext.LedgerTransactions.Where(t => t.LoanId == loan.Id && t.IsPosted).Select(t => t.Id).ToList();

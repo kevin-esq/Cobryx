@@ -46,7 +46,6 @@ public class CheckSystemHealthJob
     {
         _logger.LogInformation("Auditing elite infrastructure metrics...");
 
-        // Refresh metrics (this updates CobryxMetrics via delegates)
         await _diagnosticService.CollectInfrastructureMetricsAsync(ct);
 
         var wraparoundRisk = await _diagnosticService.GetWraparoundRiskRatioAsync(ct);
@@ -122,7 +121,7 @@ public class CheckSystemHealthJob
             return;
 
         // Fintech Thresholds - Elite Standard
-        if (metrics.PAR30Percentage > 15.0m) // 15% PAR30
+        if (metrics.PAR30Percentage > 15.0m)
         {
             await _alertingService.SendAlertAsync(
                 "RiskMonitor",
@@ -141,7 +140,7 @@ public class CheckSystemHealthJob
                 ct);
         }
 
-        if (metrics.PAR90Percentage > 8.0m) // 8% PAR90
+        if (metrics.PAR90Percentage > 8.0m)
         {
             await _alertingService.SendAlertAsync(
                 "RiskMonitor",

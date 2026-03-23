@@ -13,9 +13,8 @@ public class LoanDelinquencyState : BaseEntity
     public DateTime? OldestUnpaidDueDate { get; private set; }
     public DelinquencyStage Stage { get; private set; }
     public DateTime LastEvaluatedAt { get; private set; }
-    public DateTime? LastEvaluatedDate { get; private set; } // Daily watermark
+    public DateTime? LastEvaluatedDate { get; private set; }
 
-    // Navigation
     public virtual Loan Loan { get; private set; } = null!;
 
     private LoanDelinquencyState() { }

@@ -70,7 +70,7 @@ public class PlanGatingFilter(
 
                 context.Result = new ObjectResult(new { error = ex.Message })
                 {
-                    StatusCode = 402 // Payment Required - Standard for billing limits
+                    StatusCode = 402
                 };
                 return;
             }

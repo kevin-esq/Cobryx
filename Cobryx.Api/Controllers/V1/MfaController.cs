@@ -106,7 +106,6 @@ public class MfaController : CobryxBaseController
     {
         var result = await Sender.Send(new InitiateFido2RegistrationCommand());
 
-        // Potential Improvement: Map result.Value (CredentialCreateOptions) to Fido2RegistrationOptions if needed
         return HandleResult(result, AuthOutcomes.LoginMfaRequired);
     }
 

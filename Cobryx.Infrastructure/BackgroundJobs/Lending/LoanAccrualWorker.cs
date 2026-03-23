@@ -22,7 +22,6 @@ public class LoanAccrualWorker
     {
         _logger.LogInformation("LoanAccrualWorker triggered at {Time}", DateTime.UtcNow);
 
-        // We run accrual for today (accruing interest for the previous day usually, 
         // but our engine handles it using the LastAccrualDate watermark up to DateTime.UtcNow.Date)
         await _accrualEngine.RunDailyAccrualAsync(DateTime.UtcNow.Date);
     }

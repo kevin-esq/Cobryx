@@ -77,7 +77,7 @@ public class DecisionEngineTests
         var rateLow = pricingEngine.CalculateRate(lowRiskCtx);
         var rateHigh = pricingEngine.CalculateRate(highRiskCtx);
 
-        Assert.True(rateHigh > rateLow * 2); // Exponential impact
+        Assert.True(rateHigh > rateLow * 2);
     }
 
     [Fact]

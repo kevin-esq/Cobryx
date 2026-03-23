@@ -111,7 +111,6 @@ public class SignUpHandler(
 
         await _userRepository.AddAsync(user, cancellationToken);
 
-        // Create TenantSubscription on Starter (free) plan
         var dbContext = (DbContext)_unitOfWork;
         var starterPlan = await dbContext.Set<SubscriptionPlan>()
             .FirstOrDefaultAsync(p => p.Tier == PlanTier.Starter && p.IsActive, cancellationToken);

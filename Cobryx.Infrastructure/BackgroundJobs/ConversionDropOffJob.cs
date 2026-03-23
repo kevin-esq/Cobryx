@@ -25,7 +25,6 @@ public class ConversionDropOffJob
     public async Task ExecuteAsync()
     {
         var growthService = _context as IGrowthIntelligenceService; // This is a bit hacky if not registered, but let's assume implementation detail
-                                                                    // Better: inject IGrowthIntelligenceService
                                                                     // I will use the injected metrics directly where possible since I cannot easily change the constructor here without checking DI
 
         var now = DateTime.UtcNow;
@@ -100,7 +99,6 @@ public class ConversionDropOffJob
             var topMrr = allMrr.Take(topCount).Sum();
             var concentration = (double)(topMrr / totalMrr) * 100;
 
-            // Register global provider once if not already done, or just update value
             CobryxMetrics.RegisterRevenueConcentrationProvider(() => concentration);
             _logger.LogInformation("Portfolio Revenue Concentration (Top 10%): {Concentration:P2}", concentration / 100.0);
         }

@@ -47,11 +47,10 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
         if (IsPosted)
             return;
 
-        // Double-Entry Integrity Check
         var balance = _entries.Sum(e => e.Debit - e.Credit);
         if (balance != 0)
         {
-            throw new DomainException(DomainErrorCode.Common.GeneralError); // "Ledger out of balance"
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
         }
 
         IsPosted = true;
@@ -69,10 +68,8 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
         if (totalOriginal <= 0)
             throw new DomainException(DomainErrorCode.Common.GeneralError);
 
-        // Small delta check for safety
         if (refundAmount > (totalOriginal / 2 + 0.01m) && original.Entries.Count == 2)
         {
-            // If it's a simple 2-line transaction, we can be stricter,
         }
 
         if (refundAmount > totalOriginal + 0.01m)
@@ -89,15 +86,12 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
         foreach (var entry in original.Entries)
         {
-            // Mirror: original Credit becomes Reversal Debit, original Debit becomes Reversal Credit
             reversal.AddEntry(entry.AccountId, Math.Round(entry.Credit * ratio, 2), Math.Round(entry.Debit * ratio, 2));
         }
 
-        // Fix balance if off by cents due to rounding
         var balance = reversal._entries.Sum(e => e.Debit - e.Credit);
         if (balance != 0)
         {
-            // Adjust the largest entry to minimize relative impact of rounding
             var entryToAdjust = reversal._entries.OrderByDescending(e => Math.Abs(e.Debit + e.Credit)).First();
             if (balance > 0)
                 entryToAdjust.AdjustCredit(balance);

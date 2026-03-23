@@ -35,7 +35,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         var stripeService = scope.ServiceProvider.GetRequiredService<IStripeService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<PaymentLinkReconciliationService>>();
 
-        // MOCK State Engine to THROW EXCEPTION (Simulate Crash/Failure)
         var mockStateEngine = new Mock<FinancialStateEngine>(null!, null!, null!, null!);
         mockStateEngine
             .Setup(x => x.UpdateStatusAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -105,7 +104,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         var paymentIntentId = "pi_stuck_456";
         var link = new PaymentLink(tenantId, customerId, new Money(500, "MXN"), "token_stuck", DateTime.UtcNow.AddDays(1), "secret_stuck", loan.Id, "Ref-Stuck");
 
-        // MANUALLY set to Processing and make it OLD
         link.MarkAsProcessing(paymentIntentId);
         // Force UpdatedAt to be old (using reflection because it's set by BaseEntity)
         typeof(BaseEntity).GetProperty("UpdatedAt")!.SetValue(link, DateTime.UtcNow.AddHours(-2));
@@ -113,8 +111,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         context.PaymentLinks.Add(link);
         await context.SaveChangesAsync();
 
-        // ACT: Call recovery with a NEGATIVE timeout to force discovery (cutoff will be in the future)
-        // This bypasses the need for complex reflection/waiting in a fast test
         await reconService.RecoverStuckProcessingLinksAsync(TimeSpan.FromMinutes(-60));
 
         var dbLink = await context.PaymentLinks.AsNoTracking().FirstAsync(l => l.Id == link.Id);
@@ -180,7 +176,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
             currency: "MXN",
             paymentApplicationPolicyId: applicationPolicy.Id);
 
-        // Force ID via reflection
         var idProp = typeof(Cobryx.Domain.Shared.BaseEntity).GetProperty("Id");
         idProp!.SetValue(agreement, agreementId);
 

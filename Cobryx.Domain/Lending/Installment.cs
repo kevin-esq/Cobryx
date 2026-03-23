@@ -29,7 +29,6 @@ public class Installment : BaseEntity
     public Money RemainingBalance { get; private set; }
     public InstallmentStatus Status { get; private set; }
 
-    // Legacy decimal Aliases
     public decimal PrincipalAmount => PrincipalPart.Amount;
     public decimal InterestAmount => InterestPart.Amount;
     public decimal LateFeeAmount => LateInterestAmount.Amount;

@@ -36,7 +36,7 @@ public class ExpirePaymentLinksJob
             .Where(l => (l.Status == PaymentLinkStatus.Active || l.Status == PaymentLinkStatus.Processing)
                         && l.ExpiresAt < now)
             .OrderBy(l => l.ExpiresAt)
-            .Take(100) // Batch processing
+            .Take(100)
             .ToListAsync(ct);
 
         if (toExpire.Count == 0)

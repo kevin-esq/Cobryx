@@ -54,10 +54,6 @@ public class PermissionService : IPermissionService
         var user = await _dbContext.Users.FindAsync(new object[] { userId }, ct);
         if (user != null)
         {
-            // Incrementing version naturally "invalidates" because the key changes
-            // The old version will eventually expire in Redis
-            // We can explicitly clear if we want, but versioning is cleaner for concurrency
-            // e.g. user.IncrementPermissionVersion() - I'll do this in a CommandHandler
         }
     }
 }

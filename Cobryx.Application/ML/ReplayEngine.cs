@@ -21,7 +21,6 @@ public class ReplayEngine(DecisionService decisionService)
             Pricing = new PricingContext { ProbabilityOfDefault = 0.05m }
         };
 
-        // Bypass caching, live stores, and persistence for Replay
         var result = await decisionService.EvaluateAsync(
             snapshot.CustomerId, 
             ctx, 
@@ -33,10 +32,9 @@ public class ReplayEngine(DecisionService decisionService)
         snapshot.ReplayedCreditLimit = result.CreditLimit;
         snapshot.ReplayedInterestRate = result.InterestRate;
 
-        // Note: Delta assumes Original values were valid and comparable
         snapshot.DeltaCredit = result.CreditLimit - snapshot.OriginalCreditLimit;
         snapshot.DeltaInterest = result.InterestRate - snapshot.OriginalInterestRate;
-        snapshot.ReplayModelVersion = "Current"; // Assuming latest model was used
+        snapshot.ReplayModelVersion = "Current";
 
         return snapshot;
     }

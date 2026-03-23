@@ -28,7 +28,6 @@ public class SimulationRunner(
                 InterestDelta = decision.InterestDelta
             };
 
-            // Safety Layer (Mandatory)
             if (action.CreditMultiplier > 3.0m) action.CreditMultiplier = 3.0m;
 
             if (env.Macro.Regime == MarketRegime.Crisis)
@@ -40,7 +39,7 @@ public class SimulationRunner(
 
             db.Experiences.Add(new Experience
             {
-                CustomerId = Guid.Empty, // Simulation has aggregated/anonymous customer state at this level
+                CustomerId = Guid.Empty,
                 StateJson = JsonSerializer.Serialize(state, JsonOptions),
                 NextStateJson = JsonSerializer.Serialize(result.NextState, JsonOptions),
                 CreditMultiplier = action.CreditMultiplier,

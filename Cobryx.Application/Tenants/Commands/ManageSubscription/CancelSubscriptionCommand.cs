@@ -42,7 +42,6 @@ public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionComma
         if (subscription.Status == SubscriptionStatus.Cancelled)
             return Result.Failure(DomainErrorCode.Subscription.AlreadyCancelled);
 
-        // Grace period logic: 7 days from now
         var gracePeriodEnd = DateTime.UtcNow.AddDays(7);
 
         subscription.ExecuteCancellation(gracePeriodEnd, DateTime.UtcNow, request.Reason, request.Feedback);

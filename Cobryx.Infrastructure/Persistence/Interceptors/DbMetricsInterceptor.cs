@@ -75,16 +75,13 @@ public class DbMetricsInterceptor : DbCommandInterceptor
     {
         if (ex is NpgsqlException nex)
         {
-            // Detect Pool Exhaustion
             if (nex.Message.Contains("Timeout while getting a connection from the pool", StringComparison.OrdinalIgnoreCase))
             {
                 _metrics.DbPoolExhaustionTotal.Add(1);
             }
 
-            // Detect Command Timeout
             if (nex.InnerException is System.TimeoutException || nex.IsTransient)
             {
-                // Note: We count retries for transient errors
                 _metrics.DbRetryTotal.Add(1);
             }
 

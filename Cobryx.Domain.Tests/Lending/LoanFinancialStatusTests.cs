@@ -33,11 +33,11 @@ public class LoanFinancialStatusTests
     }
 
     [Theory]
-    [InlineData(1, FinancialStatus.Current)]   // Grace period <= 3 days
-    [InlineData(10, FinancialStatus.Late)]     // <= 30 days
-    [InlineData(45, FinancialStatus.Delinquent)] // <= 90 days
-    [InlineData(120, FinancialStatus.Default)]   // <= 180 days
-    [InlineData(200, FinancialStatus.ChargedOff)] // > 180 days
+    [InlineData(1, FinancialStatus.Current)]
+    [InlineData(10, FinancialStatus.Late)]
+    [InlineData(45, FinancialStatus.Delinquent)]
+    [InlineData(120, FinancialStatus.Default)]
+    [InlineData(200, FinancialStatus.ChargedOff)]
     public void UpdateFinancialRiskStatus_WithOverdueInstallment_ShouldReflectCorrectStatus(int daysOverdue, FinancialStatus expectedStatus)
     {
         var today = new DateTime(2026, 1, 1);
@@ -74,7 +74,7 @@ public class LoanFinancialStatusTests
 
         loan.FinancialStatus.Should().Be(FinancialStatus.Late);
         loan.FinancialDaysPastDue.Should().Be(10);
-        loan.ArrearsAmount.Should().Be(440); // (500-100) + (50-10) = 440
+        loan.ArrearsAmount.Should().Be(440);
     }
 
     [Fact]

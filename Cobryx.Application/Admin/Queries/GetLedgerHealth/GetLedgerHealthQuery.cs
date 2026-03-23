@@ -26,7 +26,6 @@ public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedge
     {
         var issues = new List<string>();
 
-        // We group entries by TransactionId and check the balance.
         var imbalancedTxs = await _dbContext.LedgerEntries
             .GroupBy(e => e.TransactionId)
             .Select(g => new
@@ -45,7 +44,6 @@ public class GetLedgerHealthHandler(ICobryxDbContext dbContext, ILogger<GetLedge
                 msg, string.Join(", ", imbalancedTxs.Take(3).Select(x => x.TransactionId)));
         }
 
-        // Note: EF Core usually prevents this via Foreign Keys, but for production "sealing", we check.
         var orphanedEntries = await _dbContext.LedgerEntries
             .Where(e => !_dbContext.LedgerTransactions.Select(t => t.Id).Contains(e.TransactionId))
             .CountAsync(ct);

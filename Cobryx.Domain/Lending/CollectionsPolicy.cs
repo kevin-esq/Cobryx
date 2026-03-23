@@ -10,18 +10,15 @@ public class CollectionsPolicy : BaseEntity, ITenantEntity
     public Guid TenantId { get; private set; }
     public string Name { get; private set; } = string.Empty;
 
-    // Thresholds
     public int EarlyStageDays { get; private set; } = 1;
     public int ModerateStageDays { get; private set; } = 31;
     public int SevereStageDays { get; private set; } = 61;
     public int DefaultStageDays { get; private set; } = 91;
     public int WriteOffDays { get; private set; } = 121;
 
-    // Automated Toggles
     public bool EnableLateFees { get; private set; }
     public bool EnableAutoWriteOff { get; private set; }
 
-    // Configuration
     public Guid? LateFeePolicyId { get; private set; }
     public virtual LateFeePolicy? LateFeePolicy { get; private set; }
 

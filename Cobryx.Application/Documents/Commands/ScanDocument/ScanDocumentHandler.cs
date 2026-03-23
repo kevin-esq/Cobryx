@@ -58,7 +58,6 @@ public class ScanDocumentHandler(
 
         try
         {
-            // Download file (streamed)
             var fileStream = await _storage.DownloadAsync(document.BlobPath);
             if (fileStream == null)
             {
@@ -86,7 +85,6 @@ public class ScanDocumentHandler(
                     document.MarkAsInfected(_clock.UtcNow);
                     _metrics.DocumentsInfectedTotal.Add(1);
 
-                    // Delete infected file from storage
                     try
                     {
                         await _storage.DeleteAsync(document.BlobPath);
@@ -124,7 +122,7 @@ public class ScanDocumentHandler(
             {
                 _logger.LogWarning(ex, "ScanDocument: Attempt {Attempt}/{Max} failed for {DocumentId}. Will retry.",
                     attempt, MaxRetryAttempts, documentId);
-                throw; // Let Hangfire retry
+                throw;
             }
         }
     }

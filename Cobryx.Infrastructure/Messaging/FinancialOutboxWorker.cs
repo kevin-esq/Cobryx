@@ -22,7 +22,7 @@ public class FinancialOutboxWorker(
     private readonly ILogger<FinancialOutboxWorker> _logger = logger;
 
     [Queue("financial-events")]
-    [AutomaticRetry(Attempts = 0)] // We handle retries internally via RetryCount
+    [AutomaticRetry(Attempts = 0)]
     public async Task ProcessEventsAsync(CancellationToken ct)
     {
         var outboxEvents = await _context.OutboxMessages

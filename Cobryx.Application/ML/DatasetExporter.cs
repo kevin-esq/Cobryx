@@ -23,13 +23,12 @@ public class DatasetExporter
         {
             utilization = x.PrincipalBalance / (x.PrincipalBalance + 1m), // fallback
             paymentDelay = 0m,     // TODO: join payments
-            behaviorScore = 0.5m,  // placeholder
+            behaviorScore = 0.5m,
             dpdTrend = (decimal)x.DaysPastDue,
             outstanding = x.PrincipalBalance + x.InterestBalance + x.LateFeeBalance,
             label = x.DaysPastDue >= 30 ? 1 : 0
         });
 
-        // Ensure directory exists
         var dir = System.IO.Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
         {

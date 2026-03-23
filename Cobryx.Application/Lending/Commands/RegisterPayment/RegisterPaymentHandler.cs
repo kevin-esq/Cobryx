@@ -58,12 +58,11 @@ public class RegisterPaymentHandler(
         await _paymentRepository.AddAsync(payment, ct);
         await _loanRepository.UpdateAsync(loan, ct);
 
-        // Telemetry: Value Realization
         var db = (DbContext)_unitOfWork;
         var paymentsCount = await db.Set<Payment>()
             .CountAsync(p => p.TenantId == tenantId.Value && p.Status == PaymentStatus.Completed && !p.IsDemo, ct);
 
-        if (paymentsCount == 1) // First real payment
+        if (paymentsCount == 1)
         {
             var tenant = await db.Set<Tenant>().FirstAsync(t => t.Id == tenantId.Value, ct);
             tenant.TriggerOnboardingMilestone("REALIZING_VALUE");

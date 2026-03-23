@@ -74,7 +74,7 @@ public class GetCustomerStatementHandler(ICobryxDbContext dbContext) : IRequestH
             InterestBalance: l.CurrentInterestBalance,
             LateFeeBalance: l.CurrentLateFeeBalance,
             Status: l.Status.ToString(),
-            MaturityDate: l.NextPaymentDueDate // Fallback for MVP
+            MaturityDate: l.NextPaymentDueDate
         )).ToList();
 
         var transactionDtos = transactions.Select(t =>

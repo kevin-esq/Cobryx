@@ -25,30 +25,25 @@ public class Permission : BaseEntity, IAggregateRoot
 
     public static class Constants
     {
-        // Customers
         public const string CustomersView = "customers.view";
         public const string CustomersCreate = "customers.create";
         public const string CustomersEdit = "customers.edit";
         public const string CustomersDelete = "customers.delete";
 
-        // Invoices
         public const string InvoicesView = "invoices.view";
         public const string InvoicesCreate = "invoices.create";
         public const string InvoicesCancel = "invoices.cancel";
         public const string InvoicesExport = "invoices.export";
 
-        // Payments
         public const string PaymentsView = "payments.view";
         public const string PaymentsApply = "payments.apply";
         public const string PaymentsRefund = "payments.refund";
 
-        // Loans (Lending)
         public const string LoansView = "loans.view";
         public const string LoansCreate = "loans.create";
         public const string LoansDisburse = "loans.disburse";
         public const string LoansManagePolicies = "loans.policies.manage";
 
-        // Tenant & Users
         public const string TenantManage = "tenant.manage";
         public const string TenantViewSettings = "tenant.settings.view";
         public const string UsersView = "users.view";

@@ -38,8 +38,8 @@ public class PortfolioCacheRefreshJob(
                 RevenueMTD = m.RevenueMTD,
                 RevenueYTD = m.RevenueYTD,
                 CollectionEfficiency = m.CollectionEfficiency,
-                CashInflowMTD = 0, // Placeholder, calculated from actual Cashflow event if implemented
-                CashOutflowMTD = 0, // Placeholder
+                CashInflowMTD = 0,
+                CashOutflowMTD = 0,
                 LastUpdated = DateTime.UtcNow
             };
 

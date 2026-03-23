@@ -38,7 +38,6 @@ public class RecordPayoutHandler(ICobryxDbContext dbContext, ILogger<RecordPayou
             $"Stripe Payout: {request.Reference}",
             $"PO-{request.Reference}");
 
-        // Debit Physical Bank (Asset Increases)
         transaction.AddEntry(bankAcc.Id, request.Amount, 0);
 
         // Credit Stripe Cash (Asset Decreases)

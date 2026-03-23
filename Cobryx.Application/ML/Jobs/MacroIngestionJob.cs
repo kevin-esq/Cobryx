@@ -6,7 +6,6 @@ public class MacroIngestionJob(ICacheService cache)
 {
     public async Task RunAsync()
     {
-        // Simulate fetching from external financial APIs
         var newRate = await FetchRate();
         var newInflation = await FetchInflation();
         var newSpread = await FetchSpread();
@@ -27,14 +26,13 @@ public class MacroIngestionJob(ICacheService cache)
         {
             InterestRate = smoothedRate,
             Inflation = smoothedInflation,
-            Unemployment = 0.04m, // mocked
+            Unemployment = 0.04m,
             CreditSpread = newSpread,
             MarketVolatility = newVolatility,
             LiquidityIndex = 1.0m,
             Regime = regime,
             Country = "US",
 
-            // Non-Markovian feature cascading
             InflationTMinus1 = prevMacro.Inflation,
             InflationTMinus2 = prevMacro.InflationTMinus1,
             RateTrend = smoothedRate - prevMacro.InterestRate

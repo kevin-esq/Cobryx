@@ -171,14 +171,14 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
         {
-            KeepAlive = 30, // Prevent silent terminations by Supabase
-            CommandTimeout = 30, // Faster failure for hanging queries
+            KeepAlive = 30,
+            CommandTimeout = 30,
             Pooling = true,
-            MinPoolSize = 5, // Reduce cold start latency
-            MaxPoolSize = 35, // Balanced for API + Hangfire load
-            ConnectionLifetime = 300, // Recycle connections every 5 minutes
-            ConnectionIdleLifetime = 60, // Clean up idle connections quickly
-            Timeout = 15 // Fail fast if pool is exhausted
+            MinPoolSize = 5,
+            MaxPoolSize = 35,
+            ConnectionLifetime = 300,
+            ConnectionIdleLifetime = 60,
+            Timeout = 15
         };
 
         services.AddDbContext<CobryxDbContext>((sp, options) =>

@@ -11,7 +11,6 @@ public static class LendingInfrastructureModule
 {
     public static IServiceCollection AddLendingInfrastructure(this IServiceCollection services)
     {
-        // Domain Repositories
         services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<ILoanAgreementRepository, LoanAgreementRepository>();
         services.AddScoped<IInstallmentRepository, InstallmentRepository>();

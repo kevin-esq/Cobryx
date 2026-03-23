@@ -9,14 +9,13 @@ public class EarlyWarningJobTests
     [Fact]
     public void NonDelinquentHighPD_ShouldTriggerEarlyWarning()
     {
-        // PD alto, DPD = 0 → anomalia de pre-delinquency  
         var context = new RiskContext
         {
             DaysPastDue = 0,
             Outstanding = 1000m,
             CreditLimit = 1000m,
             Utilization = 1m,
-            PaymentDelayDays = 30 // consistent delay despite being current
+            PaymentDelayDays = 30
         };
 
         var calculator = new ProbabilityOfDefaultCalculator(new (IRiskFactor, decimal)[]

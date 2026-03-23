@@ -8,27 +8,23 @@ namespace Cobryx.Domain.Messaging;
 /// </summary>
 public class OutboxMessage : BaseEntity, ITenantEntity
 {
-    // Common
     public Guid TenantId { get; private set; }
     public string Type { get; private set; } = string.Empty;
     public string Payload { get; private set; } = string.Empty;
     public DateTime OccurredOnUtc { get; private set; }
     public string? CorrelationId { get; private set; }
 
-    // State Tracking
     public bool IsProcessed { get; private set; }
     public DateTime? ProcessedOnUtc { get; private set; }
     public string? Error { get; private set; }
     public int RetryCount { get; private set; }
 
-    // Advanced Routing & Sequencing
     public Guid? EntityId { get; private set; }
     public long? LedgerSequenceId { get; private set; }
     public string? PartitionKey { get; private set; }
 
     private OutboxMessage() { }
 
-    // Standard Constructor
     public OutboxMessage(Guid tenantId, string type, string payload, string? correlationId = null)
     {
         TenantId = tenantId;
@@ -39,7 +35,6 @@ public class OutboxMessage : BaseEntity, ITenantEntity
         IsProcessed = false;
     }
 
-    // Advanced / Financial Constructor
     public OutboxMessage(
         Guid tenantId,
         string type,

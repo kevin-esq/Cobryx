@@ -55,7 +55,7 @@ public class CleanupStaleDocumentsJob
             .Where(d => d.ScanStatus == ScanStatus.ScanFailed
                      && d.ScannedAtUtc != null
                      && d.ScannedAtUtc < now - RetryThreshold
-                     && d.CreatedAt > now - AbandonThreshold) // Only retry recent ones
+                     && d.CreatedAt > now - AbandonThreshold)
             .ToListAsync(ct);
 
         foreach (var doc in staleForRetry)
@@ -76,7 +76,6 @@ public class CleanupStaleDocumentsJob
             }
             catch
             {
-                // Already deleted or storage unreachable — acceptable
             }
         }
 

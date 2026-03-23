@@ -152,7 +152,6 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
             lateFeePolicyId: lateFeePolicy.Id,
             currency: "MXN",
             paymentApplicationPolicyId: applicationPolicy.Id);
-        // Force ID via reflection to ensure consistency
         var idProp = typeof(Cobryx.Domain.Shared.BaseEntity).GetProperty("Id");
         idProp!.SetValue(agreement, agreementId);
 

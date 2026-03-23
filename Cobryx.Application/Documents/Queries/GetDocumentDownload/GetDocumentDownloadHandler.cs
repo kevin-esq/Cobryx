@@ -29,7 +29,6 @@ public class GetDocumentDownloadHandler(IUnitOfWork unitOfWork, ITenantProvider 
         if (doc == null)
             return Result.Failure<DocumentDownloadDto>(DomainErrorCode.Documents.NotFound);
 
-        // Hard block: never serve unscanned or infected files
         if (doc.ScanStatus != ScanStatus.Clean)
             return Result.Failure<DocumentDownloadDto>(DomainErrorCode.Documents.ScanInProgress);
 

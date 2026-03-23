@@ -35,7 +35,7 @@ public class ReconciliationEngineJob(
         {
             try
             {
-                var to = DateTime.UtcNow.AddMinutes(-5); // Buffer for eventual consistency
+                var to = DateTime.UtcNow.AddMinutes(-5);
                 var from = await GetLastReconciliationPointAsync(tenant.Id, ct);
 
                 _logger.LogInformation("Reconciling Tenant {TenantId} from {From} to {To}", tenant.Id, from, to);
@@ -64,7 +64,6 @@ public class ReconciliationEngineJob(
             .Select(a => a.ToUtc)
             .FirstOrDefaultAsync(ct);
 
-        // Default to last 24 hours if no previous record found
         return lastRun == default ? DateTime.UtcNow.AddHours(-24) : lastRun;
     }
 }

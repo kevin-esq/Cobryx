@@ -47,7 +47,7 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
         if (tenant == null || tenant.IsPaymentRestricted)
         {
-            return Result.Failure<string>(DomainErrorCode.Common.GeneralError); // "Payments are currently restricted for this business."
+            return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
         }
 
         var customer = await _context.Customers
@@ -73,7 +73,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
             if (existingLink != null)
             {
                 // Re-hashing is the only way to get a new raw token if needed, 
-                // but usually we just want to return the existence or rotate.
                 // For now, let's return the existing one if we can't get the raw token (we can't since it's hashed).
                 // Protocol: If exists, we expire the old one and create a new one to provide a fresh token.
                 existingLink.Expire();
@@ -97,7 +96,6 @@ public class CreatePaymentLinkHandler : IRequestHandler<CreatePaymentLinkCommand
         _context.PaymentLinks.Add(paymentLink);
         await _context.SaveChangesAsync(ct);
 
-        // This allows efficient lookup by Salt, then verification by HMAC
         return Result.Success($"{paymentLink.Salt}.{rawToken}");
     }
 

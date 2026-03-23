@@ -18,7 +18,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
 
         var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
 
-        // Epsilon-Greedy Exploration (10%)
         if (Random.Shared.NextDouble() < 0.10)
         {
             var actions = new[] { CollectionActionType.SmsReminder, CollectionActionType.EmailReminder, CollectionActionType.AgentCall };
@@ -31,7 +30,6 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
             };
         }
 
-        // Apply ML Optimizer Weights
         var bestEarlyAction = weights.EmailWeight > weights.SmsWeight
             ? CollectionActionType.EmailReminder
             : CollectionActionType.SmsReminder;
@@ -88,7 +86,7 @@ public class CollectionsStrategyEngine : ICollectionsStrategyEngine
         {
             Stage = CollectionStage.Legal,
             Action = CollectionActionType.LegalNotice,
-            PriorityScore = (int)(priorityScore * weights.LegalWeight), // Boost priority if ML says legal is working well
+            PriorityScore = (int)(priorityScore * weights.LegalWeight),
             NextActionAt = System.DateTime.UtcNow.AddDays(7)
         };
     }

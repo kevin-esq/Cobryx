@@ -15,7 +15,6 @@ public static class AccountingInfrastructureModule
     {
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
-        // Ledger & Replay
         services.AddScoped<ILedgerBalanceService, LedgerBalanceService>();
         services.AddScoped<IFinancialEventBus, LocalFinancialEventBus>();
         services.AddScoped<IFinancialEventConsumer, EventShadowReplayEngine>();

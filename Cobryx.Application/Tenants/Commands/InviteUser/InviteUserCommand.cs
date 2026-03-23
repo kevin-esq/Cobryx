@@ -90,7 +90,6 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
 
         if (existingInvite != null)
         {
-            // Replace old pending invitation
             dbContext.Set<TenantInvitation>().Remove(existingInvite);
             await _unitOfWork.SaveChangesAsync(ct);
             _logger.LogInformation("[AUDIT] Replacing pending invitation for {Email} in Tenant {TenantId}", request.Email, tenantId.Value);
@@ -112,10 +111,9 @@ public class InviteUserHandler : IRequestHandler<InviteUserCommand, Result<Guid>
         _logger.LogInformation("[AUDIT] Invitation created: ID {Id}, Email {Email}, Tenant {TenantId}, Role {Role}",
             invitation.Id, request.Email, tenantId.Value, request.RoleName);
 
-        // Telemetry Trigger: Building Team
         var db = (DbContext)_unitOfWork;
         var usersCount = await db.Set<User>().CountAsync(u => u.TenantId == tenantId.Value, ct);
-        if (usersCount == 1) // Only for first invite (owner is usually already there but maybe not counted yet as User entity)
+        if (usersCount == 1)
         {
             var tenant = await db.Set<Tenant>().FirstAsync(t => t.Id == tenantId.Value, ct);
             tenant.TriggerOnboardingMilestone("BUILDING_TEAM");

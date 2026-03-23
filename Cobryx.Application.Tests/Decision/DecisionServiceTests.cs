@@ -126,7 +126,6 @@ public class DecisionServiceTests
             x => x.SetAsync(It.IsAny<string>(), It.IsAny<DecisionResult>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()), Times.Once);
 
-        // Ensure result is exactly cached
         Assert.Equal(result1.CreditLimit, result2.CreditLimit);
         Assert.Equal(result1.InterestRate, result2.InterestRate);
     }
@@ -151,7 +150,6 @@ public class DecisionServiceTests
         featureStoreMock.Setup(x => x.GetAsync(It.IsAny<Guid>()))
             .ReturnsAsync(new Cobryx.Domain.ML.FeatureVector());
 
-        // Simulate failing HTTP Request (e.g., Timeout or 500)
         var mockHttp = new Mock<HttpMessageHandler>();
         mockHttp.Protected()
             .Setup<Task<HttpResponseMessage>>(

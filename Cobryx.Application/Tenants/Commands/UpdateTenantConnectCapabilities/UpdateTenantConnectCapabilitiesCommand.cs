@@ -35,7 +35,7 @@ public class UpdateTenantConnectCapabilitiesHandler : IRequestHandler<UpdateTena
         if (tenant == null)
         {
             _logger.LogWarning("Tenant with Stripe Account ID {StripeAccountId} not found. Skipping Connect capability update.", request.StripeAccountId);
-            return Result.Success(); // We return success as we don't want to break the webhook retry logic for non-existent tenants
+            return Result.Success();
         }
 
         tenant.UpdateConnectStatus(request.ChargesEnabled, request.PayoutsEnabled, request.DetailsSubmitted);

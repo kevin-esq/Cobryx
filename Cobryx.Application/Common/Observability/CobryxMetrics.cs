@@ -23,48 +23,40 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<double> RecoveryRevenueTotal { get; }
     public Counter<long> RecoveryDisputeStopTotal { get; }
 
-    // Invitation Metrics
     public Counter<long> InvitationsCreated { get; }
     public Counter<long> InvitationsAccepted { get; }
     public Counter<long> InvitationsExpired { get; }
     public Counter<long> InvitationsRejected { get; }
     public Counter<long> InvitationsReplayAttempts { get; }
 
-    // Cleanup Metrics
     public Counter<long> CleanupInvitationsDeleted { get; }
     public Counter<long> CleanupInvitationsExpired { get; }
 
-    // Monetization Metrics
     public Counter<long> SubscriptionLimitReached { get; }
     public Counter<long> SubscriptionUpgrades { get; }
     public Counter<long> SubscriptionDowngradeRejected { get; }
 
-    // Subscription Gate Metrics
     public Counter<long> SubscriptionGateBlocked { get; }
     public Counter<long> SubscriptionGateCacheHits { get; }
     public Counter<long> SubscriptionGateCacheMisses { get; }
 
-    // Document Scan Metrics
     public Counter<long> DocumentsScanTotal { get; }
     public Counter<long> DocumentsInfectedTotal { get; }
     public Counter<long> DocumentsScanFailTotal { get; }
     public Histogram<double> DocumentsScanLatency { get; }
     public Counter<long> ScannerCircuitBreakerTrips { get; }
 
-    // Performance & Scaling Metrics
     public Counter<long> UsageCacheHits { get; }
     public Counter<long> UsageCacheMisses { get; }
     public Histogram<double> OutboxProcessingLag { get; }
     public Histogram<double> CommandDuration { get; }
 
-    // Database Infrastructure Metrics
     public Histogram<double> DbCommandDuration { get; }
     public Counter<long> DbRetryTotal { get; }
     public Counter<long> DbPoolExhaustionTotal { get; }
     public Counter<long> DbCommandTimeoutTotal { get; }
     public UpDownCounter<long> ConcurrentDbCommands { get; }
 
-    // Hangfire Infrastructure Metrics (Observable)
     public ObservableGauge<long> HangfireActiveWorkers { get; }
     public ObservableGauge<long> HangfireQueueLength { get; }
     public ObservableGauge<long> HangfireFailedJobs { get; }
@@ -78,7 +70,6 @@ public sealed class CobryxMetrics : IDisposable
     public Histogram<double> TimeToExpansion { get; }
     public ObservableGauge<double> RevenueConcentration { get; }
 
-    // Institutional Reconciliation & Integrity Metrics
     public Counter<long> ReconciliationDriftTotal { get; }
     public Counter<long> ReconciliationAutoRepairedTotal { get; }
     public Counter<long> SettlementDriftTotal { get; }
@@ -89,7 +80,6 @@ public sealed class CobryxMetrics : IDisposable
     public Counter<long> ReplayEntriesScannedTotal { get; }
     public Histogram<double> ReplayDuration { get; }
 
-    // Balance Cache Metrics
     public Counter<long> BalanceCacheHits { get; }
     public Counter<long> BalanceCacheMisses { get; }
     public Histogram<double> BalanceCacheRebuildDuration { get; }
@@ -189,7 +179,6 @@ public sealed class CobryxMetrics : IDisposable
         RecoveryDisputeStopTotal = _meter.CreateCounter<long>("cobryx_recovery_dispute_stop_total",
             description: "Total recovery attempts aborted due to active disputes");
 
-        // Monetization
         SubscriptionLimitReached = _meter.CreateCounter<long>("subscription_limit_reached_total",
             description: "Total hits to a plan limit");
         SubscriptionUpgrades =
@@ -197,7 +186,6 @@ public sealed class CobryxMetrics : IDisposable
         SubscriptionDowngradeRejected = _meter.CreateCounter<long>("subscription_downgrade_rejected_total",
             description: "Total rejected downgrades due to usage");
 
-        // Subscription Gate
         SubscriptionGateBlocked = _meter.CreateCounter<long>("subscription_gate_blocked_total",
             description: "Total requests blocked by subscription gate");
         SubscriptionGateCacheHits = _meter.CreateCounter<long>("subscription_gate_cache_hit_total",
@@ -205,7 +193,6 @@ public sealed class CobryxMetrics : IDisposable
         SubscriptionGateCacheMisses = _meter.CreateCounter<long>("subscription_gate_cache_miss_total",
             description: "Cache misses for subscription status lookups");
 
-        // Document Scanning
         DocumentsScanTotal =
             _meter.CreateCounter<long>("documents_scan_total", description: "Total document scans completed");
         DocumentsInfectedTotal =
@@ -217,7 +204,6 @@ public sealed class CobryxMetrics : IDisposable
         ScannerCircuitBreakerTrips = _meter.CreateCounter<long>("scanner_circuit_breaker_trips_total",
             description: "Total times the scanner circuit breaker rejected a request");
 
-        // Scaling
         UsageCacheHits =
             _meter.CreateCounter<long>("usage_cache_hit_total", description: "Total cache hits for usage snapshots");
         UsageCacheMisses = _meter.CreateCounter<long>("usage_cache_miss_total",
@@ -228,7 +214,6 @@ public sealed class CobryxMetrics : IDisposable
         CommandDuration = _meter.CreateHistogram<double>("command_duration_seconds", unit: "s",
             description: "Duration of business commands");
 
-        // Invitations
         InvitationsCreated =
             _meter.CreateCounter<long>("invitations_created_total", description: "Total invitations sent");
         InvitationsAccepted =
@@ -245,7 +230,6 @@ public sealed class CobryxMetrics : IDisposable
         CleanupInvitationsExpired = _meter.CreateCounter<long>("cleanup_invitations_expired_total",
             description: "Total stale invitations marked as expired by cleanup job");
 
-        // Database Infrastructure
         DbCommandDuration = _meter.CreateHistogram<double>("db_command_duration_seconds", unit: "s",
             description: "Duration of database commands");
         DbRetryTotal = _meter.CreateCounter<long>("db_retry_total",
@@ -257,7 +241,6 @@ public sealed class CobryxMetrics : IDisposable
         ConcurrentDbCommands = _meter.CreateUpDownCounter<long>("db_concurrent_commands",
             description: "Number of database commands currently executing");
 
-        // Hangfire Infrastructure
         HangfireQueueLatency = _meter.CreateHistogram<double>("hangfire_queue_latency_seconds", unit: "s",
             description: "Time background jobs spend in queue");
 
@@ -291,7 +274,6 @@ public sealed class CobryxMetrics : IDisposable
             () => _revenueConcentrationProvider(), unit: "%",
             description: "Percentage of total MRR coming from the Top 10% of tenants");
 
-        // Institutional Reconciliation & Integrity
         ReconciliationDriftTotal = _meter.CreateCounter<long>("reconciliation_drift_detected_total",
             description: "Total number of reconciliation drifts detected");
         ReconciliationAutoRepairedTotal = _meter.CreateCounter<long>("reconciliation_auto_repaired_total",
@@ -358,7 +340,6 @@ public sealed class CobryxMetrics : IDisposable
     {
         var module = GetModule(outcomeCode);
 
-        // Legacy metric
         if (success)
         {
             BusinessOutcomes.Add(1,
@@ -366,7 +347,6 @@ public sealed class CobryxMetrics : IDisposable
                 new KeyValuePair<string, object?>("module", module.ToString()));
         }
 
-        // Tier-aware business metric
         CobryxOutcomeTotal.Add(1,
             new KeyValuePair<string, object?>("code", outcomeCode),
             new KeyValuePair<string, object?>("success", success.ToString().ToLowerInvariant()),

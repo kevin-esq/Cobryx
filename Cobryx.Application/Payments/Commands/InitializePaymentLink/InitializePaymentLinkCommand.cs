@@ -80,7 +80,6 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
 
                 _logger.LogWarning("Existing Intent {IntentId} has status {Status}. Generating fresh intent.",
                     link.StripePaymentIntentId, status);
-                // Fallback: Create new intent if original is no longer payable
             }
             catch (Exception ex)
             {

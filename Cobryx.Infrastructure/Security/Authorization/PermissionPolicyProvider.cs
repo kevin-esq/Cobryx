@@ -18,7 +18,7 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
-        if (policyName.Contains('.')) // Use dot as heuristic for granular permissions
+        if (policyName.Contains('.'))
         {
             var policy = new AuthorizationPolicyBuilder();
             policy.AddRequirements(new PermissionRequirement(policyName));

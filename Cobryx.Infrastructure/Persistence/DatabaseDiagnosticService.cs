@@ -14,7 +14,6 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
     private readonly CobryxMetrics _metrics;
     private readonly ILogger<DatabaseDiagnosticService> _logger;
 
-    // Stratified Cache State
     private (double Value, DateTime Timestamp) _wraparoundRiskCache;
     private (double Value, DateTime Timestamp) _deadTupleRatioCache;
     private (double Value, DateTime Timestamp) _walSyncCache;
@@ -34,19 +33,18 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
         var builder = new NpgsqlConnectionStringBuilder(baseConnString)
         {
             ApplicationName = "CobryxDiag",
-            MaxPoolSize = 2, // Tiny isolated pool
-            Timeout = 5,    // Aggressive timeout
+            MaxPoolSize = 2,
+            Timeout = 5,
             CommandTimeout = 5
         };
         _diagConnectionString = builder.ToString();
 
-        // Register delegates to push latest cached values to metrics
         CobryxMetrics.RegisterInfrastructureProviders(
             () => _wraparoundRiskCache.Value,
             () => _walSyncCache.Value,
             () => _deadTupleRatioCache.Value,
-            () => 0.0, // CacheHitRatio implementation pending 
-            () => 0.0  // WaitToWorkRatio handled via separate exporter/delegate
+            () => 0.0,
+            () => 0.0
         );
     }
 
@@ -60,7 +58,6 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
             using var conn = new NpgsqlConnection(_diagConnectionString);
             await conn.OpenAsync(ct);
 
-            // Calculate ratio: age(relfrozenxid) / autovacuum_freeze_max_age
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
                 SELECT MAX(age(relfrozenxid)::float / current_setting('autovacuum_freeze_max_age')::float)
@@ -76,7 +73,7 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to query XID Wraparound Risk Ratio");
-            return _wraparoundRiskCache.Value; // Fallback to stale
+            return _wraparoundRiskCache.Value;
         }
     }
 
@@ -143,7 +140,6 @@ public class DatabaseDiagnosticService : IDatabaseDiagnosticService
     {
         _logger.LogDebug("Refreshing elite infrastructure diagnostics...");
 
-        // This triggers the refresh of the underlying cache variables
         var xidRisk = await GetWraparoundRiskRatioAsync(ct);
         await GetLedgerDeadTupleRatioAsync(ct);
         await GetWalSyncDurationAsync(ct);

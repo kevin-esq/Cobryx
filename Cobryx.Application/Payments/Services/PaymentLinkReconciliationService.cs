@@ -133,7 +133,6 @@ public class PaymentLinkReconciliationService
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ReferenceId") == true || ex.InnerException?.Message.Contains("23505") == true)
         {
             // BANK-GRADE: Idempotency Hit
-            // If the ReferenceId already exists, it means this payment was already processed (e.g. duplicate webhook)
             _logger.LogWarning("Idempotency Hit for PaymentLink {LinkId} (PI: {IntentId}). Transaction already exists.", link.Id, paymentIntentId);
             await transaction.RollbackAsync(ct);
         }
@@ -223,7 +222,7 @@ public class PaymentLinkReconciliationService
     public async Task RecoverStuckProcessingLinksAsync(TimeSpan timeout, CancellationToken ct = default)
     {
         var cutoff = DateTime.UtcNow - timeout;
-        var recoveryThrottle = DateTime.UtcNow.AddMinutes(-15); // Don't retry more than once every 15 min
+        var recoveryThrottle = DateTime.UtcNow.AddMinutes(-15);
 
         _logger.LogInformation("Starting stuck link recovery for links stuck since: {Cutoff}", cutoff);
 
@@ -255,18 +254,12 @@ public class PaymentLinkReconciliationService
                 await _context.SaveChangesAsync(ct);
 
                 // Bank-Grade: Check real status in Stripe
-                // We fetch the full intent to check for application fees
-                // Note: GetPaymentIntentStatusAsync only returns status. We might need a fuller fetch.
-                // For now, we'll assume the status is enough to trigger HandlePaymentSuccessAsync
-                // where we might fetch more if needed.
                 var status = await _stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
 
                 if (status == "succeeded")
                 {
                     _logger.LogInformation("Link {LinkId} was successful in Stripe. Reconciling...", link.Id);
-                    // We'll trust the Link's snapshot amount.
                     // To get the exact application fee, we'd need to fetch the Intent details.
-                    // For now, we'll use null or re-calculate.
                     // Let's re-calculate to keep it simple but accurate to our formula.
                     decimal? appFee = null;
                     var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);

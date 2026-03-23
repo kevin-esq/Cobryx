@@ -107,7 +107,6 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddCobryxHealthChecks(builder.Configuration);
 
-// Document scan services
 builder.Services.AddSingleton<Cobryx.Application.Documents.Services.FileSignatureValidator>();
 builder.Services.AddScoped<Cobryx.Application.Documents.Commands.ScanDocument.ScanDocumentHandler>();
 builder.Services.AddScoped<Cobryx.Infrastructure.BackgroundJobs.CleanupStaleDocumentsJob>();
@@ -241,7 +240,6 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
     Authorization = [new Cobryx.Api.Infrastructure.HangfireDashboardFilter()]
 });
 
-// Cloud Run terminates TLS — no HTTPS redirect needed in container.
 
 app.MapControllers();
 
@@ -280,7 +278,6 @@ try
         await Cobryx.Infrastructure.Persistence.DbInitializer.SeedPlatformTenantAsync(dbContext);
         Log.Information("Database seeding completed successfully");
 
-        // Register Recurring Jobs
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.Messaging.ProcessOutboxJob>(
             "process-outbox-events",
             job => job.RunAsync(CancellationToken.None),
@@ -315,7 +312,7 @@ try
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Lending.LoanAccrualWorker>(
             "loan-daily-accrual",
             job => job.ExecuteAsync(),
-            "0 1 * * *"); // 1:00 AM Daily
+            "0 1 * * *");
 
         RecurringJob.AddOrUpdate<Cobryx.Infrastructure.BackgroundJobs.Collections.CollectionsOrchestratorJob>(
             "collections-orchestrator",

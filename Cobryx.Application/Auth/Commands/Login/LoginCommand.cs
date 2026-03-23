@@ -102,7 +102,6 @@ public class LoginHandler : IRequestHandler<LoginCommand, Result<AuthResult>>
             }
             else
             {
-                // Prevent timing attacks by hashing even if user not found/inactive
                 _passwordHasher.VerifyPassword(request.Password, "v1.10.65536.4.YmFzZTY0c2FsdA==.YmFzZTY0aGFzaA==");
             }
 

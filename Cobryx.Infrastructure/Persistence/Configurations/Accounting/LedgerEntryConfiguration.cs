@@ -20,7 +20,7 @@ public class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEntry>
             .HasPrecision(18, 4);
 
         builder.Property(x => x.JournalSequenceId)
-            .ValueGeneratedOnAdd(); // In postgres we'll link this to a SEQUENCE
+            .ValueGeneratedOnAdd();
 
         builder.HasIndex(x => new { x.TenantId, x.JournalSequenceId });
         builder.HasIndex(x => new { x.TenantId, x.AccountId, x.JournalSequenceId });

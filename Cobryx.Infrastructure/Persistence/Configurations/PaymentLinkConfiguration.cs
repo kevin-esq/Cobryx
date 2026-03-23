@@ -16,7 +16,7 @@ public class PaymentLinkConfiguration : IEntityTypeConfiguration<PaymentLink>
         builder.HasIndex(p => p.TokenHash).IsUnique();
 
         builder.HasIndex(p => p.Status);
-        builder.HasIndex(p => new { p.Status, p.UpdatedAt }); // For recovery loop optimization
+        builder.HasIndex(p => new { p.Status, p.UpdatedAt });
 
         // Idempotency: Unified unique index for external references per tenant
         builder.HasIndex(p => new { p.TenantId, p.ExternalReference })
