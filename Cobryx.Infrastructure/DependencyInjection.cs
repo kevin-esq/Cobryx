@@ -59,7 +59,6 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Options with startup validation
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .ValidateDataAnnotations()
@@ -114,17 +113,10 @@ public static class DependencyInjection
                 return sp.GetRequiredService<MemoryDistributedCache>();
             }
 
-            // If not testing, use the Redis cache if configured
             CachingOptions cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
             if (string.IsNullOrEmpty(cachingOptions.Redis.ConnectionString))
                 return sp.GetRequiredService<MemoryDistributedCache>();
-            // Note: This is an internal detail, but IDistributedCache is resolved.
-            // Instead of manually constructing RedisCache, we can rely on AddStackExchangeRedisCache
-            // but we need to ensure it's registered conditionally.
-            // To keep it simple, we'll just return the memory cache if we can't easily switch here,
-            // or we check the config earlier if possible.
-            // Actually, a better way is to move the whole AddStackExchangeRedisCache call inside an if in Program.cs
-            // but we want to keep logic in DependencyInjection.
+
             var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
             {
                 Configuration = cachingOptions.Redis.ConnectionString,
@@ -153,8 +145,6 @@ public static class DependencyInjection
             if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
                 cfg.GetValue<bool>("Caching:UseInMemory"))
             {
-                // Use a mock or a memory-based implementation of ICacheService if possible
-                // For now, let's keep it simple or use a dummy for testing
                 return new RedisCacheService(
                     sp.GetRequiredService<IDistributedCache>(),
                     sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
@@ -226,13 +216,11 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
         services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
 
-        // Stripe Billing
         services.AddOptions<StripeOptions>()
             .Bind(configuration.GetSection(StripeOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Lending Domain
         services.AddLendingInfrastructure();
 
         services.AddHttpClient<ISlackService, SlackService>();

@@ -31,7 +31,6 @@ public class LedgerIntegrityService(
         long lastProcessedSequenceId = 0;
         DateTime lastProcessedEntryDate = DateTime.MinValue;
 
-        // 1. Fetch Checkpoint for Incremental Scan
         JournalCheckpoint? checkpoint = null;
         if (!forceFullReplay)
         {
@@ -53,7 +52,6 @@ public class LedgerIntegrityService(
             _logger.LogInformation("Starting FORCED Full Ledger Integrity Scan for Tenant {TenantId}", tenantId);
         }
 
-        // 2. Transaction Balance Pass (Optimized GroupBy)
         var imbalancedTransactions = await _dbContext.LedgerEntries
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId)
@@ -70,7 +68,6 @@ public class LedgerIntegrityService(
             details.Add($"Imbalanced Transaction {tx.TransactionId}: Net={tx.Balance}");
         }
 
-        // 3. Hash-Chain Integrity Pass (Streaming Delta)
         var accountIds = await _dbContext.LedgerAccounts
             .AsNoTracking()
             .Where(a => a.TenantId == tenantId)
@@ -225,14 +222,12 @@ public class LedgerIntegrityService(
         _logger.LogInformation("Verifying Snapshot {SnapshotId} for Account {AccountId} @ Seq {Seq}",
             snapshotId, snapshot.AccountId, snapshot.JournalSequenceId);
 
-        // 1. Calculate Expected Balance from Snapshot + Journal Delta
         var deltaSinceSnapshot = await _dbContext.LedgerEntries
             .Where(e => e.AccountId == snapshot.AccountId && e.JournalSequenceId > snapshot.JournalSequenceId)
             .SumAsync(e => e.Debit - e.Credit, ct);
 
         var expectedFromSnapshot = snapshot.Balance + deltaSinceSnapshot;
 
-        // 2. Calculate Actual Balance from Full Ledger Replay
         var realBalanceFromLedger = await _dbContext.LedgerEntries
             .Where(e => e.AccountId == snapshot.AccountId)
             .SumAsync(e => e.Debit - e.Credit, ct);
