@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<Domain.Decision.IFraudEngine, Decision.FraudEngine>();
         services.AddScoped<Decision.DecisionEngine>();
         services.AddScoped<Decision.DecisionService>();
+        services.AddScoped<Decision.IRiskEvaluator, Decision.DefaultRiskEvaluator>();
+        services.AddScoped<ML.GuardrailEngine>();
         services.AddScoped<ML.IFeatureStore, ML.RedisFeatureStore>();
         services.AddScoped<ML.FeatureUpdater>();
         services.AddScoped<ML.DatasetExporter>();
