@@ -25,7 +25,6 @@ public class StripeIdempotencyTests : IClassFixture<CobryxWebApplicationFactory>
     [Fact]
     public async Task HandleCheckoutCompletedAsync_ShouldBeIdempotent()
     {
-        // Arrange
         using var scope = _factory.Services.CreateScope();
         var syncService = scope.ServiceProvider.GetRequiredService<StripeSubscriptionSyncService>();
         var dbContext = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();

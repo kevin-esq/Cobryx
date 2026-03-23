@@ -45,7 +45,6 @@ public class LedgerIntegrityTests
     [Fact]
     public async Task VerifyJournalIntegrityAsync_ShouldBeHealthy_WhenLedgerIsCorrect()
     {
-        // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
@@ -58,10 +57,8 @@ public class LedgerIntegrityTests
 
         var service = CreateService(context);
 
-        // Act
         var report = await service.VerifyJournalIntegrityAsync(_tenantId);
 
-        // Assert
         Assert.True(report.IsHealthy);
         Assert.Equal(2, report.TotalEntriesScanned);
         Assert.Equal(0, report.ImbalancedTransactionsCount);
@@ -71,7 +68,6 @@ public class LedgerIntegrityTests
     [Fact]
     public async Task VerifyJournalIntegrityAsync_ShouldDetectImbalance_AndTripCircuitBreaker()
     {
-        // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
@@ -84,10 +80,8 @@ public class LedgerIntegrityTests
 
         var service = CreateService(context);
 
-        // Act
         var report = await service.VerifyJournalIntegrityAsync(_tenantId);
 
-        // Assert
         Assert.False(report.IsHealthy);
         Assert.Equal(1, report.ImbalancedTransactionsCount);
         Assert.True(report.CircuitBreakerTripped);
@@ -101,7 +95,6 @@ public class LedgerIntegrityTests
     [Fact]
     public async Task VerifyJournalIntegrityAsync_ShouldDetectHistoricalAlteration_ViaFingerprint()
     {
-        // Arrange
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);

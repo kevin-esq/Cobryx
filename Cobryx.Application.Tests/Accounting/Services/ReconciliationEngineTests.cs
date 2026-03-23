@@ -51,7 +51,6 @@ public class ReconciliationEngineTests
     [Fact]
     public async Task ReconcileAsync_ShouldDetectMissingPayment_WhenOutsideTolerance()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var intentId = "pi_missing_123";
@@ -65,10 +64,8 @@ public class ReconciliationEngineTests
                 new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-20), [])
             ]);
 
-        // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Equal(ReconciliationStatus.HardDrift, audit.Status);
         Assert.Equal(ReconciliationSeverity.Error, audit.Severity);
         Assert.Equal(1, audit.DetectedDriftsCount);
@@ -79,7 +76,6 @@ public class ReconciliationEngineTests
     [Fact]
     public async Task ReconcileAsync_ShouldDetectTimingLag_WhenInsideTolerance()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var intentId = "pi_lag_123";
@@ -94,10 +90,8 @@ public class ReconciliationEngineTests
                 new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), [])
             ]);
 
-        // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Equal(ReconciliationStatus.SoftDrift, audit.Status);
         Assert.Equal(ReconciliationSeverity.Info, audit.Severity);
         Assert.Equal(1, audit.DetectedDriftsCount);
@@ -107,7 +101,6 @@ public class ReconciliationEngineTests
     [Fact]
     public async Task ReconcileAsync_ShouldBeSynced_WhenLedgerMatchesStripe()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var intentId = "pi_synced_123";
@@ -126,10 +119,8 @@ public class ReconciliationEngineTests
                 new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
             ]);
 
-        // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Equal(ReconciliationStatus.Synced, audit.Status);
         Assert.Equal(ReconciliationSeverity.Info, audit.Severity);
         Assert.Equal(0, audit.DetectedDriftsCount);
@@ -138,7 +129,6 @@ public class ReconciliationEngineTests
     [Fact]
     public async Task ReconcileAsync_ShouldAutoRepairMissingLoanPayment()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var intentId = "pi_repair_123";
@@ -174,14 +164,12 @@ public class ReconciliationEngineTests
                 })
             ]);
 
-        // Act
         // 1. First Pass: Detect but don't repair
         await _engine.ReconcileAsync(_tenantId, from, to);
 
         // 2. Second Pass: Confirm and Repair
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Equal(ReconciliationStatus.Repaired, audit.Status);
         Assert.Equal(0, audit.DetectedDriftsCount); // Drifts are cleared if repaired
 
@@ -193,7 +181,6 @@ public class ReconciliationEngineTests
     [Fact]
     public async Task ReconcileAsync_ShouldConfirmDrift_OnSecondRun()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var intentId = "pi_confirm_123";
@@ -210,14 +197,12 @@ public class ReconciliationEngineTests
         // 2. Second Run: Should see it as Confirmed
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Contains("ConfirmedDrift", audit.DriftDetailsJson);
     }
 
     [Fact]
     public async Task ReconcileAsync_ShouldDetectSettlementAmountMismatch()
     {
-        // Arrange
         var from = DateTime.UtcNow.AddHours(-1);
         var to = DateTime.UtcNow;
         var btId = "bt_settlement_123";
@@ -241,10 +226,8 @@ public class ReconciliationEngineTests
                 new(btId, 10500, 500, 10000, "usd", "payout", "payout", "available", DateTime.UtcNow, DateTime.UtcNow, sourceId, [])
             ]);
 
-        // Act
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        // Assert
         Assert.Equal(ReconciliationStatus.HardDrift, audit.Status);
         Assert.Contains("AmountMismatch", audit.DriftDetailsJson);
         Assert.Contains("Settlement Amount Mismatch", audit.DriftDetailsJson);

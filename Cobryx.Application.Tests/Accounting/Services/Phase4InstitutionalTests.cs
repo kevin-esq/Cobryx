@@ -47,7 +47,6 @@ public class Phase4InstitutionalTests
     [Fact]
     public async Task BankReconciliation_ShouldSupportMultiLevelMatching()
     {
-        // Arrange
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
         context.LedgerAccounts.Add(acc);
@@ -75,10 +74,8 @@ public class Phase4InstitutionalTests
 
         var engine = new BankReconciliationEngine(context, _integrityServiceMock.Object, new Mock<IDatabaseDiagnosticService>().Object, _metrics, _reconLoggerMock.Object);
 
-        // Act
         var report = await engine.ReconcileBankMovementsAsync(_tenantId);
 
-        // Assert
         Assert.Equal(2, report.MatchedItems.Count);
 
         var match1 = report.MatchedItems.First(x => x.BankMovementId == m1.Id);
@@ -91,7 +88,6 @@ public class Phase4InstitutionalTests
     [Fact]
     public async Task LedgerIntegrity_ShouldSupportIncrementalReplay_AndIgnoreHistoricalCorruption()
     {
-        // Arrange
         using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
         {
             var account = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);

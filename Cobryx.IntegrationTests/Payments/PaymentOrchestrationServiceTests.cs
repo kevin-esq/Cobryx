@@ -60,7 +60,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_SoftDecline_ShouldScheduleRetry_AndUseIdempotency()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "test@email.com", null, null);
         customer.ToggleAutoPay(true);
@@ -72,7 +71,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.PaymentLinks.Add(link);
         await _dbContext.SaveChangesAsync();
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "insufficient_funds",
@@ -82,7 +80,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             null,
             link.Id);
 
-        // Assert
         Assert.True(result.IsSuccess);
 
         var expectedIdempotencyKey = $"recovery_{link.Id}_1";
@@ -105,7 +102,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_HardDecline_ShouldGenerateManualLink()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "hard@email.com", null, null);
         _dbContext.Customers.Add(customer);
@@ -114,7 +110,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _senderMock.Setup(s => s.Send(It.IsAny<IRequest<Result<string>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success("token"));
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "stolen_card",
@@ -122,7 +117,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             "USD",
             "Hard decline example");
 
-        // Assert
         Assert.True(result.IsSuccess);
         _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _senderMock.Verify(s => s.Send(It.IsAny<IRequest<Result<string>>>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -131,7 +125,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_3DSRequired_ShouldEscalateToManualLink()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "3ds@email.com", null, null);
         customer.ToggleAutoPay(true);
@@ -150,7 +143,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _senderMock.Setup(s => s.Send(It.IsAny<IRequest<Result<string>>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success("3ds-token"));
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "card_declined", // Initial code
@@ -158,7 +150,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             "USD",
             "3DS Simulation");
 
-        // Assert
         Assert.True(result.IsSuccess);
         _senderMock.Verify(s => s.Send(It.IsAny<IRequest<Result<string>>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -166,7 +157,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_ConcurrencyLock_ShouldPreventDoubleCharge()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "lock@email.com", null, null);
         _dbContext.Customers.Add(customer);
@@ -176,7 +166,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.PaymentLinks.Add(link);
         await _dbContext.SaveChangesAsync();
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "insufficient_funds",
@@ -186,7 +175,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             null,
             link.Id);
 
-        // Assert
         Assert.True(result.IsSuccess);
         _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(
@@ -200,7 +188,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_LoanDisputed_ShouldAbortRecovery()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "dispute@email.com", null, null);
         customer.ToggleAutoPay(true);
@@ -219,7 +206,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.PaymentLinks.Add(link);
         await _dbContext.SaveChangesAsync();
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "insufficient_funds",
@@ -229,7 +215,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             null,
             link.Id);
 
-        // Assert
         Assert.True(result.IsSuccess);
         _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(
@@ -243,7 +228,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
     [Fact]
     public async Task HandlePaymentFailureAsync_LoanClosed_ShouldAbortRecovery()
     {
-        // Arrange
         var tenantId = Guid.NewGuid();
         var customer = new Customer(tenantId, "Test", "User", "+15550100", "closed@email.com", null, null);
         customer.ToggleAutoPay(true);
@@ -262,7 +246,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
         _dbContext.PaymentLinks.Add(link);
         await _dbContext.SaveChangesAsync();
 
-        // Act
         var result = await _service.HandlePaymentFailureAsync(
             customer.Id,
             "insufficient_funds",
@@ -272,7 +255,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             null,
             link.Id);
 
-        // Assert
         Assert.True(result.IsSuccess);
         _stripeMock.Verify(s => s.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _loggerMock.Verify(l => l.Log(

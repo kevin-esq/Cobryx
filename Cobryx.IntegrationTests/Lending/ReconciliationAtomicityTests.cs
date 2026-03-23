@@ -29,7 +29,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
     [Fact]
     public async Task HandlePaymentSuccess_ShouldRollbackAll_WhenStateUpdateFails()
     {
-        // Arrange
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
         var postingEngine = scope.ServiceProvider.GetRequiredService<Application.Accounting.Services.FinancialPostingEngine>();
@@ -59,10 +58,8 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
 
         var paidAmount = new Money(1000, "MXN");
 
-        // Act
         Func<Task> act = async () => await reconService.HandlePaymentSuccessAsync(paymentIntentId, paidAmount);
 
-        // Assert
         await act.Should().ThrowAsync<Exception>().WithMessage("CRASH_SIMULATION");
 
         // Verify Rollback (Bypass EF Change Tracker to ensure we see DB state)
@@ -86,7 +83,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
     [Fact]
     public async Task RecoverStuckLinks_ShouldReconcileSuccessfulIntents()
     {
-        // Arrange
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
         var postingEngine = scope.ServiceProvider.GetRequiredService<Application.Accounting.Services.FinancialPostingEngine>();
@@ -122,7 +118,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
         // This bypasses the need for complex reflection/waiting in a fast test
         await reconService.RecoverStuckProcessingLinksAsync(TimeSpan.FromMinutes(-60));
 
-        // Assert
         var dbLink = await context.PaymentLinks.AsNoTracking().FirstAsync(l => l.Id == link.Id);
         dbLink.Status.Should().Be(PaymentLinkStatus.Paid, "Stuck but successful link should be reconciled to Paid");
 

@@ -22,7 +22,6 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
     [Fact]
     public async Task UpdateStatusAsync_ShouldRecordAuditTrailOnTransition()
     {
-        // Arrange
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
         var stateEngine = scope.ServiceProvider.GetRequiredService<FinancialStateEngine>();
@@ -55,10 +54,8 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
             throw new Exception($"FK Failure caught on line 45: {ex.Message}. Inner: {inner}", ex);
         }
 
-        // Act
         await stateEngine.UpdateStatusAsync(loan.Id, "Integ Test Trigger");
 
-        // Assert
         var updatedLoan = await context.Loans.FirstAsync(l => l.Id == loan.Id);
         updatedLoan.FinancialStatus.Should().Be(FinancialStatus.Late);
         updatedLoan.FinancialDaysPastDue.Should().Be(10);
@@ -75,7 +72,6 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
     [Fact]
     public async Task ExecuteChargeOffAsync_ShouldPerformAccountingAndStateTransition()
     {
-        // Arrange
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
         var stateEngine = scope.ServiceProvider.GetRequiredService<FinancialStateEngine>();
@@ -90,10 +86,8 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
         context.Loans.Add(loan);
         await context.SaveChangesAsync();
 
-        // Act
         await stateEngine.ExecuteChargeOffAsync(loan.Id, "Loss Verification");
 
-        // Assert
         var updatedLoan = await context.Loans.FirstAsync(l => l.Id == loan.Id);
         updatedLoan.FinancialStatus.Should().Be(FinancialStatus.ChargedOff);
         updatedLoan.Status.Should().Be(LoanStatus.Closed);

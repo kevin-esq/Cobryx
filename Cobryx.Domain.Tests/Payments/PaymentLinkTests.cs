@@ -21,7 +21,6 @@ public class PaymentLinkTests
     [Fact]
     public void RecordRecoveryFailure_ShouldFollowDunningMatrix_WithJitter()
     {
-        // Arrange
         var link = CreateActiveLink();
         var now = DateTime.UtcNow;
 
@@ -42,11 +41,9 @@ public class PaymentLinkTests
     [Fact]
     public void RecordRecoveryFailure_Jitter_ShouldVaryAcrossDifferentLinks()
     {
-        // Arrange
         var link1 = CreateActiveLink();
         var link2 = CreateActiveLink();
 
-        // Act
         link1.RecordRecoveryFailure("insufficient_funds");
         link2.RecordRecoveryFailure("insufficient_funds");
 
@@ -57,10 +54,8 @@ public class PaymentLinkTests
     [Fact]
     public void RecordRecoveryFailure_ShouldTransitionToManualReview_WhenMaxAttemptsReached()
     {
-        // Arrange
         var link = CreateActiveLink();
 
-        // Act
         for (var i = 0; i < 5; i++)
         {
             link.RecordRecoveryFailure("soft_fail");
@@ -69,7 +64,6 @@ public class PaymentLinkTests
         // 6th fail should transition
         link.RecordRecoveryFailure("final_fail");
 
-        // Assert
         Assert.Equal(6, link.RecoveryAttemptCount);
         Assert.Equal(PaymentLinkStatus.ManualReview, link.Status);
         Assert.Null(link.NextRecoveryAttemptAt);
@@ -78,17 +72,14 @@ public class PaymentLinkTests
     [Fact]
     public void RecordRecoveryFailure_ShouldTransitionToManualReview_WhenDeadlineReached()
     {
-        // Arrange
         var link = CreateActiveLink();
         // Manually manipulate internal state if possible, but it's private set.
         // We can check if the deadline logic works by checking if it uses it.
         // Since we can't easily mock DateTime.UtcNow in this simple unit test without more infra,
         // we trust the conditional logic: if (RecoveryAttemptCount >= MaxRecoveryAttempts || DateTime.UtcNow > RecoveryDeadline)
 
-        // Act
         link.RecordRecoveryFailure("soft_fail");
 
-        // Assert
         Assert.Equal(1, link.RecoveryAttemptCount);
         Assert.Equal(PaymentLinkStatus.Active, link.Status);
         Assert.NotNull(link.NextRecoveryAttemptAt);
@@ -97,14 +88,11 @@ public class PaymentLinkTests
     [Fact]
     public void RecoveryLock_ShouldPreventConcurrentAccess()
     {
-        // Arrange
         var link = CreateActiveLink();
 
-        // Act
         var firstAcquire = link.TryAcquireRecoveryLock();
         var secondAcquire = link.TryAcquireRecoveryLock();
 
-        // Assert
         Assert.True(firstAcquire);
         Assert.False(secondAcquire);
         Assert.True(link.RecoveryInProgress);

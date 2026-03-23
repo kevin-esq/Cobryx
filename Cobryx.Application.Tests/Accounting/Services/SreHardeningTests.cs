@@ -35,7 +35,6 @@ public class SreHardeningTests
     [Fact]
     public async Task DriftDetection_ShouldTripCircuitBreaker_OnMismatch()
     {
-        // Arrange
         var dbName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
         var accountId = Guid.NewGuid();
@@ -63,10 +62,8 @@ public class SreHardeningTests
 
             var worker = new DriftDetectionWorker(context, _mockBalanceService.Object, _metrics, _loggerDrift.Object);
 
-            // Act
             await worker.ExecuteAsync();
 
-            // Assert
             var updatedTenant = await context.Tenants.FindAsync(tenantId);
             Assert.True(updatedTenant!.FinancialSafeMode);
         }

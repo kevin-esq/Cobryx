@@ -26,7 +26,6 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
     [Fact]
     public async Task StripeReceive_ShouldHandleConcurrentRequests_Gracefully()
     {
-        // Arrange
         var stripeEventId = "evt_race_" + Guid.NewGuid();
 
         var json = @"{
@@ -67,13 +66,11 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
             await db.SaveChangesAsync();
         }
 
-        // Act
         var task1 = SendWebhookAsync(json);
         var task2 = SendWebhookAsync(json);
 
         await Task.WhenAll(task1, task2);
 
-        // Assert
         if (task1.Result.StatusCode != HttpStatusCode.OK)
         {
             var body = await task1.Result.Content.ReadAsStringAsync();
@@ -100,14 +97,11 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
     [Fact]
     public async Task StripeReceive_ShouldReturn500_WhenProcessingFails()
     {
-        // Arrange
         var stripeEventId = "evt_fail_" + Guid.NewGuid();
         var json = @"{ ""id"": """ + stripeEventId + @""", ""object"": ""event"", ""type"": ""customer.subscription.updated"" }";
 
-        // Act
         var response = await SendWebhookAsync(json);
 
-        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var error = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         error!.ErrorCode.Should().StartWith(WebhookOutcomes.ProcessingFailed);
@@ -116,7 +110,6 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
     [Fact]
     public async Task StripeReceive_ShouldIgnoreDuplicateWebhook_WhenAlreadyProcessed()
     {
-        // Arrange
         var stripeEventId = "evt_duplicate_" + Guid.NewGuid();
         var json = @"{
   ""id"": ""{{EVENT_ID}}"",
@@ -147,10 +140,8 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
             await db.SaveChangesAsync();
         }
 
-        // Act
         var response = await SendWebhookAsync(json);
 
-        // Assert
         var body = await response.Content.ReadAsStringAsync();
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
         body.Should().Contain("\"received\":true");

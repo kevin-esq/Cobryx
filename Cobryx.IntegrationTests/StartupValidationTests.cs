@@ -17,7 +17,6 @@ public class StartupValidationTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public void Startup_ShouldFail_WhenRequiredConfigurationIsMissing()
     {
-        // Arrange
         var builder = _factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((context, config) =>
@@ -51,7 +50,6 @@ public class StartupValidationTests(WebApplicationFactory<Program> factory) : IC
         var outboxInterceptor = scope.ServiceProvider.GetService<OutboxInterceptor>();
         var metricsInterceptor = scope.ServiceProvider.GetService<DbMetricsInterceptor>();
 
-        // Assert
         auditInterceptor.Should().NotBeNull();
         outboxInterceptor.Should().NotBeNull();
         metricsInterceptor.Should().NotBeNull();

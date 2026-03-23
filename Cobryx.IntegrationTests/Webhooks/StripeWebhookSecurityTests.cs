@@ -21,14 +21,11 @@ public class StripeWebhookSecurityTests : IClassFixture<CobryxWebApplicationFact
     [Fact]
     public async Task StripeReceive_ShouldReturnBadRequest_WhenSignatureIsMissing()
     {
-        // Arrange
         var payload = new { type = "invoice.paid" };
         var request = JsonContent.Create(payload);
 
-        // Act
         var response = await _client.PostAsync("/api/v1/webhooks/stripe", request);
 
-        // Assert
         if (response.StatusCode != HttpStatusCode.BadRequest)
         {
             var body = await response.Content.ReadAsStringAsync();
@@ -42,15 +39,12 @@ public class StripeWebhookSecurityTests : IClassFixture<CobryxWebApplicationFact
     [Fact]
     public async Task StripeReceive_ShouldReturnBadRequest_WhenSignatureIsInvalid()
     {
-        // Arrange
         var payload = new { type = "invoice.paid" };
         var request = JsonContent.Create(payload);
         request.Headers.Add("Stripe-Signature", "t=123,v1=invalid_signature");
 
-        // Act
         var response = await _client.PostAsync("/api/v1/webhooks/stripe", request);
 
-        // Assert
         if (response.StatusCode != HttpStatusCode.BadRequest)
         {
             var body = await response.Content.ReadAsStringAsync();
