@@ -57,11 +57,9 @@ public class FinancialStateEngine
         // This is a subtle but critical change: DPD is now indirectly tied to whether
         // the Ledger says the balance is 0 or not.
 
-        // 2. Logic is encapsulated in the domain entity
         var oldStatus = loan.FinancialStatus;
         loan.UpdateFinancialRiskStatus();
 
-        // 3. Automated Charge-Off Trigger
         // If a loan reaches 180 days past due, it is automatically charged off.
         if (loan.FinancialDaysPastDue >= 180 && loan.FinancialStatus != FinancialStatus.ChargedOff)
         {
@@ -69,7 +67,6 @@ public class FinancialStateEngine
             return; // ExecuteChargeOffAsync handles the save and audit
         }
 
-        // 4. Audit the transition if status changed
         if (loan.FinancialStatus != oldStatus)
         {
             var audit = new FinancialStatusAudit(
@@ -146,13 +143,10 @@ public class FinancialStateEngine
 
         var oldStatus = loan.FinancialStatus;
 
-        // 1. Transactional Accounting
         await _postingEngine.PostChargeOffAsync(loan, reason, ct);
 
-        // 2. Domain Transition
         loan.MarkAsChargedOff();
 
-        // 3. Audit Trail
         var audit = new FinancialStatusAudit(
             loan.TenantId,
             loan.Id,
@@ -183,13 +177,10 @@ public class FinancialStateEngine
 
         var oldStatus = loan.FinancialStatus;
 
-        // 1. Recovery Accounting
         await _postingEngine.PostRecoveryAsync(loan, amount, reference, ct);
 
-        // 2. Domain Transition
         loan.MarkAsRecovered();
 
-        // 3. Audit Trail
         var audit = new FinancialStatusAudit(
             loan.TenantId,
             loan.Id,

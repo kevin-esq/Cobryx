@@ -42,7 +42,6 @@ public class PaymentLinkReconciliationService
     {
         _logger.LogInformation("Processing successful payment for Intent: {IntentId}", paymentIntentId);
 
-        // 1. Find the PaymentLink
         var link = await _context.PaymentLinks
             .FirstOrDefaultAsync(l => l.StripePaymentIntentId == paymentIntentId, ct);
 
@@ -70,10 +69,8 @@ public class PaymentLinkReconciliationService
         using var transaction = await _context.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, ct);
         try
         {
-            // 3. Update Link State
             link.MarkAsPaid(paidAmount);
 
-            // 4. Create a formal Payment record
             var paymentMethod = await _context.PaymentMethods
                 .FirstOrDefaultAsync(pm => pm.TenantId == link.TenantId && pm.Code == "STRIPE", ct);
 
@@ -161,7 +158,6 @@ public class PaymentLinkReconciliationService
     {
         _logger.LogInformation("Processing refund for Intent: {IntentId}", paymentIntentId);
 
-        // 1. Find the PaymentLink to get context (Tenant, Loan)
         var link = await _context.PaymentLinks
             .FirstOrDefaultAsync(l => l.StripePaymentIntentId == paymentIntentId, ct);
 
@@ -194,14 +190,12 @@ public class PaymentLinkReconciliationService
                 return;
             }
 
-            // 2. Post Reversal
             await _postingEngine.PostReversalAsync(
                 originalTx.Id,
                 refundAmount.Amount,
                 $"Stripe Refund - Amount: {refundAmount.Amount}",
                 ct);
 
-            // 3. Update Financial State (Inside transaction)
             if (link?.LoanId != null)
             {
                 await _stateEngine.UpdateStatusAsync(link.LoanId.Value, "Refund Processed", ct);

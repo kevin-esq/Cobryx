@@ -172,116 +172,186 @@ public sealed class CobryxMetrics : IDisposable
             "cobryx_domain_errors_total",
             description: "Total number of domain errors");
 
-        LoginSuccesses = _meter.CreateCounter<long>("auth_login_success_total", description: "Total number of successful logins");
-        LoginFailures = _meter.CreateCounter<long>("auth_login_failure_total", description: "Total number of failed logins");
-        TokenRefreshes = _meter.CreateCounter<long>("auth_token_refresh_total", description: "Total number of token refresh operations");
-        PasswordResets = _meter.CreateCounter<long>("auth_password_reset_total", description: "Total number of password resets requested");
-        OutboxJobsProcessed = _meter.CreateCounter<long>("outbox_jobs_processed_total", description: "Total number of outbox jobs processed");
-        RecoveryAttemptTotal = _meter.CreateCounter<long>("cobryx_recovery_attempt_total", description: "Total number of recovery attempts tagged by attempt number and outcome");
-        RecoveryRevenueTotal = _meter.CreateCounter<double>("cobryx_recovery_revenue_total", unit: "$", description: "Total revenue successfully recovered by the dunning engine");
-        RecoveryDisputeStopTotal = _meter.CreateCounter<long>("cobryx_recovery_dispute_stop_total", description: "Total recovery attempts aborted due to active disputes");
+        LoginSuccesses =
+            _meter.CreateCounter<long>("auth_login_success_total", description: "Total number of successful logins");
+        LoginFailures =
+            _meter.CreateCounter<long>("auth_login_failure_total", description: "Total number of failed logins");
+        TokenRefreshes = _meter.CreateCounter<long>("auth_token_refresh_total",
+            description: "Total number of token refresh operations");
+        PasswordResets = _meter.CreateCounter<long>("auth_password_reset_total",
+            description: "Total number of password resets requested");
+        OutboxJobsProcessed = _meter.CreateCounter<long>("outbox_jobs_processed_total",
+            description: "Total number of outbox jobs processed");
+        RecoveryAttemptTotal = _meter.CreateCounter<long>("cobryx_recovery_attempt_total",
+            description: "Total number of recovery attempts tagged by attempt number and outcome");
+        RecoveryRevenueTotal = _meter.CreateCounter<double>("cobryx_recovery_revenue_total", unit: "$",
+            description: "Total revenue successfully recovered by the dunning engine");
+        RecoveryDisputeStopTotal = _meter.CreateCounter<long>("cobryx_recovery_dispute_stop_total",
+            description: "Total recovery attempts aborted due to active disputes");
 
         // Monetization
-        SubscriptionLimitReached = _meter.CreateCounter<long>("subscription_limit_reached_total", description: "Total hits to a plan limit");
-        SubscriptionUpgrades = _meter.CreateCounter<long>("subscription_upgrade_total", description: "Total subscription upgrades");
-        SubscriptionDowngradeRejected = _meter.CreateCounter<long>("subscription_downgrade_rejected_total", description: "Total rejected downgrades due to usage");
+        SubscriptionLimitReached = _meter.CreateCounter<long>("subscription_limit_reached_total",
+            description: "Total hits to a plan limit");
+        SubscriptionUpgrades =
+            _meter.CreateCounter<long>("subscription_upgrade_total", description: "Total subscription upgrades");
+        SubscriptionDowngradeRejected = _meter.CreateCounter<long>("subscription_downgrade_rejected_total",
+            description: "Total rejected downgrades due to usage");
 
         // Subscription Gate
-        SubscriptionGateBlocked = _meter.CreateCounter<long>("subscription_gate_blocked_total", description: "Total requests blocked by subscription gate");
-        SubscriptionGateCacheHits = _meter.CreateCounter<long>("subscription_gate_cache_hit_total", description: "Cache hits for subscription status lookups");
-        SubscriptionGateCacheMisses = _meter.CreateCounter<long>("subscription_gate_cache_miss_total", description: "Cache misses for subscription status lookups");
+        SubscriptionGateBlocked = _meter.CreateCounter<long>("subscription_gate_blocked_total",
+            description: "Total requests blocked by subscription gate");
+        SubscriptionGateCacheHits = _meter.CreateCounter<long>("subscription_gate_cache_hit_total",
+            description: "Cache hits for subscription status lookups");
+        SubscriptionGateCacheMisses = _meter.CreateCounter<long>("subscription_gate_cache_miss_total",
+            description: "Cache misses for subscription status lookups");
 
         // Document Scanning
-        DocumentsScanTotal = _meter.CreateCounter<long>("documents_scan_total", description: "Total document scans completed");
-        DocumentsInfectedTotal = _meter.CreateCounter<long>("documents_infected_total", description: "Total infected documents detected");
-        DocumentsScanFailTotal = _meter.CreateCounter<long>("documents_scan_fail_total", description: "Total document scan failures");
-        DocumentsScanLatency = _meter.CreateHistogram<double>("documents_scan_latency_seconds", unit: "s", description: "Duration of virus scans");
-        ScannerCircuitBreakerTrips = _meter.CreateCounter<long>("scanner_circuit_breaker_trips_total", description: "Total times the scanner circuit breaker rejected a request");
+        DocumentsScanTotal =
+            _meter.CreateCounter<long>("documents_scan_total", description: "Total document scans completed");
+        DocumentsInfectedTotal =
+            _meter.CreateCounter<long>("documents_infected_total", description: "Total infected documents detected");
+        DocumentsScanFailTotal =
+            _meter.CreateCounter<long>("documents_scan_fail_total", description: "Total document scan failures");
+        DocumentsScanLatency = _meter.CreateHistogram<double>("documents_scan_latency_seconds", unit: "s",
+            description: "Duration of virus scans");
+        ScannerCircuitBreakerTrips = _meter.CreateCounter<long>("scanner_circuit_breaker_trips_total",
+            description: "Total times the scanner circuit breaker rejected a request");
 
         // Scaling
-        UsageCacheHits = _meter.CreateCounter<long>("usage_cache_hit_total", description: "Total cache hits for usage snapshots");
-        UsageCacheMisses = _meter.CreateCounter<long>("usage_cache_miss_total", description: "Total cache misses for usage snapshots");
+        UsageCacheHits =
+            _meter.CreateCounter<long>("usage_cache_hit_total", description: "Total cache hits for usage snapshots");
+        UsageCacheMisses = _meter.CreateCounter<long>("usage_cache_miss_total",
+            description: "Total cache misses for usage snapshots");
 
-        OutboxProcessingLag = _meter.CreateHistogram<double>("outbox_processing_lag_seconds", unit: "s", description: "Lag between event occurrence and processing");
-        CommandDuration = _meter.CreateHistogram<double>("command_duration_seconds", unit: "s", description: "Duration of business commands");
+        OutboxProcessingLag = _meter.CreateHistogram<double>("outbox_processing_lag_seconds", unit: "s",
+            description: "Lag between event occurrence and processing");
+        CommandDuration = _meter.CreateHistogram<double>("command_duration_seconds", unit: "s",
+            description: "Duration of business commands");
 
         // Invitations
-        InvitationsCreated = _meter.CreateCounter<long>("invitations_created_total", description: "Total invitations sent");
-        InvitationsAccepted = _meter.CreateCounter<long>("invitations_accepted_total", description: "Total invitations accepted");
-        InvitationsExpired = _meter.CreateCounter<long>("invitations_expired_total", description: "Total invitations expired");
-        InvitationsRejected = _meter.CreateCounter<long>("invitations_rejected_total", description: "Total enrollment attempts rejected (invalid token/mismatch)");
-        InvitationsReplayAttempts = _meter.CreateCounter<long>("invitations_replay_attempts_total", description: "Total attempts to use an already accepted/expired token");
+        InvitationsCreated =
+            _meter.CreateCounter<long>("invitations_created_total", description: "Total invitations sent");
+        InvitationsAccepted =
+            _meter.CreateCounter<long>("invitations_accepted_total", description: "Total invitations accepted");
+        InvitationsExpired =
+            _meter.CreateCounter<long>("invitations_expired_total", description: "Total invitations expired");
+        InvitationsRejected = _meter.CreateCounter<long>("invitations_rejected_total",
+            description: "Total enrollment attempts rejected (invalid token/mismatch)");
+        InvitationsReplayAttempts = _meter.CreateCounter<long>("invitations_replay_attempts_total",
+            description: "Total attempts to use an already accepted/expired token");
 
-        CleanupInvitationsDeleted = _meter.CreateCounter<long>("cleanup_invitations_deleted_total", description: "Total old invitations hard-deleted by cleanup job");
-        CleanupInvitationsExpired = _meter.CreateCounter<long>("cleanup_invitations_expired_total", description: "Total stale invitations marked as expired by cleanup job");
+        CleanupInvitationsDeleted = _meter.CreateCounter<long>("cleanup_invitations_deleted_total",
+            description: "Total old invitations hard-deleted by cleanup job");
+        CleanupInvitationsExpired = _meter.CreateCounter<long>("cleanup_invitations_expired_total",
+            description: "Total stale invitations marked as expired by cleanup job");
 
         // Database Infrastructure
-        DbCommandDuration = _meter.CreateHistogram<double>("db_command_duration_seconds", unit: "s", description: "Duration of database commands");
-        DbRetryTotal = _meter.CreateCounter<long>("db_retry_total", description: "Total number of transient database error retries");
-        DbPoolExhaustionTotal = _meter.CreateCounter<long>("db_pool_exhaustion_total", description: "Total number of connection pool exhaustion events");
-        DbCommandTimeoutTotal = _meter.CreateCounter<long>("db_command_timeout_total", description: "Total number of database command timeouts");
-        ConcurrentDbCommands = _meter.CreateUpDownCounter<long>("db_concurrent_commands", description: "Number of database commands currently executing");
+        DbCommandDuration = _meter.CreateHistogram<double>("db_command_duration_seconds", unit: "s",
+            description: "Duration of database commands");
+        DbRetryTotal = _meter.CreateCounter<long>("db_retry_total",
+            description: "Total number of transient database error retries");
+        DbPoolExhaustionTotal = _meter.CreateCounter<long>("db_pool_exhaustion_total",
+            description: "Total number of connection pool exhaustion events");
+        DbCommandTimeoutTotal = _meter.CreateCounter<long>("db_command_timeout_total",
+            description: "Total number of database command timeouts");
+        ConcurrentDbCommands = _meter.CreateUpDownCounter<long>("db_concurrent_commands",
+            description: "Number of database commands currently executing");
 
         // Hangfire Infrastructure
-        HangfireQueueLatency = _meter.CreateHistogram<double>("hangfire_queue_latency_seconds", unit: "s", description: "Time background jobs spend in queue");
+        HangfireQueueLatency = _meter.CreateHistogram<double>("hangfire_queue_latency_seconds", unit: "s",
+            description: "Time background jobs spend in queue");
 
-        HangfireActiveWorkers = _meter.CreateObservableGauge<long>("hangfire_active_workers",
+        HangfireActiveWorkers = _meter.CreateObservableGauge("hangfire_active_workers",
             () => _activeWorkersProvider(), description: "Number of active Hangfire workers");
 
-        HangfireQueueLength = _meter.CreateObservableGauge<long>("hangfire_queue_length",
+        HangfireQueueLength = _meter.CreateObservableGauge("hangfire_queue_length",
             () => _queueLengthProvider(), description: "Number of jobs waiting in Hangfire queues");
 
-        HangfireFailedJobs = _meter.CreateObservableGauge<long>("hangfire_failed_jobs_total",
+        HangfireFailedJobs = _meter.CreateObservableGauge("hangfire_failed_jobs_total",
             () => _failedJobsProvider(), description: "Total number of failed background jobs");
 
-        HangfireDeletedJobs = _meter.CreateObservableGauge<long>("hangfire_deleted_jobs_total",
+        HangfireDeletedJobs = _meter.CreateObservableGauge("hangfire_deleted_jobs_total",
             () => _deletedJobsProvider(), description: "Total number of deleted background jobs");
 
-        TimeToWow = _meter.CreateHistogram<double>("cobryx_time_to_wow_seconds", unit: "s", description: "Time from tenant creation to first value realization (Wow)");
-        FeatureActivation = _meter.CreateCounter<long>("cobryx_feature_activation_total", description: "Intensity of feature usage across tiers");
-        OnboardingAbandoned = _meter.CreateCounter<long>("cobryx_onboarding_abandoned_total", description: "Total tenants that abandoned onboarding");
-        TrialExpiredNoWow = _meter.CreateCounter<long>("cobryx_trial_expired_no_wow_total", description: "Total trials that expired without any Wow event");
-        SlowActivation = _meter.CreateCounter<long>("cobryx_slow_activation_total", description: "Total tenants that took >24h to reach Wow moment");
+        TimeToWow = _meter.CreateHistogram<double>("cobryx_time_to_wow_seconds", unit: "s",
+            description: "Time from tenant creation to first value realization (Wow)");
+        FeatureActivation = _meter.CreateCounter<long>("cobryx_feature_activation_total",
+            description: "Intensity of feature usage across tiers");
+        OnboardingAbandoned = _meter.CreateCounter<long>("cobryx_onboarding_abandoned_total",
+            description: "Total tenants that abandoned onboarding");
+        TrialExpiredNoWow = _meter.CreateCounter<long>("cobryx_trial_expired_no_wow_total",
+            description: "Total trials that expired without any Wow event");
+        SlowActivation = _meter.CreateCounter<long>("cobryx_slow_activation_total",
+            description: "Total tenants that took >24h to reach Wow moment");
 
-        TimeToExpansion = _meter.CreateHistogram<double>("cobryx_time_to_expansion_seconds", unit: "s", description: "Time from first payment to first plan expansion");
+        TimeToExpansion = _meter.CreateHistogram<double>("cobryx_time_to_expansion_seconds", unit: "s",
+            description: "Time from first payment to first plan expansion");
 
-        RevenueConcentration = _meter.CreateObservableGauge<double>("cobryx_revenue_concentration_percent",
-            () => _revenueConcentrationProvider(), unit: "%", description: "Percentage of total MRR coming from the Top 10% of tenants");
+        RevenueConcentration = _meter.CreateObservableGauge("cobryx_revenue_concentration_percent",
+            () => _revenueConcentrationProvider(), unit: "%",
+            description: "Percentage of total MRR coming from the Top 10% of tenants");
 
         // Institutional Reconciliation & Integrity
-        ReconciliationDriftTotal = _meter.CreateCounter<long>("reconciliation_drift_detected_total", description: "Total number of reconciliation drifts detected");
-        ReconciliationAutoRepairedTotal = _meter.CreateCounter<long>("reconciliation_auto_repaired_total", description: "Total number of drifts auto-repaired");
-        SettlementDriftTotal = _meter.CreateCounter<long>("reconciliation_settlement_drift_total", description: "Total number of settlement-specific drifts");
-        FeeMismatchTotal = _meter.CreateCounter<long>("reconciliation_fee_mismatch_total", description: "Total number of Stripe fee mismatches");
-        PayoutMismatchTotal = _meter.CreateCounter<long>("reconciliation_payout_mismatch_total", description: "Total number of Stripe payout mismatches");
-        LedgerIntegrityFailureTotal = _meter.CreateCounter<long>("ledger_integrity_failure_total", description: "Total number of ledger journal integrity failures");
-        CircuitBreakerTrippedTotal = _meter.CreateCounter<long>("financial_circuit_breaker_tripped_total", description: "Total number of times a financial circuit breaker was tripped");
-        ReplayEntriesScannedTotal = _meter.CreateCounter<long>("ledger_replay_entries_scanned_total", description: "Total number of ledger entries scanned during integrity checks");
-        ReplayDuration = _meter.CreateHistogram<double>("ledger_replay_duration_seconds", unit: "s", description: "Duration of ledger integrity replay runs");
+        ReconciliationDriftTotal = _meter.CreateCounter<long>("reconciliation_drift_detected_total",
+            description: "Total number of reconciliation drifts detected");
+        ReconciliationAutoRepairedTotal = _meter.CreateCounter<long>("reconciliation_auto_repaired_total",
+            description: "Total number of drifts auto-repaired");
+        SettlementDriftTotal = _meter.CreateCounter<long>("reconciliation_settlement_drift_total",
+            description: "Total number of settlement-specific drifts");
+        FeeMismatchTotal = _meter.CreateCounter<long>("reconciliation_fee_mismatch_total",
+            description: "Total number of Stripe fee mismatches");
+        PayoutMismatchTotal = _meter.CreateCounter<long>("reconciliation_payout_mismatch_total",
+            description: "Total number of Stripe payout mismatches");
+        LedgerIntegrityFailureTotal = _meter.CreateCounter<long>("ledger_integrity_failure_total",
+            description: "Total number of ledger journal integrity failures");
+        CircuitBreakerTrippedTotal = _meter.CreateCounter<long>("financial_circuit_breaker_tripped_total",
+            description: "Total number of times a financial circuit breaker was tripped");
+        ReplayEntriesScannedTotal = _meter.CreateCounter<long>("ledger_replay_entries_scanned_total",
+            description: "Total number of ledger entries scanned during integrity checks");
+        ReplayDuration = _meter.CreateHistogram<double>("ledger_replay_duration_seconds", unit: "s",
+            description: "Duration of ledger integrity replay runs");
 
-        BalanceCacheHits = _meter.CreateCounter<long>("ledger_balance_cache_hit_total", description: "Total hits on the Redis balance cache");
-        BalanceCacheMisses = _meter.CreateCounter<long>("ledger_balance_cache_miss_total", description: "Total misses on the Redis balance cache requiring SQL fallback");
-        BalanceCacheRebuildDuration = _meter.CreateHistogram<double>("ledger_balance_cache_rebuild_seconds", unit: "s", description: "Time taken to rebuild balance from Snapshot + Delta");
+        BalanceCacheHits = _meter.CreateCounter<long>("ledger_balance_cache_hit_total",
+            description: "Total hits on the Redis balance cache");
+        BalanceCacheMisses = _meter.CreateCounter<long>("ledger_balance_cache_miss_total",
+            description: "Total misses on the Redis balance cache requiring SQL fallback");
+        BalanceCacheRebuildDuration = _meter.CreateHistogram<double>("ledger_balance_cache_rebuild_seconds", unit: "s",
+            description: "Time taken to rebuild balance from Snapshot + Delta");
 
-        BalanceCacheRecomputeTotal = _meter.CreateCounter<long>("ledger_balance_recompute_total", description: "Total number of times a balance had to be recomputed from SQL");
-        LedgerDeltaScanDuration = _meter.CreateHistogram<double>("ledger_delta_scan_duration_seconds", unit: "s", description: "Duration of delta scans since last snapshot");
-        LedgerSnapshotAge = _meter.CreateHistogram<double>("ledger_snapshot_age_seconds", unit: "s", description: "Age of the latest snapshot used for balance calculation");
-        LedgerCacheAtomicRejectTotal = _meter.CreateCounter<long>("ledger_cache_atomic_reject_total", description: "Total number of Redis cache updates rejected due to stale sequence");
+        BalanceCacheRecomputeTotal = _meter.CreateCounter<long>("ledger_balance_recompute_total",
+            description: "Total number of times a balance had to be recomputed from SQL");
+        LedgerDeltaScanDuration = _meter.CreateHistogram<double>("ledger_delta_scan_duration_seconds", unit: "s",
+            description: "Duration of delta scans since last snapshot");
+        LedgerSnapshotAge = _meter.CreateHistogram<double>("ledger_snapshot_age_seconds", unit: "s",
+            description: "Age of the latest snapshot used for balance calculation");
+        LedgerCacheAtomicRejectTotal = _meter.CreateCounter<long>("ledger_cache_atomic_reject_total",
+            description: "Total number of Redis cache updates rejected due to stale sequence");
 
         // SRE
-        ShadowReplayLag = _meter.CreateHistogram<double>("shadow_replay_lag_seconds", unit: "s", description: "Lag between primary ledger and shadow replay engine");
-        ShadowReplayEventsProcessed = _meter.CreateCounter<long>("shadow_replay_events_processed_total", description: "Total events processed by the shadow replay engine");
-        ShadowDriftDetected = _meter.CreateCounter<long>("shadow_drift_detected_total", description: "Total number of drift incidents detected by SRE");
-        ShadowReplayThroughput = _meter.CreateCounter<long>("shadow_replay_throughput", description: "Throughput of the shadow replay engine");
-        ShadowReplayRebuildTotal = _meter.CreateCounter<long>("shadow_replay_rebuild_total", description: "Total number of times shadow state was rebuilt");
+        ShadowReplayLag = _meter.CreateHistogram<double>("shadow_replay_lag_seconds", unit: "s",
+            description: "Lag between primary ledger and shadow replay engine");
+        ShadowReplayEventsProcessed = _meter.CreateCounter<long>("shadow_replay_events_processed_total",
+            description: "Total events processed by the shadow replay engine");
+        ShadowDriftDetected = _meter.CreateCounter<long>("shadow_drift_detected_total",
+            description: "Total number of drift incidents detected by SRE");
+        ShadowReplayThroughput = _meter.CreateCounter<long>("shadow_replay_throughput",
+            description: "Throughput of the shadow replay engine");
+        ShadowReplayRebuildTotal = _meter.CreateCounter<long>("shadow_replay_rebuild_total",
+            description: "Total number of times shadow state was rebuilt");
 
         // Elite SRE Infrastructure
-        PostgresWraparoundRiskRatio = _meter.CreateObservableGauge<double>("postgres_wraparound_risk_ratio", () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");
-        PostgresWalSyncDurationSeconds = _meter.CreateObservableGauge<double>("postgres_wal_sync_duration_seconds", () => _walSyncProvider(), unit: "s", description: "Latency of WAL sync operations from pg_stat_wal");
-        PostgresDeadTupleRatio = _meter.CreateObservableGauge<double>("postgres_dead_tuple_ratio", () => _deadTupleRatioProvider(), description: "Ratio of dead vs live tuples in core ledger tables");
-        PostgresCacheHitRatio = _meter.CreateObservableGauge<double>("postgres_cache_hit_ratio", () => _cacheHitRatioProvider(), description: "Efficiency of Postgres shared buffer cache");
-        HangfireWaitToWorkRatio = _meter.CreateObservableGauge<double>("hangfire_wait_to_work_ratio", () => _waitToWorkRatioProvider(), description: "Ratio of job queued time vs execution time");
-        CobryxPressureBackoffActiveTotal = _meter.CreateCounter<long>("cobryx_pressure_backoff_active_total", description: "Total number of times a batch execution was delayed due to infrastructure pressure");
+        PostgresWraparoundRiskRatio = _meter.CreateObservableGauge("postgres_wraparound_risk_ratio",
+            () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");
+        PostgresWalSyncDurationSeconds = _meter.CreateObservableGauge("postgres_wal_sync_duration_seconds",
+            () => _walSyncProvider(), unit: "s", description: "Latency of WAL sync operations from pg_stat_wal");
+        PostgresDeadTupleRatio = _meter.CreateObservableGauge("postgres_dead_tuple_ratio",
+            () => _deadTupleRatioProvider(), description: "Ratio of dead vs live tuples in core ledger tables");
+        PostgresCacheHitRatio = _meter.CreateObservableGauge("postgres_cache_hit_ratio",
+            () => _cacheHitRatioProvider(), description: "Efficiency of Postgres shared buffer cache");
+        HangfireWaitToWorkRatio = _meter.CreateObservableGauge("hangfire_wait_to_work_ratio",
+            () => _waitToWorkRatioProvider(), description: "Ratio of job queued time vs execution time");
+        CobryxPressureBackoffActiveTotal = _meter.CreateCounter<long>("cobryx_pressure_backoff_active_total",
+            description: "Total number of times a batch execution was delayed due to infrastructure pressure");
     }
 
     public void RecordOutcome(string outcomeCode, bool success, string? tier = null, string? httpStatus = null)

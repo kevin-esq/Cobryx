@@ -37,7 +37,6 @@ public class ReconciliationEngine(
         var runId = Guid.NewGuid();
         _logger.LogInformation("Starting Stripe-grade Reconciliation Run {RunId} for Tenant {TenantId}", runId, tenantId);
 
-        // 1. Fetch Balances
         var (available, pending) = await _stripeService.GetBalanceAsync(stripeAccountId, ct);
         var ledgerBalance = await GetLedgerBalanceAsync(tenantId, ct);
 
@@ -93,7 +92,6 @@ public class ReconciliationEngine(
             hasMore = intents.Count == 100;
         }
 
-        // 3. Deep Settlement Scan (BalanceTransactions)
         var settlementDrifts = await ReconcileSettlementAsync(tenantId, from, to, stripeAccountId, ct);
         foreach (var sd in settlementDrifts)
         {
@@ -106,7 +104,6 @@ public class ReconciliationEngine(
             }
         }
 
-        // 3. Summarize Run
         var severity = ReconciliationSeverity.Info;
         var status = ReconciliationStatus.Synced;
 
@@ -181,7 +178,6 @@ public class ReconciliationEngine(
 
     private async Task<DriftDetail?> AnalyzeIntentAsync(StripePaymentIntentDto intent, Guid tenantId, CancellationToken ct)
     {
-        // 1. Check if recorded in Ledger via ReferenceId (PAY-STRIPE-{PI} or REC-STRIPE-{PI})
         var referencePay = $"PAY-STRIPE-{intent.Id}";
         var referenceRec = $"REC-STRIPE-{intent.Id}";
 
@@ -250,7 +246,6 @@ public class ReconciliationEngine(
 
     private async Task<DriftDetail?> AnalyzeBalanceTransactionAsync(StripeBalanceTransactionDto tx, Guid tenantId, CancellationToken ct)
     {
-        // 1. Map Stripe Types to Ledger Reference Prefixes
         // payout -> PAYOUT-STRIPE-{ID}
         // refund -> REF-STRIPE-{ID}
         // stripe_fee -> FEE-STRIPE-{BT_ID}
@@ -266,7 +261,6 @@ public class ReconciliationEngine(
         if (referenceId == null)
             return null; // Only interested in institutional movements
 
-        // 2. Check Ledger Existence
         var ledgerTx = await _dbContext.LedgerTransactions
             .AsNoTracking()
             .Include(t => t.Entries)
@@ -284,7 +278,6 @@ public class ReconciliationEngine(
             return new DriftDetail(tx.Id, DriftType.MissingPayment, ReconciliationSeverity.Error, $"Settlement {tx.Type} ({tx.Amount / 100m} {tx.Currency.ToUpper()}) missing from Ledger.", "missing_settlement", ReconciliationStatus.HardDrift);
         }
 
-        // 3. Validate Institutional Fields (Deep Pass)
         var ledgerAmount = ledgerTx.Entries.Sum(e => e.Debit - e.Credit); // Simplified for simple movements
         // For BTs, the Net amount is what landed/left the account
         var stripeNet = tx.Net / 100m;
@@ -301,7 +294,6 @@ public class ReconciliationEngine(
 
     private async Task<bool> IsDriftConfirmedAsync(Guid tenantId, string externalId, CancellationToken ct)
     {
-        // Fetch the most recent audit for this tenant
         var lastAudit = await _dbContext.ReconciliationAudits
             .AsNoTracking()
             .Where(a => a.TenantId == tenantId)
