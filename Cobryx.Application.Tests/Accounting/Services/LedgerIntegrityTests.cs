@@ -31,7 +31,6 @@ public class LedgerIntegrityTests
         _tenantProviderMock = new Mock<ITenantProvider>();
         _tenantProviderMock.Setup(x => x.GetTenantId()).Returns(_tenantId);
 
-        // Setup a Tenant initially
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
         var tenant = new Tenant("Test Tenant", "USD");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, _tenantId);

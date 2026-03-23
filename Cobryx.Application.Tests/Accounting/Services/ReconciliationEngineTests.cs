@@ -173,7 +173,6 @@ public class ReconciliationEngineTests
         Assert.Equal(ReconciliationStatus.Repaired, audit.Status);
         Assert.Equal(0, audit.DetectedDriftsCount); // Drifts are cleared if repaired
 
-        // Verify Ledger Transaction was created
         var txExists = await _dbContext.LedgerTransactions.AnyAsync(t => t.ReferenceId == $"PAY-STRIPE-{intentId}");
         Assert.True(txExists);
     }

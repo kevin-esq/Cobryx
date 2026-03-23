@@ -85,7 +85,6 @@ public class StripeWebhookResilienceTests(CobryxWebApplicationFactory factory) :
         task1.Result.StatusCode.Should().Be(HttpStatusCode.OK);
         task2.Result.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Verify only one event recorded
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();

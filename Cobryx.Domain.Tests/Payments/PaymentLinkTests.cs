@@ -24,7 +24,6 @@ public class PaymentLinkTests
         var link = CreateActiveLink();
         var now = DateTime.UtcNow;
 
-        // Act & Assert - Attempt 1 (1h ± 10%)
         link.RecordRecoveryFailure("insufficient_funds");
         Assert.Equal(1, link.RecoveryAttemptCount);
         Assert.NotNull(link.NextRecoveryAttemptAt);
@@ -32,7 +31,6 @@ public class PaymentLinkTests
         Assert.True(link.NextRecoveryAttemptAt >= now.AddMinutes(53) && link.NextRecoveryAttemptAt <= now.AddMinutes(67));
         Assert.Equal(PaymentLinkStatus.Active, link.Status);
 
-        // Act & Assert - Attempt 2 (8h ± 10%)
         link.RecordRecoveryFailure("insufficient_funds");
         // Bounds: 7.2h to 8.8h
         Assert.True(link.NextRecoveryAttemptAt >= now.AddHours(7) && link.NextRecoveryAttemptAt <= now.AddHours(9));

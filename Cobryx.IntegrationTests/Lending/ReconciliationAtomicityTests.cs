@@ -62,7 +62,6 @@ public class ReconciliationAtomicityTests(CobryxWebApplicationFactory factory) :
 
         await act.Should().ThrowAsync<Exception>().WithMessage("CRASH_SIMULATION");
 
-        // Verify Rollback (Bypass EF Change Tracker to ensure we see DB state)
         var dbLink = await context.PaymentLinks
             .AsNoTracking()
             .FirstAsync(l => l.StripePaymentIntentId == paymentIntentId);

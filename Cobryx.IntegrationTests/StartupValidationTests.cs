@@ -31,7 +31,6 @@ public class StartupValidationTests(WebApplicationFactory<Program> factory) : IC
             });
         });
 
-        // Act & Assert
         Action act = () => { var client = builder.CreateClient(); };
 
         act.Should().Throw<OptionsValidationException>()
@@ -41,11 +40,9 @@ public class StartupValidationTests(WebApplicationFactory<Program> factory) : IC
     [Fact]
     public void DbContext_Should_Register_All_EfCore_Interceptors()
     {
-        // Arrange & Act
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
 
-        // Verify they are registered in DI
         var auditInterceptor = scope.ServiceProvider.GetService<AuditInterceptor>();
         var outboxInterceptor = scope.ServiceProvider.GetService<OutboxInterceptor>();
         var metricsInterceptor = scope.ServiceProvider.GetService<DbMetricsInterceptor>();

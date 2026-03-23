@@ -82,7 +82,6 @@ public class LoanFinancialStatusTests
     {
         var loan = CreateLoan(1000);
 
-        // Act & Assert
         loan.MarkAsRecovered();
         loan.FinancialStatus.Should().Be(FinancialStatus.Current);
 

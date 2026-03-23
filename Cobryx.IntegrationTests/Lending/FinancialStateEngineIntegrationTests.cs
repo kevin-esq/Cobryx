@@ -92,7 +92,6 @@ public class FinancialStateEngineIntegrationTests(CobryxWebApplicationFactory fa
         updatedLoan.FinancialStatus.Should().Be(FinancialStatus.ChargedOff);
         updatedLoan.Status.Should().Be(LoanStatus.Closed);
 
-        // Verify Ledger (One side: Loan Principal Credit, Other side: Loss/Expense Debit)
         var tx = await context.LedgerTransactions
             .Include(t => t.Entries)
             .FirstOrDefaultAsync(t => t.Description.Contains("CHARGE-OFF") && t.Description.Contains(loan.LoanNumber));

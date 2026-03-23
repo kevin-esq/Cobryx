@@ -94,7 +94,6 @@ public class PaymentOrchestrationServiceTests : IDisposable
             null, // lastCursor
             It.IsAny<CancellationToken>()), Times.Once);
 
-        // Verify recovery attempt recorded in DB
         await _dbContext.Entry(link).ReloadAsync();
         Assert.Equal(1, link.RecoveryAttemptCount);
     }

@@ -71,7 +71,6 @@ public class InvoicingFlowTests(CobryxWebApplicationFactory factory) : IClassFix
             scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Cobryx.Infrastructure.Messaging.ProcessOutboxJob>>());
         await outboxProcessor.RunAsync(CancellationToken.None);
 
-        // Assert in a fresh scope to avoid stale entity state from the initial scope
         using var assertionScope = _factory.Services.CreateScope();
         var assertionInvoiceRepo = assertionScope.ServiceProvider.GetRequiredService<IInvoiceRepository>();
         var finalInvoice = await assertionInvoiceRepo.GetByIdAsync(invoice.Id);

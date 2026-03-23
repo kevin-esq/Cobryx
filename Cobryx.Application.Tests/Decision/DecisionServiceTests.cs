@@ -120,7 +120,6 @@ public class DecisionServiceTests
         var result1 = await service.EvaluateAsync(customerId, ctx);
         var result2 = await service.EvaluateAsync(customerId, ctx);
 
-        // Verify save and calculate hit only once
         dbSetMock.Verify(x => x.Add(It.IsAny<DecisionSnapshot>()), Times.Once);
         dbMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         cacheMock.Verify(
