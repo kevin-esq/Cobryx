@@ -19,12 +19,8 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/financial/payments")]
 [Tags("Financial Core")]
-public class PaymentsController : CobryxBaseController
+public class PaymentsController(ISender sender) : CobryxBaseController(sender)
 {
-    public PaymentsController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Processes a new payment and handle optional allocation to one or more invoices.
     /// </summary>
@@ -60,6 +56,7 @@ public class PaymentsController : CobryxBaseController
             request.InvoiceIds);
 
         var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/payments/{result.Value}", result, InvoicingOutcomes.Payments.Completed);
+        return HandleCreatedResult($"/api/v1/financial/payments/{result.Value}", result,
+            InvoicingOutcomes.Payments.Completed);
     }
 }

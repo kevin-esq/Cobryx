@@ -229,7 +229,8 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
     public void MarkAsRecovered()
     {
-        if (FinancialStatus != FinancialStatus.ChargedOff) return;
+        if (FinancialStatus != FinancialStatus.ChargedOff)
+            return;
         FinancialStatus = FinancialStatus.Recovered;
         UpdateTimestamp();
     }

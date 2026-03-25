@@ -2,7 +2,12 @@ using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.ML;
 
-public class PortfolioEngine
+public interface IPortfolioEngine
+{
+    public Task<PortfolioAction> OptimizeAsync(PortfolioState state);
+}
+
+public class PortfolioEngine : IPortfolioEngine
 {
     private readonly PortfolioPpoClient _ppo;
 

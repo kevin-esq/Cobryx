@@ -9,7 +9,6 @@ using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using Moq;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 

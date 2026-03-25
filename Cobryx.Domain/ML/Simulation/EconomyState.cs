@@ -9,6 +9,6 @@ public class EconomyState
     public decimal Inflation { get; set; }
     public decimal InterestRate { get; set; }
     public decimal Unemployment { get; set; }
-    
+
     public MarketRegime Regime { get; set; }
 }

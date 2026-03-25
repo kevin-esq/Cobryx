@@ -1,10 +1,10 @@
 using System.Reflection;
 
-using Polly;
-
 using Cobryx.Application.Auth.Services;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Modules;
+using Cobryx.Application.Risk;
+using Cobryx.Application.Risk.Factors;
 
 using Concordia;
 
@@ -12,108 +12,138 @@ using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
 
-using Cobryx.Application.Risk;
-using Cobryx.Application.Risk.Factors;
+using Polly;
 
-namespace Cobryx.Application;
-
-public static class DependencyInjection
+namespace Cobryx.Application
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static class DependencyInjection
     {
-        var assembly = Assembly.GetExecutingAssembly();
-
-        ConcordiaGeneratedRegistrations.AddConcordiaHandlers(services);
-        services.AddScoped<IMediator, Mediator>();
-        services.AddScoped<ISender>(sp => sp.GetRequiredService<IMediator>());
-
-        services.AddScoped<Domain.Decision.ICreditLimitEngine, Decision.CreditLimitEngine>();
-        services.AddScoped<Domain.Decision.IPricingEngine, Decision.PricingEngine>();
-        services.AddScoped<Domain.Decision.IFraudEngine, Decision.FraudEngine>();
-        services.AddScoped<Decision.DecisionEngine>();
-        services.AddScoped<Decision.DecisionService>();
-        services.AddScoped<Decision.IRiskEvaluator, Decision.DefaultRiskEvaluator>();
-        services.AddScoped<ML.GuardrailEngine>();
-        services.AddScoped<ML.IFeatureStore, ML.RedisFeatureStore>();
-        services.AddScoped<ML.FeatureUpdater>();
-        services.AddScoped<ML.DatasetExporter>();
-        services.AddScoped<ML.Jobs.DatasetExporterJob>();
-        services.AddScoped<ML.Jobs.RlTrainingJob>();
-        services.AddScoped<ML.Jobs.PortfolioTrainingJob>();
-        services.AddScoped<ML.Jobs.MacroIngestionJob>();
-        services.AddScoped<ML.ModelRouter>();
-        services.AddScoped<ML.EnsembleService>();
-        services.AddScoped<ML.RlPolicy>();
-        services.AddScoped<ML.IRlEngine, ML.RlEngine>();
-        services.AddScoped<ML.ScenarioGenerator>();
-        services.AddScoped<ML.MonteCarloEvaluator>();
-        services.AddScoped<ML.IPortfolioFeatureStore, ML.RedisPortfolioFeatureStore>();
-
-        services.AddHttpClient<ML.MonteCarloPpoClient>(c =>
-            {
-                var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
-                c.BaseAddress = new Uri(url);
-            })
-            .AddTransientHttpErrorPolicy(p =>
-                p.WaitAndRetryAsync(3, retry =>
-                    TimeSpan.FromMilliseconds(200 * retry)))
-            .AddTransientHttpErrorPolicy(p =>
-                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
-        services.AddScoped<ML.PortfolioEngine>();
-
-        services.AddHttpClient<ML.MlClient>(c =>
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
-            var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
-            c.BaseAddress = new Uri(url);
-        });
+            var assembly = Assembly.GetExecutingAssembly();
 
-        services.AddHttpClient<ML.PpoClient>(c =>
+            _ = services.AddConcordiaHandlers();
+            _ = services.AddScoped<IMediator, Mediator>();
+            _ = services.AddScoped<ISender>(static sp => sp.GetRequiredService<IMediator>());
+            _ = services.AddScoped<INotificationPublisher, DefaultNotificationPublisher>();
+
+            _ = services.AddScoped<Domain.Decision.ICreditLimitEngine, Decision.CreditLimitEngine>();
+            _ = services.AddScoped<Domain.Decision.IPricingEngine, Decision.PricingEngine>();
+            _ = services.AddScoped<Domain.Decision.IFraudEngine, Decision.FraudEngine>();
+            _ = services.AddScoped<Decision.DecisionEngine>();
+            _ = services.AddScoped<Decision.DecisionService>();
+            _ = services.AddScoped<Decision.IRiskEvaluator, Decision.DefaultRiskEvaluator>();
+            _ = services.AddScoped<ML.IMacroFeatureStore, ML.RedisMacroFeatureStore>();
+            _ = services.AddSingleton<Decision.SnapshotStore>();
+            _ = services.AddSingleton<Decision.ISnapshotStore>(static sp =>
+                sp.GetRequiredService<Decision.SnapshotStore>());
+            services.AddScoped<Decision.Interfaces.IReplayEngine, ML.ReplayEngine>();
+            services.AddScoped<ML.ReplayEngine>();
+            _ = services.AddScoped<Decision.SnapshotRegressionRunner>();
+            _ = services.AddScoped<Decision.Interfaces.IShadowComparer, Decision.ShadowComparer>();
+
+            _ = services.AddScoped<ML.GuardrailEngine>();
+            _ = services.AddScoped<ML.IFeatureStore, ML.RedisFeatureStore>();
+            _ = services.AddScoped<ML.FeatureUpdater>();
+            _ = services.AddScoped<ML.DatasetExporter>();
+            _ = services.AddScoped<ML.Jobs.DatasetExporterJob>();
+            _ = services.AddScoped<ML.Jobs.RlTrainingJob>();
+            _ = services.AddScoped<ML.Jobs.PortfolioTrainingJob>();
+            _ = services.AddScoped<ML.Jobs.MacroIngestionJob>();
+            _ = services.AddScoped<ML.ModelRouter>();
+            _ = services.AddScoped<ML.EnsembleService>();
+            _ = services.AddScoped<ML.RlPolicy>();
+            _ = services.AddScoped<ML.IRlEngine, ML.RlEngine>();
+            _ = services.AddScoped<ML.ScenarioGenerator>();
+            _ = services.AddScoped<ML.MonteCarloEvaluator>();
+            _ = services.AddScoped<ML.IPortfolioFeatureStore, ML.RedisPortfolioFeatureStore>();
+
+            _ = services.AddHttpClient<ML.MonteCarloPpoClient>(static c =>
+                {
+                    var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                    c.BaseAddress = new Uri(url);
+                })
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.WaitAndRetryAsync(3, static retry =>
+                        TimeSpan.FromMilliseconds(200 * retry)))
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+            _ = services.AddScoped<ML.IPortfolioEngine, ML.PortfolioEngine>();
+            _ = services.AddScoped<ML.IMonteCarloEvaluator, ML.MonteCarloEvaluator>();
+
+            _ = services.AddHttpClient<ML.IMlClient, ML.MlClient>(static c =>
             {
                 var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
                 c.BaseAddress = new Uri(url);
-            })
-            .AddTransientHttpErrorPolicy(p =>
-                p.WaitAndRetryAsync(3, retry =>
-                    TimeSpan.FromMilliseconds(200 * retry)))
-            .AddTransientHttpErrorPolicy(p =>
-                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+            });
 
-        services.AddHttpClient<ML.PortfolioPpoClient>(c =>
+            _ = services.AddHttpClient<ML.MonteCarloPpoClient>(static c =>
             {
                 var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
                 c.BaseAddress = new Uri(url);
-            })
-            .AddTransientHttpErrorPolicy(p =>
-                p.WaitAndRetryAsync(3, retry =>
-                    TimeSpan.FromMilliseconds(200 * retry)))
-            .AddTransientHttpErrorPolicy(p =>
-                p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+            });
 
-        services.AddScoped<ProbabilityOfDefaultCalculator>(_ =>
-            new ProbabilityOfDefaultCalculator(new (IRiskFactor Factor, decimal Weight)[]
+
+            _ = services.AddHttpClient<ML.PpoClient>(static c =>
+                {
+                    var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                    c.BaseAddress = new Uri(url);
+                })
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.WaitAndRetryAsync(3, static retry =>
+                        TimeSpan.FromMilliseconds(200 * retry)))
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+
+            _ = services.AddHttpClient<ML.PortfolioPpoClient>(static c =>
+                {
+                    var url = Environment.GetEnvironmentVariable("ML_SERVICE_URL") ?? "http://localhost:8001";
+                    c.BaseAddress = new Uri(url);
+                })
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.WaitAndRetryAsync(3, static retry =>
+                        TimeSpan.FromMilliseconds(200 * retry)))
+                .AddTransientHttpErrorPolicy(static p =>
+                    p.CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+
+            _ = services.AddScoped(static _ =>
+                new ProbabilityOfDefaultCalculator(
+                [
+                    (new DpdRiskFactor(), 0.4m),
+                    (new UtilizationRiskFactor(), 0.2m),
+                    (new PaymentDelayRiskFactor(), 0.2m),
+                    (new TrendRiskFactor(), 0.2m)
+                ]));
+
+            _ = services.AddScoped<Risk.Jobs.EarlyWarningJob>();
+
+            _ = services.AddValidatorsFromAssembly(assembly);
+
+            _ = services.AddScoped<IAuthService, AuthService>();
+
+            _ = services.AddLendingModule();
+            _ = services.AddPaymentsModule();
+            _ = services.AddAccountingModule();
+
+            _ = services
+                .AddScoped<Analytics.Services.IPortfolioAnalyticsService,
+                    Analytics.Services.PortfolioAnalyticsService>();
+            _ = services
+                .AddScoped<Collections.Strategy.ICollectionsStrategyEngine,
+                    Collections.Strategy.CollectionsStrategyEngine>();
+
+            return services;
+        }
+
+        private class DefaultNotificationPublisher : INotificationPublisher
+        {
+            public async Task Publish(IEnumerable<Func<INotification, CancellationToken, Task>> handlerCallbacks, INotification notification, CancellationToken cancellationToken)
             {
-                (new DpdRiskFactor(), 0.4m),
-                (new UtilizationRiskFactor(), 0.2m),
-                (new PaymentDelayRiskFactor(), 0.2m),
-                (new TrendRiskFactor(), 0.2m)
-            }));
-
-        services.AddScoped<Risk.Jobs.EarlyWarningJob>();
-
-        services.AddValidatorsFromAssembly(assembly);
-
-        services.AddScoped<IAuthService, AuthService>();
-
-        services.AddLendingModule();
-        services.AddPaymentsModule();
-        services.AddAccountingModule();
-
-        services
-            .AddScoped<Analytics.Services.IPortfolioAnalyticsService, Analytics.Services.PortfolioAnalyticsService>();
-        services
-            .AddScoped<Collections.Strategy.ICollectionsStrategyEngine,
-                Collections.Strategy.CollectionsStrategyEngine>();
-
-        return services;
+                foreach (var callback in handlerCallbacks)
+                {
+                    await callback(notification, cancellationToken);
+                }
+            }
+        }
     }
 }

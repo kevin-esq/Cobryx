@@ -2,7 +2,12 @@ using System.Net.Http.Json;
 
 namespace Cobryx.Application.ML;
 
-public class MlClient
+public interface IMlClient
+{
+    public Task<(decimal pd, string version)> PredictAsync(object features, string modelVersion);
+}
+
+public class MlClient : IMlClient
 {
     private readonly HttpClient _http;
 

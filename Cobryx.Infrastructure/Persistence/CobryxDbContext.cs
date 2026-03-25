@@ -3,15 +3,15 @@ using System.Linq.Expressions;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Domain.Accounting;
-using Cobryx.Domain.Analytics.Risk;
 using Cobryx.Domain.Analytics;
+using Cobryx.Domain.Analytics.Risk;
 using Cobryx.Domain.Collections;
 using Cobryx.Domain.Decision;
-using Cobryx.Domain.ML;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
 using Cobryx.Domain.Messaging;
+using Cobryx.Domain.ML;
 using Cobryx.Domain.Payments;
 using Cobryx.Domain.Shared;
 
@@ -141,6 +141,10 @@ public class CobryxDbContext(DbContextOptions<CobryxDbContext> options, ITenantP
     public DbSet<TenantPortfolioAggregate> TenantPortfolioAggregates => Set<TenantPortfolioAggregate>();
     public DbSet<PortfolioMetricsDaily> PortfolioMetricsDaily => Set<PortfolioMetricsDaily>();
     public DbSet<CashflowEvent> CashflowEvents => Set<CashflowEvent>();
+    public DbSet<ProductionSnapshot> ProductionSnapshots => Set<ProductionSnapshot>();
+    public DbSet<RegressionReport> RegressionReports => Set<RegressionReport>();
+    public DbSet<ShadowDriftEvent> ShadowDriftEvents => Set<ShadowDriftEvent>();
+
 
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();

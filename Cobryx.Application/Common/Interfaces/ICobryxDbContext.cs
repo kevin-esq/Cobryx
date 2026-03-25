@@ -73,6 +73,9 @@ public interface ICobryxDbContext
     public DbSet<Domain.ML.Experience> Experiences { get; }
     public DbSet<Domain.ML.DecisionDistributionLog> DecisionDistributionLogs { get; }
     public DbSet<Domain.ML.ReplaySnapshot> ReplaySnapshots { get; }
+    public DbSet<Domain.Decision.ProductionSnapshot> ProductionSnapshots { get; }
+    public DbSet<Domain.Decision.RegressionReport> RegressionReports { get; }
+    public DbSet<Domain.Decision.ShadowDriftEvent> ShadowDriftEvents { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

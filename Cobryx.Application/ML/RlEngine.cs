@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.ML;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.ML;

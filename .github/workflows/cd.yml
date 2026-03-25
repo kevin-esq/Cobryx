@@ -1,0 +1,41 @@
+name: CD Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+permissions: read-all
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore & Build
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+
+      - name: Run Tests
+        run: dotnet test --configuration Release --no-build
+
+      - name: Database Migrations
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "Listing pending migrations..."
+          dotnet ef migrations list --project Cobryx.Infrastructure --startup-project Cobryx.Api
+          echo "Applying migrations to target environment..."
+          dotnet ef database update --project Cobryx.Infrastructure --startup-project Cobryx.Api
+
+      - name: Publish API
+        run: dotnet publish Cobryx.Api/Cobryx.Api.csproj -c Release -o out
+
+      - name: Deploy
+        run: echo "🚀 Target-specific deployment steps (Docker/Cloud) would execute here."

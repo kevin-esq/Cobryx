@@ -1,5 +1,4 @@
 using Cobryx.Application.Decision;
-using Cobryx.Domain.Decision;
 
 namespace Cobryx.Application.Tests.Decision;
 

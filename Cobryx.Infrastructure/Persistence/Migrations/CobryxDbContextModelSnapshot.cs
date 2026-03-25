@@ -4747,6 +4747,41 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("Cobryx.Domain.ML.DecisionDistributionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CVaR95")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal[]>("CreditMultipliers")
+                        .IsRequired()
+                        .HasColumnType("numeric[]");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal[]>("InterestDeltas")
+                        .IsRequired()
+                        .HasColumnType("numeric[]");
+
+                    b.Property<string>("ScenarioSetJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("VaR95")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DecisionDistributionLogs");
+                });
+
             modelBuilder.Entity("Cobryx.Domain.ML.DecisionOutcome", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4817,6 +4852,10 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("Reward")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("StateJson")
                         .IsRequired()
@@ -4903,6 +4942,101 @@ namespace Cobryx.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("QValues");
+                });
+
+            modelBuilder.Entity("Cobryx.Domain.ML.ReplaySnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DecisionContextJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("DeltaCredit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("DeltaInterest")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("EngineVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExecutionTraceJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FeatureVectorJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FeatureVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MacroStateJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModelHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModelVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("OriginalCreditLimit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("OriginalInterestRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("OriginalTimestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PortfolioStateJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RandomSeed")
+                        .HasColumnType("integer");
+
+                    b.Property<bool?>("RealOutcomeDefaulted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("RealOutcomeProfit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("RealOutcomeRecovered")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ReplayModelVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("ReplayedCreditLimit")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("ReplayedInterestRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ScenarioVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReplaySnapshots");
                 });
 
             modelBuilder.Entity("Cobryx.Domain.ML.ShadowPrediction", b =>

@@ -19,15 +19,15 @@ public class RedisPortfolioFeatureStore : IPortfolioFeatureStore
         var segmentExposure = await _cache.GetAsync<System.Collections.Generic.Dictionary<string, decimal>>("portfolio:segment_exposure", default);
         var cohortDefaults = await _cache.GetAsync<System.Collections.Generic.Dictionary<string, decimal>>("portfolio:cohort_defaults", default);
 
-        return state ?? new Cobryx.Domain.ML.PortfolioState 
-        { 
-            TotalCapital = 1000000m, 
-            AvailableLiquidity = 500000m, 
-            TotalExposure = 500000m, 
-            AveragePd = 0.15m, 
-            DefaultRate = 0.05m, 
-            ActiveLoans = 1000, 
-            RevenueYTD = 50000m 
+        return state ?? new Cobryx.Domain.ML.PortfolioState
+        {
+            TotalCapital = 1000000m,
+            AvailableLiquidity = 500000m,
+            TotalExposure = 500000m,
+            AveragePd = 0.15m,
+            DefaultRate = 0.05m,
+            ActiveLoans = 1000,
+            RevenueYTD = 50000m
         };
     }
 }

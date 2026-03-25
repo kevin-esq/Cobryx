@@ -20,12 +20,8 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/financial/payment-methods")]
 [Tags("Financial Core")]
-public class PaymentMethodsController : CobryxBaseController
+public class PaymentMethodsController(ISender sender) : CobryxBaseController(sender)
 {
-    public PaymentMethodsController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Lists all active payment methods for the current tenant.
     /// </summary>
@@ -76,7 +72,8 @@ public class PaymentMethodsController : CobryxBaseController
             request.Description);
 
         var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/payment-methods/{result.Value}", result, InvoicingOutcomes.PaymentMethods.Created);
+        return HandleCreatedResult($"/api/v1/financial/payment-methods/{result.Value}", result,
+            InvoicingOutcomes.PaymentMethods.Created);
     }
 
     /// <summary>

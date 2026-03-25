@@ -17,7 +17,12 @@ public class MonteCarloMetrics
     public decimal[] RawInterestDeltas { get; set; } = [];
 }
 
-public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
+public interface IMonteCarloEvaluator
+{
+    public Task<MonteCarloMetrics> EvaluateAsync(object features, PortfolioState globalState, MacroState currentMacro, List<Scenario> scenarios);
+}
+
+public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient) : IMonteCarloEvaluator
 {
     public async Task<MonteCarloMetrics> EvaluateAsync(
         object features,
@@ -31,8 +36,10 @@ public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
         var rates = response.InterestDeltas.OrderByDescending(x => x).ToList();
 
         int tailSize = (int)(0.05 * credits.Count);
-        if (tailSize == 0 && credits.Count > 0) tailSize = 1;
-        else if (credits.Count == 0) tailSize = 0;
+        if (tailSize == 0 && credits.Count > 0)
+            tailSize = 1;
+        else if (credits.Count == 0)
+            tailSize = 0;
 
         return new MonteCarloMetrics
         {

@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Decision;
 using Cobryx.Domain.Analytics.Risk;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -60,7 +61,8 @@ WHERE rn = 1;";
 
         foreach (var s in snapshots)
         {
-            if (s.DaysPastDue > 0) continue;
+            if (s.DaysPastDue > 0)
+                continue;
 
             if (!pdCache.TryGetValue(s.LoanId, out var currentPD))
             {
@@ -80,13 +82,14 @@ WHERE rn = 1;";
             }
 
             var previousPD = currentPD * 0.9m;
-            var deltaUtilization = 0m; 
+            var deltaUtilization = 0m;
             var deltaPaymentDelay = 0m;
 
             var rawDeterioration = (currentPD - previousPD) + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
             var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
 
-            if (currentPD < threshold && deterioration < 0.1m) continue;
+            if (currentPD < threshold && deterioration < 0.1m)
+                continue;
 
             var decision = await _decisionService.EvaluateAsync(s.CustomerId, new Cobryx.Domain.Decision.DecisionContext
             {
@@ -118,7 +121,8 @@ WHERE rn = 1;";
                 x.OccurredAt >= DateTime.UtcNow.AddHours(-6),
                 ct);
 
-            if (exists) continue;
+            if (exists)
+                continue;
 
             _logger.LogInformation("EarlyWarning triggered for Loan {LoanId} with PD {PD} and Deterioration {Deterioration}", s.LoanId, currentPD, deterioration);
 

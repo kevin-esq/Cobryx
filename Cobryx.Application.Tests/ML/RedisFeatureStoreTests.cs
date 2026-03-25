@@ -2,7 +2,6 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.ML;
 using Cobryx.Domain.ML;
 
-using Moq;
 
 namespace Cobryx.Application.Tests.ML;
 

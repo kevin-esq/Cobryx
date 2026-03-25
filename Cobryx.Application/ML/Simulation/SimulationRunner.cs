@@ -1,8 +1,8 @@
 using System.Text.Json;
 
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.ML;
 using Cobryx.Domain.ML.Simulation;
-using Cobryx.Application.Common.Interfaces;
 
 namespace Cobryx.Application.ML.Simulation;
 
@@ -12,7 +12,7 @@ public class SimulationRunner(
     ICobryxDbContext db)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
-        { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public async Task RunEpisodeAsync(int steps)
     {
@@ -28,7 +28,8 @@ public class SimulationRunner(
                 InterestDelta = decision.InterestDelta
             };
 
-            if (action.CreditMultiplier > 3.0m) action.CreditMultiplier = 3.0m;
+            if (action.CreditMultiplier > 3.0m)
+                action.CreditMultiplier = 3.0m;
 
             if (env.Macro.Regime == MarketRegime.Crisis)
             {
@@ -53,7 +54,8 @@ public class SimulationRunner(
 
             state = result.NextState;
 
-            if (result.Done) break;
+            if (result.Done)
+                break;
         }
 
         await db.SaveChangesAsync(default);

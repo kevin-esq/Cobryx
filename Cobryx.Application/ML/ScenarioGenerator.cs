@@ -1,10 +1,11 @@
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.ML;
 
-public class ScenarioGenerator
+public class ScenarioGenerator(IRandomProvider rng)
 {
-    private readonly Random _rng = new();
+    private readonly IRandomProvider _rng = rng;
 
     public List<Scenario> Generate(MacroState macro, int n = 50)
     {

@@ -1,13 +1,14 @@
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.ML;
 using Cobryx.Domain.Decision;
 using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.Decision;
 
 public class DefaultRiskEvaluator(
-    ML.MlClient mlClient,
-    ML.ModelRouter router,
-    ML.EnsembleService ensemble,
+    IMlClient mlClient,
+    ModelRouter router,
+    EnsembleService ensemble,
     ICobryxDbContext db) : IRiskEvaluator
 {
     public async Task<(decimal pd, string modelVersion)> EvaluateRiskAsync(Guid customerId, DecisionContext ctx,

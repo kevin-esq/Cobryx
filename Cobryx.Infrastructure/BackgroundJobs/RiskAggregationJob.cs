@@ -20,14 +20,17 @@ public class RiskAggregationJob(
             .Where(x => x.Timestamp > oneHourAgo)
             .ToListAsync(ct);
 
-        if (!logs.Any()) return;
+        if (!logs.Any())
+            return;
 
         var allMultipliers = logs.SelectMany(x => x.CreditMultipliers).OrderBy(x => x).ToList();
 
-        if (!allMultipliers.Any()) return;
+        if (!allMultipliers.Any())
+            return;
 
         int tailSize = (int)(0.05 * allMultipliers.Count);
-        if (tailSize == 0) tailSize = 1;
+        if (tailSize == 0)
+            tailSize = 1;
 
         var globalVar95 = allMultipliers[tailSize];
         var globalCVar95 = allMultipliers.Take(tailSize).Average();

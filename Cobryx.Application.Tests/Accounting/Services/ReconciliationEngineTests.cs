@@ -10,26 +10,20 @@ using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using Moq;
-
 namespace Cobryx.Application.Tests.Accounting.Services;
 
 public class ReconciliationEngineTests
 {
     private readonly Mock<IStripeService> _stripeMock;
-    private readonly Mock<ILogger<ReconciliationEngine>> _loggerMock;
-    private readonly Mock<ILogger<FinancialPostingEngine>> _postingLoggerMock;
     private readonly CobryxDbContext _dbContext;
-    private readonly FinancialPostingEngine _postingEngine;
-    private readonly CobryxMetrics _metrics;
     private readonly ReconciliationEngine _engine;
     private readonly Guid _tenantId = Guid.NewGuid();
 
     public ReconciliationEngineTests()
     {
         _stripeMock = new Mock<IStripeService>();
-        _loggerMock = new Mock<ILogger<ReconciliationEngine>>();
-        _postingLoggerMock = new Mock<ILogger<FinancialPostingEngine>>();
+        var loggerMock = new Mock<ILogger<ReconciliationEngine>>();
+        var postingLoggerMock = new Mock<ILogger<FinancialPostingEngine>>();
 
         var options = new DbContextOptionsBuilder<CobryxDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -39,29 +33,35 @@ public class ReconciliationEngineTests
         tenantProviderMock.Setup(x => x.GetTenantId()).Returns(_tenantId);
 
         _dbContext = new CobryxDbContext(options, tenantProviderMock.Object);
-        _postingEngine = new FinancialPostingEngine(_dbContext, _postingLoggerMock.Object);
-        _metrics = new CobryxMetrics();
-        _engine = new ReconciliationEngine(_dbContext, _stripeMock.Object, _postingEngine, _metrics, _loggerMock.Object);
 
-        _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        var postingEngine = new FinancialPostingEngine(_dbContext, postingLoggerMock.Object);
+        var metrics = new CobryxMetrics();
+
+        _engine = new ReconciliationEngine(_dbContext, _stripeMock.Object, postingEngine, metrics, loggerMock.Object);
+
+        _stripeMock
+            .Setup(s => s.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((1000m, 200m));
+
+        _stripeMock
+            .Setup(s => s.ListBalanceTransactionsAsync(
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
     }
 
     [Fact]
     public async Task ReconcileAsync_ShouldDetectMissingPayment_WhenOutsideTolerance()
     {
-        var from = DateTime.UtcNow.AddHours(-1);
-        var to = DateTime.UtcNow;
-        var intentId = "pi_missing_123";
+        DateTime from = DateTime.UtcNow.AddHours(-1);
+        DateTime to = DateTime.UtcNow;
+        const string intentId = "pi_missing_123";
 
-        _stripeMock.Setup(s => s.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((1000m, 200m));
-
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-20), [])
-            ]);
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-20), [])]);
 
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
@@ -79,14 +79,10 @@ public class ReconciliationEngineTests
         var to = DateTime.UtcNow;
         var intentId = "pi_lag_123";
 
-        _stripeMock.Setup(s => s.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((1000m, 200m));
-
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), [])
-            ]);
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-5), [])]);
 
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
@@ -103,18 +99,13 @@ public class ReconciliationEngineTests
         var to = DateTime.UtcNow;
         var intentId = "pi_synced_123";
 
-        var tx = new LedgerTransaction(_tenantId, "Sync Test", $"PAY-STRIPE-{intentId}");
-        _dbContext.LedgerTransactions.Add(tx);
+        _dbContext.LedgerTransactions.Add(new LedgerTransaction(_tenantId, "Sync Test", $"PAY-STRIPE-{intentId}"));
         await _dbContext.SaveChangesAsync();
 
-        _stripeMock.Setup(s => s.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((1000m, 200m));
-
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
-            ]);
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])]);
 
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
@@ -131,43 +122,40 @@ public class ReconciliationEngineTests
         var intentId = "pi_repair_123";
         var loanId = Guid.NewGuid();
 
-        var customerId = Guid.NewGuid();
-        var agreementId = Guid.NewGuid();
-        var loan = new Loan(_tenantId, customerId, agreementId, "L-100", new Money(1000m, "USD"));
+        var loan = new Loan(_tenantId, Guid.NewGuid(), Guid.NewGuid(), "L-100", new Money(1000m, "USD"));
         typeof(Loan).GetProperty("Id")!.SetValue(loan, loanId);
         _dbContext.Loans.Add(loan);
 
-        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
-        var principalAcc = new LedgerAccount(_tenantId, "1210", "Principal", LedgerAccountType.Asset, LedgerAccountRole.Receivable, "USD", true);
-        var interestAcc = new LedgerAccount(_tenantId, "4010", "Interest", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD", true);
-        var feeAcc = new LedgerAccount(_tenantId, "4020", "Fees", LedgerAccountType.Revenue, LedgerAccountRole.Fees, "USD", true);
-        var lossAcc = new LedgerAccount(_tenantId, "5010", "Loss", LedgerAccountType.Expense, LedgerAccountRole.Loss, "USD", true);
-        var recoveryAcc = new LedgerAccount(_tenantId, "4030", "Recovery", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD", true);
-
-        _dbContext.LedgerAccounts.AddRange(cashAcc, principalAcc, interestAcc, feeAcc, lossAcc, recoveryAcc);
+        _dbContext.LedgerAccounts.AddRange(
+            new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD",
+                true),
+            new LedgerAccount(_tenantId, "1210", "Principal", LedgerAccountType.Asset, LedgerAccountRole.Receivable,
+                "USD", true),
+            new LedgerAccount(_tenantId, "4010", "Interest", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD",
+                true),
+            new LedgerAccount(_tenantId, "4020", "Fees", LedgerAccountType.Revenue, LedgerAccountRole.Fees, "USD",
+                true),
+            new LedgerAccount(_tenantId, "5010", "Loss", LedgerAccountType.Expense, LedgerAccountRole.Loss, "USD",
+                true),
+            new LedgerAccount(_tenantId, "4030", "Recovery", LedgerAccountType.Revenue, LedgerAccountRole.None, "USD",
+                true)
+        );
         await _dbContext.SaveChangesAsync();
 
-        _stripeMock.Setup(s => s.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((1000m, 200m));
-
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(intentId, 50000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), new Dictionary<string, string>
-                {
-                    { "LoanId", loanId.ToString() }
-                })
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new(intentId, 50000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30),
+                    new Dictionary<string, string> { { "LoanId", loanId.ToString() } })
             ]);
 
         await _engine.ReconcileAsync(_tenantId, from, to);
-
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
         Assert.Equal(ReconciliationStatus.Repaired, audit.Status);
         Assert.Equal(0, audit.DetectedDriftsCount);
-
-        var txExists = await _dbContext.LedgerTransactions.AnyAsync(t => t.ReferenceId == $"PAY-STRIPE-{intentId}");
-        Assert.True(txExists);
+        Assert.True(await _dbContext.LedgerTransactions.AnyAsync(t => t.ReferenceId == $"PAY-STRIPE-{intentId}"));
     }
 
     [Fact]
@@ -177,17 +165,17 @@ public class ReconciliationEngineTests
         var to = DateTime.UtcNow;
         var intentId = "pi_confirm_123";
 
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])
-            ]);
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(intentId, 10000, "usd", "succeeded", DateTime.UtcNow.AddMinutes(-30), [])]);
 
         await _engine.ReconcileAsync(_tenantId, from, to);
+        await Task.Delay(100);
 
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);
 
-        Assert.Contains("ConfirmedDrift", audit.DriftDetailsJson);
+        Assert.Equal(ReconciliationStatus.ConfirmedDrift, audit.Status);
     }
 
     [Fact]
@@ -198,20 +186,29 @@ public class ReconciliationEngineTests
         var btId = "bt_settlement_123";
         var sourceId = "pi_source_123";
 
-        var tx = new LedgerTransaction(_tenantId, "Mismatched Settlement", $"PAYOUT-STRIPE-{sourceId}");
-        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
+        var cashAcc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available,
+            "USD", true);
         _dbContext.LedgerAccounts.Add(cashAcc);
+
+        var tx = new LedgerTransaction(_tenantId, "Mismatched Settlement", $"PAYOUT-STRIPE-{sourceId}");
         tx.AddEntry(cashAcc.Id, 95.00m, 0);
         _dbContext.LedgerTransactions.Add(tx);
+
         await _dbContext.SaveChangesAsync();
 
-        _stripeMock.Setup(s => s.ListPaymentIntentsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _stripeMock
+            .Setup(s => s.ListPaymentIntentsAsync(
+                It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        _stripeMock.Setup(s => s.ListBalanceTransactionsAsync(from, to, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-            [
-                new(btId, 10500, 500, 10000, "usd", "payout", "payout", "available", DateTime.UtcNow, DateTime.UtcNow, sourceId, [])
+        _stripeMock
+            .Setup(s => s.ListBalanceTransactionsAsync(from, to,
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new(btId, 10500, 500, 10000, "usd", "payout", "payout", "available",
+                    DateTime.UtcNow, DateTime.UtcNow, sourceId, [])
             ]);
 
         var audit = await _engine.ReconcileAsync(_tenantId, from, to);

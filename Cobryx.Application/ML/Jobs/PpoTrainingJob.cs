@@ -1,5 +1,7 @@
 using System.Text.Json;
+
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.ML.Jobs;
@@ -30,7 +32,8 @@ public class PpoTrainingJob(
 
         var hybridBatch = simulationBatch.Concat(prodBatch).Concat(replayBatch).ToList();
 
-        if (hybridBatch.Count == 0) return;
+        if (hybridBatch.Count == 0)
+            return;
 
         var payload = hybridBatch.Select(x => new
         {

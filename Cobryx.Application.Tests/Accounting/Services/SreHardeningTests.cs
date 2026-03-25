@@ -6,22 +6,15 @@ using Cobryx.Domain.Identity;
 using Cobryx.Domain.Shared;
 using Cobryx.Infrastructure.BackgroundJobs.Accounting;
 using Cobryx.Infrastructure.Persistence;
-using Cobryx.Infrastructure.Services.Accounting;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using Moq;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 
 public class SreHardeningTests
 {
-    private readonly CobryxMetrics _metrics = new();
-    private readonly Mock<ILedgerBalanceService> _mockBalanceService = new();
-    private readonly Mock<ILogger<ShadowReplayEngine>> _loggerSre = new();
-    private readonly Mock<ILogger<DriftDetectionWorker>> _loggerDrift = new();
-
     private readonly Mock<ITenantProvider> _mockTenantProvider = new();
 
     private CobryxDbContext CreateDbContext(string dbName)
@@ -38,6 +31,10 @@ public class SreHardeningTests
         var dbName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
         var accountId = Guid.NewGuid();
+
+        var metrics = new CobryxMetrics();
+        var mockBalanceService = new Mock<ILedgerBalanceService>();
+        var loggerDrift = new Mock<ILogger<DriftDetectionWorker>>();
 
         using (var context = CreateDbContext(dbName))
         {
@@ -56,10 +53,11 @@ public class SreHardeningTests
 
             await context.SaveChangesAsync();
 
-            _mockBalanceService.Setup(b => b.GetHistoricalBalanceAsync(tenantId, accountId, 500L, It.IsAny<CancellationToken>()))
+            mockBalanceService.Setup(b =>
+                    b.GetHistoricalBalanceAsync(tenantId, accountId, 500L, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new BalanceResult(1200m, 500L));
 
-            var worker = new DriftDetectionWorker(context, _mockBalanceService.Object, _metrics, _loggerDrift.Object);
+            var worker = new DriftDetectionWorker(context, mockBalanceService.Object, metrics, loggerDrift.Object);
 
             await worker.ExecuteAsync();
 
@@ -73,7 +71,13 @@ internal class TestAsyncEnumerator<T> : IAsyncEnumerator<T>
 {
     private readonly IEnumerator<T> _inner;
     public TestAsyncEnumerator(IEnumerator<T> inner) => _inner = inner;
-    public ValueTask DisposeAsync() { _inner.Dispose(); return ValueTask.CompletedTask; }
+
+    public ValueTask DisposeAsync()
+    {
+        _inner.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask<bool> MoveNextAsync() => new(_inner.MoveNext());
     public T Current => _inner.Current;
 }
@@ -82,16 +86,28 @@ internal class TestAsyncQueryProvider<TEntity> : Microsoft.EntityFrameworkCore.Q
 {
     private readonly IQueryProvider _inner;
     internal TestAsyncQueryProvider(IQueryProvider inner) => _inner = inner;
-    public IQueryable CreateQuery(System.Linq.Expressions.Expression expression) => new TestAsyncEnumerable<TEntity>(expression);
-    public IQueryable<TElement> CreateQuery<TElement>(System.Linq.Expressions.Expression expression) => new TestAsyncEnumerable<TElement>(expression);
+
+    public IQueryable CreateQuery(System.Linq.Expressions.Expression expression) =>
+        new TestAsyncEnumerable<TEntity>(expression);
+
+    public IQueryable<TElement> CreateQuery<TElement>(System.Linq.Expressions.Expression expression) =>
+        new TestAsyncEnumerable<TElement>(expression);
+
     public object Execute(System.Linq.Expressions.Expression expression) => _inner.Execute(expression)!;
-    public TResult Execute<TResult>(System.Linq.Expressions.Expression expression) => _inner.Execute<TResult>(expression);
-    public TResult ExecuteAsync<TResult>(System.Linq.Expressions.Expression expression, CancellationToken cancellationToken = default) => Execute<TResult>(expression);
+
+    public TResult Execute<TResult>(System.Linq.Expressions.Expression expression) =>
+        _inner.Execute<TResult>(expression);
+
+    public TResult ExecuteAsync<TResult>(System.Linq.Expressions.Expression expression,
+        CancellationToken cancellationToken = default) => Execute<TResult>(expression);
 }
 
 internal class TestAsyncEnumerable<T> : EnumerableQuery<T>, IAsyncEnumerable<T>, IQueryable<T>
 {
     public TestAsyncEnumerable(System.Linq.Expressions.Expression expression) : base(expression) { }
-    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) => new TestAsyncEnumerator<T>(this.AsEnumerable().GetEnumerator());
+
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+        new TestAsyncEnumerator<T>(this.AsEnumerable().GetEnumerator());
+
     IQueryProvider IQueryable.Provider => new TestAsyncQueryProvider<T>(this);
 }

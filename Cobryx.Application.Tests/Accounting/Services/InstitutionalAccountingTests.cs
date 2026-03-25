@@ -9,11 +9,10 @@ using Cobryx.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using Moq;
 
 namespace Cobryx.Application.Tests.Accounting.Services;
 
-public class Phase4InstitutionalTests
+public class InstitutionalAccountingTests
 {
     private readonly DbContextOptions<CobryxDbContext> _dbOptions;
     private readonly Guid _tenantId = Guid.NewGuid();
@@ -22,7 +21,7 @@ public class Phase4InstitutionalTests
     private readonly Mock<ILogger<BankReconciliationEngine>> _reconLoggerMock;
     private readonly CobryxMetrics _metrics;
 
-    public Phase4InstitutionalTests()
+    public InstitutionalAccountingTests()
     {
         _dbOptions = new DbContextOptionsBuilder<CobryxDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -32,7 +31,7 @@ public class Phase4InstitutionalTests
         _tenantProviderMock.Setup(x => x.GetTenantId()).Returns(_tenantId);
 
         using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
-        var tenant = new Tenant("Phase 4 Tenant", "USD");
+        var tenant = new Tenant("Institutional Tenant", "USD");
         typeof(Tenant).GetProperty("Id")!.SetValue(tenant, _tenantId);
         context.Tenants.Add(tenant);
         context.SaveChanges();

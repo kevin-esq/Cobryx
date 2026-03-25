@@ -10,6 +10,12 @@ public class ReplaySnapshot
     public string MacroStateJson { get; set; } = "";
     public string PortfolioStateJson { get; set; } = "";
 
+    public string DecisionContextJson { get; set; } = "";
+    public string ExecutionTraceJson { get; set; } = "";
+
+    public string EngineVersion { get; set; } = "";
+    public string ConfigHash { get; set; } = "";
+
     public decimal OriginalCreditLimit { get; set; }
     public decimal OriginalInterestRate { get; set; }
 

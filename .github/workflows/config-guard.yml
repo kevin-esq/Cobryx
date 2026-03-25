@@ -1,0 +1,50 @@
+name: Engine Version + Config Guard
+
+on:
+    pull_request:
+        paths:
+            - Cobryx.Application/Decision/**
+            - Cobryx.Domain/Decision/**
+            - Cobryx.Domain/Config/**
+
+permissions: read-all
+
+jobs:
+    config-integrity:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Detect config/logic changes
+              id: changes
+              run: |
+                  CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+                  echo "Files changed: $CHANGED"
+
+                  if echo "$CHANGED" | grep -E "Rules|Engine|Config|Constants"; then
+                    echo "logic_changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "logic_changed=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Enforce EngineVersion Bump
+              if: ${{ steps.changes.outputs.logic_changed == 'true' }}
+              run: |
+                  echo "Logic or Config changed. Validating EngineMetadata.cs update..."
+                  DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- Cobryx.Domain/Decision/EngineMetadata.cs)
+
+                  if [ -z "$DIFF" ]; then
+                    echo "❌ Logic/Config changed but EngineMetadata.EngineVersion was NOT updated."
+                    echo "Audit trail integrity requires a version bump for any engine logic changes."
+                    exit 1
+                  fi
+
+                  if ! echo "$DIFF" | grep "EngineVersion"; then
+                     echo "❌ EngineMetadata.cs changed but EngineVersion was not modified."
+                     exit 1
+                  fi
+
+                  echo "✅ EngineVersion bump detected."
