@@ -8,6 +8,7 @@ namespace Cobryx.Integration.Tests.Architecture;
 /// Architecture tests for Controllers.
 /// Controllers should be thin - no direct infrastructure access.
 /// </summary>
+[Trait("Category", "Architecture")]
 public class ControllerArchitectureTests
 {
     private static readonly Assembly ApiAssembly = typeof(PortfolioController).Assembly;

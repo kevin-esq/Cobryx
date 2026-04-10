@@ -18,6 +18,7 @@ namespace Cobryx.Integration.Tests.Refactor;
 /// Integration tests for refactored endpoints.
 /// These tests validate the FULL pipeline: HTTP → Controller → MediatR → Handler → Response
 /// </summary>
+[Trait("Category", "Integration")]
 public class RefactoredEndpointsTests : IClassFixture<CobryxWebApplicationFactory>
 {
     private readonly HttpClient _client;

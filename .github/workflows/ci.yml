@@ -25,11 +25,16 @@ jobs:
             - name: Build
               run: dotnet build --configuration Release --no-restore
 
-            - name: Unit Tests
-              run: dotnet test --no-build --filter "Category!=Integration&Category!=Replay"
+            - name: Unit & Domain Tests
+              run: |
+                dotnet test Cobryx.Domain.Tests/Cobryx.Domain.Tests.csproj --configuration Release --no-build
+                dotnet test Cobryx.Application.Tests/Cobryx.Application.Tests.csproj --configuration Release --no-build
+
+            - name: Architecture Tests
+              run: dotnet test Cobryx.Architecture.Tests/Cobryx.Architecture.Tests.csproj --configuration Release --no-build
 
             - name: Integration Tests
-              run: dotnet test --no-build --filter "Category=Integration"
+              run: dotnet test Cobryx.Integration.Tests/Cobryx.Integration.Tests.csproj --configuration Release --no-build --filter "Category=Integration"
 
     determinism-check:
         runs-on: ubuntu-latest
@@ -47,7 +52,7 @@ jobs:
               run: dotnet build --configuration Release
 
             - name: Run Replay Engine Tests
-              run: dotnet test --filter "ReplayEngineTests"
+              run: dotnet test --configuration Release --filter "ReplayEngineTests"
 
             - name: Enforce Determinism
               run: echo "Deterministic replay validated ✅"
