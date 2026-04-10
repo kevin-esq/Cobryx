@@ -81,10 +81,10 @@ fi
 
 # Check if baseline was updated without justification
 if git diff --name-only HEAD~1 2>/dev/null | grep -q "architecture-baseline.json"; then
-    COMMIT_MSG=$(git log -1 --pretty=%B)
-    if [[ ! "$COMMIT_MSG" =~ \[ARCH_BASELINE\] ]]; then
-        echo "❌ FAIL: Baseline updated without [ARCH_BASELINE] tag in commit message"
-        echo "   If intentionally updating baseline, include [ARCH_BASELINE] in commit message"
+    # Check last 10 commits for the tag to handle merge commits in CI
+    if ! git log -n 10 --pretty=%B | grep -q "\[ARCH_BASELINE\]"; then
+        echo "❌ FAIL: Baseline updated without [ARCH_BASELINE] tag in recent commit messages"
+        echo "   If intentionally updating baseline, include [ARCH_BASELINE] in your commit message"
         FAILED=1
     fi
 fi
