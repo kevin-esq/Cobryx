@@ -17,7 +17,7 @@ jobs:
         steps:
             - uses: actions/checkout@v4
               with:
-                  fetch-depth: 2 # Need previous commit for baseline check
+                  fetch-depth: 0 # Full history needed for baseline tag check in PRs
 
             - name: Setup .NET
               uses: actions/setup-dotnet@v4
