@@ -89,11 +89,13 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
         return user;
     }
 
-    public void EnableMfa()
+    public void EnableMfa() => EnableMfa(DateTime.UtcNow);
+
+    public void EnableMfa(DateTime now)
     {
         IsMfaEnabled = true;
-        MfaEnabledAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        MfaEnabledAt = now;
+        UpdateTimestamp(now);
     }
 
     public void DisableMfa()

@@ -23,21 +23,23 @@ public class UserSecurityToken : BaseEntity
         TokenHash = null!;
     }
 
-    public UserSecurityToken(Guid userId, string tokenHash, SecurityTokenType type, int expiryMinutes)
+    public UserSecurityToken(Guid userId, string tokenHash, SecurityTokenType type, int expiryMinutes, DateTime? now = null)
     {
         UserId = userId;
         TokenHash = tokenHash;
         Type = type;
-        ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+        ExpiresAt = (now ?? DateTime.UtcNow).AddMinutes(expiryMinutes);
         IsRevoked = false;
     }
 
-    public void Use()
+    public void Use() => Use(DateTime.UtcNow);
+
+    public void Use(DateTime now)
     {
         if (!IsActive)
             throw new DomainException(DomainErrorCode.Auth.TokenNotActive);
-        UsedAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        UsedAt = now;
+        UpdateTimestamp(now);
     }
 
     public void Revoke()

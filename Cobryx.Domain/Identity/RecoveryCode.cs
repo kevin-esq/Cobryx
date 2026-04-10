@@ -20,11 +20,13 @@ public class RecoveryCode : BaseEntity
         IsUsed = false;
     }
 
-    public void Use()
+    public void Use() => Use(DateTime.UtcNow);
+
+    public void Use(DateTime now)
     {
         IsUsed = true;
-        UsedAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        UsedAt = now;
+        UpdateTimestamp(now);
     }
 
     public bool VerifyCode(string hashedCode)

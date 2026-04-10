@@ -17,12 +17,12 @@ public class BillingAlert : BaseEntity, ITenantEntity
         Message = null!;
     }
 
-    public BillingAlert(Guid tenantId, BillingAlertType alertType, string message)
+    public BillingAlert(Guid tenantId, BillingAlertType alertType, string message, DateTime? now = null)
     {
         TenantId = tenantId;
         AlertType = alertType;
         Message = message;
-        SentAt = DateTime.UtcNow;
+        SentAt = now ?? DateTime.UtcNow;
         IsAcknowledged = false;
     }
 

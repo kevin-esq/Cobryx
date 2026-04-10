@@ -157,10 +157,11 @@ public class TenantGrowthMetrics
         }
     }
 
-    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType)
+    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType) => RecordMRRTransition(newMrr, changeType, DateTime.UtcNow);
+
+    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType, DateTime now)
     {
         var delta = newMrr - CurrentMRR;
-        var now = DateTime.UtcNow;
 
         if (newMrr > 0 && FirstPaidAt == null)
         {
@@ -188,7 +189,7 @@ public class TenantGrowthMetrics
         IsChurned = newMrr == 0 && changeType == MRRChangeType.Churn;
         if (IsChurned)
         {
-            ChurnedAt = DateTime.UtcNow;
+            ChurnedAt = now;
             ChurnType = ChurnType.Voluntary;
             ChurnRisk = ChurnRisk.Churned;
         }

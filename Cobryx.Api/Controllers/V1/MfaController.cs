@@ -4,6 +4,8 @@ using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Auth.Commands.Mfa;
+using Cobryx.Application.Auth.Common;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -20,13 +22,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/mfa")]
-[Tags("Identity & Access")]
-public class MfaController : CobryxBaseController
+[Tags("Platform")]
+public class MfaController(ISender sender) : CobryxBaseController(sender)
 {
-    public MfaController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Generates a new TOTP setup secret and QR code URI.
     /// </summary>
@@ -36,13 +34,13 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: User already has MFA enabled or internal error.
     /// </remarks>
     [Authorize]
-    [HttpGet("setup-totp")]
+    [HttpGet("totp/setup")]
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> GetTotpSetup()
     {
-        var result = await Sender.Send(new GetTotpSetupQuery());
+        Result<TotpSetupResult> result = await Sender.Send(new GetTotpSetupQuery());
         return HandleResult(result, AuthOutcomes.LoginMfaRequired);
     }
 
@@ -55,14 +53,14 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: Invalid verification code or already enabled.
     /// </remarks>
     [Authorize]
-    [HttpPost("activate-totp")]
+    [HttpPost("totp/activate")]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> ActivateTotp([FromBody] EnableMfaRequest request)
     {
         var command = new EnableMfaCommand(request.Code, request.Secret);
-        var result = await Sender.Send(command);
+        Result<List<string>> result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaEnabled);
     }
 
@@ -75,14 +73,14 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: Invalid code or expired persistence token.
     /// </remarks>
     [AllowAnonymous]
-    [HttpPost("verify-totp")]
+    [HttpPost("totp/verify")]
     [ProducesResponseType(typeof(ApiSuccessResponse<AuthResponseContract>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> VerifyTotp([FromBody] VerifyMfaRequest request)
     {
         var command = new VerifyTotpLoginCommand(request.PersistenceToken, request.Code);
-        var result = await Sender.Send(command);
+        Result<AuthResult> result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaVerified);
     }
 
@@ -98,13 +96,13 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: Internal configuration error.
     /// </remarks>
     [Authorize]
-    [HttpGet("setup-fido2")]
+    [HttpGet("fido2/setup")]
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> InitiateFido2Registration()
     {
-        var result = await Sender.Send(new InitiateFido2RegistrationCommand());
+        Result<CredentialCreateOptions> result = await Sender.Send(new InitiateFido2RegistrationCommand());
 
         return HandleResult(result, AuthOutcomes.LoginMfaRequired);
     }
@@ -121,24 +119,29 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: Invalid device registration data.
     /// </remarks>
     [Authorize]
-    [HttpPost("activate-fido2")]
+    [HttpPost("fido2/activate")]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> CompleteFido2Registration([FromBody] CompleteFido2RegistrationRequest request)
     {
-        var response = request.RegistrationData.Response.Deserialize<AuthenticatorAttestationRawResponse>();
-        var options = request.Challenge.Options.Deserialize<CredentialCreateOptions>();
+        AuthenticatorAttestationRawResponse? response =
+            request.RegistrationData.Response.Deserialize<AuthenticatorAttestationRawResponse>();
+        CredentialCreateOptions? options = request.Challenge.Options.Deserialize<CredentialCreateOptions>();
 
         if (response == null || options == null)
         {
             return BadRequest(ApiResponseFactory.Error(
                 errorCode: AuthOutcomes.Fido2InvalidPayload,
-                errors: new[] { new ValidationError("registrationData", ValidationCodes.InvalidPayload, "Invalid passkey registration payload. One or more binary attributes are malformed.") }));
+                errors:
+                [
+                    new ValidationError("registrationData", ValidationCodes.InvalidPayload,
+                        "Invalid passkey registration payload. One or more binary attributes are malformed.")
+                ]));
         }
 
         var command = new CompleteFido2RegistrationCommand(request.DeviceName, response, options);
-        var result = await Sender.Send(command);
+        Result<bool> result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.Fido2Registered);
     }
 
@@ -151,13 +154,13 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: User has no registered passkeys.
     /// </remarks>
     [AllowAnonymous]
-    [HttpPost("verify-fido2-init")]
+    [HttpPost("fido2/challenge")]
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> InitiateFido2Assertion([FromBody] InitiateFido2AssertionRequest request)
     {
         var command = new InitiateFido2AssertionCommand(request.PersistenceToken);
-        var result = await Sender.Send(command);
+        Result<AssertionOptions> result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaInitiated);
     }
 
@@ -170,24 +173,29 @@ public class MfaController : CobryxBaseController
     /// - AUTH.MFA.FAILED: Invalid signature or challenge mismatch.
     /// </remarks>
     [AllowAnonymous]
-    [HttpPost("verify-fido2")]
+    [HttpPost("fido2/verify")]
     [ProducesResponseType(typeof(ApiSuccessResponse<AuthResponseContract>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> CompleteFido2Assertion([FromBody] CompleteFido2AssertionRequest request)
     {
-        var response = request.VerificationData.Response.Deserialize<AuthenticatorAssertionRawResponse>();
-        var optionsData = request.Challenge.Options.Deserialize<AssertionOptions>();
+        AuthenticatorAssertionRawResponse? response =
+            request.VerificationData.Response.Deserialize<AuthenticatorAssertionRawResponse>();
+        AssertionOptions? optionsData = request.Challenge.Options.Deserialize<AssertionOptions>();
 
         if (response == null || optionsData == null)
         {
             return BadRequest(ApiResponseFactory.Error(
                 errorCode: AuthOutcomes.Fido2InvalidPayload,
-                errors: new[] { new ValidationError("verificationData", ValidationCodes.InvalidPayload, "Invalid passkey verification payload. Check binary encoding.") }));
+                errors:
+                [
+                    new ValidationError("verificationData", ValidationCodes.InvalidPayload,
+                        "Invalid passkey verification payload. Check binary encoding.")
+                ]));
         }
 
         var command = new CompleteFido2AssertionCommand(request.PersistenceToken, response, optionsData);
-        var result = await Sender.Send(command);
+        Result<AuthResult> result = await Sender.Send(command);
         return HandleResult(result, AuthOutcomes.MfaVerified);
     }
 }

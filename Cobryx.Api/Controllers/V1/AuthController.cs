@@ -1,12 +1,14 @@
 using Asp.Versioning;
 
-using Cobryx.Api.Infrastructure;
+using Cobryx.Api.Filters;
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Auth.Commands.Core;
+using Cobryx.Application.Auth.Commands.Enroll;
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.RefreshToken;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Application.Auth.Commands.Sessions;
+using Cobryx.Application.Auth.Common;
 using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Tenants.Commands.OnboardBusiness;
@@ -26,16 +28,9 @@ namespace Cobryx.Api.Controllers.V1;
 /// </summary>
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth")]
-[Tags("Identity & Access")]
-public class AuthController : CobryxBaseController
+[Tags("Platform")]
+public class AuthController(ISender sender, ICookieService cookieService) : CobryxBaseController(sender)
 {
-    private readonly ICookieService _cookieService;
-
-    public AuthController(ISender sender, ICookieService cookieService) : base(sender)
-    {
-        _cookieService = cookieService;
-    }
-
     /// <summary>
     /// Registers a new user and tenant (Sign Up).
     /// </summary>
@@ -64,7 +59,7 @@ public class AuthController : CobryxBaseController
             request.Password,
             ReturnUrl: request.ReturnUrl);
 
-        var result = await Sender.Send(command, cancellationToken);
+        Result<Guid> result = await Sender.Send(command, cancellationToken);
         return HandleCreatedResult("/api/v1/auth/login", result, AuthOutcomes.SignupVerificationRequired);
     }
 
@@ -88,7 +83,7 @@ public class AuthController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 402)]
     public async Task<IActionResult> Enroll([FromBody] EnrollRequest request, CancellationToken cancellationToken)
     {
-        var command = new Cobryx.Application.Auth.Commands.Enroll.EnrollUserCommand(
+        var command = new EnrollUserCommand(
             request.Token,
             request.Email,
             request.FirstName,
@@ -96,7 +91,7 @@ public class AuthController : CobryxBaseController
             request.Password,
             request.MarketingConsent);
 
-        var result = await Sender.Send(command, cancellationToken);
+        Result<Guid> result = await Sender.Send(command, cancellationToken);
         return HandleResult(result, InvitationOutcomes.EnrollSuccess);
     }
 
@@ -120,25 +115,13 @@ public class AuthController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> Onboard([FromBody] OnboardRequest request, CancellationToken cancellationToken)
     {
-        var formattedAddress = $"{request.BusinessAddress.Street} {request.BusinessAddress.HouseNumber}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.ApartmentNumber))
-            formattedAddress += $", {request.BusinessAddress.ApartmentNumber}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.Neighborhood))
-            formattedAddress += $", {request.BusinessAddress.Neighborhood}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.PostalCode))
-            formattedAddress += $", {request.BusinessAddress.PostalCode}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.City))
-            formattedAddress += $", {request.BusinessAddress.City}";
-        if (!string.IsNullOrEmpty(request.BusinessAddress.State))
-            formattedAddress += $", {request.BusinessAddress.State}";
-
         var command = new OnboardBusinessCommand(
             request.TaxId,
             request.Industry,
-            formattedAddress,
+            request.BusinessAddress.ToFormattedString(),
             request.Phone);
 
-        var result = await Sender.Send(command, cancellationToken);
+        Result result = await Sender.Send(command, cancellationToken);
         return HandleResult(result, TenantOutcomes.OnboardingCompleted);
     }
 
@@ -154,14 +137,15 @@ public class AuthController : CobryxBaseController
     /// </remarks>
     /// <param name="request">The verification token received via email.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    [HttpPost("verify-email")]
+    [HttpPost("email/verify")]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
-    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new VerifyEmailCommand(request.Token), cancellationToken);
+        Result result = await Sender.Send(new VerifyEmailCommand(request.Token), cancellationToken);
         return HandleResult(result, AuthOutcomes.EmailVerified);
     }
 
@@ -177,16 +161,19 @@ public class AuthController : CobryxBaseController
     /// </remarks>
     /// <param name="request">The email to verify and optional return URL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    [HttpPost("resend-verification")]
+    [HttpPost("email/resend")]
     [ValidateCaptcha]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 429)]
-    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new ResendVerificationCommand(request.Email, request.CaptchaToken, request.ReturnUrl), cancellationToken);
+        Result result =
+            await Sender.Send(new ResendVerificationCommand(request.Email, request.CaptchaToken, request.ReturnUrl),
+                cancellationToken);
         return HandleResult(result, AuthOutcomes.VerificationEmailSent);
     }
 
@@ -213,34 +200,36 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
         var command = new LoginCommand(request.Email, request.Password, CaptchaToken: request.CaptchaToken);
-        var result = await Sender.Send(command, cancellationToken);
+        Result<AuthResult> result = await Sender.Send(command, cancellationToken);
 
-        if (result.IsSuccess && result.Value?.RefreshToken != null && result.Value.RefreshExpires.HasValue)
+        if (!result.IsSuccess || result.Value == null)
         {
-            _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
+            return HandleResult(result, AuthOutcomes.LoginCompleted);
         }
 
-        var mappedResult = result.IsSuccess && result.Value != null
-            ? new AuthResponseContract(
-                result.Value.Token,
-                result.Value.FirstName,
-                result.Value.LastName,
-                result.Value.FullName,
-                result.Value.Email,
-                result.Value.Role,
-                result.Value.Expires,
-                result.Value.SessionId,
-                result.Value.RequiresMfa,
-                result.Value.MfaToken,
-                result.Value.RequiresOnboarding)
-            : null;
+        if (result.Value.RefreshToken != null && result.Value.RefreshExpires != null)
+        {
+            cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
+        }
 
-        var finalResult = result.IsSuccess
-            ? Result.Success(mappedResult!)
-            : Result.Failure<AuthResponseContract>(result.Error!);
+        var mappedResult = new AuthResponseContract(
+            result.Value.Token,
+            result.Value.FirstName,
+            result.Value.LastName,
+            result.Value.FullName,
+            result.Value.Email,
+            result.Value.Role,
+            result.Value.Expires,
+            result.Value.SessionId,
+            result.Value.RequiresMfa,
+            result.Value.MfaToken,
+            result.Value.RequiresOnboarding);
 
-        Outcome? code = result.IsSuccess && result.Value?.Token == null ? AuthOutcomes.LoginMfaRequired : AuthOutcomes.LoginCompleted;
-        return HandleResult(finalResult, code);
+        Outcome code = result.Value.Token == null
+            ? AuthOutcomes.LoginMfaRequired
+            : AuthOutcomes.LoginCompleted;
+
+        return Success(mappedResult, code);
     }
 
     /// <summary>
@@ -257,38 +246,38 @@ public class AuthController : CobryxBaseController
     /// <returns>A new JWT access token and a rotated refresh token cookie.</returns>
     /// <response code="200">Returns a new access token and rotates the refresh token cookie.</response>
     /// <response code="401">Returns when the refresh token is missing, invalid, or expired (success: false).</response>
-    [HttpPost("refresh-token")]
+    [HttpPost("token/refresh")]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse<AuthResponseContract>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new RefreshTokenCommand(), cancellationToken);
-        if (result.IsSuccess && result.Value?.RefreshToken != null && result.Value.RefreshExpires.HasValue)
+        Result<AuthResult> result = await Sender.Send(new RefreshTokenCommand(), cancellationToken);
+
+        if (!result.IsSuccess || result.Value == null)
         {
-            _cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
+            return HandleResult(result, AuthOutcomes.TokenRotated);
         }
 
-        var mappedResult = result.IsSuccess && result.Value != null
-            ? new AuthResponseContract(
-                result.Value.Token,
-                result.Value.FirstName,
-                result.Value.LastName,
-                result.Value.FullName,
-                result.Value.Email,
-                result.Value.Role,
-                result.Value.Expires,
-                result.Value.SessionId,
-                result.Value.RequiresMfa,
-                result.Value.MfaToken,
-                result.Value.RequiresOnboarding)
-            : null;
+        if (result.Value.RefreshToken != null && result.Value.RefreshExpires != null)
+        {
+            cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
+        }
 
-        var finalResult = result.IsSuccess
-            ? Result.Success(mappedResult!)
-            : Result.Failure<AuthResponseContract>(result.Error!);
+        var mappedResult = new AuthResponseContract(
+            result.Value.Token,
+            result.Value.FirstName,
+            result.Value.LastName,
+            result.Value.FullName,
+            result.Value.Email,
+            result.Value.Role,
+            result.Value.Expires,
+            result.Value.SessionId,
+            result.Value.RequiresMfa,
+            result.Value.MfaToken,
+            result.Value.RequiresOnboarding);
 
-        return HandleResult(finalResult, AuthOutcomes.TokenRotated);
+        return Success(mappedResult, AuthOutcomes.TokenRotated);
     }
 
     /// <summary>
@@ -310,7 +299,7 @@ public class AuthController : CobryxBaseController
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutCommand(), cancellationToken);
-        _cookieService.DeleteRefreshTokenCookie();
+        cookieService.DeleteRefreshTokenCookie();
         return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutCompleted));
     }
 
@@ -327,13 +316,13 @@ public class AuthController : CobryxBaseController
     /// <returns>No content on success.</returns>
     [Authorize]
     [SkipOnboardingCheck]
-    [HttpPost("logout-all")]
+    [HttpPost("sessions/revoke-all")]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
     {
         await Sender.Send(new LogoutAllCommand(), cancellationToken);
-        _cookieService.DeleteRefreshTokenCookie();
+        cookieService.DeleteRefreshTokenCookie();
         return Ok(ApiResponseFactory.Success(outcomeCode: AuthOutcomes.LogoutAllCompleted));
     }
 
@@ -348,13 +337,15 @@ public class AuthController : CobryxBaseController
     /// </remarks>
     /// <param name="request">The email to reset and optional return URL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    [HttpPost("forgot-password")]
+    [HttpPost("password/forgot")]
     [AllowAnonymous]
     [SkipOnboardingCheck]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new ForgotPasswordCommand(request.Email, request.ReturnUrl), cancellationToken);
+        Result result =
+            await Sender.Send(new ForgotPasswordCommand(request.Email, request.ReturnUrl), cancellationToken);
         return HandleResult(result, AuthOutcomes.PasswordResetEmailSent);
     }
 }

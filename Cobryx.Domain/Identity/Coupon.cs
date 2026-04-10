@@ -31,23 +31,27 @@ public class Coupon : BaseEntity, IAggregateRoot, ITenantEntity
         IsActive = true;
     }
 
-    public bool IsValid()
+    public bool IsValid() => IsValid(DateTime.UtcNow);
+
+    public bool IsValid(DateTime now)
     {
         if (!IsActive)
             return false;
-        if (ValidUntil.HasValue && ValidUntil.Value < DateTime.UtcNow)
+        if (ValidUntil.HasValue && ValidUntil.Value < now)
             return false;
         if (MaxRedemptions.HasValue && TimesRedeemed >= MaxRedemptions.Value)
             return false;
         return true;
     }
 
-    public void Redeem()
+    public void Redeem() => Redeem(DateTime.UtcNow);
+
+    public void Redeem(DateTime now)
     {
-        if (!IsValid())
+        if (!IsValid(now))
             throw new DomainException(DomainErrorCode.Marketing.InvalidCouponGeneral);
         TimesRedeemed++;
-        UpdateTimestamp();
+        UpdateTimestamp(now);
     }
 
     public void Deactivate()
