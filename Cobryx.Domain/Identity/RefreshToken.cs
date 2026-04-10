@@ -24,19 +24,21 @@ public class RefreshToken : BaseEntity
         CreatedByIp = null!;
     }
 
-    public RefreshToken(string token, DateTime expires, string createdByIp, Guid userId, Guid sessionId)
+    public RefreshToken(string token, DateTime expires, string createdByIp, Guid userId, Guid sessionId, DateTime? now = null)
     {
         Token = token;
         Expires = expires;
-        Created = DateTime.UtcNow;
+        Created = now ?? DateTime.UtcNow;
         CreatedByIp = createdByIp;
         UserId = userId;
         SessionId = sessionId;
     }
 
-    public void Revoke(string ipAddress, string? replacedByToken = null)
+    public void Revoke(string ipAddress, string? replacedByToken = null) => Revoke(ipAddress, DateTime.UtcNow, replacedByToken);
+
+    public void Revoke(string ipAddress, DateTime now, string? replacedByToken = null)
     {
-        Revoked = DateTime.UtcNow;
+        Revoked = now;
         RevokedByIp = ipAddress;
         ReplacedByToken = replacedByToken;
     }

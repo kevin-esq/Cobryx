@@ -4,7 +4,7 @@ Cobryx is a high-performance fintech backend designed for lending, analytics, an
 
 ---
 
-## 🧠 Architecture Overview
+## Architecture Overview
 
 The system is structured in layered architecture:
 
@@ -32,13 +32,13 @@ Infrastructure → Financial Core → Domain Services → Analytics → Collecti
 
 ---
 
-## 🔄 Data Flow
+## Data Flow
 
 Snapshot → Strategy → CollectionCase → Redis Queue → Assignment → Action → Outcome → Optimizer → Strategy
 
 ---
 
-## 🚀 Performance Characteristics
+## Performance Characteristics
 
 - Reads: O(1) via Redis
 - Aggregations: O(n) via SQL Window Functions
@@ -46,7 +46,7 @@ Snapshot → Strategy → CollectionCase → Redis Queue → Assignment → Acti
 
 ---
 
-## 🧱 Tech Stack
+## Tech Stack
 
 - .NET 8 / EF Core
 - PostgreSQL
@@ -55,7 +55,7 @@ Snapshot → Strategy → CollectionCase → Redis Queue → Assignment → Acti
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 See `/docs/architecture`:
 
@@ -66,7 +66,7 @@ See `/docs/architecture`:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 dotnet test
@@ -74,7 +74,7 @@ dotnet test
 
 ---
 
-## 🚀 Running
+## Running
 
 ```bash
 dotnet run
@@ -82,7 +82,7 @@ dotnet run
 
 ---
 
-## 🧠 Philosophy
+## Philosophy
 
 Cobryx is designed as:
 - Event-driven
@@ -92,6 +92,6 @@ Cobryx is designed as:
 
 ---
 
-## 🏆 Goal
+## Goal
 
 Transform financial data into real-time operational intelligence.

@@ -160,6 +160,7 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TaxDeleteDefaultForbidden = new("DOMAIN.TAX.DELETE_DEFAULT_FORBIDDEN");
         public static readonly DomainErrorCode TaxConfigurationNotFound = new("DOMAIN.TAX_CONFIGURATION.NOT_FOUND");
         public static readonly DomainErrorCode PaymentMethodAlreadyExists = new("DOMAIN.PAYMENT_METHOD.ALREADY_EXISTS");
+        public static readonly DomainErrorCode ConcurrencyConflict = new("DOMAIN.INVOICING.CONCURRENCY_CONFLICT");
     }
 
     public static class Credits
@@ -282,17 +283,17 @@ public static class Error
 {
     public static class Auth
     {
-        public static DomainErrorCode NotAuthenticated => global::Cobryx.Domain.Shared.DomainErrorCode.Auth.NotAuthenticated;
-        public static DomainErrorCode InvalidCredentials => global::Cobryx.Domain.Shared.DomainErrorCode.Auth.InvalidCredentials;
+        public static DomainErrorCode NotAuthenticated => DomainErrorCode.Auth.NotAuthenticated;
+        public static DomainErrorCode InvalidCredentials => DomainErrorCode.Auth.InvalidCredentials;
     }
 
     public static class Customer
     {
-        public static DomainErrorCode NotFound => global::Cobryx.Domain.Shared.DomainErrorCode.Customer.NotFound;
+        public static DomainErrorCode NotFound => DomainErrorCode.Customer.NotFound;
     }
 
     public static class System
     {
-        public static DomainErrorCode InternalError => global::Cobryx.Domain.Shared.DomainErrorCode.System.InternalError;
+        public static DomainErrorCode InternalError => DomainErrorCode.System.InternalError;
     }
 }

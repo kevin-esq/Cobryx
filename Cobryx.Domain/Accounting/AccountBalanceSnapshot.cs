@@ -14,7 +14,7 @@ public class AccountBalanceSnapshot : BaseEntity, ITenantEntity
     public decimal Balance { get; private set; }
     public bool IsVerified { get; private set; }
 
-    private AccountBalanceSnapshot() { } // EF Core
+    private AccountBalanceSnapshot() { }
 
     public AccountBalanceSnapshot(Guid tenantId, Guid accountId, long journalSequenceId, decimal balance)
     {

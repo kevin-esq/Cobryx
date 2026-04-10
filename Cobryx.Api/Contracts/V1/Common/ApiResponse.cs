@@ -157,7 +157,7 @@ public static class ApiResponseFactory
         string? traceId = null,
         Outcome? outcomeCode = null)
     {
-        var response = new ApiErrorResponse
+        return new ApiErrorResponse
         {
             ErrorCode = errorCode,
             OutcomeCode = outcomeCode?.Value,
@@ -165,8 +165,5 @@ public static class ApiResponseFactory
             Errors = errors,
             TraceId = traceId
         };
-
-        response.Success = false; // Guaranteed explicit override
-        return response;
     }
 }

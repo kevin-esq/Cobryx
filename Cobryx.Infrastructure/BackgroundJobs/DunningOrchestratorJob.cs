@@ -38,8 +38,6 @@ public class DunningOrchestratorJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // 1. Fetch eligible PaymentLinks for recovery
-        // Active links that have a scheduled retry time and haven't exceeded attempts/deadline
         var pendingRecoveries = await db.Set<PaymentLink>()
             .Include(l => l.Loan)
             .Where(l => l.Status == PaymentLinkStatus.Active)
@@ -47,7 +45,6 @@ public class DunningOrchestratorJob
             .Where(l => l.RecoveryAttemptCount < l.MaxRecoveryAttempts)
             .Where(l => l.RecoveryDeadline == null || l.RecoveryDeadline > now)
             .Where(l => !l.RecoveryInProgress)
-            // Lightweight efficiency guard: ignore disputed or closed loans at the scan level
             .Where(l => l.Loan == null || (l.Loan.Status != LoanStatus.Disputed && l.Loan.Status != LoanStatus.Closed))
             .ToListAsync(ct);
 
@@ -58,7 +55,6 @@ public class DunningOrchestratorJob
 
         foreach (var link in pendingRecoveries)
         {
-            // 2. Atomic Guard: Try to acquire the recovery lock
             if (!link.TryAcquireRecoveryLock())
             {
                 _logger.LogWarning("Dunning Engine: Skipped Link {LinkId}, already in progress.", link.Id);
@@ -67,8 +63,6 @@ public class DunningOrchestratorJob
 
             try
             {
-                // 3. Delegate to Orchestration Engine
-                // We pass null for failure code because this is a retry of a PREVIOUS failure
                 await _orchestrationService.HandlePaymentFailureAsync(
                     link.CustomerId,
                     link.RecoveryFailureReason,
@@ -82,11 +76,10 @@ public class DunningOrchestratorJob
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Dunning Engine: Failed to process recovery for Link {LinkId}", link.Id);
-                link.ReleaseRecoveryLock(); // Ensure it's not stuck if the service itself crashes
+                link.ReleaseRecoveryLock();
             }
         }
 
-        // 4. Persistence
         await _unitOfWork.SaveChangesAsync(ct);
     }
 }

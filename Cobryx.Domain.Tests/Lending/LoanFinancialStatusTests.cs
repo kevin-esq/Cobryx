@@ -15,7 +15,6 @@ public class LoanFinancialStatusTests
     [Fact]
     public void UpdateFinancialRiskStatus_WithNoOverdueInstallments_ShouldBeCurrent()
     {
-        // Arrange
         var today = new DateTime(2026, 1, 1);
         var loan = CreateLoan(1000);
 
@@ -26,24 +25,21 @@ public class LoanFinancialStatusTests
         };
         loan.AddInstallments(installments);
 
-        // Act
         loan.UpdateFinancialRiskStatus(today);
 
-        // Assert
         loan.FinancialStatus.Should().Be(FinancialStatus.Current);
         loan.FinancialDaysPastDue.Should().Be(0);
         loan.ArrearsAmount.Should().Be(0);
     }
 
     [Theory]
-    [InlineData(1, FinancialStatus.Current)]   // Grace period <= 3 days
-    [InlineData(10, FinancialStatus.Late)]     // <= 30 days
-    [InlineData(45, FinancialStatus.Delinquent)] // <= 90 days
-    [InlineData(120, FinancialStatus.Default)]   // <= 180 days
-    [InlineData(200, FinancialStatus.ChargedOff)] // > 180 days
+    [InlineData(1, FinancialStatus.Current)]
+    [InlineData(10, FinancialStatus.Late)]
+    [InlineData(45, FinancialStatus.Delinquent)]
+    [InlineData(120, FinancialStatus.Default)]
+    [InlineData(200, FinancialStatus.ChargedOff)]
     public void UpdateFinancialRiskStatus_WithOverdueInstallment_ShouldReflectCorrectStatus(int daysOverdue, FinancialStatus expectedStatus)
     {
-        // Arrange
         var today = new DateTime(2026, 1, 1);
         var dueDate = today.AddDays(-daysOverdue);
         var loan = CreateLoan(1000);
@@ -54,10 +50,8 @@ public class LoanFinancialStatusTests
         };
         loan.AddInstallments(installments);
 
-        // Act
         loan.UpdateFinancialRiskStatus(today);
 
-        // Assert
         loan.FinancialStatus.Should().Be(expectedStatus);
         loan.FinancialDaysPastDue.Should().Be(daysOverdue);
         loan.ArrearsAmount.Should().Be(500);
@@ -66,7 +60,6 @@ public class LoanFinancialStatusTests
     [Fact]
     public void UpdateFinancialRiskStatus_WithPartialPayment_ShouldCalculateCorrectArrears()
     {
-        // Arrange
         var today = new DateTime(2026, 1, 1);
         var dueDate = today.AddDays(-10);
         var loan = CreateLoan(1000);
@@ -77,22 +70,18 @@ public class LoanFinancialStatusTests
 
         loan.AddInstallments([installment]);
 
-        // Act
         loan.UpdateFinancialRiskStatus(today);
 
-        // Assert
         loan.FinancialStatus.Should().Be(FinancialStatus.Late);
         loan.FinancialDaysPastDue.Should().Be(10);
-        loan.ArrearsAmount.Should().Be(440); // (500-100) + (50-10) = 440
+        loan.ArrearsAmount.Should().Be(440);
     }
 
     [Fact]
     public void MarkAsRecovered_ShouldOnlyWorkIfChargedOff()
     {
-        // Arrange
         var loan = CreateLoan(1000);
 
-        // Act & Assert
         loan.MarkAsRecovered();
         loan.FinancialStatus.Should().Be(FinancialStatus.Current);
 

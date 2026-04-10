@@ -5,42 +5,38 @@ using Cobryx.Domain.Interfaces;
 
 using Concordia;
 
-using Microsoft.EntityFrameworkCore;
-
-namespace Cobryx.Application.Notifications.EventHandlers;
-
-public class ProjectNotificationOnPaymentCompletedHandler : INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>
+namespace Cobryx.Application.Notifications.EventHandlers
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public ProjectNotificationOnPaymentCompletedHandler(IUnitOfWork unitOfWork)
+    public class ProjectNotificationOnPaymentCompletedHandler(
+        INotificationRepository notificationRepository,
+        IUnitOfWork unitOfWork) : INotificationHandler<DomainEventNotification<PaymentCompletedEvent>>
     {
-        _unitOfWork = unitOfWork;
-    }
+        public async Task Handle(DomainEventNotification<PaymentCompletedEvent> notification,
+            CancellationToken cancellationToken)
+        {
+            PaymentCompletedEvent domainEvent = notification.DomainEvent;
 
-    public async Task Handle(DomainEventNotification<PaymentCompletedEvent> notification, CancellationToken cancellationToken)
-    {
-        var domainEvent = notification.DomainEvent;
-        var dbContext = (DbContext)_unitOfWork;
+            var exists = await notificationRepository.ExistsAsync(
+                domainEvent.TenantId,
+                domainEvent.PaymentId.ToString(),
+                NotificationType.Success,
+                cancellationToken);
 
-        var exists = await dbContext.Set<Notification>()
-            .AnyAsync(n => n.TenantId == domainEvent.TenantId &&
-                         n.RelatedEntityId == domainEvent.PaymentId.ToString() &&
-                         n.Type == NotificationType.Success, cancellationToken);
+            if (exists)
+            {
+                return;
+            }
 
-        if (exists)
-            return;
+            Notification userNotification = new(
+                domainEvent.TenantId,
+                "Payment Received",
+                $"A payment of {domainEvent.Amount.Amount} {domainEvent.Amount.Currency} has been successfully processed.",
+                NotificationType.Success,
+                relatedEntityId: domainEvent.PaymentId.ToString(),
+                relatedEntityType: "Payment");
 
-        var userNotification = new Notification(
-            domainEvent.TenantId,
-            "Payment Received",
-            $"A payment of {domainEvent.Amount.Amount} {domainEvent.Amount.Currency} has been successfully processed.",
-            NotificationType.Success,
-            relatedEntityId: domainEvent.PaymentId.ToString(),
-            relatedEntityType: "Payment"
-        );
-
-        dbContext.Set<Notification>().Add(userNotification);
-        await dbContext.SaveChangesAsync(cancellationToken);
+            await notificationRepository.AddAsync(userNotification, cancellationToken);
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
     }
 }

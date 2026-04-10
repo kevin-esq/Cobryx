@@ -1,5 +1,7 @@
 using System.Text;
+
 using Cobryx.Application.Common.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.ML;
@@ -21,15 +23,14 @@ public class DatasetExporter
 
         var rows = data.Select(x => new
         {
-            utilization = x.PrincipalBalance / (x.PrincipalBalance + 1m), // fallback
-            paymentDelay = 0m,     // TODO: join payments
-            behaviorScore = 0.5m,  // placeholder
+            utilization = x.PrincipalBalance / (x.PrincipalBalance + 1m),
+            paymentDelay = 0m,
+            behaviorScore = 0.5m,
             dpdTrend = (decimal)x.DaysPastDue,
             outstanding = x.PrincipalBalance + x.InterestBalance + x.LateFeeBalance,
             label = x.DaysPastDue >= 30 ? 1 : 0
         });
 
-        // Ensure directory exists
         var dir = System.IO.Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
         {
@@ -41,7 +42,6 @@ public class DatasetExporter
 
         foreach (var r in rows)
         {
-            // invariant format
             csv.AppendLine(System.FormattableString.Invariant($"{r.utilization:F4},{r.paymentDelay:F4},{r.behaviorScore:F4},{r.dpdTrend:F4},{r.outstanding:F4},{r.label}"));
         }
 

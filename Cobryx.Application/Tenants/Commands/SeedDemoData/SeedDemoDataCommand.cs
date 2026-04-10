@@ -32,12 +32,10 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
         var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
         var dbContext = (DbContext)_unitOfWork;
 
-        // 1. Check if demo data already exists to avoid duplicates
         var alreadyHasDemo = await dbContext.Set<Loan>().AnyAsync(l => l.TenantId == tenantId && l.IsDemo, cancellationToken);
         if (alreadyHasDemo)
             return Result.Success();
 
-        // 2. Create Demo Customer
         var customer = new Cobryx.Domain.Lending.Customer(
             tenantId,
             "Demo",
@@ -49,12 +47,11 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
 
         dbContext.Set<Cobryx.Domain.Lending.Customer>().Add(customer);
 
-        // 3. Create Demo Loan Agreement
         var agreement = new LoanAgreement(
             tenantId,
             customer.Id,
             500000,
-            Guid.NewGuid(), // Interest Policy
+            Guid.NewGuid(),
             PaymentFrequency.Monthly,
             12,
             _clock.UtcNow.AddDays(-60),
@@ -63,16 +60,14 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
 
         dbContext.Set<LoanAgreement>().Add(agreement);
 
-        // 4. Create Demo Loans
-        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", new Money(250000, "MXN"), isDemo: true);
+        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", new Money(250000, CobryxDefaults.Currency), isDemo: true);
         activeLoan.Activate();
 
-        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", new Money(100000, "MXN"), isDemo: true);
+        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", new Money(100000, CobryxDefaults.Currency), isDemo: true);
         overdueLoan.Activate();
 
         dbContext.Set<Loan>().AddRange(activeLoan, overdueLoan);
 
-        // 5. Create Demo Payments
         var paymentMethod = await dbContext.Set<PaymentMethod>()
             .FirstOrDefaultAsync(pm => pm.TenantId == tenantId, cancellationToken);
 
@@ -82,7 +77,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
                 tenantId,
                 customer.Id,
                 paymentMethod.Id,
-                new Money(15000, "MXN"),
+                new Money(15000, CobryxDefaults.Currency),
                 _clock.UtcNow.AddDays(-5),
                 "DEMO-REF-001",
                 "Demo Payment Success",

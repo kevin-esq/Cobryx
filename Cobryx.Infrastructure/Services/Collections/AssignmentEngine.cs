@@ -20,7 +20,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
         var lockKey = $"portfolio:collections:assignment:lock:{tenantId}";
         var token = Guid.NewGuid().ToString();
 
-        // 1. Acquire Distributed Lock
         var acquired = await db.LockTakeAsync(lockKey, token, TimeSpan.FromSeconds(30));
         if (!acquired)
         {
@@ -30,7 +29,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
 
         try
         {
-            // 2. Fetch Unassigned critical cases
             var unassignedCases = await _dbContext.CollectionCases
                 .Where(c => c.TenantId == tenantId && !c.IsClosed && c.AssignedAgentId == null && c.PriorityScore > 0)
                 .OrderByDescending(c => c.PriorityScore)
@@ -40,7 +38,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
             if (!unassignedCases.Any())
                 return;
 
-            // 3. Find Available Agents
             var activeAgents = await _dbContext.CollectionAgents
                 .Where(a => a.TenantId == tenantId && a.IsActive && a.CurrentLoad < a.MaxCapacity)
                 .ToListAsync();
@@ -48,7 +45,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
             if (!activeAgents.Any())
                 return;
 
-            // 4. Distribute using round-robin logic
             int agentIndex = 0;
             foreach (var caseToAssign in unassignedCases)
             {
@@ -59,7 +55,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
                 caseToAssign.AssignAgent(agent.Id);
                 agent.CurrentLoad++;
 
-                // Track load in Redis too for realtime dashboards
                 await db.HashIncrementAsync($"portfolio:collections:agents:load:{tenantId}", agent.Id.ToString(), 1);
 
                 agentIndex = (agentIndex + 1) % activeAgents.Count;
@@ -74,7 +69,6 @@ public class AssignmentEngine(IConnectionMultiplexer redis, ICobryxDbContext dbC
         }
         finally
         {
-            // 5. Release Lock
             await db.LockReleaseAsync(lockKey, token);
         }
     }

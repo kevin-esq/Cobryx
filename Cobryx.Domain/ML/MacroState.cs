@@ -1,21 +1,18 @@
 namespace Cobryx.Domain.ML;
 
+/// <summary>
+/// Mutable state for ML simulation. Uses public setters for simulation mutability.
+/// </summary>
 public class MacroState
 {
-    public decimal InterestRate { get; set; }        // FED / Banxico rate
+    public decimal InterestRate { get; set; }
     public decimal Inflation { get; set; }
     public decimal Unemployment { get; set; }
-
     public decimal CreditSpread { get; set; }
     public decimal MarketVolatility { get; set; }
-
     public decimal LiquidityIndex { get; set; }
-    
-    // Phase 17 Audit Additions
     public MarketRegime Regime { get; set; } = MarketRegime.Normal;
     public string Country { get; set; } = "US";
-    
-    // Non-Markovian Memory (Audit Fix 3)
     public decimal InflationTMinus1 { get; set; }
     public decimal InflationTMinus2 { get; set; }
     public decimal RateTrend { get; set; }

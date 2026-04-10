@@ -14,11 +14,9 @@ public static class PaymentsInfrastructureModule
 {
     public static IServiceCollection AddPaymentsInfrastructure(this IServiceCollection services)
     {
-        // Repositories
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
 
-        // Stripe & Orchestration
         services.AddScoped<IStripeService, StripeService>();
         services.AddScoped<IPaymentOrchestrationService, PaymentOrchestrationService>();
         services.AddScoped<Cobryx.Application.Subscriptions.Services.StripeSubscriptionSyncService>();

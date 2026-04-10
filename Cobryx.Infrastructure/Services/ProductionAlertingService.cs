@@ -32,7 +32,6 @@ public class ProductionAlertingService : IAlertingService
         var timestamp = DateTime.UtcNow;
         var metadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : "{}";
 
-        // 1. Mandatory Logging (Production standard)
         var logMessage = $"[ALERT][{level}][{source}] {message} | Metadata: {metadataJson}";
 
         if (level == AlertLevel.Critical)
@@ -48,7 +47,6 @@ public class ProductionAlertingService : IAlertingService
             _logger.LogInformation(logMessage);
         }
 
-        // 2. Dispatch to High-Priority Channels (Critical/Degraded only)
         if (level >= AlertLevel.Degraded)
         {
             await DispatchToCommunicationsAsync(source, message, level, metadataJson, ct);
@@ -64,10 +62,8 @@ public class ProductionAlertingService : IAlertingService
     {
         try
         {
-            // 1. Dispatch to Slack (Modern standard)
             await _slackService.SendAlertAsync(message, $"Cobryx Alert: [{level}] from {source}", GetColor(level));
 
-            // 2. Dispatch to Email (Reliable fallback)
             var subject = $"Cobryx Alert: [{level}] from {source}";
             var body = $"""
                 <h3>Cobryx System Alert</h3>
@@ -91,8 +87,8 @@ public class ProductionAlertingService : IAlertingService
 
     private static string GetColor(AlertLevel level) => level switch
     {
-        AlertLevel.Critical => "#FF0000", // Red
-        AlertLevel.Degraded => "#FFA500", // Orange
-        _ => "#32CD32" // LimeGreen
+        AlertLevel.Critical => "#FF0000",
+        AlertLevel.Degraded => "#FFA500",
+        _ => "#32CD32"
     };
 }

@@ -10,12 +10,12 @@ public class CollectionAction
 
     private CollectionAction() { }
 
-    public CollectionAction(Guid caseId, CollectionActionType actionType, string notes)
+    public CollectionAction(Guid caseId, CollectionActionType actionType, string notes, DateTime? now = null)
     {
         Id = Guid.NewGuid();
         CaseId = caseId;
         ActionType = actionType;
         Notes = notes;
-        ExecutedAt = DateTime.UtcNow;
+        ExecutedAt = now ?? DateTime.UtcNow;
     }
 }

@@ -21,7 +21,6 @@ public class TenantSubscriptionRepository : BaseRepository<TenantSubscription>, 
 
     public async Task<TenantSubscription?> GetByTenantIdWithLockAsync(Guid tenantId, CancellationToken ct = default)
     {
-        // Explicitly using FOR UPDATE to prevent race conditions during authoritative Stripe sync
         return await _dbContext.TenantSubscriptions
             .FromSqlRaw("SELECT * FROM \"TenantSubscriptions\" WHERE \"TenantId\" = {0} FOR UPDATE", tenantId)
             .Include(s => s.Plan)

@@ -3,19 +3,19 @@ namespace Cobryx.Domain.Accounting.Enums;
 public enum ReconciliationStatus
 {
     Synced = 1,
-    SoftDrift = 2,  // Within timing tolerance (Lag)
-    HardDrift = 3,  // Out of sync or missing
-    Repairing = 4,  // Auto-repair in progress
-    Repaired = 5,    // Drift was detected and successfully fixed
+    SoftDrift = 2,
+    HardDrift = 3,
+    Repairing = 4,
+    Repaired = 5,
     ConfirmedDrift = 6
 }
 
 public enum ReconciliationSeverity
 {
-    Info = 1,     // Minimal lag, expected
-    Warning = 2,  // Drift detected but within thresholds
-    Error = 3,    // Missing money or mismatch
-    Critical = 4  // Balance mismatch or systemic failure
+    Info = 1,
+    Warning = 2,
+    Error = 3,
+    Critical = 4
 }
 
 public enum DriftType
@@ -28,5 +28,7 @@ public enum DriftType
     BalanceMismatch = 5,
     FeeMismatch = 6,
     PayoutMismatch = 7,
-    LedgerCorruption = 8
+    LedgerCorruption = 8,
+    PhantomPayment = 9,      // DB has payment, Stripe doesn't (refund/chargeback)
+    InvariantViolation = 10  // Ledger invariants broken (debits != credits)
 }

@@ -16,12 +16,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/sessions")]
-[Tags("Identity & Access")]
-public class SessionsController : CobryxBaseController
+[Tags("Platform")]
+public class SessionsController(ISender sender) : CobryxBaseController(sender)
 {
-    public SessionsController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Retrieves a list of all active sessions across different devices for the authenticated user.
@@ -45,7 +42,6 @@ public class SessionsController : CobryxBaseController
             return HandleResult(result, AuthOutcomes.SessionSearchCompleted);
         }
 
-        // Intentional Mapping: Internal DTO -> Public API Contract
         var mappedResult = result.Value?.Select(s => new SessionContract(
             s.Id,
             s.IpAddress,

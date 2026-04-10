@@ -13,7 +13,6 @@ public class TenantInvitation : BaseEntity, IAggregateRoot
     public DateTime ExpiresAt { get; private set; }
     public InvitationStatus Status { get; private set; }
 
-    // Required for EF Core
     private TenantInvitation()
     {
         Email = null!;

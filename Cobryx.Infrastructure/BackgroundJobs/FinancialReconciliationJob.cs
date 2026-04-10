@@ -24,7 +24,6 @@ public class FinancialReconciliationJob
     {
         _logger.LogInformation("Starting Financial Reconciliation Job (Stuck Link Recovery)");
 
-        // Recover links stuck for more than 30 minutes
         await _reconciliationService.RecoverStuckProcessingLinksAsync(TimeSpan.FromMinutes(30), ct);
 
         _logger.LogInformation("Financial Reconciliation Job completed.");

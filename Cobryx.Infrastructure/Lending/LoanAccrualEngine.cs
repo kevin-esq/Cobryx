@@ -6,15 +6,8 @@ using Cobryx.Domain.Lending.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Infrastructure.Lending;
-
-public class LoanAccrualEngine : ILoanAccrualEngine
+namespace Cobryx.Infrastructure.Lending
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ILateFeeService _lateFeeService;
-    private readonly ILogger<LoanAccrualEngine> _logger;
-    private const int BatchSize = 1000;
-
     /// <summary>
     /// Financial engine responsible for daily interest calculation and late fee assessment.
     /// </summary>
@@ -23,108 +16,102 @@ public class LoanAccrualEngine : ILoanAccrualEngine
     /// fails for one day, the next run will recover all missing accrual days sequentially
     /// to maintain ledger integrity.
     /// </remarks>
-    public LoanAccrualEngine(
+    public partial class LoanAccrualEngine(
         ICobryxDbContext dbContext,
         ILateFeeService lateFeeService,
-        ILogger<LoanAccrualEngine> logger)
+        ILogger<LoanAccrualEngine> logger) : ILoanAccrualEngine
     {
-        _dbContext = dbContext;
-        _lateFeeService = lateFeeService;
-        _logger = logger;
-    }
+        private const int BatchSize = 1000;
 
-    public async Task RunDailyAccrualAsync(DateTime accrualDate, CancellationToken ct = default)
-    {
-        var targetDate = accrualDate.Date;
-        _logger.LogInformation("Starting daily accrual for {AccrualDate}", targetDate);
-
-        int totalProcessed = 0;
-        int totalChargesCreated = 0;
-
-        while (true)
+        public async Task RunDailyAccrualAsync(DateTime accrualDate, CancellationToken ct = default)
         {
-            // Implementation of 'Sequential Catch-up': we fetch loans whose LastAccrualDate
-            // is behind the targetDate. This allows for safe recovery after system downtime.
-            var loans = await _dbContext.Loans
-                .Include(l => l.Agreement)
-                .ThenInclude(a => a.InterestPolicy)
-                .Where(l => l.Status == LoanStatus.Active && l.LastAccrualDate < targetDate)
-                .OrderBy(l => l.Id) // Sorted by Id for predictable batching
-                .Take(BatchSize)
-                .ToListAsync(ct);
+            DateTime targetDate = accrualDate.Date;
+            LogStartingDailyAccrual(logger, targetDate);
 
-            if (loans.Count == 0)
-                break;
+            var totalProcessed = 0;
+            var totalChargesCreated = 0;
 
-            foreach (var loan in loans)
+            while (true)
             {
-                try
+                List<Loan> loans = await dbContext.Loans
+                    .Include(static l => l.Agreement)
+                    .ThenInclude(static a => a.InterestPolicy)
+                    .Where(l => l.Status == LoanStatus.Active && l.LastAccrualDate < targetDate)
+                    .OrderBy(static l => l.Id)
+                    .Take(BatchSize)
+                    .ToListAsync(ct);
+
+                if (loans.Count == 0)
                 {
-                    totalChargesCreated += await ProcessLoanAccrualAsync(loan, targetDate, ct);
-                    totalProcessed++;
+                    break;
                 }
-                catch (Exception ex)
+
+                foreach (Loan loan in loans)
                 {
-                    _logger.LogError(ex, "Failed to process accrual for Loan {LoanId}", loan.Id);
+                    try
+                    {
+                        totalChargesCreated += await ProcessLoanAccrualAsync(loan, targetDate, ct);
+                        totalProcessed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogAccrualProcessingFailed(logger, ex, loan.Id);
+                    }
                 }
+
+                _ = await dbContext.SaveChangesAsync(ct);
             }
 
-            // Explicitly await SaveChangesAsync
-            await _dbContext.SaveChangesAsync(ct);
+            LogDailyAccrualFinished(logger, totalProcessed, totalChargesCreated);
         }
 
-        _logger.LogInformation("Finished daily accrual. Processed {LoanCount} loans, created {ChargeCount} charges.", totalProcessed, totalChargesCreated);
-    }
-
-    public async Task<int> ProcessLoanAccrualAsync(Cobryx.Domain.Lending.Loan loan, DateTime targetDate, CancellationToken ct = default)
-    {
-        int chargesCreated = 0;
-        var nextDate = loan.LastAccrualDate.AddDays(1).Date;
-        var policy = await GetCollectionsPolicyAsync(loan.TenantId, ct);
-
-        // Waterfall recovery: we iterate through every missing day until targetDate is reached.
-        while (nextDate <= targetDate)
+        public async Task<int> ProcessLoanAccrualAsync(Loan loan, DateTime targetDate, CancellationToken ct = default)
         {
-            // 1. Calculate Ordinary Interest: derived from current OutstandingPrincipal.
-            var dailyInterest = CalculateDailyInterest(loan);
-            if (dailyInterest > 0)
+            var chargesCreated = 0;
+            DateTime nextDate = loan.LastAccrualDate.AddDays(1).Date;
+            CollectionsPolicy policy = await GetCollectionsPolicyAsync(loan.TenantId, ct);
+
+            while (nextDate <= targetDate)
             {
-                var charge = new AccruedCharge(loan.Id, ChargeType.OrdinaryInterest, dailyInterest, nextDate);
-                loan.AddAccruedCharge(charge);
-                chargesCreated++;
+                var dailyInterest = CalculateDailyInterest(loan);
+                if (dailyInterest > 0)
+                {
+                    AccruedCharge charge = new(loan.Id, ChargeType.OrdinaryInterest, dailyInterest, nextDate);
+                    loan.AddAccruedCharge(charge);
+                    chargesCreated++;
+                }
+
+                if (policy.EnableLateFees)
+                {
+                    chargesCreated += (int)Math.Min(1, lateFeeService.AssessLateFee(loan, nextDate));
+                }
+
+                loan.MarkAccrued(nextDate);
+                nextDate = nextDate.AddDays(1);
             }
 
-            // 2. Assess Late Fees: Policy-driven assessment based on DPD (Days Past Due).
-            if (policy.EnableLateFees)
-            {
-                // We increment chargesCreated based on whether a new fee was actually generated.
-                chargesCreated += (int)Math.Min(1, _lateFeeService.AssessLateFee(loan, nextDate));
-            }
-
-            loan.MarkAccrued(nextDate);
-            nextDate = nextDate.AddDays(1);
+            return chargesCreated;
         }
 
-        return chargesCreated;
-    }
+        private async Task<CollectionsPolicy> GetCollectionsPolicyAsync(Guid tenantId, CancellationToken ct)
+        {
+            CollectionsPolicy? policy = await dbContext.CollectionsPolicies
+                .FirstOrDefaultAsync(p => p.TenantId == tenantId, ct);
 
-    private async Task<CollectionsPolicy> GetCollectionsPolicyAsync(Guid tenantId, CancellationToken ct)
-    {
-        return await _dbContext.CollectionsPolicies
-            .FirstOrDefaultAsync(p => p.TenantId == tenantId, ct)
-            ?? CollectionsPolicy.CreateStandard(tenantId, "Default Collections Policy");
-    }
+            return policy ?? CollectionsPolicy.CreateStandard(tenantId, "Default Collections Policy");
+        }
 
-    private static decimal CalculateDailyInterest(Loan loan)
-    {
-        var policy = loan.Agreement?.InterestPolicy;
-        if (policy == null || !policy.IsActive)
-            return 0;
+        private static decimal CalculateDailyInterest(Loan loan)
+        {
+            InterestPolicy policy = loan.Agreement.InterestPolicy;
+            if (!policy.IsActive)
+            {
+                return 0;
+            }
 
-        var dailyRate = policy.CalculateDailyRate();
+            var dailyRate = policy.CalculateDailyRate();
 
-        // High-precision rounding is deferred to the FinancialPostingEngine to avoid
-        // compounding errors during daily aggregation.
-        return loan.OutstandingPrincipal * dailyRate;
+            return loan.OutstandingPrincipal * dailyRate;
+        }
     }
 }

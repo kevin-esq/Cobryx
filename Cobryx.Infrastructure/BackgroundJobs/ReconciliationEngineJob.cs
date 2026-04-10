@@ -25,7 +25,6 @@ public class ReconciliationEngineJob(
     {
         _logger.LogInformation("Reconciliation Job: Starting global scan.");
 
-        // 1. Fetch all tenants with Stripe capability
         var tenants = await _dbContext.Tenants
             .AsNoTracking()
             .Where(t => t.IsConnectActive || t.Id == CobryxDefaults.PlatformTenantId)
@@ -35,8 +34,7 @@ public class ReconciliationEngineJob(
         {
             try
             {
-                // 2. Determine Window (Last 24 hours with a rolling 15 min buffer)
-                var to = DateTime.UtcNow.AddMinutes(-5); // Buffer for eventual consistency
+                var to = DateTime.UtcNow.AddMinutes(-5);
                 var from = await GetLastReconciliationPointAsync(tenant.Id, ct);
 
                 _logger.LogInformation("Reconciling Tenant {TenantId} from {From} to {To}", tenant.Id, from, to);
@@ -65,7 +63,6 @@ public class ReconciliationEngineJob(
             .Select(a => a.ToUtc)
             .FirstOrDefaultAsync(ct);
 
-        // Default to last 24 hours if no previous record found
         return lastRun == default ? DateTime.UtcNow.AddHours(-24) : lastRun;
     }
 }

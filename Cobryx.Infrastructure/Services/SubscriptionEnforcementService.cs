@@ -61,8 +61,6 @@ public class SubscriptionEnforcementService : ISubscriptionEnforcementService
 
     public async Task EnsureSubscriptionActiveAsync(Guid tenantId, CancellationToken ct = default)
     {
-        // Use FOR UPDATE (Postgres) to lock the subscription row for this tenant.
-        // This serializes all limit-checking requests for the same tenant, preventing race conditions.
         var subscription = await _dbContext.TenantSubscriptions
             .FromSqlRaw("SELECT * FROM \"TenantSubscriptions\" WHERE \"TenantId\" = {0} FOR UPDATE", tenantId)
             .FirstOrDefaultAsync(ct);

@@ -61,7 +61,7 @@ public class Customer : BaseEntity, IAggregateRoot, ITenantEntity
     public void SetStripeCustomerId(string customerId)
     {
         if (string.IsNullOrWhiteSpace(customerId))
-            throw new DomainException(DomainErrorCode.Common.ReasonRequired); // Reuse or use specific error
+            throw new DomainException(DomainErrorCode.Common.ReasonRequired);
 
         StripeCustomerId = customerId;
         UpdateTimestamp();

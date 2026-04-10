@@ -21,7 +21,6 @@ public class LoanBalanceSnapshotConfiguration : IEntityTypeConfiguration<LoanBal
         builder.Property(x => x.InterestBalance).HasPrecision(18, 2);
         builder.Property(x => x.LateFeeBalance).HasPrecision(18, 2);
 
-        // Required indexes for performance of ranking window functions
         builder.HasIndex(x => new { x.LoanId, x.RecordedAt })
                .HasDatabaseName("idx_snapshot_loan_recorded");
 

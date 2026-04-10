@@ -22,22 +22,20 @@ public class CollectionOptimizer : ICollectionOptimizer
     {
         var outcomes = await _dbContext.CollectionOutcomes
             .Where(o => o.TenantId == tenantId)
-            .OrderByDescending(o => o.Id) // Fetch most recent outcomes
+            .OrderByDescending(o => o.Id)
             .Take(1000)
             .ToListAsync();
 
         var weights = new StrategyWeights();
 
         if (!outcomes.Any())
-            return weights; // Use defaults if no data
+            return weights;
 
-        // Calculate success rates dynamically
         var smsSuccess = CalculateSuccessRate(outcomes, CollectionActionType.SmsReminder);
         var emailSuccess = CalculateSuccessRate(outcomes, CollectionActionType.EmailReminder);
         var callSuccess = CalculateSuccessRate(outcomes, CollectionActionType.AgentCall);
         var legalSuccess = CalculateSuccessRate(outcomes, CollectionActionType.LegalNotice);
 
-        // Normalize rates into multiplier weights (avoiding 0 multipliers)
         weights.SmsWeight = Math.Max(0.5m, smsSuccess * 2.0m);
         weights.EmailWeight = Math.Max(0.5m, emailSuccess * 2.0m);
         weights.CallWeight = Math.Max(0.5m, callSuccess * 2.0m);
@@ -52,7 +50,7 @@ public class CollectionOptimizer : ICollectionOptimizer
     {
         var typeOutcomes = outcomes.Where(o => o.ActionType == type).ToList();
         if (!typeOutcomes.Any())
-            return 0.5m; // Assume 50% success base line if no data
+            return 0.5m;
         return (decimal)typeOutcomes.Count(o => o.WasSuccessful) / typeOutcomes.Count;
     }
 }

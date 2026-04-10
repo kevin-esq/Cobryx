@@ -5,12 +5,8 @@ using Cobryx.Domain.Shared;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Infrastructure.Lending;
-
-public class PaymentAllocationEngine : IPaymentAllocationEngine
+namespace Cobryx.Infrastructure.Lending
 {
-    private readonly ILogger<PaymentAllocationEngine> _logger;
-
     /// <summary>
     /// Engine responsible for distributing payment amounts across loan balances according to priority.
     /// </summary>
@@ -18,75 +14,74 @@ public class PaymentAllocationEngine : IPaymentAllocationEngine
     /// This engine follows a strict "Waterfall" allocation strategy where funds are applied
     /// sequentially to Fees, then Interest, and finally Principal (by default).
     /// </remarks>
-    public PaymentAllocationEngine(ILogger<PaymentAllocationEngine> logger)
+    public partial class PaymentAllocationEngine(ILogger<PaymentAllocationEngine> logger) : IPaymentAllocationEngine
     {
-        _logger = logger;
-    }
-
-    public Task<LoanPaymentAllocation> AllocateAsync(Loan loan, decimal paymentAmount, Guid paymentId, CancellationToken ct = default)
-    {
-        if (paymentAmount <= 0)
-            throw new DomainException(DomainErrorCode.Loans.InvalidPaymentAmount);
-
-        _logger.LogInformation("Allocating payment of {Amount} for Loan {LoanId}", paymentAmount, loan.Id);
-
-        // adjust precision if mapping from external source, but here we assume decimals are passed correctly
-        var remaining = paymentAmount;
-
-        var principalApplied = 0m;
-        var interestApplied = 0m;
-        var feesApplied = 0m;
-
-        var policy = loan.Agreement.PaymentApplicationPolicy;
-        if (policy == null)
-            throw new DomainException(DomainErrorCode.Loans.InvalidLateFeePolicy);
-
-        var priorityOrder = policy.GetPriorityOrder();
-
-        // Waterfall Allocation Loop: we iterate through each bucket (Fees, Interest, Principal)
-        // until the payment amount is exhausted.
-        foreach (var category in priorityOrder)
+        public Task<LoanPaymentAllocation> AllocateAsync(Loan loan, decimal paymentAmount, Guid paymentId,
+            CancellationToken ct = default)
         {
-            if (remaining <= 0)
-                break;
-
-            decimal outstanding = category switch
+            if (paymentAmount <= 0)
             {
-                PaymentApplicationType.LateFees => loan.OutstandingFees,
-                PaymentApplicationType.Interest => loan.OutstandingInterest,
-                PaymentApplicationType.Principal => loan.OutstandingPrincipal,
-                _ => 0m
-            };
-
-            var applied = Math.Min(outstanding, remaining);
-
-            switch (category)
-            {
-                case PaymentApplicationType.LateFees:
-                    feesApplied = applied;
-                    break;
-                case PaymentApplicationType.Interest:
-                    interestApplied = applied;
-                    break;
-                case PaymentApplicationType.Principal:
-                    principalApplied = applied;
-                    break;
+                throw new DomainException(DomainErrorCode.Loans.InvalidPaymentAmount);
             }
 
-            remaining -= applied;
+            LogAllocatingPayment(logger, paymentAmount, loan.Id);
+
+            var remaining = paymentAmount;
+
+            var principalApplied = 0m;
+            var interestApplied = 0m;
+            var feesApplied = 0m;
+
+            PaymentApplicationPolicy policy = loan.Agreement.PaymentApplicationPolicy
+                                              ?? throw new DomainException(DomainErrorCode.Loans.InvalidLateFeePolicy);
+
+            IEnumerable<PaymentApplicationType> priorityOrder = policy.GetPriorityOrder();
+
+            foreach (PaymentApplicationType category in priorityOrder)
+            {
+                if (remaining <= 0)
+                {
+                    break;
+                }
+
+                var outstanding = category switch
+                {
+                    PaymentApplicationType.LateFees => loan.OutstandingFees,
+                    PaymentApplicationType.Interest => loan.OutstandingInterest,
+                    PaymentApplicationType.Principal => loan.OutstandingPrincipal,
+                    _ => 0m
+                };
+
+                var applied = Math.Min(outstanding, remaining);
+
+                switch (category)
+                {
+                    case PaymentApplicationType.LateFees:
+                        feesApplied = applied;
+                        break;
+                    case PaymentApplicationType.Interest:
+                        interestApplied = applied;
+                        break;
+                    case PaymentApplicationType.Principal:
+                        principalApplied = applied;
+                        break;
+                }
+
+                remaining -= applied;
+            }
+
+            var allocation = new LoanPaymentAllocation(
+                loan.TenantId,
+                loan.Id,
+                paymentId,
+                principalApplied,
+                interestApplied,
+                feesApplied,
+                remaining,
+                0
+            );
+
+            return Task.FromResult(allocation);
         }
-
-        var allocation = new LoanPaymentAllocation(
-            loan.TenantId,
-            loan.Id,
-            paymentId,
-            principalApplied,
-            interestApplied,
-            feesApplied,
-            remaining, // Record any overpayment/excess funds as UnappliedAmount.
-            0 // SnapshotSequence is managed by the FinancialPostingEngine during ledger commit.
-        );
-
-        return Task.FromResult(allocation);
     }
 }

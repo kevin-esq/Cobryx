@@ -5,51 +5,39 @@ using Cobryx.Application.Common.Observability;
 using Cobryx.Domain.Accounting;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Infrastructure.Services.Accounting;
 
-public class ShadowReplayEngine : IShadowReplayEngine
+public class ShadowReplayEngine(
+    ICobryxDbContext context,
+    CobryxMetrics metrics) : IShadowReplayEngine
 {
-    private readonly ICobryxDbContext _context;
-    private readonly CobryxMetrics _metrics;
-    private readonly ILogger<ShadowReplayEngine> _logger;
-
-    public ShadowReplayEngine(
-        ICobryxDbContext context,
-        CobryxMetrics metrics,
-        ILogger<ShadowReplayEngine> _logger)
-    {
-        _context = context;
-        _metrics = metrics;
-        this._logger = _logger;
-    }
 
     public async Task ProcessEventAsync(LedgerCdcEvent cdcEvent, CancellationToken ct = default)
     {
-        var shadow = await _context.ShadowBalances
+        ShadowBalance? shadow = await context.ShadowBalances
             .FirstOrDefaultAsync(s => s.TenantId == cdcEvent.TenantId && s.AccountId == cdcEvent.AccountId, ct);
 
         if (shadow == null)
         {
-            var amount = cdcEvent.DebitAmount - cdcEvent.CreditAmount;
+            decimal amount = cdcEvent.DebitAmount - cdcEvent.CreditAmount;
             shadow = new ShadowBalance(cdcEvent.TenantId, cdcEvent.AccountId, amount, cdcEvent.JournalSequenceId);
-            _context.ShadowBalances.Add(shadow);
+            context.ShadowBalances.Add(shadow);
         }
         else
         {
-            var amount = cdcEvent.DebitAmount - cdcEvent.CreditAmount;
-            shadow.ApplyChange(amount, cdcEvent.JournalSequenceId);
+            decimal changeAmount = cdcEvent.DebitAmount - cdcEvent.CreditAmount;
+            shadow.ApplyChange(changeAmount, cdcEvent.JournalSequenceId);
         }
 
-        await _context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(ct);
 
-        _metrics.ShadowReplayEventsProcessed.Add(1);
-        _metrics.ShadowReplayThroughput.Add(1);
+        metrics.ShadowReplayEventsProcessed.Add(1);
+        metrics.ShadowReplayThroughput.Add(1);
     }
 
     public async Task<long> GetLastSequenceAsync(CancellationToken ct = default)
     {
-        return await _context.ShadowBalances.MaxAsync(s => (long?)s.LastSequence, ct) ?? -1L;
+        return await context.ShadowBalances.MaxAsync(s => (long?)s.LastSequence, ct) ?? -1L;
     }
 }

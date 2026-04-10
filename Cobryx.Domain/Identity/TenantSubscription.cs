@@ -17,7 +17,6 @@ public class TenantSubscription : BaseEntity, IAggregateRoot, ITenantEntity
     public DateTime? CancelledAtUtc { get; private set; }
     public DateTime? GracePeriodEndsAtUtc { get; private set; }
 
-    // Stripe integration
     public string? StripeCustomerId { get; private set; }
     public string? StripeSubscriptionId { get; private set; }
     public DateTime? TrialEndsAtUtc { get; private set; }

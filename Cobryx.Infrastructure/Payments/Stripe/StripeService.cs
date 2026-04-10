@@ -128,7 +128,7 @@ public class StripeService : IStripeService
         var service = new PaymentIntentService();
         var options = new PaymentIntentCreateOptions
         {
-            Amount = (long)(amount.Amount * 100), // Convert to cents
+            Amount = (long)(amount.Amount * 100),
             Currency = amount.Currency.ToLowerInvariant(),
             Metadata = metadata,
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
@@ -233,8 +233,6 @@ public class StripeService : IStripeService
 
         var balance = await service.GetAsync(requestOptions, cancellationToken: ct);
 
-        // Summing across all currency balances (defaulting to primary or total in USD equivalent if multi-currency)
-        // For Cobryx simplicity, we assume the first balance object or single currency.
         var available = balance.Available.Sum(b => b.Amount) / 100m;
         var pending = balance.Pending.Sum(b => b.Amount) / 100m;
 
@@ -248,7 +246,7 @@ public class StripeService : IStripeService
         {
             Customer = customerId,
             PaymentMethodTypes = new List<string> { "card" },
-            Usage = "off_session", // Critical for AutoPay/Scheduled charges
+            Usage = "off_session",
         }, cancellationToken: ct);
 
         return intent.ClientSecret;
@@ -262,8 +260,6 @@ public class StripeService : IStripeService
             Customer = customerId,
         }, cancellationToken: ct);
 
-        // Optional: Update customer to make this the default if needed,
-        // but normally we handle 'default' logic in the Application layer.
     }
 
     public async Task<List<StripePaymentMethodDto>> ListPaymentMethodsAsync(string customerId, CancellationToken ct = default)
@@ -283,7 +279,7 @@ public class StripeService : IStripeService
             Last4: pm.Card.Last4,
             ExpMonth: (short)pm.Card.ExpMonth,
             ExpYear: (short)pm.Card.ExpYear,
-            IsDefault: false // Handled by comparing with Customer entity in App layer
+            IsDefault: false
         )).ToList();
     }
 
@@ -306,7 +302,7 @@ public class StripeService : IStripeService
             Customer = customerId,
             PaymentMethod = paymentMethodId,
             Confirm = true,
-            OffSession = true, // KEY: Charge without user intervention
+            OffSession = true,
             Description = description,
         };
 
@@ -378,7 +374,7 @@ public class StripeService : IStripeService
             },
             Limit = 100,
             StartingAfter = startingAfter,
-            Expand = new List<string> { "data.source" } // To get source metadata/details if reachable
+            Expand = new List<string> { "data.source" }
         };
 
         var requestOptions = new RequestOptions();
@@ -401,7 +397,7 @@ public class StripeService : IStripeService
             t.Created,
             t.AvailableOn,
             t.SourceId,
-            new Dictionary<string, string>() // Metadata is usually on the source object, not the BT itself
+            new Dictionary<string, string>()
         )).ToList();
     }
 }

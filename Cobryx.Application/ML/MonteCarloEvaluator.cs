@@ -1,27 +1,29 @@
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.ML;
 
 public class MonteCarloMetrics
 {
-    // Rendimiento esperado promedio
     public decimal AverageCreditMultiplier { get; set; }
 
-    // Riesgo Cuantitativo (El límite inferior del percentil 95)
     public decimal VaR95CreditMultiplier { get; set; }
 
-    // Cola extrema: Pérdida esperada en el 5% de los peores mundos
     public decimal ExpectedShortfallCredit { get; set; }
 
     public decimal AverageInterestDelta { get; set; }
     public decimal VaR95InterestDelta { get; set; }
 
-    // Arrays para persistir en Postgres
     public decimal[] RawCreditMultipliers { get; set; } = [];
     public decimal[] RawInterestDeltas { get; set; } = [];
 }
 
-public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
+public interface IMonteCarloEvaluator
+{
+    public Task<MonteCarloMetrics> EvaluateAsync(object features, PortfolioState globalState, MacroState currentMacro, List<Scenario> scenarios);
+}
+
+public class MonteCarloEvaluator(IMonteCarloPpoClient ppoClient) : IMonteCarloEvaluator
 {
     public async Task<MonteCarloMetrics> EvaluateAsync(
         object features,
@@ -32,11 +34,13 @@ public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient)
         var response = await ppoClient.EvaluateBatchAsync(features, globalState, currentMacro, scenarios);
 
         var credits = response.CreditMultipliers.OrderBy(x => x).ToList();
-        var rates = response.InterestDeltas.OrderByDescending(x => x).ToList(); // worst rate is the highest delta
+        var rates = response.InterestDeltas.OrderByDescending(x => x).ToList();
 
         int tailSize = (int)(0.05 * credits.Count);
-        if (tailSize == 0 && credits.Count > 0) tailSize = 1;
-        else if (credits.Count == 0) tailSize = 0;
+        if (tailSize == 0 && credits.Count > 0)
+            tailSize = 1;
+        else if (credits.Count == 0)
+            tailSize = 0;
 
         return new MonteCarloMetrics
         {

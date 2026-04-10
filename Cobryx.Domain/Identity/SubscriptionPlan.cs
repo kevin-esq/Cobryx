@@ -14,7 +14,6 @@ public class SubscriptionPlan : BaseEntity, IAggregateRoot
     public int MaxLoans { get; private set; }
     public bool IsActive { get; private set; }
 
-    // Stripe integration
     public string? StripePriceId { get; private set; }
     public int TrialDays { get; private set; }
     public PlanTier Tier { get; private set; }

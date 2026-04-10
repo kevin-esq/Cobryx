@@ -1,5 +1,8 @@
 namespace Cobryx.Domain.ML;
 
+/// <summary>
+/// Economic scenario for stress testing.
+/// </summary>
 public class Scenario
 {
     public string Name { get; set; } = "Stochastic";

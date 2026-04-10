@@ -54,7 +54,6 @@ public class DbInitializer
                     isNew = true;
                 }
 
-                // Determine target permissions for this specific role
                 IEnumerable<Permission> targetPermissions;
                 if (role.Name == Role.Constants.Owner)
                 {
@@ -88,7 +87,6 @@ public class DbInitializer
                     targetPermissions = Enumerable.Empty<Permission>();
                 }
 
-                // Sync permissions
                 foreach (var p in targetPermissions)
                 {
                     if (!role.Permissions.Any(ep => ep.Name == p.Name))
@@ -141,19 +139,16 @@ public class DbInitializer
 
     public static async Task SeedPlatformTenantAsync(CobryxDbContext dbContext)
     {
-        // 1. Ensure Platform Tenant exists
         var platformId = CobryxDefaults.PlatformTenantId;
         var platformTenant = await dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == platformId);
 
         if (platformTenant == null)
         {
             platformTenant = new Tenant("Cobryx Platform", CobryxDefaults.Currency);
-            // We force the ID via reflection since it's a fixed constant
             typeof(Tenant).GetProperty("Id")!.SetValue(platformTenant, platformId);
             dbContext.Tenants.Add(platformTenant);
         }
 
-        // 2. Ensure System Accounts for Platform
         var accounts = new[]
         {
             new { Code = "1010", Name = "Platform Cash", Type = LedgerAccountType.Asset, Role = LedgerAccountRole.Available },

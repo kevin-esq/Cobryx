@@ -1,43 +1,43 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Users.Common;
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Users.Queries.GetTenantUsers;
-
-public record GetTenantUsersQuery(int Page = 1, int PageSize = 20) : IRequest<PagedList<UserListDto>>;
-
-public class GetTenantUsersHandler : IRequestHandler<GetTenantUsersQuery, PagedList<UserListDto>>
+namespace Cobryx.Application.Users.Queries.GetTenantUsers
 {
-    private readonly IUserRepository _userRepository;
-    private readonly ITenantProvider _tenantProvider;
+    public record GetTenantUsersQuery(int Page = 1, int PageSize = 20) : IRequest<Result<PagedList<UserListDto>>>;
 
-    public GetTenantUsersHandler(IUserRepository userRepository, ITenantProvider tenantProvider)
+    public class GetTenantUsersHandler(
+        IUserRepository userRepository,
+        ITenantProvider tenantProvider) : IRequestHandler<GetTenantUsersQuery, Result<PagedList<UserListDto>>>
     {
-        _userRepository = userRepository;
-        _tenantProvider = tenantProvider;
-    }
+        public async Task<Result<PagedList<UserListDto>>> Handle(GetTenantUsersQuery request,
+            CancellationToken cancellationToken)
+        {
+            Guid? tenantId = tenantProvider.GetTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Result.Failure<PagedList<UserListDto>>(DomainErrorCode.Tenant.ContextMissing);
+            }
 
-    public async Task<PagedList<UserListDto>> Handle(GetTenantUsersQuery request, CancellationToken ct)
-    {
-        var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
+            (IEnumerable<User> users, var totalCount) = await userRepository.GetByTenantPagedAsync(
+                tenantId.Value,
+                request.Page,
+                request.PageSize,
+                cancellationToken);
 
-        var (users, totalCount) = await _userRepository.GetByTenantPagedAsync(
-            tenantId,
-            request.Page,
-            request.PageSize,
-            ct);
+            IEnumerable<UserListDto> dtos = users.Select(u => new UserListDto(
+                u.Id,
+                u.FullName,
+                u.Email.Value,
+                u.Role.Name,
+                u.IsActive,
+                u.CreatedAt));
 
-        var dtos = users.Select(u => new UserListDto(
-            u.Id,
-            u.FullName,
-            u.Email.Value,
-            u.Role?.Name ?? "Unknown",
-            u.IsActive,
-            u.CreatedAt));
-
-        return new PagedList<UserListDto>(dtos, totalCount, request.Page, request.PageSize);
+            return Result.Success(new PagedList<UserListDto>(dtos, totalCount, request.Page, request.PageSize));
+        }
     }
 }

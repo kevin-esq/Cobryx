@@ -3,6 +3,7 @@ using Cobryx.Infrastructure.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 using nClam;
 
@@ -15,49 +16,42 @@ public static class HealthCheckExtensions
         var dbConnectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        var s3AccessKey = configuration["Storage:S3:AccessKey"]
-            ?? throw new InvalidOperationException("S3 AccessKey is missing.");
-        var s3SecretKey = configuration["Storage:S3:SecretKey"]
-            ?? throw new InvalidOperationException("S3 SecretKey is missing.");
-        var s3ServiceUrl = configuration["Storage:S3:ServiceUrl"]
-            ?? throw new InvalidOperationException("S3 ServiceUrl is missing.");
-        var bucketName = configuration["Storage:S3:BucketName"]
-            ?? throw new InvalidOperationException("S3 BucketName is missing.");
-
-        var clamAvSection = configuration.GetSection(ClamAvOptions.SectionName);
-        var clamAvHost = clamAvSection["Host"] ?? throw new InvalidOperationException("ClamAV Host is missing.");
-        var clamAvPort = int.TryParse(clamAvSection["Port"], out var port) ? port : 3310;
-
-        var redisConnectionString = configuration["Caching:Redis:ConnectionString"]
-            ?? throw new InvalidOperationException("Redis ConnectionString is missing.");
-
         services.AddHealthChecks()
             .AddNpgSql(dbConnectionString, name: "Database")
             .AddS3(options =>
             {
-                options.BucketName = bucketName;
-                options.Credentials = new Amazon.Runtime.BasicAWSCredentials(s3AccessKey, s3SecretKey);
+                using var scope = services.BuildServiceProvider().CreateScope();
+                var s3Options = scope.ServiceProvider.GetRequiredService<IOptions<S3StorageOptions>>().Value;
+
+                options.BucketName = s3Options.BucketName;
+                options.Credentials = new Amazon.Runtime.BasicAWSCredentials(s3Options.AccessKey, s3Options.SecretKey);
                 options.S3Config = new Amazon.S3.AmazonS3Config
                 {
-                    ServiceURL = s3ServiceUrl,
+                    ServiceURL = s3Options.ServiceUrl,
                     ForcePathStyle = true
                 };
             }, name: "CloudflareR2")
             .AddAsyncCheck("ClamAV", async () =>
             {
+                using var scope = services.BuildServiceProvider().CreateScope();
+                var clamOptions = scope.ServiceProvider.GetRequiredService<IOptions<ClamAvOptions>>().Value;
+
                 try
                 {
-                    var clam = new ClamClient(clamAvHost, clamAvPort);
+                    var clam = new ClamClient(clamOptions.Host, clamOptions.Port);
                     var ping = await clam.PingAsync();
-                    return ping ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy("ClamAV Ping failed.");
+                    return ping
+                        ? HealthCheckResult.Healthy()
+                        : HealthCheckResult.Unhealthy("ClamAV ping failed.");
                 }
                 catch (Exception ex)
                 {
-                    return HealthCheckResult.Unhealthy($"ClamAV Unreachable: {ex.Message}");
+                    return HealthCheckResult.Unhealthy($"ClamAV unreachable: {ex.Message}");
                 }
             })
-            .AddCheck("Redis", new RedisHealthCheck(redisConnectionString))
-            .AddCheck<OutboxHealthCheck>("Outbox");
+            .AddCheck("Redis", new RedisHealthCheck(configuration))
+            .AddCheck<OutboxHealthCheck>("Outbox")
+            .AddCheck<ShadowHealthCheck>("ShadowDrift");
 
         return services;
     }

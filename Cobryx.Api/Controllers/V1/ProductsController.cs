@@ -1,6 +1,9 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
 using Concordia;
@@ -16,17 +19,11 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/financial/products")]
-[Tags("Financial Core")]
-public class ProductsController : CobryxBaseController
+[Route("api/v{version:apiVersion}/products")]
+[Tags("Catalog")]
+public class ProductsController(ISender sender, ITenantProvider tenantProvider, IApiLinkGenerator linkGenerator)
+    : CobryxBaseController(sender)
 {
-    private readonly Application.Common.Interfaces.ITenantProvider _tenantProvider;
-
-    public ProductsController(ISender sender, Application.Common.Interfaces.ITenantProvider tenantProvider) : base(sender)
-    {
-        _tenantProvider = tenantProvider;
-    }
-
     /// <summary>
     /// Creates a new product or service entry in the catalog.
     /// </summary>
@@ -51,18 +48,27 @@ public class ProductsController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest request)
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         if (tenantId == null)
             return Unauthorized();
 
-        // Intentional Mapping: Public Request -> Internal Domain Value Objects
         var command = new Application.Products.Commands.Create.CreateProductCommand(
             tenantId.Value,
             request.Name,
             new Money(request.Price, request.Currency),
             request.Description);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/products/{result.Value}", result, ProductOutcomes.Created);
+        Result<Guid> result = await Sender.Send(command);
+        return HandleCreatedResult(linkGenerator.GetProductUrl(result.Value), result, ProductOutcomes.Created);
     }
+
+    /// <summary>
+    /// Retrieves a single product entry from the catalog.
+    /// </summary>
+    [HttpGet("{id}", Name = "GetProduct")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public IActionResult GetProduct(Guid id) =>
+        Ok(ApiResponseFactory.Success(new
+            { id, message = "Product retrieval implemented via catalog search currently." }));
 }

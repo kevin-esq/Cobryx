@@ -4,6 +4,7 @@ using Cobryx.Api.Outcomes;
 using Cobryx.Application.Audit.Queries.GetAuditLogs;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -20,13 +21,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/audit")]
-[Tags("Platform")]
-public class AuditController : CobryxBaseController
+[Tags("Operations")]
+public class AuditController(ISender sender) : CobryxBaseController(sender)
 {
-    public AuditController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Queries the audit log with optional filters. Results are paginated and ordered by most recent first.
     /// </summary>
@@ -59,7 +56,7 @@ public class AuditController : CobryxBaseController
     {
         var clampedPageSize = Math.Min(pageSize, 100);
 
-        var result = await Sender.Send(new GetAuditLogsQuery(
+        Result<PaginatedList<AuditLogEntry>> result = await Sender.Send(new GetAuditLogsQuery(
             page, clampedPageSize, entityName, action, userId, from, to));
 
         return HandleResult(result, AuditOutcomes.SearchCompleted);

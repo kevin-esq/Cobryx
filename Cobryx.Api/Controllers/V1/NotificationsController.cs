@@ -1,123 +1,99 @@
 using Asp.Versioning;
 
-using Cobryx.Domain.Identity;
-using Cobryx.Domain.Interfaces;
+using Cobryx.Api.Outcomes;
+using Cobryx.Application.Notifications.Commands.BulkNotificationAction;
+using Cobryx.Application.Notifications.Commands.MarkNotificationRead;
+using Cobryx.Application.Notifications.Common;
+using Cobryx.Application.Notifications.Queries.GetNotifications;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Api.Controllers.V1;
 
 /// <summary>
-/// Controller for managing system alerts and tenant notifications.
+/// Manages system alerts and tenant notifications including read-state tracking.
 /// </summary>
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/notifications")]
 [Tags("Platform")]
-public class NotificationsController : CobryxBaseController
+public class NotificationsController(ISender sender) : CobryxBaseController(sender)
 {
-    private readonly Application.Common.Interfaces.ITenantProvider _tenantProvider;
-    private readonly IUnitOfWork _unitOfWork;
-
-    public NotificationsController(ISender sender, Application.Common.Interfaces.ITenantProvider tenantProvider, IUnitOfWork unitOfWork)
-        : base(sender)
-    {
-        _tenantProvider = tenantProvider;
-        _unitOfWork = unitOfWork;
-    }
-
     /// <summary>
     /// Retrieves a list of notifications for the current tenant.
     /// </summary>
     /// <param name="unreadOnly">If true, only returns notifications that haven't been marked as read.</param>
     /// <param name="limit">Maximum number of results to return (default 20).</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Returns notifications ordered by creation date (newest first).
+    /// Soft-deleted notifications are excluded automatically.
+    ///
+    /// Possible Outcomes:
+    /// - NOTIFICATION.SEARCH_SUCCESS: Notifications retrieved successfully.
+    /// </remarks>
     /// <response code="200">A collection of notifications.</response>
+    /// <response code="401">Missing or invalid authentication.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiSuccessResponse<List<NotificationContract>>), 200)]
+    [ProducesResponseType(typeof(ApiSuccessResponse<List<NotificationDto>>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
-    public async Task<IActionResult> GetNotifications([FromQuery] bool unreadOnly = true, [FromQuery] int limit = 20)
+    public async Task<IActionResult> GetNotifications(
+        [FromQuery] bool unreadOnly = true,
+        [FromQuery] int limit = 20,
+        CancellationToken ct = default)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        var dbContext = (DbContext)_unitOfWork;
-
-        var query = dbContext.Set<Notification>()
-            .Where(n => n.TenantId == tenantId && !n.IsDeleted);
-
-        if (unreadOnly)
-        {
-            query = query.Where(n => !n.IsRead);
-        }
-
-        var notifications = await query
-            .OrderByDescending(n => n.CreatedAt)
-            .Take(limit)
-            .ToListAsync();
-
-        var mapped = notifications.Select(n => new NotificationContract(
-            n.Id,
-            n.Title,
-            n.Message,
-            n.Type.ToString(),
-            n.IsRead,
-            n.CreatedAt)).ToList();
-
-        return Success(mapped);
+        Result<List<NotificationDto>> result = await Sender.Send(
+            new GetNotificationsQuery(unreadOnly, limit), ct);
+        return HandleResult(result, NotificationOutcomes.SearchCompleted);
     }
 
     /// <summary>
     /// Marks a specific notification as read.
     /// </summary>
-    /// <param name="id">Identifier of the notification.</param>
-    /// <response code="204">Acknowledged.</response>
-    /// <response code="404">Notification not found.</response>
+    /// <param name="id">Unique identifier of the notification.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Idempotent: marking an already-read notification has no effect.
+    ///
+    /// Possible Outcomes:
+    /// - NOTIFICATION.MARKED_READ: Notification acknowledged.
+    /// </remarks>
+    /// <response code="200">Notification marked as read.</response>
+    /// <response code="401">Missing or invalid authentication.</response>
+    /// <response code="404">Notification not found or belongs to another tenant.</response>
     [HttpPatch("{id:guid}/read")]
-    [ProducesResponseType(204)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
-    public async Task<IActionResult> MarkAsRead(Guid id)
+    public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        var dbContext = (DbContext)_unitOfWork;
-
-        var notification = await dbContext.Set<Notification>()
-            .FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenantId);
-
-        if (notification == null)
-            return NotFound();
-
-        notification.MarkAsRead();
-        await _unitOfWork.SaveChangesAsync();
-
-        return NoContent();
+        Result result = await Sender.Send(new MarkNotificationReadCommand(id), ct);
+        return HandleResult(result, NotificationOutcomes.MarkedAsRead);
     }
 
     /// <summary>
-    /// Marks all unread tenant notifications as read.
+    /// Performs a bulk action on multiple notifications (e.g., mark as read).
     /// </summary>
-    /// <response code="204">Acknowledged.</response>
-    [HttpPost("read-all")]
-    [ProducesResponseType(204)]
-    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
-    public async Task<IActionResult> MarkAllAsRead()
+    /// <param name="request">List of notification IDs and the operation to perform.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Currently supports: 'mark_read'.
+    /// </remarks>
+    /// <response code="200">Bulk operation completed.</response>
+    /// <response code="400">Invalid operation or malformed list.</response>
+    [HttpPost("bulk")]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 400)]
+    public async Task<IActionResult> BulkAction([FromBody] BulkNotificationActionRequest request, CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        var dbContext = (DbContext)_unitOfWork;
-
-        var notifications = await dbContext.Set<Notification>()
-            .Where(n => n.TenantId == tenantId && !n.IsRead)
-            .ToListAsync();
-
-        foreach (var notification in notifications)
-        {
-            notification.MarkAsRead();
-        }
-
-        await _unitOfWork.SaveChangesAsync();
-        return NoContent();
+        Result result = await Sender.Send(new BulkNotificationActionCommand(request.Ids, request.Operation), ct);
+        return HandleResult(result);
     }
 }
+
+public record BulkNotificationActionRequest(List<Guid> Ids, string Operation);

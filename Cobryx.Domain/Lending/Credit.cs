@@ -27,7 +27,8 @@ public class Credit : BaseLendingInstrument
         PaymentFrequency frequency,
         int installmentsCount,
         int graceDays = 0,
-        Guid? productId = null) : base(tenantId, customerId, principal, interestRate, interestType, frequency, installmentsCount, graceDays)
+        Guid? productId = null,
+        DateTime? now = null) : base(tenantId, customerId, principal, interestRate, interestType, frequency, installmentsCount, graceDays)
     {
         if (tenantId == Guid.Empty)
             throw new DomainException(DomainErrorCode.Common.TenantIdRequired);
@@ -37,7 +38,7 @@ public class Credit : BaseLendingInstrument
             throw new DomainException(DomainErrorCode.Credits.InvalidInstallmentsCount);
 
         ProductId = productId;
-        StartDate = DateTime.UtcNow;
+        StartDate = now ?? DateTime.UtcNow;
         Status = CreditStatus.Active;
 
         AddDomainEvent(new CreditCreatedEvent(Id, TenantId, CustomerId, principal, StartDate));
@@ -67,7 +68,7 @@ public class Credit : BaseLendingInstrument
             Status = CreditStatus.Paid;
         }
 
-        AddDomainEvent(new PaymentAppliedEvent(Id, paymentId, amount, DateTime.UtcNow));
+        AddDomainEvent(new PaymentAppliedEvent(Id, paymentId, amount, DateTime.UtcNow)); // Event timestamp is fine as UtcNow
         UpdateTimestamp();
     }
 

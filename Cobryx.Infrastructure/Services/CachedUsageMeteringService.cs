@@ -33,7 +33,6 @@ public class CachedUsageMeteringService : IUsageMeteringService
         _metrics.UsageCacheMisses.Add(1, new KeyValuePair<string, object?>("TenantId", tenantId));
         var snapshot = await _inner.GetUsageSnapshotAsync(tenantId, ct);
 
-        // Cache for 5 minutes by default
         await _cacheService.SetAsync(cacheKey, snapshot, TimeSpan.FromMinutes(5), ct);
 
         return snapshot;

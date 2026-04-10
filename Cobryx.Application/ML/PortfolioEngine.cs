@@ -1,18 +1,18 @@
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.ML;
 
-public class PortfolioEngine
+public interface IPortfolioEngine
 {
-    private readonly PortfolioPpoClient _ppo;
+    public Task<PortfolioAction> OptimizeAsync(PortfolioState state);
+}
 
-    public PortfolioEngine(PortfolioPpoClient ppo)
-    {
-        _ppo = ppo;
-    }
+public class PortfolioEngine(IPortfolioPpoClient ppo) : IPortfolioEngine
+{
 
     public async Task<PortfolioAction> OptimizeAsync(PortfolioState state)
     {
-        return await _ppo.DecideAsync(state);
+        return await ppo.DecideAsync(state);
     }
 }

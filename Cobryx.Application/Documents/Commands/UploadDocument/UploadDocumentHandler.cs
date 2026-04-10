@@ -1,6 +1,5 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Documents.Services;
-using Cobryx.Domain.Exceptions.Tenants;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -16,32 +15,23 @@ public class UploadDocumentHandler(
     FileSignatureValidator validator,
     IClock clock) : IRequestHandler<UploadDocumentCommand, Result<UploadDocumentResult>>
 {
-    private readonly IUnitOfWork _unitOfWork = unitOfWork;
-    private readonly IDocumentStorage _storage = storage;
-    private readonly ITenantProvider _tenantProvider = tenantProvider;
-    private readonly FileSignatureValidator _validator = validator;
-    private readonly IClock _clock = clock;
-
     public async Task<Result<UploadDocumentResult>> Handle(UploadDocumentCommand request, CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId() ?? request.TenantId;
-        if (tenantId == Guid.Empty)
-            throw new TenantContextMissingException();
+        Guid? tenantId = tenantProvider.GetTenantId();
+        if (!tenantId.HasValue)
+            return Result.Failure<UploadDocumentResult>(DomainErrorCode.Tenant.ContextMissing);
 
-        // 1. Validate file (size, extension, MIME, magic bytes)
-        var validation = _validator.Validate(request.FileStream, request.FileName, request.ContentType);
+        Result validation = validator.Validate(request.FileStream, request.FileName, request.ContentType);
         if (!validation.IsSuccess)
         {
             return Result.Failure<UploadDocumentResult>(validation.Error!);
         }
 
-        // 2. Upload to storage
         request.FileStream.Position = 0;
-        var blobPath = await _storage.UploadAsync(request.FileStream, request.FileName, request.ContentType);
+        var blobPath = await storage.UploadAsync(request.FileStream, request.FileName, request.ContentType);
 
-        // 3. Create entity with PendingScan
         var document = new DocumentMetadata(
-            tenantId,
+            tenantId.Value,
             request.EntityId,
             request.EntityType,
             request.FileName,
@@ -49,13 +39,12 @@ public class UploadDocumentHandler(
             request.FileStream.Length,
             request.ContentType,
             request.UploadedBy,
-            _clock.UtcNow);
+            clock.UtcNow);
 
-        // 4. Persist — OutboxInterceptor captures DocumentUploadedEvent raised in constructor
-        var db = (Microsoft.EntityFrameworkCore.DbContext)_unitOfWork;
+        var db = (Microsoft.EntityFrameworkCore.DbContext)unitOfWork;
         await db.Set<DocumentMetadata>().AddAsync(document, ct);
 
-        await _unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Success(new UploadDocumentResult(document.Id, document.ScanStatus.ToString()));
     }

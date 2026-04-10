@@ -7,83 +7,65 @@ using Concordia;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Users.Commands.UpdateUserRole;
-
-public record UpdateUserRoleCommand(Guid UserId, Guid RoleId) : IRequest<Result>;
-
-public class UpdateUserRoleHandler : IRequestHandler<UpdateUserRoleCommand, Result>
+namespace Cobryx.Application.Users.Commands.UpdateUserRole
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IUserRepository _userRepository;
-    private readonly IRoleRepository _roleRepository;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly ICurrentUserProvider _currentUserProvider;
-    private readonly ILogger<UpdateUserRoleHandler> _logger;
+    public record UpdateUserRoleCommand(Guid UserId, Guid RoleId) : IRequest<Result>;
 
-    public UpdateUserRoleHandler(
+    public partial class UpdateUserRoleHandler(
         IUnitOfWork unitOfWork,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         ITenantProvider tenantProvider,
         ICurrentUserProvider currentUserProvider,
-        ILogger<UpdateUserRoleHandler> logger)
+        ILogger<UpdateUserRoleHandler> logger) : IRequestHandler<UpdateUserRoleCommand, Result>
     {
-        _unitOfWork = unitOfWork;
-        _userRepository = userRepository;
-        _roleRepository = roleRepository;
-        _tenantProvider = tenantProvider;
-        _currentUserProvider = currentUserProvider;
-        _logger = logger;
-    }
-
-    public async Task<Result> Handle(UpdateUserRoleCommand request, CancellationToken ct)
-    {
-        var tenantId = _tenantProvider.GetTenantId() ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
-        var currentUserId = _currentUserProvider.GetUserId() ?? throw new DomainException(DomainErrorCode.Auth.NotAuthenticated);
-
-        // 1. Fetch target user and role
-        var targetUser = await _userRepository.GetByIdAsync(request.UserId, ct);
-        if (targetUser == null || targetUser.TenantId != tenantId)
+        public async Task<Result> Handle(UpdateUserRoleCommand request, CancellationToken cancellationToken)
         {
-            return Result.Failure(DomainErrorCode.User.NotFound);
-        }
+            Guid tenantId = tenantProvider.GetTenantId()
+                            ?? throw new DomainException(DomainErrorCode.Tenant.ContextMissing);
+            Guid currentUserId = currentUserProvider.GetUserId()
+                                 ?? throw new DomainException(DomainErrorCode.Auth.NotAuthenticated);
 
-        var newRole = await _roleRepository.GetByIdAsync(request.RoleId, ct);
-        if (newRole == null)
-        {
-            return Result.Failure(DomainErrorCode.Auth.RoleNotFound);
-        }
+            User? targetUser = await userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            if (targetUser == null || targetUser.TenantId != tenantId)
+            {
+                return Result.Failure(DomainErrorCode.User.NotFound);
+            }
 
-        // 2. Safety: Owner Immutability
-        // Cannot assign Owner role, and cannot change an Owner's role
-        var targetRole = await _roleRepository.GetByIdAsync(targetUser.RoleId, ct);
-        if (newRole.Name == Role.Constants.Owner || targetRole?.Name == Role.Constants.Owner)
-        {
-            return Result.Failure(DomainErrorCode.Auth.Forbidden);
-        }
+            Role? newRole = await roleRepository.GetByIdAsync(request.RoleId, cancellationToken);
+            if (newRole == null)
+            {
+                return Result.Failure(DomainErrorCode.Auth.RoleNotFound);
+            }
 
-        // 3. Safety: Last Admin Protection (Total count >= 1)
-        if (targetRole?.Name == Role.Constants.Admin && newRole.Name != Role.Constants.Admin)
-        {
-            var adminCount = await _userRepository.CountAdminsInTenantAsync(tenantId, ct);
-            if (adminCount <= 1)
+            Role? targetRole = await roleRepository.GetByIdAsync(targetUser.RoleId, cancellationToken);
+            if (newRole.Name == Role.Constants.Owner || targetRole?.Name == Role.Constants.Owner)
             {
                 return Result.Failure(DomainErrorCode.Auth.Forbidden);
             }
+
+            if (targetRole?.Name == Role.Constants.Admin && newRole.Name != Role.Constants.Admin)
+            {
+                var adminCount = await userRepository.CountAdminsInTenantAsync(tenantId, cancellationToken);
+                if (adminCount <= 1)
+                {
+                    return Result.Failure(DomainErrorCode.Auth.Forbidden);
+                }
+            }
+
+            var oldRoleName = targetRole?.Name ?? CobryxDefaults.UnknownValue;
+            targetUser.UpdateRole(newRole.Id);
+            targetUser.IncrementPermissionVersion();
+
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            LogRoleChanged(logger, targetUser.Id, oldRoleName, newRole.Name, currentUserId, tenantId);
+
+            return Result.Success();
         }
 
-        // 4. Execution
-        var oldRoleName = targetRole?.Name ?? "Unknown";
-        targetUser.UpdateRole(newRole.Id);
-        targetUser.IncrementPermissionVersion();
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        // 5. Audit Logging
-        _logger.LogInformation(
-            "[AUDIT] Role changed: TargetUser {TargetId}, OldRole {OldRole}, NewRole {NewRole}, ChangedBy {AdminId}, Tenant {TenantId}",
-            targetUser.Id, oldRoleName, newRole.Name, currentUserId, tenantId);
-
-        return Result.Success();
+        [LoggerMessage(Level = LogLevel.Information,
+            Message = "[AUDIT] Role changed: TargetUser {TargetId}, OldRole {OldRole}, NewRole {NewRole}, ChangedBy {AdminId}, Tenant {TenantId}")]
+        private static partial void LogRoleChanged(ILogger logger, Guid targetId, string oldRole, string newRole, Guid adminId, Guid tenantId);
     }
 }

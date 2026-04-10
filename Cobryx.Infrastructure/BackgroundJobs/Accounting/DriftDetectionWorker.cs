@@ -30,7 +30,6 @@ public class DriftDetectionWorker
     {
         _logger.LogInformation("Starting Shadow Drift Detection Pass...");
 
-        // 1. Lag Monitoring & Alerting
         var latestLedgerSeq = await _context.LedgerEntries.MaxAsync(e => (long?)e.JournalSequenceId, ct) ?? 0L;
         var latestShadowSeq = await _context.ShadowBalances.MaxAsync(s => (long?)s.LastSequence, ct) ?? 0L;
 
@@ -48,15 +47,12 @@ public class DriftDetectionWorker
             _logger.LogWarning("SRE LAG WARNING: {Lag} sequences behind.", lag);
         }
 
-        // 2. Pinpoint Drift Detection
         var shadowBalances = await _context.ShadowBalances
             .AsNoTracking()
             .ToListAsync(ct);
 
         foreach (var shadow in shadowBalances)
         {
-            // Only compare if we have the exact snapshot sequence ready in the ledger
-            // This is "Pinpoint Detection" (matching same sequence)
             var ledgerResult = await _balanceService.GetHistoricalBalanceAsync(shadow.TenantId, shadow.AccountId, shadow.LastSequence, ct);
 
             if (Math.Abs(ledgerResult.Balance - shadow.Balance) > 0.0001m)

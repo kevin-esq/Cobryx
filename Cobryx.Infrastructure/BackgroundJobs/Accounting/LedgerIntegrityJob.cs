@@ -18,12 +18,11 @@ public class LedgerIntegrityJob(
     private readonly ILogger<LedgerIntegrityJob> _logger = logger;
 
     [Queue("ledger-integrity")]
-    [AutomaticRetry(Attempts = 1)] // Small retry for transient DB issues
+    [AutomaticRetry(Attempts = 1)]
     public async Task RunAsync(CancellationToken ct)
     {
         _logger.LogInformation("Starting Global Ledger Integrity Scan...");
 
-        // Scan all tenants with ledger activity
         var tenantIds = await _dbContext.LedgerAccounts
             .AsNoTracking()
             .Select(a => a.TenantId)

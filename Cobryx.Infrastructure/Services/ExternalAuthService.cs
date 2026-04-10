@@ -1,21 +1,22 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Shared;
+using Cobryx.Infrastructure.Configuration;
 
 using Google.Apis.Auth;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Services;
 
 public class ExternalAuthService : IExternalAuthService
 {
-    private readonly IConfiguration _configuration;
+    private readonly GoogleOAuthOptions _googleOptions;
     private readonly ILogger<ExternalAuthService> _logger;
 
-    public ExternalAuthService(IConfiguration configuration, ILogger<ExternalAuthService> logger)
+    public ExternalAuthService(IOptions<GoogleOAuthOptions> googleOptions, ILogger<ExternalAuthService> logger)
     {
-        _configuration = configuration;
+        _googleOptions = googleOptions.Value;
         _logger = logger;
     }
 
@@ -33,7 +34,7 @@ public class ExternalAuthService : IExternalAuthService
     {
         try
         {
-            var clientIds = _configuration["OAuth:Google:ClientId"]?
+            var clientIds = _googleOptions.ClientId
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
 

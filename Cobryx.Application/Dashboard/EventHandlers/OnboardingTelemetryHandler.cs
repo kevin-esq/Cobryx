@@ -23,14 +23,12 @@ public class OnboardingTelemetryHandler : INotificationHandler<DomainEventNotifi
         var dbContext = (DbContext)_unitOfWork;
         var @event = notification.DomainEvent;
 
-        // check if already logged to avoid duplicates
         var exists = await dbContext.Set<TenantFunnelMetric>()
             .AnyAsync(m => m.TenantId == @event.TenantId && m.MilestoneCode == @event.MilestoneCode, cancellationToken);
 
         if (exists)
             return;
 
-        // Get previous milestone to calculate delta
         var previous = await dbContext.Set<TenantFunnelMetric>()
             .Where(m => m.TenantId == @event.TenantId)
             .OrderByDescending(m => m.ReachedAtUtc)

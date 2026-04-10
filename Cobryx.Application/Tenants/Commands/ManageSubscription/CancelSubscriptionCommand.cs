@@ -6,49 +6,50 @@ using Cobryx.Domain.Shared.Enums;
 
 using Concordia;
 
-namespace Cobryx.Application.Tenants.Commands.ManageSubscription;
-
-public record CancelSubscriptionCommand(
-    CancellationReason Reason,
-    string? Feedback = null) : IRequest<Result>;
-
-public class CancelSubscriptionHandler : IRequestHandler<CancelSubscriptionCommand, Result>
+namespace Cobryx.Application.Tenants.Commands.ManageSubscription
 {
-    private readonly ITenantProvider _tenantProvider;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ITenantSubscriptionRepository _subscriptionRepository;
+    public record CancelSubscriptionCommand(
+        CancellationReason Reason,
+        string? Feedback = null) : IRequest<Result>;
 
-    public CancelSubscriptionHandler(
+    public class CancelSubscriptionHandler(
         ITenantProvider tenantProvider,
         IUnitOfWork unitOfWork,
-        ITenantSubscriptionRepository subscriptionRepository)
+        ITenantSubscriptionRepository subscriptionRepository,
+        IClock clock) : IRequestHandler<CancelSubscriptionCommand, Result>
     {
-        _tenantProvider = tenantProvider;
-        _unitOfWork = unitOfWork;
-        _subscriptionRepository = subscriptionRepository;
-    }
+        private readonly ITenantProvider _tenantProvider = tenantProvider;
+        private readonly IUnitOfWork _unitOfWork = unitOfWork;
+        private readonly ITenantSubscriptionRepository _subscriptionRepository = subscriptionRepository;
+        private readonly IClock _clock = clock;
 
-    public async Task<Result> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
-    {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue)
-            return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+        public async Task<Result> Handle(CancelSubscriptionCommand request, CancellationToken cancellationToken)
+        {
+            var tenantId = _tenantProvider.GetTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+            }
 
-        var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
+            var subscription = await _subscriptionRepository.GetByTenantIdAsync(tenantId.Value, cancellationToken);
 
-        if (subscription == null)
-            return Result.Failure(DomainErrorCode.Subscription.NotFound);
+            if (subscription == null)
+            {
+                return Result.Failure(DomainErrorCode.Subscription.NotFound);
+            }
 
-        if (subscription.Status == SubscriptionStatus.Cancelled)
-            return Result.Failure(DomainErrorCode.Subscription.AlreadyCancelled);
+            if (subscription.Status == SubscriptionStatus.Cancelled)
+            {
+                return Result.Failure(DomainErrorCode.Subscription.AlreadyCancelled);
+            }
 
-        // Grace period logic: 7 days from now
-        var gracePeriodEnd = DateTime.UtcNow.AddDays(7);
+            var gracePeriodEnd = _clock.UtcNow.AddDays(7);
 
-        subscription.ExecuteCancellation(gracePeriodEnd, DateTime.UtcNow, request.Reason, request.Feedback);
+            subscription.ExecuteCancellation(gracePeriodEnd, _clock.UtcNow, request.Reason, request.Feedback);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _ = await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result.Success();
+            return Result.Success();
+        }
     }
 }

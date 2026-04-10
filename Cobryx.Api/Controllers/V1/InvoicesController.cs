@@ -1,7 +1,11 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
 using Cobryx.Application.Common.Attributes;
+using Cobryx.Application.Invoicing.Commands.CreateInvoice;
+using Cobryx.Application.Invoicing.Queries.GetInvoices;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -17,17 +21,14 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/financial/invoices")]
-[Tags("Financial Core")]
-public class InvoicesController : CobryxBaseController
+[Route("api/v{version:apiVersion}/invoices")]
+[Tags("Invoicing")]
+public class InvoicesController(ISender sender, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
-    public InvoicesController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Retrieves a paginated list of all commercial invoices issued within the tenant context.
     /// </summary>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Possible Outcomes:
     /// - INVOICING.INVOICE.SEARCH_COMPLETED: Results retrieved successfully.
@@ -36,9 +37,9 @@ public class InvoicesController : CobryxBaseController
     [HttpGet]
     [ProducesResponseType(typeof(ApiSuccessResponse<List<InvoiceSummaryContract>>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
-    public async Task<IActionResult> GetInvoices()
+    public async Task<IActionResult> GetInvoices(CancellationToken ct)
     {
-        var result = await Sender.Send(new Application.Invoicing.Queries.GetInvoices.GetInvoicesQuery());
+        Result<IReadOnlyList<InvoiceDto>> result = await Sender.Send(new GetInvoicesQuery(), ct);
 
         if (!result.IsSuccess || result.Value == null)
             return HandleResult(result, InvoicingOutcomes.Invoices.SearchCompleted);
@@ -57,9 +58,42 @@ public class InvoicesController : CobryxBaseController
     }
 
     /// <summary>
+    /// Retrieves a single invoice by its identifier.
+    /// </summary>
+    /// <param name="id">Unique identifier of the invoice.</param>
+    [HttpGet("{id}", Name = "GetInvoice")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<InvoiceSummaryContract>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetInvoice(Guid id)
+    {
+        // Fallback: Currently re-uses the list query to find the invoice
+        Result<IReadOnlyList<InvoiceDto>> result = await Sender.Send(new GetInvoicesQuery());
+
+        if (!result.IsSuccess || result.Value == null)
+            return HandleResult(result);
+
+        var invoice = result.Value.FirstOrDefault(i => i.Id == id);
+        if (invoice == null)
+            return NotFound();
+
+        var mapped = new InvoiceSummaryContract(
+            invoice.Id,
+            invoice.CustomerId,
+            invoice.CustomerName,
+            invoice.InvoiceNumber,
+            invoice.DueDate,
+            invoice.TotalAmount,
+            invoice.Currency,
+            invoice.Status);
+
+        return Success(mapped, InvoicingOutcomes.Invoices.SearchCompleted);
+    }
+
+    /// <summary>
     /// Creates and issues a new commercial invoice containing one or more line items.
     /// </summary>
     /// <param name="request">Invoice details including customer context, due date, and line items with unit prices (ISO-4217).</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Financial Precision:
     /// - 'UnitPrice' and totals are provided in the native currency unit (ISO-4217).
@@ -80,20 +114,22 @@ public class InvoicesController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
-    public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request)
+    public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request, CancellationToken ct)
     {
-        // Intentional Mapping: Public Intent -> Internal Domain Command
-        var command = new Application.Invoicing.Commands.CreateInvoice.CreateInvoiceCommand(
+        var command = new CreateInvoiceCommand(
             request.CustomerId,
             request.DueDate,
-            request.Items.Select(i => new Application.Invoicing.Commands.CreateInvoice.InvoiceItemRequest(
-                i.Description,
-                i.Quantity,
-                i.UnitPrice,
-                i.TaxConfigurationId)).ToList(),
+            [
+                .. request.Items.Select(i => new Application.Invoicing.Commands.CreateInvoice.InvoiceItemRequest(
+                    i.Description,
+                    i.Quantity,
+                    i.UnitPrice,
+                    i.TaxConfigurationId))
+            ],
             request.Notes);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/invoices/{result.Value}", result, InvoicingOutcomes.Invoices.Created);
+        Result<Guid> result = await Sender.Send(command, ct);
+        return HandleCreatedResult(linkGenerator.GetInvoiceUrl(result.Value), result,
+            InvoicingOutcomes.Invoices.Created);
     }
 }

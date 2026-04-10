@@ -29,7 +29,6 @@ public class Installment : BaseEntity
     public Money RemainingBalance { get; private set; }
     public InstallmentStatus Status { get; private set; }
 
-    // Legacy decimal Aliases
     public decimal PrincipalAmount => PrincipalPart.Amount;
     public decimal InterestAmount => InterestPart.Amount;
     public decimal LateFeeAmount => LateInterestAmount.Amount;
@@ -68,7 +67,7 @@ public class Installment : BaseEntity
     }
 
     public Installment(Guid loanId, int installmentNumber, DateTime dueDate, decimal principalAmount, decimal interestAmount)
-        : this(loanId, installmentNumber, dueDate, new Money(principalAmount, "USD"), new Money(interestAmount, "USD"), new Money(principalAmount + interestAmount, "USD"))
+        : this(loanId, installmentNumber, dueDate, new Money(principalAmount, CobryxDefaults.Currency), new Money(interestAmount, CobryxDefaults.Currency), new Money(principalAmount + interestAmount, CobryxDefaults.Currency))
     {
     }
 

@@ -1,11 +1,22 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Common.Models;
+using Cobryx.Application.Credits.Commands.Create;
+using Cobryx.Application.Credits.Common;
+using Cobryx.Application.Credits.Queries.GetCreditById;
+using Cobryx.Application.Credits.Queries.GetCredits;
+using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
+using ApiErrorResponse = Cobryx.Api.Contracts.V1.Common.ApiErrorResponse;
 
 namespace Cobryx.Api.Controllers.V1;
 
@@ -16,12 +27,10 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize(Policy = "CanCreateCredits")]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/lending/credits")]
-[Tags("Financial Core")]
-public class CreditsController(ISender sender, Application.Common.Interfaces.ITenantProvider tenantProvider) : CobryxBaseController(sender)
+[Route("api/v{version:apiVersion}/credits")]
+[Tags("Lending")]
+public class CreditsController(ISender sender, ITenantProvider tenantProvider, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
-    private readonly Application.Common.Interfaces.ITenantProvider _tenantProvider = tenantProvider;
-
     /// <summary>
     /// Establishes a new credit line facility for a customer.
     /// </summary>
@@ -37,33 +46,31 @@ public class CreditsController(ISender sender, Application.Common.Interfaces.ITe
     /// <response code="400">Invalid parameters or incompatible credit policy.</response>
     /// <response code="422">Business rule violation (e.g., customer already has an active limit).</response>
     [HttpPost]
-    [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), 201)]
+    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse<Guid>), 201)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateCreditRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateCreditRequest request)
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         if (tenantId == null)
             return Unauthorized();
 
-        // Intentional Mapping: Public Intent -> Internal Domain Implementation
-        var command = new Application.Credits.Commands.Create.CreateCreditCommand(
+        var command = new CreateCreditCommand(
             tenantId.Value,
             request.CustomerId,
             request.Amount,
             request.Currency,
             request.InterestRate,
-            Enum.Parse<Cobryx.Domain.Lending.Enums.InterestType>(request.InterestType, true),
-            Enum.Parse<Cobryx.Domain.Lending.Enums.PaymentFrequency>(request.Frequency, true),
+            Enum.Parse<InterestType>(request.InterestType, true),
+            Enum.Parse<PaymentFrequency>(request.Frequency, true),
             request.InstallmentsCount,
             request.GraceDays,
             request.ProductId);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/lending/credits/{result.Value}", result, CreditOutcomes.Created);
+        Result<Guid> result = await Sender.Send(command);
+        return HandleCreatedResult(linkGenerator.GetCreditUrl(result.Value), result, CreditOutcomes.Created);
     }
 
     /// <summary>
@@ -79,31 +86,36 @@ public class CreditsController(ISender sender, Application.Common.Interfaces.ITe
     /// <response code="200">A paginated list of credit facilities.</response>
     [HttpGet]
     [Authorize(Policy = "CanViewCredits")]
-    [ProducesResponseType(typeof(ApiSuccessResponse<Cobryx.Application.Common.Models.PaginatedList<CreditSummaryContract>>), 200)]
+    [ProducesResponseType(
+        typeof(Contracts.V1.Common.ApiSuccessResponse<PaginatedList<CreditSummaryContract>>),
+        200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
-    public async Task<IActionResult> GetAll([FromQuery] Guid? customerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAll([FromQuery] Guid? customerId, [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var result = await Sender.Send(new Application.Credits.Queries.GetCredits.GetCreditsQuery(customerId, page, pageSize));
+        Result<PaginatedList<CreditDto>> result = await Sender.Send(new GetCreditsQuery(customerId, page, pageSize));
 
         if (!result.IsSuccess || result.Value == null)
         {
             return HandleResult(result, CreditOutcomes.SearchCompleted);
         }
 
-        var mapped = new Application.Common.Models.PaginatedList<CreditSummaryContract>(
-            [.. result.Value.Items.Select(c => new CreditSummaryContract(
-                c.Id,
-                c.CustomerId,
-                c.CustomerName,
-                c.PrincipalAmount,
-                c.Currency,
-                c.InterestRate,
-                c.InstallmentsCount,
-                c.Status.ToString(),
-                c.StartDate,
-                c.TotalPaid,
-                c.RemainingBalance))],
+        var mapped = new PaginatedList<CreditSummaryContract>(
+            [
+                .. result.Value.Items.Select(c => new CreditSummaryContract(
+                    c.Id,
+                    c.CustomerId,
+                    c.CustomerName,
+                    c.PrincipalAmount,
+                    c.Currency,
+                    c.InterestRate,
+                    c.InstallmentsCount,
+                    c.Status.ToString(),
+                    c.StartDate,
+                    c.TotalPaid,
+                    c.RemainingBalance))
+            ],
             result.Value.TotalCount,
             result.Value.Page,
             result.Value.TotalPages);
@@ -122,23 +134,23 @@ public class CreditsController(ISender sender, Application.Common.Interfaces.ITe
     /// </remarks>
     /// <response code="200">The credit facility details.</response>
     /// <response code="404">Target credit facility not found.</response>
-    [HttpGet("{id}")]
+    [HttpGet("{id}", Name = "GetCredit")]
     [Authorize(Policy = "CanViewCredits")]
-    [ProducesResponseType(typeof(ApiSuccessResponse<CreditSummaryContract>), 200)]
+    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse<CreditSummaryContract>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetCredit(Guid id)
     {
-        var result = await Sender.Send(new Application.Credits.Queries.GetCreditById.GetCreditByIdQuery(id));
+        Result<CreditDetailDto> result = await Sender.Send(new GetCreditByIdQuery(id));
 
         if (!result.IsSuccess || result.Value == null)
         {
             return HandleResult(result, CreditOutcomes.SearchCompleted);
         }
 
-        var totalPaid = result.Value.Payments?.Sum(p => p.Amount) ?? 0m;
-        var totalDue = result.Value.Schedule?.Sum(i => i.TotalDue) ?? result.Value.PrincipalAmount;
+        var totalPaid = result.Value.Payments.Sum(p => p.Amount);
+        var totalDue = result.Value.Schedule.Sum(i => i.TotalDue);
 
         var mapped = new CreditSummaryContract(
             result.Value.Id,

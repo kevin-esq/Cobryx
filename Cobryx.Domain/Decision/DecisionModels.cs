@@ -33,4 +33,15 @@ public class DecisionResult
     public decimal InterestRate { get; set; }
     public decimal FraudScore { get; set; }
     public bool Approved { get; set; }
+
+    public ExecutionTrace Trace { get; set; } = new();
+}
+
+public class CombinedDecisionResult
+{
+    public DecisionResult? Primary { get; set; }
+    public DecisionResult? Shadow { get; set; }
+
+    public bool HasDrift => Primary?.CreditLimit != Shadow?.CreditLimit ||
+                            Primary?.InterestRate != Shadow?.InterestRate;
 }

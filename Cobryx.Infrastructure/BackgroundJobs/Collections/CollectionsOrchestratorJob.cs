@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Cobryx.Application.Collections.Assignment;
 using Cobryx.Application.Collections.Models;
+using Cobryx.Application.Collections.Optimizer;
 using Cobryx.Application.Collections.Strategy;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Collections;
@@ -13,76 +14,61 @@ using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Collections;
 
-public class CollectionsOrchestratorJob
+public partial class CollectionsOrchestratorJob(
+    ICobryxDbContext dbContext,
+    ICollectionsStrategyEngine strategyEngine,
+    IAssignmentEngine assignmentEngine,
+    IConnectionMultiplexer redis,
+    IClock clock,
+    ILogger<CollectionsOrchestratorJob> logger)
 {
-    private readonly ICobryxDbContext _dbContext;
-    private readonly ICollectionsStrategyEngine _strategyEngine;
-    private readonly IAssignmentEngine _assignmentEngine;
-    private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<CollectionsOrchestratorJob> _logger;
-
-    public CollectionsOrchestratorJob(
-        ICobryxDbContext dbContext,
-        ICollectionsStrategyEngine strategyEngine,
-        IAssignmentEngine assignmentEngine,
-        IConnectionMultiplexer redis,
-        ILogger<CollectionsOrchestratorJob> logger)
-    {
-        _dbContext = dbContext;
-        _strategyEngine = strategyEngine;
-        _assignmentEngine = assignmentEngine;
-        _redis = redis;
-        _logger = logger;
-    }
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public async Task ProcessCollectionsAsync()
     {
-        _logger.LogInformation("Starting Collections Orchestrator Job...");
+        LogJobStarted(logger);
 
-        var delinquentLoans = await _dbContext.LatestLoanSnapshots
+        var delinquentLoans = await dbContext.LatestLoanSnapshots
             .Where(s => s.DaysPastDue > 0)
-            .Join(_dbContext.Loans,
+            .Join(dbContext.Loans,
                 s => s.LoanId,
                 l => l.Id,
                 (s, l) => new { Snapshot = s, l.TenantId })
             .ToListAsync();
 
-        _logger.LogInformation($"Found {delinquentLoans.Count} delinquent loans.");
+        LogDelinquentLoansFound(logger, delinquentLoans.Count);
 
         foreach (var data in delinquentLoans)
         {
             try
             {
                 var snapshot = data.Snapshot;
-                var tenantId = data.TenantId;
+                Guid tenantId = data.TenantId;
 
-                // Mocks for Phase 10 logic
-                var riskProfile = new CustomerRiskProfile { Score = 50 };
-                var behaviorProfile = new PaymentBehaviorProfile { MissedPayments = 1, PaymentConsistencyScore = 0.8m };
-                var trend = new DpdTrend { CurrentDpd = snapshot.DaysPastDue, PreviousDpd = System.Math.Max(0, snapshot.DaysPastDue - 1) };
+                CustomerRiskProfile riskProfile = new() { Score = 50 };
+                PaymentBehaviorProfile behaviorProfile = new() { MissedPayments = 1, PaymentConsistencyScore = 0.8m };
+                DpdTrend trend = new() { CurrentDpd = snapshot.DaysPastDue, PreviousDpd = Math.Max(0, snapshot.DaysPastDue - 1) };
 
-                // ML Weights
-                var db = _redis.GetDatabase();
+                var db = redis.GetDatabase();
                 var weightsJson = await db.StringGetAsync($"portfolio:collections:weights:{tenantId}");
-                var weights = new Cobryx.Application.Collections.Optimizer.StrategyWeights();
+                var weights = new StrategyWeights();
                 if (weightsJson.HasValue)
                 {
-                    var deserialized = System.Text.Json.JsonSerializer.Deserialize<Cobryx.Application.Collections.Optimizer.StrategyWeights>(weightsJson!);
+                    var deserialized = JsonSerializer.Deserialize<StrategyWeights>(weightsJson!);
                     if (deserialized != null)
                         weights = deserialized;
                 }
 
-                // 1. STRATEGY EVALUATION
-                var decision = _strategyEngine.Evaluate(
+                var decision = strategyEngine.Evaluate(
                     snapshot.DaysPastDue,
                     snapshot.Outstanding,
                     riskProfile,
                     behaviorProfile,
                     trend,
-                    weights);
+                    weights,
+                    clock);
 
-                // 2. CASE MANAGEMENT
-                var collectionCase = await _dbContext.CollectionCases
+                var collectionCase = await dbContext.CollectionCases
                     .FirstOrDefaultAsync(c => c.LoanId == snapshot.LoanId && !c.IsClosed);
 
                 if (collectionCase == null)
@@ -94,7 +80,7 @@ public class CollectionsOrchestratorJob
                         snapshot.Outstanding);
 
                     collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, decision.NextActionAt);
-                    _dbContext.CollectionCases.Add(collectionCase);
+                    dbContext.CollectionCases.Add(collectionCase);
                 }
                 else
                 {
@@ -102,21 +88,18 @@ public class CollectionsOrchestratorJob
                     collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, decision.NextActionAt);
                 }
 
-                // 3. ACTION LOGGING
-                if (collectionCase.NextActionAt == null || collectionCase.NextActionAt <= System.DateTime.UtcNow)
+                if (collectionCase.NextActionAt == null || collectionCase.NextActionAt <= clock.UtcNow)
                 {
                     var action = new CollectionAction(
                         collectionCase.Id,
                         decision.Action,
                         $"Automated {decision.Action} triggered by Strategy Engine. Priority: {decision.PriorityScore}");
 
-                    _dbContext.CollectionActions.Add(action);
+                    dbContext.CollectionActions.Add(action);
 
-                    // Push next action date 24h into the future
-                    collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, System.DateTime.UtcNow.AddDays(1));
+                    collectionCase.ApplyDecision(decision.Stage, decision.PriorityScore, clock.UtcNow.AddDays(1));
                 }
 
-                // 4. REDIS PRIORITY QUEUE (ZSET + HASH)
                 var priorityKey = $"portfolio:collections:priority:{tenantId}";
                 var dataKey = $"portfolio:collections:data:{snapshot.LoanId}";
 
@@ -128,25 +111,24 @@ public class CollectionsOrchestratorJob
                     dpd = snapshot.DaysPastDue,
                     outstanding = snapshot.Outstanding,
                     stage = decision.Stage.ToString()
-                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                }, _jsonOptions);
 
                 await db.HashSetAsync(dataKey, "info", metadata);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to process collection case for Loan {data.Snapshot.LoanId}");
+                LogProcessLoanFailed(logger, ex, data.Snapshot.LoanId);
             }
         }
 
-        await _dbContext.SaveChangesAsync(default);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
 
-        // 5. AUTO ASSIGNMENT
         var affectedTenants = delinquentLoans.Select(x => x.TenantId).Distinct().ToList();
-        foreach (var tId in affectedTenants)
+        foreach (Guid tId in affectedTenants)
         {
-            await _assignmentEngine.AssignCasesAsync(tId);
+            await assignmentEngine.AssignCasesAsync(tId);
         }
 
-        _logger.LogInformation("Collections Orchestrator Job completed successfully.");
+        LogJobCompleted(logger);
     }
 }

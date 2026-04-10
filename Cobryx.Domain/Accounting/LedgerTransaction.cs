@@ -3,7 +3,7 @@ using Cobryx.Domain.Shared;
 namespace Cobryx.Domain.Accounting;
 
 /// <summary>
-/// A Journal Entry in the system. 
+/// A Journal Entry in the system.
 /// Groups multiple LedgerEntries into an atomic, balanced unit of work.
 /// </summary>
 public class LedgerTransaction : BaseEntity, ITenantEntity
@@ -11,7 +11,7 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
     public Guid TenantId { get; private set; }
     public string Description { get; private set; } = string.Empty;
     public string? ReferenceId { get; private set; }
-    public string Currency { get; private set; } = "USD";
+    public string Currency { get; private set; } = CobryxDefaults.Currency;
     public DateTime EffectiveDate { get; private set; }
     public bool IsPosted { get; private set; }
     public bool IsReversal { get; private set; }
@@ -23,15 +23,20 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
     private LedgerTransaction() { }
 
-    public LedgerTransaction(Guid tenantId, string description, string? referenceId = null, Guid? loanId = null, string currency = "USD")
+    public LedgerTransaction(
+        Guid tenantId,
+        string description,
+        string? referenceId = null,
+        Guid? loanId = null,
+        string? currency = null,
+        DateTime? now = null)
     {
         TenantId = tenantId;
         Description = description;
         ReferenceId = referenceId;
         LoanId = loanId;
-        Currency = currency;
-        EffectiveDate = DateTime.UtcNow;
-        IsPosted = false;
+        Currency = currency ?? CobryxDefaults.Currency;
+        EffectiveDate = now ?? DateTime.UtcNow;
     }
 
     public void AddEntry(Guid accountId, decimal debit, decimal credit)
@@ -47,21 +52,17 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
         if (IsPosted)
             return;
 
-        // Double-Entry Integrity Check
         var balance = _entries.Sum(e => e.Debit - e.Credit);
         if (balance != 0)
         {
-            throw new DomainException(DomainErrorCode.Common.GeneralError); // "Ledger out of balance"
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
         }
 
         IsPosted = true;
         UpdateTimestamp();
     }
 
-    public static LedgerTransaction CreateReversal(LedgerTransaction original, string reason)
-    {
-        return CreatePartialReversal(original, original.Entries.Sum(e => e.Debit), reason);
-    }
+    public static LedgerTransaction CreateReversal(LedgerTransaction original, string reason) => CreatePartialReversal(original, original.Entries.Sum(e => e.Debit), reason);
 
     public static LedgerTransaction CreatePartialReversal(LedgerTransaction original, decimal refundAmount, string reason)
     {
@@ -69,10 +70,8 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
         if (totalOriginal <= 0)
             throw new DomainException(DomainErrorCode.Common.GeneralError);
 
-        // Small delta check for safety
         if (refundAmount > (totalOriginal / 2 + 0.01m) && original.Entries.Count == 2)
         {
-            // If it's a simple 2-line transaction, we can be stricter,
         }
 
         if (refundAmount > totalOriginal + 0.01m)
@@ -89,15 +88,12 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
         foreach (var entry in original.Entries)
         {
-            // Mirror: original Credit becomes Reversal Debit, original Debit becomes Reversal Credit
             reversal.AddEntry(entry.AccountId, Math.Round(entry.Credit * ratio, 2), Math.Round(entry.Debit * ratio, 2));
         }
 
-        // Fix balance if off by cents due to rounding
         var balance = reversal._entries.Sum(e => e.Debit - e.Credit);
         if (balance != 0)
         {
-            // Adjust the largest entry to minimize relative impact of rounding
             var entryToAdjust = reversal._entries.OrderByDescending(e => Math.Abs(e.Debit + e.Credit)).First();
             if (balance > 0)
                 entryToAdjust.AdjustCredit(balance);

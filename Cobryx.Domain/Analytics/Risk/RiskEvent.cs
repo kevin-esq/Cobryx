@@ -12,13 +12,13 @@ public class RiskEvent
 
     private RiskEvent() { }
 
-    public RiskEvent(System.Guid customerId, RiskEventType eventType, decimal impactScore)
+    public RiskEvent(System.Guid customerId, RiskEventType eventType, decimal impactScore, DateTime? now = null)
     {
         Id = System.Guid.NewGuid();
         CustomerId = customerId;
         EventType = eventType;
         ImpactScore = impactScore;
-        OccurredAt = System.DateTime.UtcNow;
+        OccurredAt = now ?? System.DateTime.UtcNow;
     }
 }
 

@@ -22,7 +22,6 @@ public class PortfolioAnalyticsService : IPortfolioAnalyticsService
 
     public async Task CalculateAllNightlyMetricsAsync(DateTime date, CancellationToken ct = default)
     {
-        // Multi-Tenant Batch Aggregation using Window SQL Functions for O(1) query scalability
         var batchQuery = @"
 WITH latest_snapshots AS (
     SELECT
@@ -87,7 +86,6 @@ GROUP BY ""TenantId"";";
         var startOfMonth = new DateTime(date.Year, date.Month, 1);
         var startOfYear = new DateTime(date.Year, 1, 1);
 
-        // Fetch tenant-level revenue and collection statistics concurrently
         var revenueMtdByTenant = await _db.LoanPaymentAllocations
             .Where(x => x.AllocationDate >= startOfMonth && x.AllocationDate <= date)
             .GroupBy(x => x.TenantId)
@@ -112,7 +110,6 @@ GROUP BY ""TenantId"";";
             .Select(g => new { TenantId = g.Key, Amount = g.Sum(x => x.Amount.Amount) })
             .ToDictionaryAsync(x => x.TenantId, x => x.Amount, ct);
 
-        // Combine projections in-memory to limit DB load
         foreach (var agg in aggregates)
         {
             var nplRatio = agg.TotalOutstanding > 0 ? agg.NplOutstanding / agg.TotalOutstanding : 0;

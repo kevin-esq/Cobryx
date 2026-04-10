@@ -1,44 +1,51 @@
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Users.Commands.UpdateMyProfile;
-
-public record UpdateMyProfileCommand(
-    Guid UserId,
-    string? PhoneNumber,
-    string? AvatarUrl,
-    string PreferredLanguage,
-    string Timezone) : IRequest<Result>;
-
-public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, Result>
+namespace Cobryx.Application.Users.Commands.UpdateMyProfile
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    /// <summary>
+    /// Updates the authenticated user's profile preferences.
+    /// The user identity is resolved via ICurrentUserProvider — no userId parameter needed.
+    /// </summary>
+    public record UpdateMyProfileCommand(
+        string? PhoneNumber,
+        string? AvatarUrl,
+        string PreferredLanguage,
+        string Timezone) : IRequest<Result>;
 
-    public UpdateMyProfileHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
+    public class UpdateMyProfileHandler(
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUserProvider currentUserProvider) : IRequestHandler<UpdateMyProfileCommand, Result>
     {
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
-    }
-
-    public async Task<Result> Handle(UpdateMyProfileCommand request, CancellationToken cancellationToken)
-    {
-        var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
-        if (user == null)
-            return Result.Failure(DomainErrorCode.User.NotFound);
-
-        if (user.Profile == null)
+        public async Task<Result> Handle(UpdateMyProfileCommand request, CancellationToken cancellationToken)
         {
-            user.CreateProfile(request.PhoneNumber, request.AvatarUrl);
+            Guid? userId = currentUserProvider.GetUserId();
+            if (!userId.HasValue)
+            {
+                return Result.Failure(DomainErrorCode.Auth.NotAuthenticated);
+            }
+
+            Domain.Identity.User? user = await userRepository.GetByIdAsync(userId.Value, cancellationToken);
+            if (user == null)
+            {
+                return Result.Failure(DomainErrorCode.User.NotFound);
+            }
+
+            if (user.Profile == null)
+            {
+                user.CreateProfile(request.PhoneNumber, request.AvatarUrl);
+            }
+
+            user.Profile!.Update(request.PhoneNumber, request.AvatarUrl, request.PreferredLanguage, request.Timezone);
+
+            await userRepository.UpdateAsync(user, cancellationToken);
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Success();
         }
-
-        user.Profile!.Update(request.PhoneNumber, request.AvatarUrl, request.PreferredLanguage, request.Timezone);
-
-        await _userRepository.UpdateAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
     }
 }

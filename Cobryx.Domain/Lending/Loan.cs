@@ -56,7 +56,8 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         PaymentFrequency frequency = PaymentFrequency.Monthly,
         int installmentsCount = 0,
         int graceDays = 0,
-        bool isDemo = false)
+        bool isDemo = false,
+        DateTime? now = null)
         : base(tenantId, customerId, originalPrincipal, interestRate, interestType, frequency, installmentsCount, graceDays)
     {
         LoanAgreementId = loanAgreementId;
@@ -67,33 +68,39 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         CollectionStage = CollectionStage.None;
         CurrentPrincipalBalance = originalPrincipal.Amount;
         FinancialStatus = FinancialStatus.Current;
-        LastAccrualDate = DateTime.UtcNow;
+        LastAccrualDate = now ?? DateTime.UtcNow;
         IsDemo = isDemo;
     }
 
-    public void MarkAsClosed()
+    public void MarkAsClosed() => MarkAsClosed(DateTime.UtcNow);
+
+    public void MarkAsClosed(DateTime now)
     {
         Status = LoanStatus.Closed;
-        ClosedAt = DateTime.UtcNow;
-        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, DateTime.UtcNow));
-        UpdateTimestamp();
+        ClosedAt = now;
+        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, now));
+        UpdateTimestamp(now);
     }
 
-    public void Activate()
+    public void Activate() => Activate(DateTime.UtcNow);
+
+    public void Activate(DateTime now)
     {
         if (Status != LoanStatus.Draft)
             return;
         Status = LoanStatus.Active;
-        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, DateTime.UtcNow));
-        UpdateTimestamp();
+        AddDomainEvent(new LoanStatusChangedEvent(Id, 0, now));
+        UpdateTimestamp(now);
     }
 
-    public void Disburse(DateTime date)
+    public void Disburse(DateTime date) => Disburse(date, DateTime.UtcNow);
+
+    public void Disburse(DateTime date, DateTime now)
     {
         Status = LoanStatus.Active;
         DisbursementDate = date;
-        AddDomainEvent(new LoanDisbursedEvent(Id, 0, DateTime.UtcNow));
-        UpdateTimestamp();
+        AddDomainEvent(new LoanDisbursedEvent(Id, 0, now));
+        UpdateTimestamp(now);
     }
 
     public override void AddInstallments(IEnumerable<Installment> installments)
@@ -111,7 +118,9 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         NextPaymentDueDate = firstPending?.DueDate;
     }
 
-    public void RecordPaymentApplied(decimal amount, DateTime paymentDate)
+    public void RecordPaymentApplied(decimal amount, DateTime paymentDate) => RecordPaymentApplied(amount, paymentDate, DateTime.UtcNow);
+
+    public void RecordPaymentApplied(decimal amount, DateTime paymentDate, DateTime now)
     {
         if (amount <= 0)
             throw new DomainException(DomainErrorCode.Loans.InvalidPaymentAmount);
@@ -121,8 +130,8 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
         TotalPaid += amount;
         LastPaymentDate = paymentDate;
-        AddDomainEvent(new LoanPaymentAppliedEvent(Id, 0, DateTime.UtcNow));
-        UpdateTimestamp();
+        AddDomainEvent(new LoanPaymentAppliedEvent(Id, 0, now));
+        UpdateTimestamp(now);
     }
 
     public void AssessLateFees(decimal amount)
@@ -161,13 +170,15 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         UpdateTimestamp();
     }
 
-    public void MarkAsChargedOff()
+    public void MarkAsChargedOff() => MarkAsChargedOff(DateTime.UtcNow);
+
+    public void MarkAsChargedOff(DateTime now)
     {
         FinancialStatus = FinancialStatus.ChargedOff;
         Status = LoanStatus.Closed;
         IsWrittenOff = true;
-        WriteOffDate = DateTime.UtcNow;
-        UpdateTimestamp();
+        WriteOffDate = now;
+        UpdateTimestamp(now);
     }
 
     public void MarkAsWrittenOff(DateTime date)
@@ -193,11 +204,13 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
         UpdateTimestamp();
     }
 
-    public void MarkAccrued(DateTime date)
+    public void MarkAccrued(DateTime date) => MarkAccrued(date, DateTime.UtcNow);
+
+    public void MarkAccrued(DateTime date, DateTime now)
     {
         LastAccrualDate = date;
-        AddDomainEvent(new AccrualPostedEvent(Id, 0, DateTime.UtcNow));
-        UpdateTimestamp();
+        AddDomainEvent(new AccrualPostedEvent(Id, 0, now));
+        UpdateTimestamp(now);
     }
 
     public void ApplyAllocation(LoanPaymentAllocation allocation)
@@ -229,7 +242,8 @@ public class Loan : BaseLendingInstrument, IAggregateRoot
 
     public void MarkAsRecovered()
     {
-        if (FinancialStatus != FinancialStatus.ChargedOff) return;
+        if (FinancialStatus != FinancialStatus.ChargedOff)
+            return;
         FinancialStatus = FinancialStatus.Recovered;
         UpdateTimestamp();
     }

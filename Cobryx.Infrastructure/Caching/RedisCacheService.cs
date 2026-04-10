@@ -62,10 +62,6 @@ public class RedisCacheService : ICacheService
     {
         var db = _redis.GetDatabase();
 
-        // Lua script to perform atomic sequence-check and update
-        // ARGV[1]: sequence field name
-        // ARGV[2]: new sequence value
-        // Remaining ARGV members: field-value pairs for the hash
         const string luaScript = @"
             local seq = redis.call('HGET', KEYS[1], ARGV[1])
             local newSeq = tonumber(ARGV[2])

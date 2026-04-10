@@ -1,30 +1,28 @@
 using Cobryx.Application.Users.Common;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Users.Queries.GetAvailableRoles;
-
-public record GetAvailableRolesQuery() : IRequest<IEnumerable<RoleDto>>;
-
-public class GetAvailableRolesHandler : IRequestHandler<GetAvailableRolesQuery, IEnumerable<RoleDto>>
+namespace Cobryx.Application.Users.Queries.GetAvailableRoles
 {
-    private readonly IRoleRepository _roleRepository;
+    public record GetAvailableRolesQuery : IRequest<Result<IEnumerable<RoleDto>>>;
 
-    public GetAvailableRolesHandler(IRoleRepository roleRepository)
+    public class GetAvailableRolesHandler(
+        IRoleRepository roleRepository) : IRequestHandler<GetAvailableRolesQuery, Result<IEnumerable<RoleDto>>>
     {
-        _roleRepository = roleRepository;
-    }
+        public async Task<Result<IEnumerable<RoleDto>>> Handle(GetAvailableRolesQuery request,
+            CancellationToken cancellationToken)
+        {
+            IEnumerable<Role> roles = await roleRepository.GetAllAsync(cancellationToken);
 
-    public async Task<IEnumerable<RoleDto>> Handle(GetAvailableRolesQuery request, CancellationToken ct)
-    {
-        var roles = await _roleRepository.GetAllAsync(ct);
+            IEnumerable<RoleDto> result = roles
+                .Where(r => r.Name != Role.Constants.Owner)
+                .Select(r => new RoleDto(r.Id, r.Name, r.Description))
+                .OrderBy(r => r.Name);
 
-        // Exclude Owner from basic role listing for enterprise safety
-        return roles
-            .Where(r => r.Name != Role.Constants.Owner)
-            .Select(r => new RoleDto(r.Id, r.Name, r.Description))
-            .OrderBy(r => r.Name);
+            return Result.Success(result);
+        }
     }
 }

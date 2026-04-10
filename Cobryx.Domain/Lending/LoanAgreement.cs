@@ -85,18 +85,20 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         ProductSnapshot = productSnapshot;
         IsRecoverable = isRecoverable;
         RecoveryValue = recoveryValue;
-        PaymentApplicationPolicyId = paymentApplicationPolicyId ?? Guid.Empty; // Should be set during creation flow
+        PaymentApplicationPolicyId = paymentApplicationPolicyId ?? Guid.Empty;
         IsSigned = false;
     }
 
-    public void Sign()
+    public void Sign() => Sign(DateTime.UtcNow);
+
+    public void Sign(DateTime now)
     {
         if (IsSigned)
             throw new DomainException(DomainErrorCode.Loans.AgreementAlreadySigned);
 
         IsSigned = true;
-        SignedAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        SignedAt = now;
+        UpdateTimestamp(now);
     }
 
     public int GetDaysBetweenPayments()

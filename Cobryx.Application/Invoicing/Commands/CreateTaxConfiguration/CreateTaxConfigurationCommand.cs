@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Interfaces;
@@ -7,11 +8,12 @@ using Concordia;
 
 namespace Cobryx.Application.Invoicing.Commands.CreateTaxConfiguration;
 
+[TenantScoped]
 public record CreateTaxConfigurationCommand(
     string Name,
     decimal Rate,
     bool IsInclusive = true,
-    bool IsDefault = false) : IRequest<Result<Guid>>;
+    bool IsDefault = false) : IRequest<Result<Guid>>, IRequiresTenant;
 
 public class CreateTaxConfigurationHandler(
     ITaxConfigurationRepository taxRepository,

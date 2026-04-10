@@ -10,14 +10,14 @@ namespace Cobryx.Domain.Accounting;
 public class LedgerAccount : BaseEntity
 {
     public Guid TenantId { get; private set; }
-    public string Code { get; private set; } = string.Empty; // e.g., "1010"
-    public string Name { get; private set; } = string.Empty; // e.g., "Cash at Bank"
+    public string Code { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
     public LedgerAccountType Type { get; private set; }
     public LedgerAccountRole Role { get; private set; }
     public string Currency { get; private set; } = string.Empty;
-    public bool IsSystem { get; private set; } // Prevents deletion of core accounts
+    public bool IsSystem { get; private set; }
 
-    private LedgerAccount() { } // EF Core
+    private LedgerAccount() { }
 
     public LedgerAccount(
         Guid tenantId,
@@ -25,7 +25,7 @@ public class LedgerAccount : BaseEntity
         string name,
         LedgerAccountType type,
         LedgerAccountRole role = LedgerAccountRole.None,
-        string currency = "MXN",
+        string? currency = null,
         bool isSystem = false)
     {
         TenantId = tenantId;
@@ -33,14 +33,14 @@ public class LedgerAccount : BaseEntity
         Name = name;
         Type = type;
         Role = role;
-        Currency = currency.ToUpperInvariant();
+        Currency = (currency ?? CobryxDefaults.Currency).ToUpperInvariant();
         IsSystem = isSystem;
     }
 
     public void UpdateDetails(string name, string code)
     {
         if (IsSystem)
-            throw new DomainException(DomainErrorCode.Common.GeneralError); // Or specific "SystemAccountLocked"
+            throw new DomainException(DomainErrorCode.Common.GeneralError);
 
         Name = name;
         Code = code;

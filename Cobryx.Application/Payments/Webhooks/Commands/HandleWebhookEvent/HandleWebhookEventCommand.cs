@@ -1,9 +1,15 @@
 using System.Text.Json;
 
-using Cobryx.Application.Admin.Commands.RecordPayout;
+using Cobryx.Application.Operations.Commands.RecordPayout;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Payments.Commands.HandleChargeback;
-using Cobryx.Application.Payments.Commands.RefundPayment;
+using Cobryx.Application.Payments.Webhooks.Commands.HandleAccountUpdated;
+using Cobryx.Application.Payments.Webhooks.Commands.HandleChargeRefunded;
+using Cobryx.Application.Payments.Webhooks.Commands.HandleCheckoutCompleted;
+using Cobryx.Application.Payments.Webhooks.Commands.HandleInvoicePaid;
 using Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
+using Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentSucceeded;
+using Cobryx.Application.Payments.Webhooks.Commands.HandleSubscriptionChanged;
 using Cobryx.Application.Payments.Webhooks.Common;
 using Cobryx.Application.Payments.Webhooks.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
@@ -15,158 +21,200 @@ using Concordia;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent;
-
-public record HandleWebhookEventCommand(Guid WebhookEventId) : IRequest<Result>;
-
-public class HandleWebhookEventHandler(
-    IWebhookEventRepository webhookEventRepository,
-    IPaymentRepository paymentRepository,
-    ITenantRepository tenantRepository,
-    IUnitOfWork unitOfWork,
-    IEnumerable<IWebhookParser> parsers,
-    ISender sender,
-    ILogger<HandleWebhookEventHandler> logger) : IRequestHandler<HandleWebhookEventCommand, Result>
+namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent
 {
-    private readonly IWebhookEventRepository _webhookEventRepository = webhookEventRepository;
-    private readonly IPaymentRepository _paymentRepository = paymentRepository;
-    private readonly ITenantRepository _tenantRepository = tenantRepository;
-    private readonly IUnitOfWork _unitOfWork = unitOfWork;
-    private readonly IEnumerable<IWebhookParser> _parsers = parsers;
-    private readonly ISender _sender = sender;
-    private readonly ILogger<HandleWebhookEventHandler> _logger = logger;
+    public record HandleWebhookEventCommand(Guid WebhookEventId) : IRequest<Result>;
 
-    public async Task<Result> Handle(HandleWebhookEventCommand request, CancellationToken cancellationToken)
+    public partial class HandleWebhookEventHandler(
+        IWebhookEventRepository webhookEventRepository,
+        IPaymentRepository paymentRepository,
+        ITenantRepository tenantRepository,
+        IEnumerable<IWebhookParser> parsers,
+        ISender sender,
+        IUnitOfWork unitOfWork,
+        IClock clock,
+        ILogger<HandleWebhookEventHandler> logger) : IRequestHandler<HandleWebhookEventCommand, Result>
     {
-        var webhookEvent = await _webhookEventRepository.GetByIdAsync(request.WebhookEventId, cancellationToken);
+        public async Task<Result> Handle(HandleWebhookEventCommand request, CancellationToken cancellationToken)
+        {
+            WebhookEvent? webhookEvent =
+                await webhookEventRepository.GetByIdAsync(request.WebhookEventId, cancellationToken);
 
-        if (webhookEvent == null)
-            return Result.Failure(DomainErrorCode.Webhooks.EventNotFound);
+            if (webhookEvent == null)
+            {
+                return Result.Failure(DomainErrorCode.Webhooks.EventNotFound);
+            }
 
-        if (webhookEvent.Status == WebhookStatus.Processed)
+            if (webhookEvent.Status == WebhookStatus.Processed)
+            {
+                return Result.Success();
+            }
+
+            IWebhookParser? parser = parsers.FirstOrDefault(p =>
+                p.Provider.Equals(webhookEvent.Provider, StringComparison.OrdinalIgnoreCase));
+            if (parser == null)
+            {
+                webhookEvent.MarkAsFailed(DomainErrorCode.Webhooks.ParserNotFound);
+                _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result.Failure(DomainErrorCode.Webhooks.ParserNotFound);
+            }
+
+            webhookEvent.StartProcessing(clock.UtcNow);
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                WebhookParseResult parseResult = await parser.ParseAsync(webhookEvent.RawPayload);
+                Result result = await DispatchInternalCommandAsync(parseResult, cancellationToken);
+
+                if (result.IsSuccess)
+                {
+                    webhookEvent.MarkAsProcessed(clock.UtcNow);
+                }
+                else
+                {
+                    webhookEvent.MarkAsFailed(result.Error ?? CobryxDefaults.UnknownValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogProcessingError(logger, ex, webhookEvent.Id);
+                webhookEvent.MarkAsFailed(ex.Message);
+            }
+
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
-
-        var parser = _parsers.FirstOrDefault(p => p.Provider.Equals(webhookEvent.Provider, StringComparison.OrdinalIgnoreCase));
-        if (parser == null)
-        {
-            webhookEvent.MarkAsFailed(DomainErrorCode.Webhooks.ParserNotFound);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return Result.Failure(DomainErrorCode.Webhooks.ParserNotFound);
         }
 
-        webhookEvent.StartProcessing();
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        try
+        private async Task<Result> DispatchInternalCommandAsync(WebhookParseResult parseResult, CancellationToken ct)
         {
-            var parseResult = await parser.ParseAsync(webhookEvent.RawPayload);
-
-            var result = await DispatchInternalCommandAsync(parseResult, cancellationToken);
-
-            if (result.IsSuccess)
+            if (parseResult.Data is not JsonElement data)
             {
-                webhookEvent.MarkAsProcessed();
+                return Result.Failure(DomainErrorCode.Webhooks.InvalidDataFormat);
             }
-            else
+
+            var eventId = parseResult.ExternalTransactionId ?? "unknown";
+
+            return parseResult.InternalEventType switch
             {
-                webhookEvent.MarkAsFailed(result.Error ?? CobryxDefaults.UnknownValue);
+                // Subscription lifecycle
+                WebhookConstants.InternalEvents.CheckoutCompleted
+                    => await sender.Send(new HandleCheckoutCompletedCommand(data, eventId), ct),
+
+                WebhookConstants.InternalEvents.InvoicePaid
+                    => await sender.Send(new HandleInvoicePaidCommand(data, eventId), ct),
+
+                WebhookConstants.InternalEvents.SubscriptionUpdated
+                    => await sender.Send(new HandleSubscriptionChangedCommand(data, eventId, IsDeleted: false), ct),
+
+                WebhookConstants.InternalEvents.SubscriptionDeleted
+                    => await sender.Send(new HandleSubscriptionChangedCommand(data, eventId, IsDeleted: true), ct),
+
+                // Payment processing
+                WebhookConstants.InternalEvents.PaymentSucceeded
+                    => await sender.Send(new HandlePaymentSucceededCommand(data, eventId), ct),
+
+                WebhookConstants.InternalEvents.PaymentFailed
+                    => await sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
+
+                WebhookConstants.InternalEvents.InvoicePaymentFailed
+                    => await sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
+
+                // Refunds & disputes
+                WebhookConstants.InternalEvents.ChargeRefunded
+                    => await sender.Send(new HandleChargeRefundedCommand(data, eventId), ct),
+
+                WebhookConstants.InternalEvents.ChargeDisputeCreated
+                    => await HandleChargebackAsync(parseResult, ct),
+
+                // Payouts
+                WebhookConstants.InternalEvents.PayoutPaid
+                    => await HandlePayoutAsync(parseResult, data, ct),
+
+                WebhookConstants.InternalEvents.PayoutFailed
+                    => await HandlePayoutAsync(parseResult, data, ct),
+
+                // Connect
+                WebhookConstants.InternalEvents.AccountUpdated
+                    => await sender.Send(new HandleAccountUpdatedCommand(data), ct),
+
+                _ => HandleUnknownEvent(parseResult)
+            };
+        }
+
+        /// <summary>
+        /// Handles payout.paid and payout.failed events.
+        /// Resolves tenant by Stripe account ID and records the payout.
+        /// </summary>
+        private async Task<Result> HandlePayoutAsync(WebhookParseResult parseResult, JsonElement data,
+            CancellationToken ct)
+        {
+            var stripeAccountId = parseResult.Metadata != null &&
+                                  parseResult.Metadata.TryGetValue("stripe_account_id", out var accountId)
+                ? accountId
+                : null;
+
+            Guid tenantId = Guid.Empty;
+
+            if (!string.IsNullOrEmpty(stripeAccountId))
+            {
+                Domain.Identity.Tenant? tenant = await tenantRepository.GetByStripeAccountIdAsync(stripeAccountId, ct);
+                tenantId = tenant?.Id ?? Guid.Empty;
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing webhook {Id}", webhookEvent.Id);
-            webhookEvent.MarkAsFailed(ex.Message);
-        }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
+            if (tenantId == Guid.Empty)
+            {
+                LogTenantNotFound(logger, stripeAccountId ?? "Missing");
+                return Result.Failure(DomainErrorCode.Tenant.NotFound);
+            }
 
-    private async Task<Result> DispatchInternalCommandAsync(WebhookParseResult parseResult, CancellationToken ct)
-    {
-        if (parseResult.Data is not JsonElement data)
-        {
-            return Result.Failure(DomainErrorCode.Webhooks.InvalidDataFormat);
+            var amount = data.GetProperty("amount").GetInt64() / 100m;
+            var currency = data.GetProperty("currency").GetString()?.ToUpperInvariant() ?? CobryxDefaults.Currency;
+            var status = data.GetProperty("status").GetString() ?? "unknown";
+
+            RecordPayoutCommand command = new(tenantId, amount, currency,
+                parseResult.ExternalTransactionId ?? "unknown", status);
+            return await sender.Send(command, ct);
         }
 
-        return parseResult.InternalEventType switch
+        /// <summary>
+        /// Handles charge.dispute.created events.
+        /// Looks up the payment by external reference and creates a chargeback record.
+        /// </summary>
+        private async Task<Result> HandleChargebackAsync(WebhookParseResult parseResult, CancellationToken ct)
         {
-            WebhookConstants.InternalEvents.ChargeRefunded => await HandleRefundAsync(parseResult, data, ct),
-            WebhookConstants.InternalEvents.ChargeDisputeCreated => await HandleChargebackAsync(parseResult, ct),
-            WebhookConstants.InternalEvents.PayoutPaid => await HandlePayoutAsync(parseResult, data, ct),
-            WebhookConstants.InternalEvents.PayoutFailed => await HandlePayoutAsync(parseResult, data, ct),
-            WebhookConstants.InternalEvents.PaymentFailed => await _sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
-            WebhookConstants.InternalEvents.InvoicePaymentFailed => await _sender.Send(new HandlePaymentFailedCommand(data, parseResult.InternalEventType), ct),
-            _ => await HandleUnknownEventAsync(parseResult)
-        };
-    }
+            if (string.IsNullOrEmpty(parseResult.ExternalTransactionId))
+            {
+                return Result.Failure(DomainErrorCode.Webhooks.MissingTransactionId);
+            }
 
-    private async Task<Result> HandlePayoutAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)
-    {
-        var stripeAccountId = (parseResult.Metadata != null && parseResult.Metadata.TryGetValue("stripe_account_id", out var accountId))
-            ? accountId
-            : null;
+            Domain.Payments.Payment? payment =
+                await paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
+            if (payment == null)
+            {
+                return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
+            }
 
-        var tenantId = Guid.Empty;
-
-        if (!string.IsNullOrEmpty(stripeAccountId))
-        {
-            var tenant = await _tenantRepository.GetByStripeAccountIdAsync(stripeAccountId, ct);
-            tenantId = tenant?.Id ?? Guid.Empty;
+            HandleChargebackCommand command = new(payment.Id);
+            return await sender.Send(command, ct);
         }
 
-        if (tenantId == Guid.Empty)
+        private Result HandleUnknownEvent(WebhookParseResult parseResult)
         {
-            _logger.LogWarning("Could not resolve Tenant for Stripe Account {StripeAccountId}", stripeAccountId ?? "Missing");
-            return Result.Failure(DomainErrorCode.Tenant.NotFound);
+            LogUnknownEvent(logger, parseResult.InternalEventType);
+            return Result.Failure(DomainErrorCode.System.NotAllowed);
         }
 
-        decimal amount = data.GetProperty("amount").GetInt64() / 100m;
-        string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
-        string status = data.GetProperty("status").GetString() ?? "unknown";
+        [LoggerMessage(Level = LogLevel.Error,
+            Message = "Error processing webhook {WebhookEventId}")]
+        private static partial void LogProcessingError(ILogger logger, Exception ex, Guid webhookEventId);
 
-        var command = new RecordPayoutCommand(
-            tenantId,
-            amount,
-            currency,
-            parseResult.ExternalTransactionId ?? "unknown",
-            status);
+        [LoggerMessage(Level = LogLevel.Warning,
+            Message = "Could not resolve Tenant for Stripe Account {StripeAccountId}")]
+        private static partial void LogTenantNotFound(ILogger logger, string stripeAccountId);
 
-        return await _sender.Send(command, ct);
-    }
-
-    private async Task<Result> HandleRefundAsync(WebhookParseResult parseResult, JsonElement data, CancellationToken ct)
-    {
-        if (string.IsNullOrEmpty(parseResult.ExternalTransactionId))
-            return Result.Failure(DomainErrorCode.Webhooks.MissingTransactionId);
-
-        var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
-        if (payment == null)
-            return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
-
-        decimal amount = data.GetProperty("amount_refunded").GetInt64() / 100m;
-        string currency = data.GetProperty("currency").GetString()?.ToUpper() ?? CobryxDefaults.Currency;
-
-        var command = new RefundPaymentCommand(payment.Id, amount, currency);
-        return await _sender.Send(command, ct);
-    }
-
-    private async Task<Result> HandleChargebackAsync(WebhookParseResult parseResult, CancellationToken ct)
-    {
-        if (string.IsNullOrEmpty(parseResult.ExternalTransactionId))
-            return Result.Failure(DomainErrorCode.Webhooks.MissingTransactionId);
-
-        var payment = await _paymentRepository.GetByReferenceAsync(parseResult.ExternalTransactionId, ct);
-        if (payment == null)
-            return Result.Failure(DomainErrorCode.Invoicing.PaymentNotFound);
-
-        var command = new HandleChargebackCommand(payment.Id);
-        return await _sender.Send(command, ct);
-    }
-
-    private Task<Result> HandleUnknownEventAsync(WebhookParseResult parseResult)
-    {
-        _logger.LogWarning("Translation for event type {InternalEventType} not implemented.", parseResult.InternalEventType);
-        return Task.FromResult(Result.Failure(DomainErrorCode.System.NotAllowed));
+        [LoggerMessage(Level = LogLevel.Warning,
+            Message = "Translation for event type {InternalEventType} not implemented")]
+        private static partial void LogUnknownEvent(ILogger logger, string internalEventType);
     }
 }

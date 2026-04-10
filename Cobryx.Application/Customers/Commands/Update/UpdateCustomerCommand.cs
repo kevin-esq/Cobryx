@@ -1,7 +1,9 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Exceptions.Customers;
 using Cobryx.Domain.Exceptions.Tenants;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
 using Cobryx.Domain.Shared;
 using Cobryx.Domain.ValueObjects;
 
@@ -9,6 +11,7 @@ using Concordia;
 
 namespace Cobryx.Application.Customers.Commands.Update;
 
+[TenantScoped]
 public record UpdateCustomerCommand(
     Guid Id,
     string FirstName,
@@ -16,26 +19,18 @@ public record UpdateCustomerCommand(
     string Phone,
     string Email,
     Address? Address = null,
-    IdentityDocument? Document = null) : IRequest<Result>;
+    IdentityDocument? Document = null) : IRequest<Result>, IRequiresTenant;
 
-public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Result>
+public class UpdateCustomerHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
+    : IRequestHandler<UpdateCustomerCommand, Result>
 {
-    private readonly ICustomerRepository _customerRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public UpdateCustomerHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
-    {
-        _customerRepository = customerRepository;
-        _tenantProvider = tenantProvider;
-    }
-
     public async Task<Result> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
             throw new TenantContextMissingException();
 
-        var customer = await _customerRepository.GetByIdAsync(request.Id, cancellationToken);
+        Customer? customer = await customerRepository.GetByIdAsync(request.Id, cancellationToken);
 
         if (customer == null || customer.TenantId != tenantId.Value)
         {
@@ -44,7 +39,7 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
 
         if (customer.Phone != request.Phone)
         {
-            var existing = await _customerRepository.GetByPhoneAsync(tenantId.Value, request.Phone, cancellationToken);
+            Customer? existing = await customerRepository.GetByPhoneAsync(tenantId.Value, request.Phone, cancellationToken);
             if (existing != null)
             {
                 throw new DuplicateCustomerException();
@@ -59,7 +54,7 @@ public class UpdateCustomerHandler : IRequestHandler<UpdateCustomerCommand, Resu
             request.Address,
             request.Document);
 
-        await _customerRepository.UpdateAsync(customer, cancellationToken);
+        await customerRepository.UpdateAsync(customer, cancellationToken);
 
         return Result.Success();
     }

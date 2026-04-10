@@ -1,61 +1,46 @@
-using System.Text.Json;
+using Asp.Versioning;
 
-using Cobryx.Application.Common.Interfaces;
+using Cobryx.Api.Outcomes;
+using Cobryx.Application.Collections.Queries.GetPriorityCases;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-using StackExchange.Redis;
+namespace Cobryx.Api.Controllers.V1.Collections;
 
-namespace Cobryx.Api.Controllers.v1.Collections;
-
+/// <summary>
+/// Provides access to the collections priority queue and case management.
+/// </summary>
 [ApiController]
-[Route("api/v1/collections")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/collections")]
 [Authorize]
-public class CollectionsController : ControllerBase
+[Tags("Collections")]
+public class CollectionsController(ISender sender) : CobryxBaseController(sender)
 {
-    private readonly IConnectionMultiplexer _redis;
-    private readonly ITenantProvider _tenantProvider;
-
-    public CollectionsController(IConnectionMultiplexer redis, ITenantProvider tenantProvider)
-    {
-        _redis = redis;
-        _tenantProvider = tenantProvider;
-    }
-
+    /// <summary>
+    /// Returns the top priority collection cases from the Redis queue.
+    /// </summary>
+    /// <param name="limit">Maximum number of cases to return (default 100).</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Cases are sorted by priority score (highest first).
+    /// Served from Redis with O(log n) complexity.
+    ///
+    /// Possible Outcomes:
+    /// - COLLECTIONS.CASES.RETRIEVED: Priority cases retrieved successfully.
+    /// </remarks>
+    /// <response code="200">List of priority collection cases.</response>
+    /// <response code="401">Missing or invalid authentication.</response>
     [HttpGet("cases")]
-    public async Task<IActionResult> GetPriorityCases([FromQuery] int limit = 100)
+    [ProducesResponseType(typeof(ApiSuccessResponse<List<PriorityCaseDto>>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    public async Task<IActionResult> GetPriorityCases([FromQuery] int limit = 100, CancellationToken ct = default)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
-
-        var db = _redis.GetDatabase();
-        var priorityKey = $"portfolio:collections:priority:{tenantId}";
-
-        // Fetch top N loanIds by priority score (descending)
-        var topEntries = await db.SortedSetRangeByRankWithScoresAsync(priorityKey, 0, limit - 1, Order.Descending);
-
-        var results = new List<object>();
-
-        foreach (var entry in topEntries)
-        {
-            var loanId = entry.Element.ToString();
-            var dataKey = $"portfolio:collections:data:{loanId}";
-
-            var metadataJson = await db.HashGetAsync(dataKey, "info");
-
-            if (metadataJson.HasValue)
-            {
-                var metadata = JsonSerializer.Deserialize<object>(metadataJson!);
-                results.Add(new
-                {
-                    priorityScore = entry.Score,
-                    data = metadata
-                });
-            }
-        }
-
-        return Ok(new { cases = results });
+        Result<List<PriorityCaseDto>> result = await Sender.Send(new GetPriorityCasesQuery(limit), ct);
+        return HandleResult(result, CollectionsOutcomes.CasesRetrieved);
     }
 }

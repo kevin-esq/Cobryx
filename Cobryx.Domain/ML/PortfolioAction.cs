@@ -1,5 +1,8 @@
 namespace Cobryx.Domain.ML;
 
+/// <summary>
+/// Action for portfolio optimization.
+/// </summary>
 public class PortfolioAction
 {
     public decimal CreditMultiplier { get; set; }

@@ -26,7 +26,6 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
         {
             await _context.SaveChangesAsync(default);
 
-            // Record to Prometheus
             if (metrics.TTWSeconds.HasValue)
             {
                 _metrics.RecordTimeToWow(metrics.TTWSeconds.Value, outcomeCode);
@@ -43,8 +42,6 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
 
     public void RecordFeatureActivation(Guid tenantId, string featureName)
     {
-        // For feature activation heatmap, we use low-cardinality signals
-        // We'll emit this to Prometheus directly
         _metrics.RecordFeatureActivation(featureName);
     }
 
@@ -61,7 +58,6 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
         metrics.MarkConvertedToPaid(DateTime.UtcNow);
         await _context.SaveChangesAsync(default);
 
-        // Signal conversion to Prometheus
         _metrics.SubscriptionUpgrades.Add(1, new KeyValuePair<string, object?>("tier", "paid"));
     }
 
@@ -76,16 +72,13 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
     {
         var metrics = await GetOrCreateMetricsAsync(tenantId);
 
-        // Record the history snapshot
         var history = new TenantMRRHistory(tenantId, newMrr, changeType, reason);
         _context.Set<TenantMRRHistory>().Add(history);
 
-        // Update the current metrics
         metrics.RecordMRRTransition(newMrr, changeType);
 
         await _context.SaveChangesAsync(default);
 
-        // Emit signal to Prometheus
         _metrics.SubscriptionUpgrades.Add(1, new KeyValuePair<string, object?>("tier", changeType.ToString()));
     }
 
@@ -98,11 +91,6 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
 
         foreach (var tenant in activeTenants)
         {
-            // Simple Engagement Logic (0-100)
-            // Points based on: 
-            // - Recency (Last 7 days activity)
-            // - Wow Achievement
-            // - Paid status
             int score = 0;
 
             var daysSinceLastActivity = (now - tenant.LastActivityAt).TotalDays;
@@ -131,7 +119,6 @@ public class GrowthIntelligenceService : IGrowthIntelligenceService
 
         if (metrics == null)
         {
-            // If it doesn't exist, we try to find the tenant to get its creation date
             var tenant = await _context.Tenants.IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.Id == tenantId);
 

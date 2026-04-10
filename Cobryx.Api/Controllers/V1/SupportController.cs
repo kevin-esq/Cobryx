@@ -17,12 +17,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/support/tickets")]
-[Tags("Support & Operations")]
-public class SupportController : CobryxBaseController
+[Tags("Operations")]
+public class SupportController(ISender sender) : CobryxBaseController(sender)
 {
-    public SupportController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Submits a new technical or operational support ticket.
@@ -43,7 +40,6 @@ public class SupportController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> Create([FromBody] CreateSupportTicketRequest request)
     {
-        // Intentional Mapping: Public Request -> Internal Domain Command
         var command = new Application.Support.Commands.Create.CreateSupportTicketCommand(
             request.Subject,
             request.Description,

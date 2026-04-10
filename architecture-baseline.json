@@ -1,0 +1,29 @@
+{
+    "version": "2.1.0",
+    "lastUpdated": "2026-04-10",
+    "updatedBy": "architecture-tests",
+    "baselines": {
+        "namingViolations": 4,
+        "tenantPolicyGaps": 100,
+        "controllersWithoutMediatR": 0,
+        "minimumArchitectureScore": 55
+    },
+    "targets": {
+        "tenantPolicyCoverage": 30,
+        "architectureScore": 60,
+        "targetDate": "2026-Q3"
+    },
+    "tenantScopedRequests": [
+        "GetPortfolioSummaryQuery",
+        "GetPortfolioAgingQuery",
+        "GetPriorityCasesQuery"
+    ],
+    "moduleOwnership": {
+        "Analytics": "platform-team",
+        "Collections": "platform-team",
+        "Payments": "payments-team",
+        "Customers": "crm-team",
+        "Billing": "billing-team"
+    },
+    "notes": "Update baselines ONLY when intentionally paying down debt. Commit must include [ARCH_BASELINE] tag."
+}

@@ -13,19 +13,18 @@ public class LoanDelinquencyState : BaseEntity
     public DateTime? OldestUnpaidDueDate { get; private set; }
     public DelinquencyStage Stage { get; private set; }
     public DateTime LastEvaluatedAt { get; private set; }
-    public DateTime? LastEvaluatedDate { get; private set; } // Daily watermark
+    public DateTime? LastEvaluatedDate { get; private set; }
 
-    // Navigation
     public virtual Loan Loan { get; private set; } = null!;
 
     private LoanDelinquencyState() { }
 
-    public LoanDelinquencyState(Guid loanId)
+    public LoanDelinquencyState(Guid loanId, DateTime? now = null)
     {
         LoanId = loanId;
         Stage = DelinquencyStage.Current;
         DaysPastDue = 0;
-        LastEvaluatedAt = DateTime.UtcNow;
+        LastEvaluatedAt = now ?? DateTime.UtcNow;
     }
 
     public void UpdateState(int dpd, DateTime? oldestDueDate, DelinquencyStage stage, DateTime evaluatedAt, DateTime evaluatedDate)

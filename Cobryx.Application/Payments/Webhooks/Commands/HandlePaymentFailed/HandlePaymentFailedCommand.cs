@@ -7,6 +7,8 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
+using static Cobryx.Domain.Shared.CobryxDefaults;
+
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
 
 public record HandlePaymentFailedCommand(JsonElement StripeObject, string EventType) : IRequest<Result>;
@@ -24,12 +26,10 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
 
     public async Task<Result> Handle(HandlePaymentFailedCommand request, CancellationToken ct)
     {
-        // 1. Extract CustomerId from Metadata
         if (!request.StripeObject.TryGetProperty("metadata", out var metadata) ||
             !metadata.TryGetProperty("CustomerId", out var customerIdProp) ||
             !Guid.TryParse(customerIdProp.GetString(), out var customerId))
         {
-            // Fallback: Try to find customer by StripeCustomerId if metadata is missing
             if (request.StripeObject.TryGetProperty("customer", out var stripeCustIdProp))
             {
                 var stripeCustId = stripeCustIdProp.GetString();
@@ -44,23 +44,22 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             }
         }
 
-        // 2. Extract Amount and Failure Code
         decimal amount = 0;
-        string currency = "USD";
+        string currency = Currency;
         string? failureCode = null;
         string description = "Payment attempt failed.";
 
         if (request.EventType.Contains("invoice"))
         {
             amount = request.StripeObject.GetProperty("amount_due").GetInt64() / 100m;
-            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? "USD";
+            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? Currency;
             failureCode = "invoice_payment_failed";
             description = $"Invoice {request.StripeObject.GetProperty("number").GetString()} payment failed.";
         }
-        else // PaymentIntent
+        else
         {
             amount = request.StripeObject.GetProperty("amount").GetInt64() / 100m;
-            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? "USD";
+            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? Currency;
 
             if (request.StripeObject.TryGetProperty("last_payment_error", out var errorProp))
             {
@@ -68,7 +67,6 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             }
         }
 
-        // 3. Delegate to Orchestration Engine
         var stripePaymentIntentId = request.StripeObject.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
 
         return await _orchestrationService.HandlePaymentFailureAsync(
@@ -78,7 +76,7 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
             currency,
             description,
             stripePaymentIntentId,
-            null, // PaymentLinkId resolved internally if needed
+            null,
             ct);
     }
 }

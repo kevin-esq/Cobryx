@@ -23,8 +23,5 @@ public class PaymentAllocation : BaseEntity
         IsReversed = false;
     }
 
-    public void MarkAsReversed()
-    {
-        IsReversed = true;
-    }
+    public void MarkAsReversed() => IsReversed = true;
 }

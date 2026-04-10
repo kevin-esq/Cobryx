@@ -1,90 +1,105 @@
 using Asp.Versioning;
 
+using Cobryx.Api.Outcomes;
 using Cobryx.Application.Analytics.Models;
-using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Analytics.Queries.GetPortfolioAging;
+using Cobryx.Application.Analytics.Queries.GetPortfolioSummary;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Cobryx.Api.Controllers.v1.Analytics;
+namespace Cobryx.Api.Controllers.V1.Analytics;
 
+/// <summary>
+/// Provides real-time portfolio analytics served from Redis (&lt;10ms).
+/// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/portfolio")]
 [Authorize]
-public class PortfolioController(ITenantProvider tenantProvider, ICacheService cache) : ControllerBase
+[Tags("Operations")]
+public class PortfolioController(ISender sender) : CobryxBaseController(sender)
 {
-    private readonly ITenantProvider _tenantProvider = tenantProvider;
-    private readonly ICacheService _cache = cache;
-
     /// <summary>
-    /// Returns the 12-metric fintech profile for the portfolio. (Served from Redis &lt;10ms)
+    /// Returns the 12-metric fintech profile for the portfolio.
     /// </summary>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Served from Redis with &lt;10ms latency.
+    ///
+    /// Possible Outcomes:
+    /// - ANALYTICS.PORTFOLIO.SUMMARY_RETRIEVED: Metrics retrieved successfully.
+    /// </remarks>
+    /// <response code="200">Portfolio summary metrics.</response>
+    /// <response code="404">Metrics not generated yet for today.</response>
     [HttpGet("summary")]
-    [ProducesResponseType(typeof(PortfolioSummaryCache), 200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> GetSummary()
+    [ProducesResponseType(typeof(ApiSuccessResponse<PortfolioSummaryCache>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
-
-        var key = $"portfolio:summary:{tenantId}";
-        var summary = await _cache.GetAsync<PortfolioSummaryCache>(key);
-
-        if (summary == null)
-            return NotFound(new { Message = "Portfolio metrics not generated yet for today." });
-
-        return Ok(summary);
+        Result<PortfolioSummaryCache> result = await Sender.Send(new GetPortfolioSummaryQuery(), ct);
+        return HandleResult(result, AnalyticsOutcomes.Portfolio.SummaryRetrieved);
     }
 
     /// <summary>
-    /// Returns the standard aging buckets (Current, 1-30, 31-60, 61-90, 90+ DPD). (Served from Redis &lt;10ms)
+    /// Returns the standard aging buckets (Current, 1-30, 31-60, 61-90, 90+ DPD).
     /// </summary>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Served from Redis with &lt;10ms latency.
+    ///
+    /// Possible Outcomes:
+    /// - ANALYTICS.PORTFOLIO.AGING_RETRIEVED: Aging buckets retrieved successfully.
+    /// </remarks>
+    /// <response code="200">Portfolio aging buckets.</response>
+    /// <response code="404">Aging metrics not generated yet for today.</response>
     [HttpGet("aging")]
-    [ProducesResponseType(typeof(PortfolioAgingCache), 200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> GetAging()
+    [ProducesResponseType(typeof(ApiSuccessResponse<PortfolioAgingCache>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetAging(CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
-
-        var key = $"portfolio:aging:{tenantId}";
-        var aging = await _cache.GetAsync<PortfolioAgingCache>(key);
-
-        if (aging == null)
-            return NotFound(new { Message = "Portfolio aging metrics not generated yet for today." });
-
-        return Ok(aging);
+        Result<PortfolioAgingCache> result = await Sender.Send(new GetPortfolioAgingQuery(), ct);
+        return HandleResult(result, AnalyticsOutcomes.Portfolio.AgingRetrieved);
     }
 
     /// <summary>
-    /// Ultra-fast endpoint for the home dashboard returning the 4 most critical business operations metrics.
+    /// Ultra-fast endpoint returning the 4 most critical business KPIs.
     /// </summary>
-    [HttpGet("../dashboard/kpis")] // Maps to /api/v1/dashboard/kpis
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(404)]
-    public async Task<IActionResult> GetCoreKpis()
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - ANALYTICS.PORTFOLIO.KPIS_RETRIEVED: Core KPIs retrieved successfully.
+    /// </remarks>
+    /// <response code="200">Core business KPIs.</response>
+    /// <response code="404">KPIs not generated yet for today.</response>
+    [HttpGet("kpis")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<CoreKpisDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetCoreKpis(CancellationToken ct)
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
+        Result<PortfolioSummaryCache> result = await Sender.Send(new GetPortfolioSummaryQuery(), ct);
 
-        var key = $"portfolio:summary:{tenantId}";
-        var summary = await _cache.GetAsync<PortfolioSummaryCache>(key);
+        if (!result.IsSuccess || result.Value == null)
+            return HandleResult(result, AnalyticsOutcomes.Portfolio.KpisRetrieved);
 
-        if (summary == null)
-            return NotFound(new { Message = "KPIs not generated yet for today." });
+        var kpis = new CoreKpisDto(
+            result.Value.TotalOutstanding,
+            result.Value.NplRatio,
+            result.Value.RevenueMTD,
+            result.Value.CollectionEfficiency);
 
-        var kpis = new
-        {
-            totalOutstanding = summary.TotalOutstanding,
-            nplRatio = summary.NplRatio,
-            revenueMTD = summary.RevenueMTD,
-            collectionEfficiency = summary.CollectionEfficiency
-        };
-
-        return Ok(kpis);
+        return Success(kpis, AnalyticsOutcomes.Portfolio.KpisRetrieved);
     }
 }
+
+public record CoreKpisDto(
+    decimal TotalOutstanding,
+    decimal NplRatio,
+    decimal RevenueMTD,
+    decimal CollectionEfficiency);

@@ -1,29 +1,42 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.ML;
+using Asp.Versioning;
+
+using Cobryx.Api.Outcomes;
+using Cobryx.Application.ML.Commands.ExecuteReplay;
+using Cobryx.Domain.Shared;
+
 using Concordia;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cobryx.Api.Controllers;
 
+/// <summary>
+/// Provides time-travel replay capabilities for risk analysis.
+/// </summary>
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/risk")]
 [Authorize]
-public class TimeTravelController(
-    ICobryxDbContext db, 
-    ReplayEngine replayEngine, 
-    ISender sender) : CobryxBaseController(sender)
+[Tags("ML & Risk")]
+public class TimeTravelController(ISender sender) : CobryxBaseController(sender)
 {
-    [HttpPost("/api/v1/risk/replay/{id}")]
-    public async Task<IActionResult> Replay(Guid id)
+    /// <summary>
+    /// Replays a historical snapshot for risk analysis.
+    /// </summary>
+    /// <param name="id">The snapshot identifier.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - ML.REPLAY.COMPLETED: Replay executed successfully.
+    /// - ML.REPLAY.DRIFT_DETECTED: Replay completed with drift.
+    /// </remarks>
+    [HttpPost("replay/{id:guid}")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<ReplayResultDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> Replay(Guid id, CancellationToken ct)
     {
-        var snapshot = await db.ReplaySnapshots.FindAsync(id);
-        if (snapshot == null) return NotFound();
-
-        var result = await replayEngine.ReplayAsync(snapshot);
-
-        // Optionally, one could save the diffs back to DB or an audit log.
-        // db.ReplaySnapshots.Update(result);
-        // await db.SaveChangesAsync();
-
-        return Ok(result);
+        Result<ReplayResultDto> result = await Sender.Send(new ExecuteReplayCommand(id), ct);
+        return HandleResult(result, MlOutcomes.Replay.Completed);
     }
 }

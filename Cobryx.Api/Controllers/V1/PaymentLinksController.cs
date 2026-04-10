@@ -16,12 +16,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/payment-links")]
 [Authorize]
-[Tags("Payments & Collection")]
-public class PaymentLinksController : CobryxBaseController
+[Tags("Payments")]
+public class PaymentLinksController(ISender sender) : CobryxBaseController(sender)
 {
-    public PaymentLinksController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Generates a new secure payment link for a customer or specific loan.
@@ -31,8 +28,6 @@ public class PaymentLinksController : CobryxBaseController
     {
         var result = await Sender.Send(command);
 
-        // Note: Success returns the RAW token which the tenant should 
-        // immediately send to the customer (via email/SMS).
         return HandleResult(result, Outcome.FromExternal("PAYMENT_LINK.CREATE"));
     }
 }

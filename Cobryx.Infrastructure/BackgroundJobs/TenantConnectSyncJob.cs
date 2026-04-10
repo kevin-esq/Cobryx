@@ -30,7 +30,6 @@ public class TenantConnectSyncJob
     {
         var db = (DbContext)_unitOfWork;
 
-        // 1. Find all tenants with a Connect Account
         var connectedTenants = await db.Set<Tenant>()
             .Where(t => t.StripeAccountId != null && t.StripeAccountId != "")
             .ToListAsync(ct);

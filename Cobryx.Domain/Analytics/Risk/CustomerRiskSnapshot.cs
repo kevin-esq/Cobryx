@@ -13,13 +13,13 @@ public class CustomerRiskSnapshot
 
     private CustomerRiskSnapshot() { }
 
-    public CustomerRiskSnapshot(System.Guid customerId, decimal riskScore, decimal behaviorScore, decimal pd)
+    public CustomerRiskSnapshot(System.Guid customerId, decimal riskScore, decimal behaviorScore, decimal pd, DateTime? now = null)
     {
         Id = Guid.NewGuid();
         CustomerId = customerId;
         RiskScore = riskScore;
         BehaviorScore = behaviorScore;
         ProbabilityOfDefault = pd;
-        RecordedAt = DateTime.UtcNow;
+        RecordedAt = now ?? DateTime.UtcNow;
     }
 }

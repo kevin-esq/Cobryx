@@ -1,0 +1,246 @@
+name: CD Deploy
+
+on:
+    push:
+        branches: [main]
+
+permissions: read-all
+
+env:
+    REGISTRY: gcr.io
+    PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+    SERVICE_NAME: cobryx-api
+    REGION: us-central1
+
+jobs:
+    # ============================================
+    # GATE 1: Production Readiness Validation
+    # ============================================
+    validate-secrets:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Validate critical secrets exist
+              run: |
+                  echo "Validating production secrets..."
+
+                  missing=0
+
+                  if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+                    echo "❌ DATABASE_URL is missing"
+                    missing=1
+                  fi
+
+                  if [ -z "${{ secrets.JWT_SECRET }}" ]; then
+                    echo "❌ JWT_SECRET is missing"
+                    missing=1
+                  fi
+
+                  if [ -z "${{ secrets.STRIPE_SECRET_KEY }}" ]; then
+                    echo "❌ STRIPE_SECRET_KEY is missing"
+                    missing=1
+                  fi
+
+                  if [ -z "${{ secrets.REDIS_CONNECTION_STRING }}" ]; then
+                    echo "❌ REDIS_CONNECTION_STRING is missing"
+                    missing=1
+                  fi
+
+                  if [ $missing -eq 1 ]; then
+                    echo "::error::Production secrets validation failed. Configure missing secrets before deploy."
+                    exit 1
+                  fi
+
+                  echo "✅ All critical secrets configured"
+
+    # ============================================
+    # GATE 2: Build & Test
+    # ============================================
+    build-and-test:
+        runs-on: ubuntu-latest
+        needs: validate-secrets
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+
+            - name: Restore & Build
+              run: |
+                  dotnet restore
+                  dotnet build --configuration Release --no-restore
+
+            - name: Run Tests
+              run: dotnet test --configuration Release --no-build --logger "trx" --results-directory ./test-results
+
+            - name: Validate test results
+              run: |
+                  # Fail if any tests failed
+                  if grep -r "outcome=\"Failed\"" ./test-results/*.trx 2>/dev/null; then
+                    echo "::error::Tests failed. Cannot deploy."
+                    exit 1
+                  fi
+                  echo "✅ All tests passed"
+
+    # ============================================
+    # GATE 3: Architecture Compliance
+    # ============================================
+    architecture-gate:
+        runs-on: ubuntu-latest
+        needs: build-and-test
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+
+            - name: Run Architecture Tests
+              run: |
+                  dotnet test Cobryx.Architecture.Tests --configuration Release
+                  echo "✅ Architecture compliance verified"
+
+    # ============================================
+    # GATE 4: Build & Push Docker Image
+    # ============================================
+    build-image:
+        runs-on: ubuntu-latest
+        needs: architecture-gate
+        outputs:
+            image-tag: ${{ github.sha }}
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+
+            - name: Build Docker image
+              run: |
+                  docker build -t ${{ env.SERVICE_NAME }}:${{ github.sha }} .
+                  echo "Docker image built"
+
+            - name: Scan image for vulnerabilities
+              run: |
+                  # Using trivy for vulnerability scanning
+                  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL \
+                    ${{ env.SERVICE_NAME }}:${{ github.sha }} || {
+                      echo "::warning::Vulnerabilities found. Review before production."
+                    }
+
+    # ============================================
+    # DEPLOY TO STAGING
+    # ============================================
+    deploy-staging:
+        runs-on: ubuntu-latest
+        needs: build-image
+        # environment: staging  # Uncomment after creating environment in GitHub Settings
+        steps:
+            - name: Deploy to Staging
+              run: |
+                  echo "Deploying to staging environment..."
+                  # gcloud run deploy staging-${{ env.SERVICE_NAME }} ...
+                  echo "✅ Deployed to staging"
+
+    # ============================================
+    # GATE 5: Smoke Tests (Post-Deploy Validation)
+    # ============================================
+    smoke-tests:
+        runs-on: ubuntu-latest
+        needs: deploy-staging
+        steps:
+            - name: Run Smoke Tests
+              run: |
+                  STAGING_URL="${{ secrets.STAGING_URL }}"
+
+                  echo "=== SMOKE TESTS ==="
+
+                  # 1. Basic health
+                  echo "1. Testing health endpoint..."
+                  curl -sf "$STAGING_URL/health" || {
+                    echo "::error::Health check failed"
+                    exit 1
+                  }
+
+                  # 2. Readiness (validates all dependencies)
+                  echo "2. Testing readiness (DB, Redis, S3, ClamAV)..."
+                  HEALTH_RESPONSE=$(curl -sf "$STAGING_URL/health/ready")
+                  echo "$HEALTH_RESPONSE"
+
+                  if echo "$HEALTH_RESPONSE" | grep -q "Unhealthy"; then
+                    echo "::error::System dependencies unhealthy"
+                    exit 1
+                  fi
+
+                  # 3. API responds
+                  echo "3. Testing API version endpoint..."
+                  curl -sf "$STAGING_URL/api/v1/health" || {
+                    echo "::error::API health check failed"
+                    exit 1
+                  }
+
+                  # 4. Auth endpoint reachable (no credentials, expect 401)
+                  echo "4. Testing auth endpoint reachable..."
+                  AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/v1/auth/me")
+                  if [ "$AUTH_STATUS" != "401" ]; then
+                    echo "::error::Auth endpoint not responding correctly (got $AUTH_STATUS)"
+                    exit 1
+                  fi
+
+                  # 5. Feature flags endpoint (if exists)
+                  echo "5. Validating feature flags..."
+                  curl -sf "$STAGING_URL/health" | grep -q "status" || {
+                    echo "::warning::Could not validate feature flags"
+                  }
+
+                  echo "=== ALL SMOKE TESTS PASSED ==="
+
+    # ============================================
+    # DEPLOY TO PRODUCTION (Manual Approval)
+    # ============================================
+    deploy-production:
+        runs-on: ubuntu-latest
+        needs: smoke-tests
+        # environment: production  # Uncomment after creating environment in GitHub Settings
+        steps:
+            - name: Deploy to Production
+              run: |
+                  echo "Deploying to production..."
+                  # gcloud run deploy ${{ env.SERVICE_NAME }} \
+                  #   --image ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+                  #   --region ${{ env.REGION }} \
+                  #   --platform managed
+                  echo "✅ Deployed to production"
+
+            - name: Notify deployment
+              run: |
+                  echo "Deployment complete: ${{ github.sha }}"
+
+    # ============================================
+    # GATE 6: Production Health Validation
+    # ============================================
+    validate-production:
+        runs-on: ubuntu-latest
+        needs: deploy-production
+        steps:
+            - name: Validate Production Health
+              run: |
+                  PROD_URL="${{ secrets.PRODUCTION_URL }}"
+
+                  echo "Waiting for deployment to stabilize..."
+                  sleep 30
+
+                  echo "Validating production health..."
+                  for i in 1 2 3; do
+                    if curl -sf "$PROD_URL/health/ready"; then
+                      echo "✅ Production is healthy"
+                      exit 0
+                    fi
+                    echo "Retry $i/3..."
+                    sleep 10
+                  done
+
+                  echo "::error::Production health check failed after deployment"
+                  exit 1

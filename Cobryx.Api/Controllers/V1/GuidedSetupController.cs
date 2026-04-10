@@ -13,11 +13,8 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/guided-setup")]
-public class GuidedSetupController : CobryxBaseController
+public class GuidedSetupController(ISender sender) : CobryxBaseController(sender)
 {
-    public GuidedSetupController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Retrieves the 'Next Best Action' for the current tenant to drive onboarding.

@@ -43,7 +43,6 @@ public class GrowthIntelligenceEventHandler :
             await _growthService.MarkOnboardingCompletedAsync(notification.DomainEvent.TenantId);
         }
 
-        // Track milestone activation heatmap
         _growthService.RecordFeatureActivation(notification.DomainEvent.TenantId, notification.DomainEvent.MilestoneCode);
     }
 }

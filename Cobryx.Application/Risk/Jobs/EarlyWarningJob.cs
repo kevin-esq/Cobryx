@@ -1,33 +1,28 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Decision;
 using Cobryx.Domain.Analytics.Risk;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Risk.Jobs;
-
-public class EarlyWarningJob
+namespace Cobryx.Application.Risk.Jobs
 {
-    private readonly ICobryxDbContext _db;
-    private readonly ProbabilityOfDefaultCalculator _pdCalculator;
-    private readonly DecisionService _decisionService;
-    private readonly ILogger<EarlyWarningJob> _logger;
-
-    public EarlyWarningJob(
+    public partial class EarlyWarningJob(
         ICobryxDbContext db,
         ProbabilityOfDefaultCalculator pdCalculator,
         DecisionService decisionService,
+        IClock clock,
         ILogger<EarlyWarningJob> logger)
     {
-        _db = db;
-        _pdCalculator = pdCalculator;
-        _decisionService = decisionService;
-        _logger = logger;
-    }
+        private readonly ICobryxDbContext _db = db;
+        private readonly ProbabilityOfDefaultCalculator _pdCalculator = pdCalculator;
+        private readonly DecisionService _decisionService = decisionService;
+        private readonly IClock _clock = clock;
+        private readonly ILogger<EarlyWarningJob> _logger = logger;
 
-    public async Task RunAsync(CancellationToken ct = default)
-    {
-        var sql = @"
+        public async Task RunAsync(CancellationToken ct = default)
+        {
+            var sql = @"
 WITH latest_snapshots AS (
     SELECT
         s.""TenantId"",
@@ -42,7 +37,7 @@ WITH latest_snapshots AS (
             ORDER BY s.""RecordedAt"" DESC
         ) AS rn
     FROM ""LoanBalanceSnapshots"" s
-    INNER JOIN ""Loans"" l ON s.""LoanId"" = l.""Id""
+    INNER JOIN ""LendingInstruments"" l ON s.""LoanId"" = l.""Id""
     WHERE s.""RecordedAt"" >= NOW() - INTERVAL '1 day'
       AND s.""DaysPastDue"" <= 0
 )
@@ -50,97 +45,109 @@ SELECT ""TenantId"", ""LoanId"", ""CustomerId"", ""PrincipalBalance"", ""Interes
 FROM latest_snapshots
 WHERE rn = 1;";
 
-        var snapshots = await _db.LatestLoanSnapshots
-            .FromSqlRaw(sql)
-            .ToListAsync(ct);
+            var snapshots = await _db.LatestLoanSnapshots
+                .FromSqlRaw(sql)
+                .ToListAsync(ct);
 
-        var events = new List<RiskEvent>();
-        var threshold = 0.6m;
-        var pdCache = new Dictionary<Guid, decimal>();
+            var events = new List<RiskEvent>();
+            var threshold = 0.6m;
+            var pdCache = new Dictionary<Guid, decimal>();
 
-        foreach (var s in snapshots)
-        {
-            if (s.DaysPastDue > 0) continue;
-
-            if (!pdCache.TryGetValue(s.LoanId, out var currentPD))
+            foreach (var s in snapshots)
             {
-                var context = new RiskContext
+                if (s.DaysPastDue > 0)
                 {
-                    DaysPastDue = s.DaysPastDue,
-                    Outstanding = s.Outstanding,
-                    CreditLimit = s.Outstanding == 0 ? 1m : (s.Outstanding * 2m), // safe fallback 200% util
-                    Utilization = 1m, // the factor eval internally will compute it based on CreditLimit / Outstanding
-                    PaymentDelayDays = 0,
-                    PreviousPaymentDelayDays = 0,
-                    PreviousUtilization = 0
-                };
+                    continue;
+                }
 
-                currentPD = _pdCalculator.Calculate(context);
-                pdCache[s.LoanId] = currentPD;
+                if (!pdCache.TryGetValue(s.LoanId, out var currentPD))
+                {
+                    var context = new RiskContext
+                    {
+                        DaysPastDue = s.DaysPastDue,
+                        Outstanding = s.Outstanding,
+                        CreditLimit = s.Outstanding == 0 ? 1m : (s.Outstanding * 2m),
+                        Utilization = 1m,
+                        PaymentDelayDays = 0,
+                        PreviousPaymentDelayDays = 0,
+                        PreviousUtilization = 0
+                    };
+
+                    currentPD = _pdCalculator.Calculate(context);
+                    pdCache[s.LoanId] = currentPD;
+                }
+
+                var previousPD = currentPD * 0.9m;
+                var deltaUtilization = 0m;
+                var deltaPaymentDelay = 0m;
+
+                var rawDeterioration = currentPD - previousPD + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
+                var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
+
+                if (currentPD < threshold && deterioration < 0.1m)
+                {
+                    continue;
+                }
+
+                var decision = await _decisionService.EvaluateAsync(s.CustomerId, new Domain.Decision.DecisionContext
+                {
+                    Credit = new Domain.Decision.CreditContext
+                    {
+                        ProbabilityOfDefault = currentPD,
+                        BehaviorScore = 1m,
+                        MonthlyIncomeEstimate = 10000m,
+                        Utilization = 0.5m
+                    },
+                    Pricing = new Domain.Decision.PricingContext
+                    {
+                        ProbabilityOfDefault = currentPD
+                    },
+                    Fraud = new Domain.Decision.FraudContext
+                    {
+                        TransactionsLastHour = 2,
+                        AmountVelocity = 500m,
+                        GeoAnomaly = false
+                    }
+                }, ct: ct);
+
+                LogDecisionRendered(_logger, s.LoanId, decision.CreditLimit, decision.InterestRate, decision.FraudScore, decision.Approved);
+
+                var exists = await _db.RiskEvents.AnyAsync(x =>
+                    x.CustomerId == s.CustomerId &&
+                    x.EventType == RiskEventType.BalanceIncrease &&
+                    x.OccurredAt >= _clock.UtcNow.AddHours(-6),
+                    ct);
+
+                if (exists)
+                {
+                    continue;
+                }
+
+                LogEarlyWarningTriggered(_logger, s.LoanId, currentPD, deterioration);
+
+                var riskEvent = new RiskEvent(
+                    s.CustomerId,
+                    RiskEventType.BalanceIncrease,
+                    currentPD
+                );
+
+                events.Add(riskEvent);
             }
 
-            var previousPD = currentPD * 0.9m; // stub for true historical pd
-            var deltaUtilization = 0m; 
-            var deltaPaymentDelay = 0m;
-
-            var rawDeterioration = (currentPD - previousPD) + (deltaUtilization * 0.5m) + (deltaPaymentDelay / 30m * 0.5m);
-            var deterioration = Math.Clamp(rawDeterioration, 0m, 1m);
-
-            // thresholds configurable per tenant later
-            if (currentPD < threshold && deterioration < 0.1m) continue;
-
-            // Trigger Phase 10.5 Decision Hook
-            var decision = await _decisionService.EvaluateAsync(s.CustomerId, new Cobryx.Domain.Decision.DecisionContext
+            if (events.Count > 0)
             {
-                Credit = new Cobryx.Domain.Decision.CreditContext
-                {
-                    ProbabilityOfDefault = currentPD,
-                    BehaviorScore = 1m, // Assume baseline behavior for now
-                    MonthlyIncomeEstimate = 10000m, // Placeholder
-                    Utilization = 0.5m // Placeholder or calculate based on s.Outstanding / s.CreditLimit
-                },
-                Pricing = new Cobryx.Domain.Decision.PricingContext
-                {
-                    ProbabilityOfDefault = currentPD
-                },
-                Fraud = new Cobryx.Domain.Decision.FraudContext
-                {
-                    TransactionsLastHour = 2,
-                    AmountVelocity = 500m,
-                    GeoAnomaly = false
-                }
-            });
+                await using var tx = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
 
-            _logger.LogInformation("Decision rendered for Anomaly Loan {LoanId}: Limit {Limit}, Rate {Rate}, Fraud {Fraud}, Approved {Approved}",
-                s.LoanId, decision.CreditLimit, decision.InterestRate, decision.FraudScore, decision.Approved);
+                _db.RiskEvents.AddRange(events);
+                _ = await _db.SaveChangesAsync(ct);
 
-            var exists = await _db.RiskEvents.AnyAsync(x =>
-                x.CustomerId == s.CustomerId &&
-                x.EventType == RiskEventType.BalanceIncrease &&
-                x.OccurredAt >= DateTime.UtcNow.AddHours(-6),
-                ct);
-
-            if (exists) continue;
-
-            _logger.LogInformation("EarlyWarning triggered for Loan {LoanId} with PD {PD} and Deterioration {Deterioration}", s.LoanId, currentPD, deterioration);
-
-            var riskEvent = new RiskEvent(
-                s.CustomerId, // Fixed CustomerId matching!
-                RiskEventType.BalanceIncrease,
-                currentPD
-            );
-
-            events.Add(riskEvent);
+                await tx.CommitAsync(ct);
+            }
         }
+        [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Decision rendered for Anomaly Loan {LoanId}: Limit {Limit}, Rate {Rate}, Fraud {Fraud}, Approved {Approved}")]
+        static partial void LogDecisionRendered(ILogger logger, Guid loanId, decimal limit, decimal rate, decimal fraud, bool approved);
 
-        if (events.Count > 0)
-        {
-            await using var tx = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
-
-            _db.RiskEvents.AddRange(events);
-            await _db.SaveChangesAsync(ct);
-
-            await tx.CommitAsync(ct);
-        }
+        [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "EarlyWarning triggered for Loan {LoanId} with PD {PD} and Deterioration {Deterioration}")]
+        static partial void LogEarlyWarningTriggered(ILogger logger, Guid loanId, decimal pd, decimal deterioration);
     }
 }

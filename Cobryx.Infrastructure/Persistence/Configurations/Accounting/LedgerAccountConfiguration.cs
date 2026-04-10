@@ -29,7 +29,6 @@ public class LedgerAccountConfiguration : IEntityTypeConfiguration<LedgerAccount
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        // Unique index per tenant
         builder.HasIndex(x => new { x.TenantId, x.Code })
             .IsUnique();
 

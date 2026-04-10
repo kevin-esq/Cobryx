@@ -26,13 +26,11 @@ public interface ICobryxDbContext
     public DbSet<TenantMRRHistory> TenantMRRHistory { get; }
     public DbSet<AdminActionAudit> AdminActionAudits { get; }
 
-    // Analytics
     public DbSet<Domain.Analytics.LatestLoanSnapshot> LatestLoanSnapshots { get; }
     public DbSet<Domain.Analytics.LoanBalanceSnapshot> LoanBalanceSnapshots { get; }
     public DbSet<Cobryx.Domain.Analytics.TenantPortfolioAggregate> TenantPortfolioAggregates { get; }
     public DbSet<Domain.Analytics.PortfolioMetricsDaily> PortfolioMetricsDaily { get; }
 
-    // Lending
     public DbSet<Loan> Loans { get; }
     public DbSet<Installment> Installments { get; }
     public DbSet<LoanDelinquencyState> LoanDelinquencyStates { get; }
@@ -45,7 +43,6 @@ public interface ICobryxDbContext
     public DbSet<AccruedCharge> AccruedCharges { get; }
     public DbSet<LoanPaymentAllocation> LoanPaymentAllocations { get; }
 
-    // Payments & Accounting
     public DbSet<Payment> Payments { get; }
     public DbSet<PaymentMethod> PaymentMethods { get; }
     public DbSet<LedgerAccount> LedgerAccounts { get; }
@@ -64,7 +61,6 @@ public interface ICobryxDbContext
     public DbSet<CollectionAgent> CollectionAgents { get; }
     public DbSet<CollectionOutcome> CollectionOutcomes { get; }
 
-    // Risk
     public DbSet<CustomerRiskProfile> CustomerRiskProfiles { get; }
     public DbSet<RiskEvent> RiskEvents { get; }
     public DbSet<Domain.Decision.DecisionSnapshot> DecisionSnapshots { get; }
@@ -77,6 +73,9 @@ public interface ICobryxDbContext
     public DbSet<Domain.ML.Experience> Experiences { get; }
     public DbSet<Domain.ML.DecisionDistributionLog> DecisionDistributionLogs { get; }
     public DbSet<Domain.ML.ReplaySnapshot> ReplaySnapshots { get; }
+    public DbSet<Domain.Decision.ProductionSnapshot> ProductionSnapshots { get; }
+    public DbSet<Domain.Decision.RegressionReport> RegressionReports { get; }
+    public DbSet<Domain.Decision.ShadowDriftEvent> ShadowDriftEvents { get; }
 
     public DbSet<TEntity> Set<TEntity>() where TEntity : class;
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken);

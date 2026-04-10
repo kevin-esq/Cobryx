@@ -107,7 +107,7 @@ public class TenantGrowthMetrics
 
     public ChurnRisk ChurnRisk { get; private set; }
 
-    private TenantGrowthMetrics() { } // EF Core
+    private TenantGrowthMetrics() { }
 
     public TenantGrowthMetrics(Guid tenantId, DateTime createdAt)
     {
@@ -119,7 +119,7 @@ public class TenantGrowthMetrics
     public bool RecordWow(string outcomeCode, DateTime occurredAt)
     {
         if (FirstWowAt != null)
-            return false; // First-Wow Guard
+            return false;
 
         FirstWowAt = occurredAt;
         WowOutcomeCode = outcomeCode;
@@ -157,10 +157,11 @@ public class TenantGrowthMetrics
         }
     }
 
-    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType)
+    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType) => RecordMRRTransition(newMrr, changeType, DateTime.UtcNow);
+
+    public void RecordMRRTransition(decimal newMrr, MRRChangeType changeType, DateTime now)
     {
         var delta = newMrr - CurrentMRR;
-        var now = DateTime.UtcNow;
 
         if (newMrr > 0 && FirstPaidAt == null)
         {
@@ -183,12 +184,12 @@ public class TenantGrowthMetrics
         }
 
         CurrentMRR = newMrr;
-        LifetimeRevenue += Math.Max(0, delta); // Simple approximation for lifetime
+        LifetimeRevenue += Math.Max(0, delta);
 
         IsChurned = newMrr == 0 && changeType == MRRChangeType.Churn;
         if (IsChurned)
         {
-            ChurnedAt = DateTime.UtcNow;
+            ChurnedAt = now;
             ChurnType = ChurnType.Voluntary;
             ChurnRisk = ChurnRisk.Churned;
         }
@@ -198,7 +199,6 @@ public class TenantGrowthMetrics
     {
         EngagementScore = Math.Clamp(score, 0, 100);
 
-        // Map score to categorical risk
         ChurnRisk = EngagementScore switch
         {
             < 20 => ChurnRisk.High,

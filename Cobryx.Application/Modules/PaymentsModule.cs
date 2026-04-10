@@ -8,7 +8,6 @@ public static class PaymentsModule
 {
     public static IServiceCollection AddPaymentsModule(this IServiceCollection services)
     {
-        // Application Services
         services.AddScoped<PaymentLinkReconciliationService>();
 
         return services;

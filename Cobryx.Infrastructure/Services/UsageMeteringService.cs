@@ -47,7 +47,6 @@ public class UsageMeteringService : IUsageMeteringService
             subscription?.Plan?.MaxUsers ?? 0,
             subscription?.Plan?.MaxLoans ?? 0);
 
-        // Store in cache for 5 minutes. Snapshots are reactive-invalidated by Domain Events.
         await _cacheService.SetAsync(cacheKey, snapshot, TimeSpan.FromMinutes(5), ct);
 
         return snapshot;

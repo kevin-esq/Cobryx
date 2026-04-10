@@ -1,4 +1,5 @@
 using Cobryx.Domain.Decision;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

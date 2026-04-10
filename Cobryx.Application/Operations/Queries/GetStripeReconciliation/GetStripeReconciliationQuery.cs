@@ -1,0 +1,76 @@
+using Cobryx.Application.Common.Interfaces;
+using Cobryx.Domain.Shared;
+
+using Concordia;
+
+using Microsoft.EntityFrameworkCore;
+
+namespace Cobryx.Application.Operations.Queries.GetStripeReconciliation;
+
+public record GetStripeReconciliationQuery(Guid? TenantId = null) : IRequest<Result<StripeReconciliationDto>>;
+
+public record StripeReconciliationDto(
+    decimal LedgerCashBalance,
+    decimal StripeAvailableBalance,
+    decimal StripePendingBalance,
+    decimal TotalStripeBalance,
+    decimal Discrepancy,
+    string Status,
+    string? StripeAccountId);
+
+public class GetStripeReconciliationHandler : IRequestHandler<GetStripeReconciliationQuery, Result<StripeReconciliationDto>>
+{
+    private readonly ICobryxDbContext _dbContext;
+    private readonly IStripeService _stripeService;
+
+    public GetStripeReconciliationHandler(ICobryxDbContext dbContext, IStripeService stripeService)
+    {
+        _dbContext = dbContext;
+        _stripeService = stripeService;
+    }
+
+    public async Task<Result<StripeReconciliationDto>> Handle(GetStripeReconciliationQuery request, CancellationToken ct)
+    {
+        var tenantId = request.TenantId ?? CobryxDefaults.PlatformTenantId;
+        string? stripeAccountId = null;
+
+        if (tenantId != CobryxDefaults.PlatformTenantId)
+        {
+            var tenant = await _dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+            if (tenant == null)
+                return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Tenant.NotFound);
+            stripeAccountId = tenant.StripeAccountId;
+
+            if (string.IsNullOrEmpty(stripeAccountId))
+                return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Common.GeneralError);
+        }
+
+        var cashAccount = await _dbContext.LedgerAccounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == "1010", ct);
+
+        if (cashAccount == null)
+            return Result.Failure<StripeReconciliationDto>(DomainErrorCode.Common.GeneralError);
+
+        var ledgerBalance = await _dbContext.LedgerEntries
+            .AsNoTracking()
+            .Where(e => e.AccountId == cashAccount.Id)
+            .SumAsync(e => e.Debit - e.Credit, ct);
+
+        var (available, pending) = await _stripeService.GetBalanceAsync(stripeAccountId, ct);
+        var totalStripe = available + pending;
+
+        var discrepancy = ledgerBalance - totalStripe;
+        var status = Math.Abs(discrepancy) < 0.01m ? "SYNCED" : "DISCREPANCY";
+
+        return Result.Success(new StripeReconciliationDto(
+            LedgerCashBalance: ledgerBalance,
+            StripeAvailableBalance: available,
+            StripePendingBalance: pending,
+            TotalStripeBalance: totalStripe,
+            Discrepancy: discrepancy,
+            Status: status,
+            StripeAccountId: stripeAccountId
+        ));
+    }
+}

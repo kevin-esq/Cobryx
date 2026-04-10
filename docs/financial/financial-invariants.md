@@ -25,3 +25,8 @@ Every ledger entry must have a unique, monotonically increasing `JournalSequence
 
 **Invariant:**
 `Entry[N].SequenceId < Entry[N+1].SequenceId`
+
+## 5. Rounding Rules (The "Centavo" Differential)
+In payment systems, rounding is the biggest source of mathematical drift.
+* **Methodology:** We explicitly use **Banker's Rounding** (`MidpointRounding.ToEven`) for all financial fractional computations unless superseded by a specific legal requirement.
+* **Adjustment Account:** When dividing a balance into multiple installments (e.g., 100 / 3 = 33.33 + 33.33 + 33.33 = 99.99), the differential (the "centavo") must not be lost or randomly assigned. It must be allocated systematically to a designated "Cent Adjustment" account or wrapped into the final installment.

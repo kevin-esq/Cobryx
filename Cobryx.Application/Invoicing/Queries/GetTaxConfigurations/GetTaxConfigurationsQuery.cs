@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -6,7 +7,8 @@ using Concordia;
 
 namespace Cobryx.Application.Invoicing.Queries.GetTaxConfigurations;
 
-public record GetTaxConfigurationsQuery() : IRequest<Result<IReadOnlyList<TaxDto>>>;
+[TenantScoped]
+public record GetTaxConfigurationsQuery() : IRequest<Result<IReadOnlyList<TaxDto>>>, IRequiresTenant;
 
 public record TaxDto(Guid Id, string Name, decimal Rate, bool IsInclusive, bool IsDefault);
 

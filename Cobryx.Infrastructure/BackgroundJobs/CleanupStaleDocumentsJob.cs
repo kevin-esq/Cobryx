@@ -41,7 +41,6 @@ public class CleanupStaleDocumentsJob
         var db = (DbContext)_unitOfWork;
         var now = _clock.UtcNow;
 
-        // 1. Abandoned: PendingScan > 1 hour → mark ScanFailed
         var abandoned = await db.Set<DocumentMetadata>()
             .Where(d => d.ScanStatus == ScanStatus.PendingScan && d.CreatedAt < now - AbandonThreshold)
             .ToListAsync(ct);
@@ -52,12 +51,11 @@ public class CleanupStaleDocumentsJob
             _logger.LogWarning("Document {DocumentId} marked ScanFailed due to timeout", doc.Id);
         }
 
-        // 2. Stale: ScanFailed → reset for retry (one attempt)
         var staleForRetry = await db.Set<DocumentMetadata>()
             .Where(d => d.ScanStatus == ScanStatus.ScanFailed
                      && d.ScannedAtUtc != null
                      && d.ScannedAtUtc < now - RetryThreshold
-                     && d.CreatedAt > now - AbandonThreshold) // Only retry recent ones
+                     && d.CreatedAt > now - AbandonThreshold)
             .ToListAsync(ct);
 
         foreach (var doc in staleForRetry)
@@ -66,7 +64,6 @@ public class CleanupStaleDocumentsJob
             _logger.LogInformation("Document {DocumentId} reset for scan retry", doc.Id);
         }
 
-        // 3. Infected cleanup: verify blob actually deleted
         var infected = await db.Set<DocumentMetadata>()
             .Where(d => d.ScanStatus == ScanStatus.Infected)
             .ToListAsync(ct);
@@ -79,7 +76,6 @@ public class CleanupStaleDocumentsJob
             }
             catch
             {
-                // Already deleted or storage unreachable — acceptable
             }
         }
 

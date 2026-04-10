@@ -1,6 +1,7 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
 
 using Concordia;
 
@@ -16,13 +17,10 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/financial/taxes")]
-[Tags("Financial Core")]
-public class TaxesController : CobryxBaseController
+[Route("api/v{version:apiVersion}/tax-configurations")]
+[Tags("Tax")]
+public class TaxesController(ISender sender, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
-    public TaxesController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Lists all tax configurations and jurisdictional rates established for the tenant.
@@ -54,6 +52,26 @@ public class TaxesController : CobryxBaseController
     }
 
     /// <summary>
+    /// Retrieves a single tax configuration by its identifier.
+    /// </summary>
+    [HttpGet("{id}", Name = "GetTax")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<TaxConfigurationContract>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetTax(Guid id)
+    {
+        var result = await Sender.Send(new Application.Invoicing.Queries.GetTaxConfigurations.GetTaxConfigurationsQuery());
+        if (!result.IsSuccess || result.Value == null)
+            return HandleResult(result);
+
+        var tax = result.Value.FirstOrDefault(t => t.Id == id);
+        if (tax == null)
+            return NotFound();
+
+        return Success(new TaxConfigurationContract(tax.Id, tax.Name, tax.Rate, tax.IsInclusive, tax.IsDefault),
+            InvoicingOutcomes.Taxes.SearchCompleted);
+    }
+
+    /// <summary>
     /// Establishes a new taxation configuration (e.g., VAT, Sales Tax) with specific rules.
     /// </summary>
     /// <param name="request">Tax configuration including descriptive label and statutory rate.</param>
@@ -75,7 +93,6 @@ public class TaxesController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 409)]
     public async Task<IActionResult> CreateTax([FromBody] CreateTaxRequest request)
     {
-        // Intentional Mapping: Public Intent -> Internal Domain Implementation
         var command = new Application.Invoicing.Commands.CreateTaxConfiguration.CreateTaxConfigurationCommand(
             request.Name,
             request.Rate,
@@ -83,7 +100,7 @@ public class TaxesController : CobryxBaseController
             request.IsDefault);
 
         var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/taxes/{result.Value}", result, InvoicingOutcomes.Taxes.Created);
+        return HandleCreatedResult(linkGenerator.GetTaxUrl(result.Value), result, InvoicingOutcomes.Taxes.Created);
     }
 
     /// <summary>
