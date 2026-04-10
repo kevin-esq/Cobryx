@@ -33,6 +33,7 @@ namespace Cobryx.Domain.Decision
         public decimal ResultCreditLimit { get; private set; }
         public decimal ResultInterestRate { get; private set; }
 
+        // ReSharper disable once UnusedMember.Local — Required by EF Core
         private ProductionSnapshot() { }
 
         public ProductionSnapshot(

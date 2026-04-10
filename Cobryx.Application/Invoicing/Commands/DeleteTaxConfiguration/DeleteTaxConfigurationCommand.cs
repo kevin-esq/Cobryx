@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -6,7 +7,8 @@ using Concordia;
 
 namespace Cobryx.Application.Invoicing.Commands.DeleteTaxConfiguration;
 
-public record DeleteTaxConfigurationCommand(Guid Id) : IRequest<Result>;
+[TenantScoped]
+public record DeleteTaxConfigurationCommand(Guid Id) : IRequest<Result>, IRequiresTenant;
 
 public class DeleteTaxConfigurationHandler : IRequestHandler<DeleteTaxConfigurationCommand, Result>
 {

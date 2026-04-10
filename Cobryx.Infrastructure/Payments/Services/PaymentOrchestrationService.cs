@@ -21,6 +21,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
     private readonly IStripeService _stripeService;
     private readonly ISender _sender;
     private readonly CobryxMetrics _metrics;
+    private readonly IClock _clock;
     private readonly ILogger<PaymentOrchestrationService> _logger;
 
     public PaymentOrchestrationService(
@@ -28,12 +29,14 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
         IStripeService stripeService,
         ISender sender,
         CobryxMetrics metrics,
+        IClock clock,
         ILogger<PaymentOrchestrationService> logger)
     {
         _dbContext = dbContext;
         _stripeService = stripeService;
         _sender = sender;
         _metrics = metrics;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -120,7 +123,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
 
                     if (link != null)
                     {
-                        link.RecordRecoveryAttempt();
+                        link.RecordRecoveryAttempt(_clock.UtcNow);
                         _metrics.RecordRecoveryAttempt(currentAttempt, "success");
                         _metrics.RecordRecoveryRevenue((double)amount, currency);
                         await _dbContext.SaveChangesAsync(ct);
@@ -139,7 +142,7 @@ public class PaymentOrchestrationService : IPaymentOrchestrationService
 
                     if (link != null)
                     {
-                        link.RecordRecoveryFailure(stripeFailureCode ?? "unknown_error");
+                        link.RecordRecoveryFailure(stripeFailureCode ?? "unknown_error", _clock.UtcNow);
                         _metrics.RecordRecoveryAttempt(link.RecoveryAttemptCount, "failure", stripeFailureCode);
                         await _dbContext.SaveChangesAsync(ct);
                     }

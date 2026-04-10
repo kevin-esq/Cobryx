@@ -1,5 +1,8 @@
 namespace Cobryx.Domain.ML;
 
+/// <summary>
+/// Feature vector for ML model input.
+/// </summary>
 public class FeatureVector
 {
     public decimal Utilization { get; set; }

@@ -122,4 +122,56 @@ public static class PipelineBehaviors
             return true;
         }
     }
+
+    /// <summary>
+    /// Pipeline behavior that validates tenant context is present for requests that require it.
+    /// Requests can opt-in by implementing <see cref="IRequiresTenant"/>.
+    /// </summary>
+    public class TenantValidation<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
+    {
+        private readonly ITenantProvider _tenantProvider;
+        private readonly ILogger<TenantValidation<TRequest, TResponse>> _logger;
+
+        public TenantValidation(ITenantProvider tenantProvider, ILogger<TenantValidation<TRequest, TResponse>> logger)
+        {
+            _tenantProvider = tenantProvider;
+            _logger = logger;
+        }
+
+        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        {
+            if (request is IRequiresTenant)
+            {
+                var tenantId = _tenantProvider.GetTenantId();
+                if (tenantId == null || tenantId == Guid.Empty)
+                {
+                    _logger.LogWarning("Tenant context missing for request {RequestType}", typeof(TRequest).Name);
+                    return CreateFailureResult();
+                }
+            }
+
+            return await next(cancellationToken);
+        }
+
+        private static TResponse CreateFailureResult()
+        {
+            var responseType = typeof(TResponse);
+
+            if (responseType == typeof(Result))
+            {
+                return (TResponse)(object)Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+            }
+
+            if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(Result<>))
+            {
+                var innerType = responseType.GetGenericArguments()[0];
+                var failureMethod = typeof(Result).GetMethod("Failure", 1, [typeof(DomainErrorCode)])!
+                    .MakeGenericMethod(innerType);
+                return (TResponse)failureMethod.Invoke(null, [DomainErrorCode.Tenant.ContextMissing])!;
+            }
+
+            throw new InvalidOperationException($"Cannot create failure result for type {responseType}");
+        }
+    }
 }

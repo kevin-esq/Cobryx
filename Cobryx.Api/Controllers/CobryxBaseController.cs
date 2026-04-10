@@ -1,3 +1,4 @@
+using Cobryx.Api.Errors.Definitions;
 using Cobryx.Api.Errors.Mappers;
 using Cobryx.Domain.Shared;
 
@@ -9,27 +10,23 @@ namespace Cobryx.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]
-public abstract class CobryxBaseController : ControllerBase
+public abstract class CobryxBaseController(ISender sender) : ControllerBase
 {
-    protected readonly ISender Sender;
+    protected readonly ISender Sender = sender;
 
-    protected CobryxBaseController(ISender sender)
-    {
-        Sender = sender;
-    }
-
-    protected IActionResult HandleResult<T>(Result<T> result, Outcome? outcomeCode = null, int? successStatusCode = null)
+    protected IActionResult HandleResult<T>(Result<T> result, Outcome? outcomeCode = null,
+        int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
-            var response = ApiResponseFactory.Success(result.Value!, outcomeCode);
+            ApiSuccessResponse<T> response = ApiResponseFactory.Success(result.Value!, outcomeCode);
             return successStatusCode.HasValue
                 ? StatusCode(successStatusCode.Value, response)
                 : Ok(response);
         }
 
-        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
-        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
+        DomainErrorCode errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
+        ErrorDefinition errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
 
@@ -40,18 +37,19 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult HandleResult(Result result, Outcome? outcomeCode = null, int? successStatusCode = null)
+    protected IActionResult HandleResult(Result result, Outcome? outcomeCode = null,
+        int? successStatusCode = null)
     {
         if (result.IsSuccess)
         {
-            var response = ApiResponseFactory.Success(outcomeCode: outcomeCode);
+            ApiSuccessResponse response = ApiResponseFactory.Success(outcomeCode: outcomeCode);
             return successStatusCode.HasValue
                 ? StatusCode(successStatusCode.Value, response)
                 : Ok(response);
         }
 
-        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
-        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
+        DomainErrorCode errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
+        ErrorDefinition errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
 
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
 
@@ -62,10 +60,8 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult Success<T>(T data, Outcome? outcomeCode = null)
-    {
-        return Ok(ApiResponseFactory.Success(data, outcomeCode));
-    }
+    protected IActionResult Success<T>(T data, Outcome? outcomeCode = null) =>
+        Ok(ApiResponseFactory.Success(data, outcomeCode));
 
     protected IActionResult HandleDeleteResult(Result result, Outcome? outcomeCode = null)
     {
@@ -74,8 +70,8 @@ public abstract class CobryxBaseController : ControllerBase
             return NoContent();
         }
 
-        var errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
-        var errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
+        DomainErrorCode errorCode = result.Error ?? DomainErrorCode.Common.GeneralError;
+        ErrorDefinition errorDef = ErrorMapper.Map(DomainErrorCode.From(errorCode));
         var statusCode = GetErrorStatusCode(errorCode, errorDef.StatusCode);
 
         return StatusCode(statusCode, ApiResponseFactory.Error(
@@ -85,15 +81,20 @@ public abstract class CobryxBaseController : ControllerBase
             outcomeCode: GetFailureOutcomeCode(outcomeCode)));
     }
 
-    protected IActionResult CreatedResult<T>(string uri, T data, Outcome? outcomeCode = null)
-    {
-        return Created(uri, ApiResponseFactory.Success(data, outcomeCode));
-    }
+    protected IActionResult CreatedResult<T>(string uri, T data, Outcome? outcomeCode = null) =>
+        Created(uri, ApiResponseFactory.Success(data, outcomeCode));
 
-    protected IActionResult HandleCreatedResult<T>(string uri, Result<T> result, Outcome? outcomeCode = null)
+    protected IActionResult HandleCreatedResult<T>(string? uri, Result<T> result, Outcome? outcomeCode = null)
     {
-        _ = uri;
-        return HandleResult(result, outcomeCode, 201);
+        if (!result.IsSuccess)
+        {
+            return HandleResult(result, outcomeCode);
+        }
+
+        ApiSuccessResponse<T> response = ApiResponseFactory.Success(result.Value!, outcomeCode);
+        return string.IsNullOrEmpty(uri)
+            ? StatusCode(201, response)
+            : Created(uri, response);
     }
 
     private static int GetErrorStatusCode(string errorCode, int defaultStatusCode)

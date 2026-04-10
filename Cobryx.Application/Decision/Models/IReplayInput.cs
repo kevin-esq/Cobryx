@@ -24,13 +24,13 @@ namespace Cobryx.Application.Decision.Models
     public class ReplaySnapshotAdapter(ReplaySnapshot snapshot) : IReplayInput
     {
         public Guid CustomerId => snapshot.CustomerId;
-        public string ConfigHash => snapshot.ConfigHash ?? "";
+        public string ConfigHash => snapshot.ConfigHash;
         public string EngineVersion => snapshot.EngineVersion;
-        public string? FeatureVectorJson => snapshot.FeatureVectorJson;
-        public string? MacroStateJson => snapshot.MacroStateJson;
-        public string? PortfolioStateJson => snapshot.PortfolioStateJson;
-        public string? DecisionContextJson => snapshot.DecisionContextJson;
-        public string? ExecutionTraceJson => snapshot.ExecutionTraceJson;
+        public string FeatureVectorJson => snapshot.FeatureVectorJson;
+        public string MacroStateJson => snapshot.MacroStateJson;
+        public string PortfolioStateJson => snapshot.PortfolioStateJson;
+        public string DecisionContextJson => snapshot.DecisionContextJson;
+        public string ExecutionTraceJson => snapshot.ExecutionTraceJson;
         public decimal OriginalLimit => snapshot.OriginalCreditLimit;
         public decimal OriginalRate => snapshot.OriginalInterestRate;
         public int RandomSeed => snapshot.RandomSeed;

@@ -18,8 +18,9 @@ public class CollectionCase
 
     private CollectionCase() { }
 
-    public CollectionCase(Guid tenantId, Guid loanId, int daysPastDue, decimal outstanding)
+    public CollectionCase(Guid tenantId, Guid loanId, int daysPastDue, decimal outstanding, DateTime? now = null)
     {
+        var timestamp = now ?? DateTime.UtcNow;
         Id = Guid.NewGuid();
         TenantId = tenantId;
         LoanId = loanId;
@@ -28,23 +29,28 @@ public class CollectionCase
         Stage = CollectionStage.Current;
         IsClosed = false;
         PriorityScore = 0;
-        CreatedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        CreatedAt = timestamp;
+        UpdatedAt = timestamp;
     }
 
     public void ApplyDecision(CollectionStage newStage, int priorityScore, DateTime? nextActionAt = null)
+        => ApplyDecision(newStage, priorityScore, DateTime.UtcNow, nextActionAt);
+
+    public void ApplyDecision(CollectionStage newStage, int priorityScore, DateTime now, DateTime? nextActionAt = null)
     {
         Stage = newStage;
         PriorityScore = priorityScore;
         NextActionAt = nextActionAt ?? NextActionAt;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = now;
     }
 
-    public void SyncState(int daysPastDue, decimal outstanding)
+    public void SyncState(int daysPastDue, decimal outstanding) => SyncState(daysPastDue, outstanding, DateTime.UtcNow);
+
+    public void SyncState(int daysPastDue, decimal outstanding, DateTime now)
     {
         DaysPastDue = daysPastDue;
         Outstanding = outstanding;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = now;
 
         if (daysPastDue == 0 && outstanding == 0)
         {
@@ -54,22 +60,28 @@ public class CollectionCase
         }
     }
 
-    public void AssignAgent(Guid agentId)
+    public void AssignAgent(Guid agentId) => AssignAgent(agentId, DateTime.UtcNow);
+
+    public void AssignAgent(Guid agentId, DateTime now)
     {
         AssignedAgentId = agentId;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = now;
     }
 
-    public void MarkContacted(DateTime contactTime)
+    public void MarkContacted(DateTime contactTime) => MarkContacted(contactTime, DateTime.UtcNow);
+
+    public void MarkContacted(DateTime contactTime, DateTime now)
     {
         LastContactedAt = contactTime;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = now;
     }
 
-    public void Close()
+    public void Close() => Close(DateTime.UtcNow);
+
+    public void Close(DateTime now)
     {
         IsClosed = true;
         PriorityScore = 0;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = now;
     }
 }

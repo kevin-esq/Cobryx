@@ -1,25 +1,26 @@
+using System.Text.Json;
+
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Decision.Models;
 using Cobryx.Application.ML;
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Application.ML.Models;
-using Cobryx.Domain.Config;
 using Cobryx.Domain.Decision;
 using Cobryx.Domain.ML;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Decision
 {
-    public class DecisionService(
+    public partial class DecisionService(
         DecisionEngine engine,
         ICacheService cache,
         ICobryxDbContext db,
         IFeatureStore featureStore,
         IRiskEvaluator riskEvaluator,
-        ModelRouter router,
+        IModelRouter router,
         IRlEngine rlEngine,
         ScenarioGenerator scenarioGenerator,
         IMonteCarloEvaluator monteCarlo,
@@ -30,7 +31,7 @@ namespace Cobryx.Application.Decision
         IRandomProvider rng,
         ISnapshotStore snapshotStore,
         Interfaces.IShadowComparer shadowComparer,
-        Microsoft.Extensions.Options.IOptions<ShadowConfig> shadowOptions,
+        IOptions<ShadowConfig> shadowOptions,
         IServiceScopeFactory scopeFactory,
         ILogger<DecisionService> logger)
     {
@@ -44,12 +45,15 @@ namespace Cobryx.Application.Decision
             bool isReplay = false,
             CancellationToken ct = default)
         {
-            var key = $"decision:{customerId}";
-            DecisionResult? cached = isReplay ? null : await cache.GetAsync<DecisionResult>(key, ct);
+            var cacheKey = $"decision:{customerId}";
 
-            if (cached != null)
+            if (!isReplay)
             {
-                return cached;
+                var cached = await cache.GetAsync<DecisionResult>(cacheKey, ct);
+                if (cached != null)
+                {
+                    return cached;
+                }
             }
 
             if (overrideSeed.HasValue)
@@ -57,9 +61,8 @@ namespace Cobryx.Application.Decision
                 rng.Reseed(overrideSeed.Value);
             }
 
-            var seed = overrideSeed ?? rng.Next();
 
-            FeatureVector features = overrideFeatures ?? await featureStore.GetAsync(customerId);
+            var features = overrideFeatures ?? await featureStore.GetAsync(customerId);
 
             var (finalPd, prodVersion) = await riskEvaluator.EvaluateRiskAsync(customerId, ctx, features);
 
@@ -72,10 +75,7 @@ namespace Cobryx.Application.Decision
                     MonthlyIncomeEstimate = ctx.Credit.MonthlyIncomeEstimate,
                     Utilization = ctx.Credit.Utilization
                 },
-                Pricing = new PricingContext
-                {
-                    ProbabilityOfDefault = finalPd
-                },
+                Pricing = new PricingContext { ProbabilityOfDefault = finalPd },
                 Fraud = new FraudContext
                 {
                     TransactionsLastHour = ctx.Fraud.TransactionsLastHour,
@@ -87,7 +87,7 @@ namespace Cobryx.Application.Decision
             var trace = new ExecutionTrace();
             trace.AddStep("Risk Evaluation", 0m, finalPd, $"Evaluated PD using {prodVersion}");
 
-            DecisionResult result = engine.Evaluate(engineCtx);
+            var result = engine.Evaluate(engineCtx);
             trace.AddStep("Base Rules Limit", 0m, result.CreditLimit, "Base credit limit evaluated");
             trace.AddStep("Base Rules Rate", 0m, result.InterestRate, "Base interest rate evaluated");
 
@@ -100,26 +100,22 @@ namespace Cobryx.Application.Decision
 
             var creditLimit = result.CreditLimit;
             var interestRate = result.InterestRate;
-
             DecisionAction? action = null;
 
-            PortfolioState globalState = overridePortfolio ?? await portfolioStore.GetGlobalStateAsync();
-            MacroState macro = overrideMacro ?? await macroStore.GetAsync();
+            var globalState = overridePortfolio ?? await portfolioStore.GetGlobalStateAsync();
+            var macro = overrideMacro ?? await macroStore.GetAsync();
 
-            _ = await cache.GetAsync<PortfolioLimits>("portfolio:limits", ct) ??
-                new PortfolioLimits { MaxExposure = RiskLimits.MaxPortfolioExposure };
             var globalCreditMultiplier = 1.0m;
             try
             {
-                PortfolioAction portfolioAction = await portfolioEngine.OptimizeAsync(globalState);
+                var portfolioAction = await portfolioEngine.OptimizeAsync(globalState);
                 globalCreditMultiplier = portfolioAction.CreditMultiplier;
-                var globalRiskTolerance = portfolioAction.RiskTolerance;
                 trace.AddStep("Portfolio Engine", 1.0m, globalCreditMultiplier,
-                    $"Applied macro risk tolerance: {globalRiskTolerance}");
+                    $"Applied macro risk tolerance: {portfolioAction.RiskTolerance}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                /* ignored */
+                LogPortfolioEngineFailed(logger, ex);
             }
 
             if (macro.InterestRate > 0.15m || macro.Inflation > 0.10m)
@@ -147,23 +143,17 @@ namespace Cobryx.Application.Decision
                     };
 
                     var scenarios = scenarioGenerator.Generate(macro);
+                    var mcMetrics = await monteCarlo.EvaluateAsync(payloadFeatures, globalState, macro, scenarios);
 
-                    MonteCarloMetrics mcMetrics = await monteCarlo.EvaluateAsync(
-                        payloadFeatures,
-                        globalState,
-                        macro,
-                        scenarios);
-
-                    creditLimit *= globalCreditMultiplier;
-                    creditLimit *= mcMetrics.VaR95CreditMultiplier;
+                    creditLimit *= globalCreditMultiplier * mcMetrics.VaR95CreditMultiplier;
                     interestRate += mcMetrics.AverageInterestDelta;
 
                     trace.AddStep("Monte Carlo Optimizer", globalCreditMultiplier, creditLimit,
                         $"Optimized via PPO. VaR95 Multiplier: {mcMetrics.VaR95CreditMultiplier}");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    /* fallback to standard logic */
+                    LogMonteCarloFailed(logger, ex);
                 }
             }
             else
@@ -172,6 +162,7 @@ namespace Cobryx.Application.Decision
                 {
                     action = await rlEngine.DecideAsync(state);
                     var oldLimit = creditLimit;
+
                     creditLimit = action.Value switch
                     {
                         DecisionAction.LowRisk => creditLimit * 1.2m,
@@ -189,9 +180,9 @@ namespace Cobryx.Application.Decision
                     trace.AddStep("RL Engine", oldLimit, creditLimit,
                         $"Action {action.Value} applied via Q-Learning");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    /* ignored */
+                    LogRlEngineFailed(logger, ex);
                 }
             }
 
@@ -208,103 +199,136 @@ namespace Cobryx.Application.Decision
 
             if (!isReplay)
             {
-                var outcome = new ModelOutcome(customerId, finalPd, prodVersion, false, 0m);
-                _ = db.ModelOutcomes.Add(outcome);
-
-                var dbSnapshot = new DecisionSnapshot(
-                    customerId,
-                    finalPd,
-                    prodVersion,
-                    result.CreditLimit,
-                    result.InterestRate,
-                    result.FraudScore
-                );
-
-                _ = db.DecisionSnapshots.Add(dbSnapshot);
-
-                _ = db.DecisionOutcomes.Add(new DecisionOutcome
-                {
-                    CustomerId = customerId,
-                    StateKey = state.ToKey(),
-                    Action = action ?? DecisionAction.MediumRisk,
-                    CreditLimit = creditLimit,
-                    InterestRate = interestRate,
-                    ModelVersion = prodVersion
-                });
-
-                var isFull = !result.Approved || result.CreditLimit == 0 || result.InterestRate > 0.20m ||
-                             rng.NextDouble() < 0.05;
-
-                _ = snapshotStore.QueueSnapshotAsync(
-                    customerId,
-                    EngineMetadata.EngineVersion,
-                    EngineMetadata.ConfigHash,
-                    features,
-                    macro,
-                    globalState,
-                    trace,
-                    result,
-                    isFull,
-                    ct);
-
-                _ = await db.SaveChangesAsync(ct);
-
-                await cache.SetAsync(key, result, TimeSpan.FromMinutes(5), ct);
+                await PersistAndCacheAsync(customerId, finalPd, prodVersion, state, action, features, macro,
+                    globalState, trace, result, cacheKey, ct);
             }
 
             if (shadowOptions.Value.Enabled && !isReplay && ShouldRunShadow(customerId))
             {
-                var shadowInput = new ProductionSnapshotAdapter(new ProductionSnapshot(
-                    customerId.ToString(),
-                    EngineMetadata.EngineVersion,
-                    EngineMetadata.ConfigHash,
-                    trace.GetTraceHash(EngineMetadata.EngineVersion),
-                    true,
-                    result.CreditLimit,
-                    result.InterestRate,
-                    JsonSerializer.Serialize(features),
-                    JsonSerializer.Serialize(macro),
-                    JsonSerializer.Serialize(globalState),
-                    JsonSerializer.Serialize(trace),
-                    JsonSerializer.Serialize(result)
-                ));
-
-                _ = Task.Run(async () =>
-                {
-                    using var scope = scopeFactory.CreateScope();
-                    var scopedReplayEngine = scope.ServiceProvider.GetRequiredService<Interfaces.IReplayEngine>();
-                    var scopedMonitor = scope.ServiceProvider.GetRequiredService<Interfaces.IShadowMonitor>();
-                    try
-                    {
-                        var shadowReplayResult = await scopedReplayEngine.ReplayAsync(shadowInput);
-                        var primaryReplayResult = new ReplayResult
-                        {
-                            IsDeterministic = true,
-                            DeltaCreditLimit = 0,
-                            DeltaInterestRate = 0,
-                            OriginalEngineVersion = EngineMetadata.EngineVersion,
-                            ReplayedEngineVersion = EngineMetadata.EngineVersion,
-                            OriginalTraceHash = trace.GetTraceHash(EngineMetadata.EngineVersion),
-                            ReplayedTraceHash = trace.GetTraceHash(EngineMetadata.EngineVersion)
-                        };
-
-                        var shadowResult = shadowComparer.Compare(
-                            Guid.NewGuid(),
-                            primaryReplayResult,
-                            shadowReplayResult,
-                            new DriftToleranceProfile());
-
-                        await scopedMonitor.RecordAsync(shadowResult, engineCtx);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Shadow evaluation failed for {CustomerId}", customerId);
-                    }
-                }, CancellationToken.None);
+                FireShadowEvaluation(customerId, features, macro, globalState, trace, result, engineCtx);
             }
 
             return result;
         }
+
+        private async Task PersistAndCacheAsync(
+            Guid customerId,
+            decimal finalPd,
+            string prodVersion,
+            RlState state,
+            DecisionAction? action,
+            FeatureVector features,
+            MacroState macro,
+            PortfolioState globalState,
+            ExecutionTrace trace,
+            DecisionResult result,
+            string cacheKey,
+            CancellationToken ct)
+        {
+            _ = db.ModelOutcomes.Add(new ModelOutcome(customerId, finalPd, prodVersion, false, 0m));
+
+            _ = db.DecisionSnapshots.Add(new DecisionSnapshot(
+                customerId, finalPd, prodVersion,
+                result.CreditLimit, result.InterestRate, result.FraudScore));
+
+            _ = db.DecisionOutcomes.Add(new DecisionOutcome
+            {
+                CustomerId = customerId,
+                StateKey = state.ToKey(),
+                Action = action ?? DecisionAction.MediumRisk,
+                CreditLimit = result.CreditLimit,
+                InterestRate = result.InterestRate,
+                ModelVersion = prodVersion
+            });
+
+            var isFull = !result.Approved || result.CreditLimit == 0 || result.InterestRate > 0.20m
+                      || rng.NextDouble() < 0.05;
+
+            await snapshotStore.QueueSnapshotAsync(
+                customerId, EngineMetadata.EngineVersion, EngineMetadata.ConfigHash,
+                features, macro, globalState, trace, result, isFull, ct);
+
+            _ = await db.SaveChangesAsync(ct);
+            await cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5), ct);
+        }
+
+        private void FireShadowEvaluation(
+            Guid customerId,
+            FeatureVector features,
+            MacroState macro,
+            PortfolioState globalState,
+            ExecutionTrace trace,
+            DecisionResult result,
+            DecisionContext engineCtx)
+        {
+            var shadowInput = new ProductionSnapshotAdapter(new ProductionSnapshot(
+                customerId.ToString(),
+                EngineMetadata.EngineVersion,
+                EngineMetadata.ConfigHash,
+                trace.GetTraceHash(EngineMetadata.EngineVersion),
+                true,
+                result.CreditLimit,
+                result.InterestRate,
+                JsonSerializer.Serialize(features),
+                JsonSerializer.Serialize(macro),
+                JsonSerializer.Serialize(globalState),
+                JsonSerializer.Serialize(trace),
+                JsonSerializer.Serialize(result)));
+
+            _ = Task.Run(async () =>
+            {
+                using var scope = scopeFactory.CreateScope();
+                var scopedReplayEngine = scope.ServiceProvider.GetRequiredService<Interfaces.IReplayEngine>();
+                var scopedMonitor = scope.ServiceProvider.GetRequiredService<Interfaces.IShadowMonitor>();
+                try
+                {
+                    var shadowReplayResult = await scopedReplayEngine.ReplayAsync(shadowInput);
+                    var primaryReplayResult = new ReplayResult
+                    {
+                        IsDeterministic = true,
+                        DeltaCreditLimit = 0,
+                        DeltaInterestRate = 0,
+                        OriginalEngineVersion = EngineMetadata.EngineVersion,
+                        ReplayedEngineVersion = EngineMetadata.EngineVersion,
+                        OriginalTraceHash = trace.GetTraceHash(EngineMetadata.EngineVersion),
+                        ReplayedTraceHash = trace.GetTraceHash(EngineMetadata.EngineVersion)
+                    };
+
+                    var shadowResult = shadowComparer.Compare(
+                        Guid.NewGuid(), primaryReplayResult, shadowReplayResult, new DriftToleranceProfile());
+
+                    await scopedMonitor.RecordAsync(shadowResult, engineCtx);
+                }
+                catch (Exception ex)
+                {
+                    LogShadowFailed(logger, customerId, ex);
+                }
+            }, CancellationToken.None);
+        }
+
+        [LoggerMessage(
+            EventId = 1,
+            Level = LogLevel.Warning,
+            Message = "Portfolio engine failed; using default credit multiplier.")]
+        static partial void LogPortfolioEngineFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(
+            EventId = 2,
+            Level = LogLevel.Warning,
+            Message = "Monte Carlo optimizer failed; using pre-optimizer values.")]
+        static partial void LogMonteCarloFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(
+            EventId = 3,
+            Level = LogLevel.Warning,
+            Message = "RL engine failed; using base credit limit.")]
+        static partial void LogRlEngineFailed(ILogger logger, Exception ex);
+
+        [LoggerMessage(
+            EventId = 4,
+            Level = LogLevel.Error,
+            Message = "Shadow evaluation failed for {CustomerId}.")]
+        static partial void LogShadowFailed(ILogger logger, Guid customerId, Exception ex);
 
         private bool ShouldRunShadow(Guid id)
         {

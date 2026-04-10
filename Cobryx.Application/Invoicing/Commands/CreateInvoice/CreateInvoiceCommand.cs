@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Interfaces;
@@ -5,71 +6,72 @@ using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Invoicing.Commands.CreateInvoice;
-
-public record CreateInvoiceCommand(
-    Guid CustomerId,
-    DateTime DueDate,
-    List<InvoiceItemRequest> Items,
-    string? Notes = null) : IRequest<Result<Guid>>;
-
-public record InvoiceItemRequest(
-    string Description,
-    decimal Quantity,
-    decimal UnitPrice,
-    Guid? TaxConfigurationId = null);
-
-public class CreateInvoiceHandler(
-    IInvoiceRepository invoiceRepository,
-    ITaxConfigurationRepository taxRepository,
-    ITenantProvider tenantProvider,
-    ICustomerRepository customerRepository,
-    IInvoiceNumberService invoiceNumberService,
-    ISubscriptionEnforcementService subscriptionEnforcement) : IRequestHandler<CreateInvoiceCommand, Result<Guid>>
+namespace Cobryx.Application.Invoicing.Commands.CreateInvoice
 {
-    private readonly IInvoiceRepository _invoiceRepository = invoiceRepository;
-    private readonly ITaxConfigurationRepository _taxRepository = taxRepository;
-    private readonly ITenantProvider _tenantProvider = tenantProvider;
-    private readonly ICustomerRepository _customerRepository = customerRepository;
-    private readonly IInvoiceNumberService _invoiceNumberService = invoiceNumberService;
-    private readonly ISubscriptionEnforcementService _subscriptionEnforcement = subscriptionEnforcement;
+    [TenantScoped]
+    public record CreateInvoiceCommand(
+        Guid CustomerId,
+        DateTime DueDate,
+        List<InvoiceItemRequest> Items,
+        string? Notes = null) : IRequest<Result<Guid>>, IRequiresTenant;
 
-    public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
+    public record InvoiceItemRequest(
+        string Description,
+        decimal Quantity,
+        decimal UnitPrice,
+        Guid? TaxConfigurationId = null);
+
+    public class CreateInvoiceHandler(
+        IInvoiceRepository invoiceRepository,
+        ITaxConfigurationRepository taxRepository,
+        ITenantProvider tenantProvider,
+        ICustomerRepository customerRepository,
+        IInvoiceNumberService invoiceNumberService,
+        IClock clock,
+        ISubscriptionEnforcementService subscriptionEnforcement) : IRequestHandler<CreateInvoiceCommand, Result<Guid>>
     {
-        var tenantId = _tenantProvider.GetTenantId();
-        if (!tenantId.HasValue)
-            return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
-
-        await _subscriptionEnforcement.EnsureWithinInvoicesLimitAsync(tenantId.Value, cancellationToken);
-
-        var customer = await _customerRepository.GetByIdAsync(request.CustomerId, cancellationToken);
-        if (customer == null || customer.TenantId != tenantId.Value)
-            return Result.Failure<Guid>(DomainErrorCode.Customer.NotFound);
-
-        var defaultTax = await _taxRepository.GetDefaultAsync(tenantId.Value, cancellationToken);
-        var invoiceNumber = await _invoiceNumberService.GenerateNextNumberAsync(tenantId.Value);
-
-        var invoice = new Invoice(
-            tenantId.Value,
-            request.CustomerId,
-            invoiceNumber,
-            DateTime.UtcNow,
-            request.DueDate);
-
-        foreach (var itemReq in request.Items)
+        public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
         {
-            var taxConfig = itemReq.TaxConfigurationId.HasValue
-                ? await _taxRepository.GetByIdAsync(itemReq.TaxConfigurationId.Value, cancellationToken)
-                : defaultTax;
+            Guid? tenantId = tenantProvider.GetTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Result.Failure<Guid>(DomainErrorCode.Tenant.ContextMissing);
+            }
 
-            decimal rate = taxConfig?.Rate ?? 0;
-            bool inclusive = taxConfig?.IsInclusive ?? false;
+            await subscriptionEnforcement.EnsureWithinInvoicesLimitAsync(tenantId.Value, cancellationToken);
 
-            invoice.AddItem(itemReq.Description, itemReq.Quantity, itemReq.UnitPrice, rate, inclusive);
+            Domain.Lending.Customer? customer =
+                await customerRepository.GetByIdAsync(request.CustomerId, cancellationToken);
+            if (customer == null || customer.TenantId != tenantId.Value)
+            {
+                return Result.Failure<Guid>(DomainErrorCode.Customer.NotFound);
+            }
+
+            TaxConfiguration? defaultTax = await taxRepository.GetDefaultAsync(tenantId.Value, cancellationToken);
+            var invoiceNumber = await invoiceNumberService.GenerateNextNumberAsync(tenantId.Value);
+
+            var invoice = new Invoice(
+                tenantId.Value,
+                request.CustomerId,
+                invoiceNumber,
+                clock.UtcNow,
+                request.DueDate);
+
+            foreach (InvoiceItemRequest itemReq in request.Items)
+            {
+                TaxConfiguration? taxConfig = itemReq.TaxConfigurationId.HasValue
+                    ? await taxRepository.GetByIdAsync(itemReq.TaxConfigurationId.Value, cancellationToken)
+                    : defaultTax;
+
+                var rate = taxConfig?.Rate ?? 0;
+                var inclusive = taxConfig?.IsInclusive ?? false;
+
+                invoice.AddItem(itemReq.Description, itemReq.Quantity, itemReq.UnitPrice, rate, inclusive);
+            }
+
+            await invoiceRepository.AddAsync(invoice, cancellationToken);
+
+            return Result.Success(invoice.Id);
         }
-
-        await _invoiceRepository.AddAsync(invoice, cancellationToken);
-
-        return Result.Success(invoice.Id);
     }
 }

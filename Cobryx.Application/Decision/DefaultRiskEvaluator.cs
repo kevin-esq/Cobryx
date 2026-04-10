@@ -1,58 +1,66 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.ML;
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Domain.Decision;
 using Cobryx.Domain.ML;
 
-namespace Cobryx.Application.Decision;
-
-public class DefaultRiskEvaluator(
-    IMlClient mlClient,
-    ModelRouter router,
-    EnsembleService ensemble,
-    ICobryxDbContext db) : IRiskEvaluator
+namespace Cobryx.Application.Decision
 {
-    public async Task<(decimal pd, string modelVersion)> EvaluateRiskAsync(Guid customerId, DecisionContext ctx,
-        FeatureVector features)
+    public class DefaultRiskEvaluator(
+        IMlClient mlClient,
+        IModelRouter router,
+        EnsembleService ensemble,
+        ICobryxDbContext db,
+        IClock clock,
+        IFeatureFlags featureFlags) : IRiskEvaluator
     {
-        var heuristicPd = ctx.Credit.ProbabilityOfDefault;
-        decimal prodPd;
-        string prodVersion;
-
-        try
+        public async Task<(decimal pd, string modelVersion)> EvaluateRiskAsync(Guid customerId, DecisionContext ctx,
+            FeatureVector features)
         {
-            (prodPd, prodVersion) = await mlClient.PredictAsync(features, "xgb_v1");
-        }
-        catch
-        {
-            prodPd = heuristicPd;
-            prodVersion = "fallback-heuristic";
-        }
+            var heuristicPd = ctx.Credit.ProbabilityOfDefault;
+            decimal prodPd;
+            string prodVersion;
 
-        decimal shadowPd = prodPd;
+            // ML Kill Switch - use heuristic rules when ML is disabled
+            if (!featureFlags.IsMlScoringEnabled)
+            {
+                return (heuristicPd, "kill-switch-heuristic");
+            }
 
-        if (router.ShouldRunShadow())
-        {
             try
             {
-                (shadowPd, var shadowVersion) = await mlClient.PredictAsync(features, "xgb_v2");
-
-                db.ShadowPredictions.Add(new ShadowPrediction
-                {
-                    CustomerId = customerId,
-                    ProductionPd = prodPd,
-                    ShadowPd = shadowPd,
-                    ProductionModelVersion = prodVersion,
-                    ShadowModelVersion = shadowVersion,
-                    CreatedAt = DateTime.UtcNow
-                });
+                (prodPd, prodVersion) = await mlClient.PredictAsync(features, "xgb_v1");
             }
-            catch (Exception)
+            catch
             {
-                /* ignored */
+                prodPd = heuristicPd;
+                prodVersion = "fallback-heuristic";
             }
-        }
 
-        var finalPd = ensemble.Combine(heuristicPd, prodPd, shadowPd);
-        return (finalPd, prodVersion);
+            var shadowPd = prodPd;
+
+            if (router.ShouldRunShadow())
+            {
+                try
+                {
+                    (shadowPd, var shadowVersion) = await mlClient.PredictAsync(features, "xgb_v2");
+
+                    _ = db.ShadowPredictions.Add(new ShadowPrediction(
+                        customerId,
+                        prodPd,
+                        shadowPd,
+                        prodVersion,
+                        shadowVersion,
+                        clock.UtcNow));
+                }
+                catch (Exception)
+                {
+                    /* ignored */
+                }
+            }
+
+            var finalPd = ensemble.Combine(heuristicPd, prodPd, shadowPd);
+            return (finalPd, prodVersion);
+        }
     }
 }

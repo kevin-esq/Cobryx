@@ -100,6 +100,34 @@ namespace Cobryx.Application.Common.Observability
         public Counter<long> ShadowReplayRebuildTotal { get; }
         public Histogram<double> ShadowComparisonDelta { get; }
 
+        public Counter<long> DeadLetterCount { get; }
+        public Counter<long> DeadLetterAlertTriggered { get; }
+
+        public Counter<long> IdempotencyStuckRecoveredTotal { get; }
+        public Counter<long> IdempotencyConflictTotal { get; }
+        public Counter<long> IdempotencyReplayTotal { get; }
+
+        public Counter<long> WebhookReceivedTotal { get; }
+        public Counter<long> WebhookDuplicateTotal { get; }
+        public Counter<long> WebhookProcessedTotal { get; }
+        public Counter<long> WebhookFailedTotal { get; }
+
+        public Counter<long> ReconciliationCheckedTotal { get; }
+        public Counter<long> ReconciliationMismatchTotal { get; }
+        public Counter<long> ReconciliationAutoFixedTotal { get; }
+        public Counter<long> ReconciliationFailedTotal { get; }
+        public Counter<long> ReconciliationHighDriftRateAlert { get; }
+        public Counter<long> ReconciliationCriticalAlert { get; }
+        public Counter<long> ReconciliationPhantomPaymentTotal { get; }
+        public Counter<long> LedgerInvariantViolationTotal { get; }
+        public Counter<long> ClockSkewDetectedTotal { get; }
+        public Counter<long> AutoRepairAtomicFailureTotal { get; }
+
+        public Counter<long> StripeTimeoutTotal { get; }
+        public Counter<long> StripeRetryTotal { get; }
+        public Counter<long> StripeCircuitBreakerOpenTotal { get; }
+        public Counter<long> StripeRateLimitedTotal { get; }
+
         public ObservableGauge<double> PostgresWraparoundRiskRatio { get; }
         public ObservableGauge<double> PostgresWalSyncDurationSeconds { get; }
         public ObservableGauge<double> PostgresDeadTupleRatio { get; }
@@ -332,6 +360,57 @@ namespace Cobryx.Application.Common.Observability
                 description: "Total number of times shadow state was rebuilt");
             ShadowComparisonDelta = _meter.CreateHistogram<double>("shadow_comparison_delta",
                 description: "Histogram of numeric deviations between primary and shadow outputs");
+
+            DeadLetterCount = _meter.CreateCounter<long>("outbox_dead_letter_total",
+                description: "Total number of events moved to dead letter queue");
+            DeadLetterAlertTriggered = _meter.CreateCounter<long>("outbox_dead_letter_alert_total",
+                description: "Total number of DLQ threshold alerts triggered");
+
+            IdempotencyStuckRecoveredTotal = _meter.CreateCounter<long>("idempotency_stuck_recovered_total",
+                description: "Total number of stuck idempotency records recovered");
+            IdempotencyConflictTotal = _meter.CreateCounter<long>("idempotency_conflict_total",
+                description: "Total number of idempotency conflicts (request in progress)");
+            IdempotencyReplayTotal = _meter.CreateCounter<long>("idempotency_replay_total",
+                description: "Total number of cached responses replayed");
+
+            WebhookReceivedTotal = _meter.CreateCounter<long>("webhook_received_total",
+                description: "Total webhooks received by provider");
+            WebhookDuplicateTotal = _meter.CreateCounter<long>("webhook_duplicate_total",
+                description: "Total duplicate webhooks detected (idempotency hit)");
+            WebhookProcessedTotal = _meter.CreateCounter<long>("webhook_processed_total",
+                description: "Total webhooks successfully processed");
+            WebhookFailedTotal = _meter.CreateCounter<long>("webhook_failed_total",
+                description: "Total webhooks that failed processing");
+
+            ReconciliationCheckedTotal = _meter.CreateCounter<long>("reconciliation_checked_total",
+                description: "Total tenants checked during reconciliation");
+            ReconciliationMismatchTotal = _meter.CreateCounter<long>("reconciliation_mismatch_total",
+                description: "Total payment mismatches detected");
+            ReconciliationAutoFixedTotal = _meter.CreateCounter<long>("reconciliation_auto_fixed_total",
+                description: "Total payments auto-repaired by reconciliation");
+            ReconciliationFailedTotal = _meter.CreateCounter<long>("reconciliation_failed_total",
+                description: "Total reconciliation failures");
+            ReconciliationHighDriftRateAlert = _meter.CreateCounter<long>("reconciliation_high_drift_rate_alert_total",
+                description: "Total high drift rate alerts triggered");
+            ReconciliationCriticalAlert = _meter.CreateCounter<long>("reconciliation_critical_alert_total",
+                description: "Total critical payment drift alerts");
+            ReconciliationPhantomPaymentTotal = _meter.CreateCounter<long>("reconciliation_phantom_payment_total",
+                description: "Payments in DB but not in Stripe (refund/chargeback)");
+            LedgerInvariantViolationTotal = _meter.CreateCounter<long>("ledger_invariant_violation_total",
+                description: "Ledger invariant violations (debits != credits)");
+            ClockSkewDetectedTotal = _meter.CreateCounter<long>("clock_skew_detected_total",
+                description: "Clock skew events detected between nodes");
+            AutoRepairAtomicFailureTotal = _meter.CreateCounter<long>("auto_repair_atomic_failure_total",
+                description: "Auto-repair operations that failed atomicity");
+
+            StripeTimeoutTotal = _meter.CreateCounter<long>("stripe_timeout_total",
+                description: "Stripe API timeouts");
+            StripeRetryTotal = _meter.CreateCounter<long>("stripe_retry_total",
+                description: "Stripe API retry attempts");
+            StripeCircuitBreakerOpenTotal = _meter.CreateCounter<long>("stripe_circuit_breaker_open_total",
+                description: "Stripe circuit breaker open events");
+            StripeRateLimitedTotal = _meter.CreateCounter<long>("stripe_rate_limited_total",
+                description: "Stripe API rate limit hits");
 
             PostgresWraparoundRiskRatio = _meter.CreateObservableGauge("postgres_wraparound_risk_ratio",
                 static () => _wraparoundRiskProvider(), description: "Ratio of current XID age vs freeze_max_age");

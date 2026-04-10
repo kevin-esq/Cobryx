@@ -1,3 +1,4 @@
+using Cobryx.Application.ML.Interfaces;
 
 namespace Cobryx.Application.ML.Jobs;
 

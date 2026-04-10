@@ -29,4 +29,14 @@ public static class StripeConstants
         public const string Canceled = "canceled";
         public const string Unpaid = "unpaid";
     }
+
+    public static class PaymentIntentStatuses
+    {
+        public const string Succeeded = "succeeded";
+        public const string Processing = "processing";
+        public const string RequiresPaymentMethod = "requires_payment_method";
+        public const string RequiresConfirmation = "requires_confirmation";
+        public const string RequiresAction = "requires_action";
+        public const string Canceled = "canceled";
+    }
 }

@@ -1,13 +1,14 @@
 using System.Text.Json;
 
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Domain.ML;
 using Cobryx.Domain.ML.Simulation;
 
 namespace Cobryx.Application.ML.Simulation;
 
 public class SimulationRunner(
-    MonteCarloPpoClient ppo,
+    IMonteCarloPpoClient ppo,
     EconomyEnvironment env,
     ICobryxDbContext db)
 {
@@ -22,32 +23,25 @@ public class SimulationRunner(
         {
             var decision = await ppo.DecideAsync(state);
 
-            var action = new EconomyAction
-            {
-                CreditMultiplier = decision.CreditMultiplier,
-                InterestDelta = decision.InterestDelta
-            };
-
-            if (action.CreditMultiplier > 3.0m)
-                action.CreditMultiplier = 3.0m;
-
+            var creditMultiplier = decision.CreditMultiplier;
+            if (creditMultiplier > 3.0m)
+                creditMultiplier = 3.0m;
             if (env.Macro.Regime == MarketRegime.Crisis)
-            {
-                action.CreditMultiplier = Math.Min(action.CreditMultiplier, 0.5m);
-            }
+                creditMultiplier = Math.Min(creditMultiplier, 0.5m);
 
+            var action = new EconomyAction { CreditMultiplier = creditMultiplier, InterestDelta = decision.InterestDelta };
             var result = env.Step(action);
 
             db.Experiences.Add(new Experience
             {
                 CustomerId = Guid.Empty,
                 StateJson = JsonSerializer.Serialize(state, JsonOptions),
-                NextStateJson = JsonSerializer.Serialize(result.NextState, JsonOptions),
                 CreditMultiplier = action.CreditMultiplier,
                 InterestDelta = action.InterestDelta,
-                Reward = result.Reward,
                 LogProb = decision.LogProb,
                 Value = decision.Value,
+                Reward = result.Reward,
+                NextStateJson = JsonSerializer.Serialize(result.NextState, JsonOptions),
                 Done = result.Done,
                 Source = "simulation"
             });

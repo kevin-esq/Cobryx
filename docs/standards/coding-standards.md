@@ -14,11 +14,14 @@ For error handling, API response patterns, and controller conventions, see [engi
   - [2. Entities Protect Themselves](#2-entities-protect-themselves)
   - [3. Never Mix Infrastructure with Domain](#3-never-mix-infrastructure-with-domain)
   - [4. Abstract Time with IClock](#4-abstract-time-with-iclock)
+    - [Financial System Time (EOD Accrual Engine)](#financial-system-time-eod-accrual-engine)
   - [5. Use Value Objects](#5-use-value-objects)
+    - [Identity Validation and Fraud Prevention (KYC)](#identity-validation-and-fraud-prevention-kyc)
   - [6. Validate at the Boundary](#6-validate-at-the-boundary)
   - [7. Keep Controllers Thin](#7-keep-controllers-thin)
   - [8. Configuration Always via Options + ValidateOnStart](#8-configuration-always-via-options--validateonstart)
   - [9. Structured Logging Only](#9-structured-logging-only)
+    - [Forensic Audit Logging (Immutability)](#forensic-audit-logging-immutability)
   - [10. Idempotency in Everything External](#10-idempotency-in-everything-external)
     - [API-Level Idempotency](#api-level-idempotency)
   - [11. Nullable Reference Types Always Enabled](#11-nullable-reference-types-always-enabled)
@@ -33,6 +36,8 @@ For error handling, API response patterns, and controller conventions, see [engi
   - [15. Domain Events Policy](#15-domain-events-policy)
   - [16. Automated Enforcement and Tooling](#16-automated-enforcement-and-tooling)
     - [Support Tools](#support-tools)
+  - [17. Domain Concept: "Ventas a Plazos" vs "Crédito Directo"](#17-domain-concept-ventas-a-plazos-vs-crédito-directo)
+  - [18. Zero-Error Checklist](#18-zero-error-checklist)
   - [Compliance Summary](#compliance-summary)
     - [Priority Fix Backlog](#priority-fix-backlog)
 
@@ -56,6 +61,7 @@ All domain entity properties must use `private set`. No public setters allowed.
 `SubscriptionStatus`, `PlanTier`, `InvoiceStatus`, `PaymentStatus`, `InstallmentStatus`, etc.
 
 **Known violations:**
+
 - `CustomerSuggestion.Status` is `string?` — should be an enum (`SuggestionStatus`)
 - `SupportTicket` constructor defaults `category = "Inquiry"` — should be an enum
 
@@ -95,11 +101,13 @@ public void ActivateFromPayment()
 ## 3. Never Mix Infrastructure with Domain
 
 The Domain layer must have zero external dependencies. No references to:
+
 - `Cobryx.Infrastructure`
 - `Cobryx.Api`
 - `Stripe`, `Amazon`, `Microsoft.EntityFrameworkCore`
 
 The Application layer must not reference Infrastructure directly:
+
 - Use interfaces (`IStripeService`, `IFileStorageProvider`, etc.)
 - Use the `(DbContext)_unitOfWork` pattern for EF queries
 
@@ -144,6 +152,13 @@ public class SystemClock : IClock
 }
 ```
 
+### Financial System Time (EOD Accrual Engine)
+
+For a financial system managing credits, time equals money. Do not depend solely on "on-access" computation (e.g., calculating interest only when the user opens the app).
+
+- Implement a formal **End Of Day (EOD) Accrual Engine** batch process documented in a Runbook.
+- **Financial Invariant:** The system must guarantee that interest is calculated exactly at the same time for all customers to avoid arbitrage, inconsistent ledgers, and complaints.
+
 **Audit status:** COMPLIANT. The `IClock` abstraction has been introduced and registered as a singleton. All new code must favor `_clock.UtcNow` over `DateTime.UtcNow`.
 
 | Layer       | `DateTime.UtcNow` usages | Files affected                                                                                                                                               |
@@ -154,6 +169,7 @@ public class SystemClock : IClock
 > [!IMPORTANT]
 > **Migration Strategy (Boy Scout Rule):**
 > Introducing `IClock` across 70+ locations is high-risk. We follow a gradual migration:
+>
 > 1. **New Code:** Mandatory use of `_clock.UtcNow`. Direct usage of `DateTime.UtcNow` will fail PR review.
 > 2. **Refactoring:** When modifying an existing file for any reason, migrate its `DateTime` calls to `IClock` as a mandatory part of the change.
 > 3. **Avoid Big Bangs:** Do not perform a global search-and-replace unless it's a dedicated, isolated sprint task.
@@ -185,6 +201,13 @@ public Money Price { get; private set; }
 | `IdentityDocument` | Identity document type + number                  |
 | `BusinessSettings` | Tenant business configuration                    |
 
+### Identity Validation and Fraud Prevention (KYC)
+
+In environments with high identity fraud risk, robust Value Objects are just the first step.
+
+- **Domain State:** Identities require validation states. A `Customer` should conceptually begin in a `PENDING_VERIFICATION` state.
+- **Pre-requisites:** A loan or credit must never transition to an `ACTIVE` state if the underlying identity documentation hasn't been explicitly verified (either automatically or via human fallback).
+
 ---
 
 ## 6. Validate at the Boundary
@@ -200,6 +223,7 @@ Validation happens at three levels. All three are mandatory:
 Never trust controller validation alone. The domain must protect itself.
 
 **Audit status:** COMPLIANT. All three layers enforce validation:
+
 - API: Request contracts with `[Required]`
 - Application: MediatR pipeline behaviors with FluentValidation
 - Domain: Constructor guards and method preconditions
@@ -209,6 +233,7 @@ Never trust controller validation alone. The domain must protect itself.
 ## 7. Keep Controllers Thin
 
 Controllers should only:
+
 1. Extract request data
 2. Send a MediatR command/query
 3. Map the result to HTTP response
@@ -261,6 +286,7 @@ services.AddOptions<ClamAvOptions>()
 ```
 
 Rules for defaults:
+
 - **Never as default:** API keys, secrets, tokens, origins, domains, URLs, connection strings
 - **Acceptable as default:** Port numbers, TTLs, non-sensitive operational values
 
@@ -304,6 +330,13 @@ _logger.LogInformation($"User {userId} upgraded plan");
 _logger.LogInformation("User {UserId} upgraded plan", userId);
 ```
 
+### Forensic Audit Logging (Immutability)
+
+Structured logging is excellent for developer debugging, but insufficient for credit platforms.
+
+- **Bitácora de Auditoría (Audit Log):** When executing sensitive mutations (e.g., changing an interest rate, forgiving a late fee), capture a **Snapshot** of the state before and after in an immutable database table.
+- **Idempotency:** Ensure financial processes (e.g., payment application) are idempotently protected so that network errors and double-execution never deduct balances twice.
+
 **Audit status:** COMPLIANT. Zero string interpolation found in any logger call across the entire project.
 
 ---
@@ -326,7 +359,9 @@ public void ActivateFromPayment()
 ```
 
 ### API-Level Idempotency
+
 For all POST/PUT operations that perform financial mutations or critical state changes (e.g., `CreatePayment`, `CreateLoan`), the API must support `X-Idempotency-Key`.
+
 - The key ensures that replayed requests (due to network retries) do not execute business logic more than once.
 - Idempotency state should be persisted for at least 24 hours.
 
@@ -469,10 +504,11 @@ an enum or a `const`. Prefer enums over strings for any value that controls beha
 Entities must never execute side effects (sending emails, calling external APIs, writing to disk) directly. Instead, they record intentions of change.
 
 **Rule:**
+
 1. Entities register events by adding to a protected `_domainEvents` collection.
 2. Events must be immutable classes derived from `IDomainEvent`.
 3. Side effects are executed by `IDomainEventHandler`s in the **Application** layer.
-4. The `UnitOfWork` (or a dedicated dispatcher) is responsible for publishing events *after* a successful database transaction.
+4. The `UnitOfWork` (or a dedicated dispatcher) is responsible for publishing events _after_ a successful database transaction.
 
 ```csharp
 public void MarkAsPaid()
@@ -492,9 +528,32 @@ public void MarkAsPaid()
 Standardizing code is only half the battle; enforcement should be automated wherever possible.
 
 ### Support Tools
+
 - **Roslyn Analyzers:** Use custom analyzers to enforce naming conventions and prohibit `DateTime.UtcNow`.
 - **ArchUnit.NET:** Mandatory for unit testing architecture. Use it to fail the build if `Domain` references `Infrastructure` or if `Controllers` are not thin.
 - **EditorConfig:** Strict `.editorconfig` to enforce formatting and prevent "noise" in PR diffs.
+
+---
+
+## 17. Domain Concept: "Ventas a Plazos" vs "Crédito Directo"
+
+When building a system for both direct cash lending and standard product financing:
+
+- **Domain Distinction:** Maintain a sharp distinction between a **Consumption Credit** (cash payout) and a **Commercial Credit** (product as collateral).
+- **Collateral Management:** If financing physical goods (e.g., motorcycles, appliances), the domain must track identifiers like Serial Numbers or IMEIs linked to the contract.
+- **Repossession States:** Implement recovery-oriented states in the lifecycle, such as `REPO_PENDING` (Pending Repossession), when a collateral-backed loan enters severe default.
+
+---
+
+## 18. Zero-Error Checklist
+
+For any AI assistant or developer working on Cobryx, validating this checklist is **MANDATORY** to prevent systemic corruption before pushing code:
+
+1. **Does it use `DateTime.UtcNow`?** ➡️ **ERROR**. You must use `IClock`.
+2. **Does it use `Guid.NewGuid()`?** ➡️ **ERROR**. You must use Sequential GUIDs to avoid DB fragmentation.
+3. **Is there business logic in the Controller?** ➡️ **ERROR**. Controllers must be purely procedural and thin.
+4. **Does it use `configuration["Key"]`?** ➡️ **ERROR**. You must use `IOptions<T>` with validation on startup.
+5. **Are Swagger XML tags missing on public API actions?** ➡️ **ERROR**. This is strictly enforced for elite API documentation.
 
 ---
 

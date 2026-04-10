@@ -6,6 +6,7 @@ using Cobryx.Application.Tenants.Commands.UpdateBusinessSettings;
 using Cobryx.Application.Tenants.Commands.UpdateTenantSettings;
 using Cobryx.Application.Tenants.Queries.GetBusinessSettings;
 using Cobryx.Application.Tenants.Queries.GetTenantSettings;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -23,12 +24,8 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/settings")]
 [Tags("Platform")]
-public class TenantSettingsController : CobryxBaseController
+public class TenantSettingsController(ISender sender) : CobryxBaseController(sender)
 {
-    public TenantSettingsController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Retrieves the current tenant profile including branding, contact info, and onboarding status.
     /// </summary>
@@ -40,12 +37,12 @@ public class TenantSettingsController : CobryxBaseController
     /// </remarks>
     /// <response code="200">The tenant profile and branding configuration.</response>
     [HttpGet("tenant")]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse<TenantSettingsDto>), 200)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 401)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiSuccessResponse<TenantSettingsDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetTenantSettings()
     {
-        var result = await Sender.Send(new GetTenantSettingsQuery());
+        Result<TenantSettingsDto> result = await Sender.Send(new GetTenantSettingsQuery());
         return HandleResult(result, TenantOutcomes.SearchCompleted);
     }
 
@@ -61,12 +58,12 @@ public class TenantSettingsController : CobryxBaseController
     /// </remarks>
     /// <response code="200">Update confirmed.</response>
     [HttpPatch("tenant")]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse), 200)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 401)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> UpdateTenantSettings([FromBody] UpdateTenantSettingsCommand request)
     {
-        var result = await Sender.Send(request);
+        Result result = await Sender.Send(request);
         return HandleResult(result, TenantOutcomes.BrandingUpdated);
     }
 
@@ -81,12 +78,12 @@ public class TenantSettingsController : CobryxBaseController
     /// </remarks>
     /// <response code="200">The business configuration defaults.</response>
     [HttpGet("business")]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse<BusinessSettingsDto>), 200)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 401)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiSuccessResponse<BusinessSettingsDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetBusinessSettings()
     {
-        var result = await Sender.Send(new GetBusinessSettingsQuery());
+        Result<BusinessSettingsDto> result = await Sender.Send(new GetBusinessSettingsQuery());
         return HandleResult(result, TenantOutcomes.SearchCompleted);
     }
 
@@ -102,12 +99,12 @@ public class TenantSettingsController : CobryxBaseController
     /// </remarks>
     /// <response code="200">Update confirmed.</response>
     [HttpPatch("business")]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse), 200)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 401)]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> UpdateBusinessSettings([FromBody] UpdateBusinessSettingsCommand request)
     {
-        var result = await Sender.Send(request);
+        Result result = await Sender.Send(request);
         return HandleResult(result, TenantOutcomes.SettingsUpdated);
     }
 
@@ -115,11 +112,11 @@ public class TenantSettingsController : CobryxBaseController
     /// Seeds the current tenant with demonstration data (Mock Loans/Payments).
     /// Used to reduce Time-To-Wow for new accounts.
     /// </summary>
-    [HttpPost("demo-seed")]
-    [ProducesResponseType(typeof(Contracts.V1.Common.ApiSuccessResponse), 200)]
+    [HttpPost("/api/v{version:apiVersion}/system/commands/seed-demo-data")]
+    [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     public async Task<IActionResult> SeedDemoData()
     {
-        var result = await Sender.Send(new SeedDemoDataCommand());
+        Result result = await Sender.Send(new SeedDemoDataCommand());
         return HandleResult(result);
     }
 }

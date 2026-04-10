@@ -25,12 +25,12 @@ public class OutboxMessage : BaseEntity, ITenantEntity
 
     private OutboxMessage() { }
 
-    public OutboxMessage(Guid tenantId, string type, string payload, string? correlationId = null)
+    public OutboxMessage(Guid tenantId, string type, string payload, string? correlationId = null, DateTime? now = null)
     {
         TenantId = tenantId;
         Type = type;
         Payload = payload;
-        OccurredOnUtc = DateTime.UtcNow;
+        OccurredOnUtc = now ?? DateTime.UtcNow;
         CorrelationId = correlationId;
         IsProcessed = false;
     }
@@ -42,7 +42,8 @@ public class OutboxMessage : BaseEntity, ITenantEntity
         Guid entityId,
         long ledgerSequenceId,
         string partitionKey,
-        string? correlationId = null)
+        string? correlationId = null,
+        DateTime? now = null)
     {
         TenantId = tenantId;
         Type = type;
@@ -50,7 +51,7 @@ public class OutboxMessage : BaseEntity, ITenantEntity
         EntityId = entityId;
         LedgerSequenceId = ledgerSequenceId;
         PartitionKey = partitionKey;
-        OccurredOnUtc = DateTime.UtcNow;
+        OccurredOnUtc = now ?? DateTime.UtcNow;
         CorrelationId = correlationId;
         IsProcessed = false;
 

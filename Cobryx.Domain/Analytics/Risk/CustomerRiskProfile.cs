@@ -15,19 +15,22 @@ public class CustomerRiskProfile
 
     private CustomerRiskProfile() { }
 
-    public CustomerRiskProfile(Guid customerId)
+    public CustomerRiskProfile(Guid customerId, DateTime? now = null)
     {
         Id = Guid.NewGuid();
         CustomerId = customerId;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now ?? DateTime.UtcNow;
     }
 
     public void UpdateScores(decimal risk, decimal behavior, decimal credit, decimal pd)
+        => UpdateScores(risk, behavior, credit, pd, DateTime.UtcNow);
+
+    public void UpdateScores(decimal risk, decimal behavior, decimal credit, decimal pd, DateTime now)
     {
         RiskScore = risk;
         BehaviorScore = behavior;
         CreditScore = credit;
         ProbabilityOfDefault = System.Math.Clamp(pd, 0m, 1m);
-        LastUpdated = System.DateTime.UtcNow;
+        LastUpdated = now;
     }
 }

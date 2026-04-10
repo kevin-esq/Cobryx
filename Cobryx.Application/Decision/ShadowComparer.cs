@@ -46,7 +46,8 @@ public class ShadowComparer : IShadowComparer
     private static DriftAttribution PerformDriftAttribution(TraceDiff diff)
     {
         var attr = new DriftAttribution();
-        if (diff.Mismatches.Count == 0) return attr;
+        if (diff.Mismatches.Count == 0)
+            return attr;
 
         attr.FirstDriftStep = diff.Mismatches.First().StepName;
         var maxMismatch = diff.Mismatches.OrderByDescending(m => Math.Abs(m.ReplayedOutput - m.OriginalOutput)).First();

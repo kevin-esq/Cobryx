@@ -17,7 +17,7 @@ public record LegalConsent : ValueObject
         UserAgent = null!;
     }
 
-    public LegalConsent(bool accepted, string version, string ipAddress, string userAgent)
+    public LegalConsent(bool accepted, string version, string ipAddress, string userAgent, DateTime? now = null)
     {
         if (!accepted)
             throw new DomainException(DomainErrorCode.Legal.ConsentRequired);
@@ -29,7 +29,7 @@ public record LegalConsent : ValueObject
             throw new DomainException(DomainErrorCode.Legal.UserAgentRequired);
 
         Accepted = accepted;
-        Timestamp = DateTime.UtcNow;
+        Timestamp = now ?? DateTime.UtcNow;
         Version = version;
         IpAddress = ipAddress;
         UserAgent = userAgent;

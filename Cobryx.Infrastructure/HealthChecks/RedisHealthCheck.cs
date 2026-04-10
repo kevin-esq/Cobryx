@@ -1,6 +1,10 @@
 using System.Diagnostics;
 
+using Cobryx.Infrastructure.Configuration;
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 using StackExchange.Redis;
 
@@ -12,9 +16,15 @@ public class RedisHealthCheck : IHealthCheck
     private const int DegradedThresholdMs = 100;
     private const int UnhealthyThresholdMs = 500;
 
-    public RedisHealthCheck(string connectionString)
+    public RedisHealthCheck(IOptions<CachingOptions> options)
     {
-        _connectionString = connectionString;
+        _connectionString = options.Value.Redis.ConnectionString;
+    }
+
+    public RedisHealthCheck(IConfiguration configuration)
+    {
+        _connectionString = configuration["Caching:Redis:ConnectionString"]
+            ?? throw new InvalidOperationException("Redis ConnectionString is missing.");
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
@@ -22,8 +32,8 @@ public class RedisHealthCheck : IHealthCheck
         try
         {
             var sw = Stopwatch.StartNew();
-            using var connection = await ConnectionMultiplexer.ConnectAsync(_connectionString);
-            var db = connection.GetDatabase();
+            await using ConnectionMultiplexer connection = await ConnectionMultiplexer.ConnectAsync(_connectionString);
+            IDatabase db = connection.GetDatabase();
             await db.PingAsync();
             sw.Stop();
 

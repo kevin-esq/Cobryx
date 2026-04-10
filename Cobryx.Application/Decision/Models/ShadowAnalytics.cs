@@ -1,5 +1,5 @@
-using Cobryx.Domain.Decision;
 using Cobryx.Application.ML.Models;
+using Cobryx.Domain.Decision;
 
 namespace Cobryx.Application.Decision.Models
 {

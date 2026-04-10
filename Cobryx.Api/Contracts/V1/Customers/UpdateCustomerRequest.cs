@@ -1,3 +1,4 @@
+using AddressContract = Cobryx.Api.Contracts.V1.Common.AddressContract;
 
 namespace Cobryx.Api.Contracts.V1.Customers;
 

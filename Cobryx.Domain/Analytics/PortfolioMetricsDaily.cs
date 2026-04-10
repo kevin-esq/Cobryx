@@ -28,43 +28,54 @@ public class PortfolioMetricsDaily
 
     private PortfolioMetricsDaily() { }
 
-    public PortfolioMetricsDaily(Guid tenantId, DateTime date)
+    public PortfolioMetricsDaily(Guid tenantId, DateTime date, DateTime? now = null)
     {
         Id = Guid.NewGuid();
         TenantId = tenantId;
         Date = date;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now ?? DateTime.UtcNow;
     }
+
     public void SetTotals(int totalLoans, decimal totalOutstanding, decimal totalPrincipal, decimal totalInterest, decimal totalLateFees)
+        => SetTotals(totalLoans, totalOutstanding, totalPrincipal, totalInterest, totalLateFees, DateTime.UtcNow);
+
+    public void SetTotals(int totalLoans, decimal totalOutstanding, decimal totalPrincipal, decimal totalInterest, decimal totalLateFees, DateTime now)
     {
         TotalLoans = totalLoans;
         TotalOutstanding = totalOutstanding;
         TotalPrincipal = totalPrincipal;
         TotalInterest = totalInterest;
         TotalLateFees = totalLateFees;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now;
     }
 
     public void SetRisk(decimal nplRatio, decimal bucket0To30, decimal bucket31To60, decimal bucket61To90, decimal bucket90Plus)
+        => SetRisk(nplRatio, bucket0To30, bucket31To60, bucket61To90, bucket90Plus, DateTime.UtcNow);
+
+    public void SetRisk(decimal nplRatio, decimal bucket0To30, decimal bucket31To60, decimal bucket61To90, decimal bucket90Plus, DateTime now)
     {
         NPLRatio = nplRatio;
         Bucket0To30 = bucket0To30;
         Bucket31To60 = bucket31To60;
         Bucket61To90 = bucket61To90;
         Bucket90Plus = bucket90Plus;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now;
     }
 
-    public void SetRevenue(decimal revenueMTD, decimal revenueYTD)
+    public void SetRevenue(decimal revenueMTD, decimal revenueYTD) => SetRevenue(revenueMTD, revenueYTD, DateTime.UtcNow);
+
+    public void SetRevenue(decimal revenueMTD, decimal revenueYTD, DateTime now)
     {
         RevenueMTD = revenueMTD;
         RevenueYTD = revenueYTD;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now;
     }
 
-    public void SetCollections(decimal collectionEfficiency)
+    public void SetCollections(decimal collectionEfficiency) => SetCollections(collectionEfficiency, DateTime.UtcNow);
+
+    public void SetCollections(decimal collectionEfficiency, DateTime now)
     {
         CollectionEfficiency = collectionEfficiency;
-        LastUpdated = DateTime.UtcNow;
+        LastUpdated = now;
     }
 }

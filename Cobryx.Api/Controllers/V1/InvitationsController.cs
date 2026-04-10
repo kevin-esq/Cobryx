@@ -16,12 +16,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/invitations")]
-[Tags("Invitations")]
-public class InvitationsController : CobryxBaseController
+[Tags("Platform")]
+public class InvitationsController(ISender sender) : CobryxBaseController(sender)
 {
-    public InvitationsController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Invites a new user to the current tenant.

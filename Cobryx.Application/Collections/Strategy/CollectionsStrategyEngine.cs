@@ -1,93 +1,94 @@
 using Cobryx.Application.Collections.Models;
+using Cobryx.Application.Collections.Optimizer;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Collections;
 
-namespace Cobryx.Application.Collections.Strategy;
-
-public class CollectionsStrategyEngine : ICollectionsStrategyEngine
+namespace Cobryx.Application.Collections.Strategy
 {
-    public CollectionDecision Evaluate(
-        int daysPastDue,
-        decimal outstanding,
-        CustomerRiskProfile risk,
-        PaymentBehaviorProfile behavior,
-        DpdTrend trend,
-        Cobryx.Application.Collections.Optimizer.StrategyWeights weights)
+    public class CollectionsStrategyEngine : ICollectionsStrategyEngine
     {
-        var dpd = daysPastDue;
-        var riskScore = risk.Score;
-
-        var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
-
-        if (Random.Shared.NextDouble() < 0.10)
+        public CollectionDecision Evaluate(
+            int daysPastDue,
+            decimal outstanding,
+            CustomerRiskProfile risk,
+            PaymentBehaviorProfile behavior,
+            DpdTrend trend,
+            StrategyWeights weights,
+            IClock clock)
         {
-            var actions = new[] { CollectionActionType.SmsReminder, CollectionActionType.EmailReminder, CollectionActionType.AgentCall };
-            return new CollectionDecision
-            {
-                Stage = CollectionStage.Contact,
-                Action = actions[Random.Shared.Next(actions.Length)],
-                PriorityScore = priorityScore,
-                NextActionAt = DateTime.UtcNow.AddDays(1)
-            };
-        }
+            var dpd = daysPastDue;
+            var riskScore = risk.Score;
 
-        var bestEarlyAction = weights.EmailWeight > weights.SmsWeight
-            ? CollectionActionType.EmailReminder
-            : CollectionActionType.SmsReminder;
+            var priorityScore = (int)((outstanding * 0.5m) + (dpd * 2) + (riskScore * 1.5m));
 
-        if (dpd <= 3)
-        {
-            return new CollectionDecision
+            if (Random.Shared.NextDouble() < 0.10)
             {
-                Stage = CollectionStage.Reminder,
-                Action = bestEarlyAction,
-                PriorityScore = priorityScore,
-                NextActionAt = System.DateTime.UtcNow.AddDays(1)
-            };
-        }
-
-        if (dpd <= 7)
-        {
-            if (riskScore < 40 || trend.Delta > 5)
-            {
+                var actions = new[] { CollectionActionType.SmsReminder, CollectionActionType.EmailReminder, CollectionActionType.AgentCall };
                 return new CollectionDecision
                 {
                     Stage = CollectionStage.Contact,
-                    Action = CollectionActionType.AgentCall,
+                    Action = actions[Random.Shared.Next(actions.Length)],
                     PriorityScore = priorityScore,
-                    NextActionAt = DateTime.UtcNow.AddDays(1)
+                    NextActionAt = clock.UtcNow.AddDays(1)
+                };
+            }
+
+            var bestEarlyAction = weights.EmailWeight > weights.SmsWeight
+                ? CollectionActionType.EmailReminder
+                : CollectionActionType.SmsReminder;
+
+            if (dpd <= 3)
+            {
+                return new CollectionDecision
+                {
+                    Stage = CollectionStage.Reminder,
+                    Action = bestEarlyAction,
+                    PriorityScore = priorityScore,
+                    NextActionAt = clock.UtcNow.AddDays(1)
+                };
+            }
+
+            if (dpd <= 7)
+            {
+                return riskScore < 40 || trend.Delta > 5
+                    ? new CollectionDecision
+                    {
+                        Stage = CollectionStage.Contact,
+                        Action = CollectionActionType.AgentCall,
+                        PriorityScore = priorityScore,
+                        NextActionAt = clock.UtcNow.AddDays(1)
+                    }
+                    : new CollectionDecision
+                    {
+                        Stage = CollectionStage.Reminder,
+                        Action = CollectionActionType.EmailReminder,
+                        PriorityScore = priorityScore,
+                        NextActionAt = clock.UtcNow.AddDays(2)
+                    };
+            }
+
+            if (dpd <= 30)
+            {
+                var highExposure = outstanding > 10000;
+
+                return new CollectionDecision
+                {
+                    Stage = CollectionStage.Escalation,
+                    Action = highExposure
+                        ? CollectionActionType.AgentCall
+                        : CollectionActionType.PaymentPlanOffer,
+                    PriorityScore = priorityScore,
+                    NextActionAt = clock.UtcNow.AddDays(3)
                 };
             }
 
             return new CollectionDecision
             {
-                Stage = CollectionStage.Reminder,
-                Action = CollectionActionType.EmailReminder,
-                PriorityScore = priorityScore,
-                NextActionAt = DateTime.UtcNow.AddDays(2)
+                Stage = CollectionStage.Legal,
+                Action = CollectionActionType.LegalNotice,
+                PriorityScore = (int)(priorityScore * weights.LegalWeight),
+                NextActionAt = clock.UtcNow.AddDays(7)
             };
         }
-
-        if (dpd <= 30)
-        {
-            var highExposure = outstanding > 10000;
-
-            return new CollectionDecision
-            {
-                Stage = CollectionStage.Escalation,
-                Action = highExposure
-                    ? CollectionActionType.AgentCall
-                    : CollectionActionType.PaymentPlanOffer,
-                PriorityScore = priorityScore,
-                NextActionAt = DateTime.UtcNow.AddDays(3)
-            };
-        }
-
-        return new CollectionDecision
-        {
-            Stage = CollectionStage.Legal,
-            Action = CollectionActionType.LegalNotice,
-            PriorityScore = (int)(priorityScore * weights.LegalWeight),
-            NextActionAt = System.DateTime.UtcNow.AddDays(7)
-        };
     }
 }

@@ -1,3 +1,4 @@
+using Cobryx.Application.ML.Interfaces;
 using Cobryx.Domain.ML;
 
 namespace Cobryx.Application.ML;
@@ -22,7 +23,7 @@ public interface IMonteCarloEvaluator
     public Task<MonteCarloMetrics> EvaluateAsync(object features, PortfolioState globalState, MacroState currentMacro, List<Scenario> scenarios);
 }
 
-public class MonteCarloEvaluator(MonteCarloPpoClient ppoClient) : IMonteCarloEvaluator
+public class MonteCarloEvaluator(IMonteCarloPpoClient ppoClient) : IMonteCarloEvaluator
 {
     public async Task<MonteCarloMetrics> EvaluateAsync(
         object features,

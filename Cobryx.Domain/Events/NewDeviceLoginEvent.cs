@@ -10,12 +10,12 @@ public class NewDeviceLoginEvent : IDomainEvent
     public string UserAgent { get; }
     public DateTime OccurredOn { get; }
 
-    public NewDeviceLoginEvent(Guid userId, string email, string ipAddress, string userAgent)
+    public NewDeviceLoginEvent(Guid userId, string email, string ipAddress, string userAgent, DateTime? now = null)
     {
         UserId = userId;
         Email = email;
         IpAddress = ipAddress;
         UserAgent = userAgent;
-        OccurredOn = DateTime.UtcNow;
+        OccurredOn = now ?? DateTime.UtcNow;
     }
 }

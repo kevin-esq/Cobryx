@@ -1,30 +1,41 @@
 using Cobryx.Application.Analytics.Services;
+using Cobryx.Application.Common.Interfaces;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Analytics.Jobs;
-
-public class PortfolioMetricsJob(
-    IPortfolioAnalyticsService analyticsService,
-    ILogger<PortfolioMetricsJob> logger)
+namespace Cobryx.Application.Analytics.Jobs
 {
-    private readonly IPortfolioAnalyticsService _analyticsService = analyticsService;
-    private readonly ILogger<PortfolioMetricsJob> _logger = logger;
-
-    public async Task RunAsync()
+    public partial class PortfolioMetricsJob(
+        IPortfolioAnalyticsService analyticsService,
+        IClock clock,
+        ILogger<PortfolioMetricsJob> logger)
     {
-        _logger.LogInformation("Starting daily multi-tenant PortfolioMetricsJob");
-
-        var date = DateTime.UtcNow.Date;
-
-        try
+        public async Task RunAsync(CancellationToken ct = default)
         {
-            await _analyticsService.CalculateAllNightlyMetricsAsync(date);
-            _logger.LogInformation("Finished daily multi-tenant PortfolioMetricsJob successfully");
+            LogStartingJob(logger);
+
+            DateTime date = clock.UtcNow.Date;
+
+            try
+            {
+                await analyticsService.CalculateAllNightlyMetricsAsync(date, ct);
+                LogJobFinished(logger);
+            }
+            catch (Exception ex)
+            {
+                LogJobFailed(logger, ex);
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to calculate portfolio metrics batch.");
-        }
+
+        [LoggerMessage(EventId = 1, Level = LogLevel.Information,
+            Message = "Starting daily multi-tenant PortfolioMetricsJob")]
+        static partial void LogStartingJob(ILogger logger);
+
+        [LoggerMessage(EventId = 2, Level = LogLevel.Information,
+            Message = "Finished daily multi-tenant PortfolioMetricsJob successfully")]
+        static partial void LogJobFinished(ILogger logger);
+
+        [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Failed to calculate portfolio metrics batch.")]
+        static partial void LogJobFailed(ILogger logger, Exception ex);
     }
 }

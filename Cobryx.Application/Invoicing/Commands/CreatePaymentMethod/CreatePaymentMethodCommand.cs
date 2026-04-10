@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Payments;
@@ -7,10 +8,11 @@ using Concordia;
 
 namespace Cobryx.Application.Invoicing.Commands.CreatePaymentMethod;
 
+[TenantScoped]
 public record CreatePaymentMethodCommand(
     string Name,
     string Code,
-    string? Description = null) : IRequest<Result<Guid>>;
+    string? Description = null) : IRequest<Result<Guid>>, IRequiresTenant;
 
 public class CreatePaymentMethodHandler(
     IPaymentMethodRepository paymentMethodRepository,

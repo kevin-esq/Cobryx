@@ -60,10 +60,10 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
 
         dbContext.Set<LoanAgreement>().Add(agreement);
 
-        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", new Money(250000, "MXN"), isDemo: true);
+        var activeLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-ACTIVE", new Money(250000, CobryxDefaults.Currency), isDemo: true);
         activeLoan.Activate();
 
-        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", new Money(100000, "MXN"), isDemo: true);
+        var overdueLoan = new Loan(tenantId, customer.Id, agreement.Id, "DEMO-LN-OVERDUE", new Money(100000, CobryxDefaults.Currency), isDemo: true);
         overdueLoan.Activate();
 
         dbContext.Set<Loan>().AddRange(activeLoan, overdueLoan);
@@ -77,7 +77,7 @@ public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
                 tenantId,
                 customer.Id,
                 paymentMethod.Id,
-                new Money(15000, "MXN"),
+                new Money(15000, CobryxDefaults.Currency),
                 _clock.UtcNow.AddDays(-5),
                 "DEMO-REF-001",
                 "Demo Payment Success",

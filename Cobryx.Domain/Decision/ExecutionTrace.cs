@@ -24,19 +24,17 @@ public class ExecutionStep
 
 public class ExecutionTrace
 {
-    public List<ExecutionStep> Steps { get; set; } = new();
+    public List<ExecutionStep> Steps { get; set; } = [];
 
-    public void AddStep(string name, decimal input, decimal output, string description = "")
-    {
+    public void AddStep(string name, decimal input, decimal output, string description = "") =>
         Steps.Add(new ExecutionStep(name, input, output, description));
-    }
 
     public string GetTraceHash(string engineVersion = "")
     {
         var payload = new
         {
             Version = engineVersion,
-            Steps = Steps
+            Steps
         };
         var json = JsonSerializer.Serialize(payload);
         var bytes = Encoding.UTF8.GetBytes(json);

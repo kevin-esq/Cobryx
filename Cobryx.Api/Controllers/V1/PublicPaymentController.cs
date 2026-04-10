@@ -18,11 +18,8 @@ namespace Cobryx.Api.Controllers.V1;
 [Route("api/v{version:apiVersion}/public/pay")]
 [AllowAnonymous]
 [Tags("Customer Portal")]
-public class PublicPaymentController : CobryxBaseController
+public class PublicPaymentController(ISender sender) : CobryxBaseController(sender)
 {
-    public PublicPaymentController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Retrieves payment link details using a secure token.

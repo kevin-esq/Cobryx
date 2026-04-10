@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -6,7 +7,8 @@ using Concordia;
 
 namespace Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
 
-public record GetPaymentMethodsQuery() : IRequest<Result<IReadOnlyList<PaymentMethodDto>>>;
+[TenantScoped]
+public record GetPaymentMethodsQuery() : IRequest<Result<IReadOnlyList<PaymentMethodDto>>>, IRequiresTenant;
 
 public record PaymentMethodDto(Guid Id, string Name, string Code, string? Description);
 

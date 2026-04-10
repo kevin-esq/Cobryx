@@ -20,6 +20,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Stripe.net">
+      <HintPath>..\..\..\..\..\.nuget\packages\stripe.net\50.3.0\lib\net8.0\Stripe.net.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

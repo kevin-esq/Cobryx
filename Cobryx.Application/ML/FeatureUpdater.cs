@@ -1,18 +1,13 @@
+using Cobryx.Application.ML.Interfaces;
+
 namespace Cobryx.Application.ML;
 
-public class FeatureUpdater
+public class FeatureUpdater(IFeatureStore store)
 {
-    private readonly IFeatureStore _store;
-
-    public FeatureUpdater(IFeatureStore store)
-    {
-        _store = store;
-    }
-
     public async Task UpdateFromPayment(Guid customerId, decimal delay)
     {
-        var f = await _store.GetAsync(customerId);
+        var f = await store.GetAsync(customerId);
         f.PaymentDelay = delay;
-        await _store.SetAsync(customerId, f);
+        await store.SetAsync(customerId, f);
     }
 }

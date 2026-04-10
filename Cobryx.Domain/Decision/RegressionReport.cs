@@ -18,7 +18,7 @@ public class RegressionReport : BaseEntity
     public string TargetEngineVersion { get; private set; } = string.Empty;
     public string? BaselineEngineVersion { get; private set; }
     public string? ParentEngineVersion { get; private set; }
-    
+
     public int SampleRate { get; private set; }
     public int SampleSize { get; private set; }
     public string? DatasetHash { get; private set; }
@@ -33,6 +33,7 @@ public class RegressionReport : BaseEntity
     /// </summary>
     public string SeverityDistributionJson { get; private set; } = "{}";
 
+    // ReSharper disable once UnusedMember.Local — Required by EF Core
     private RegressionReport() { }
 
     public RegressionReport(

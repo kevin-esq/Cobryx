@@ -13,15 +13,13 @@ public class LocalFinancialEventBus(
     IEnumerable<IFinancialEventConsumer> consumers,
     ILogger<LocalFinancialEventBus> logger) : IFinancialEventBus
 {
-    private readonly IEnumerable<IFinancialEventConsumer> _consumers = consumers;
-    private readonly ILogger<LocalFinancialEventBus> _logger = logger;
 
     public async Task PublishAsync(OutboxMessage @event, CancellationToken ct = default)
     {
-        _logger.LogInformation("Publishing Financial Event {EventId} (Type: {Type}, Partition: {Partition})",
+        logger.LogInformation("Publishing Financial Event {EventId} (Type: {Type}, Partition: {Partition})",
             @event.Id, @event.Type, @event.PartitionKey);
 
-        foreach (var consumer in _consumers)
+        foreach (IFinancialEventConsumer consumer in consumers)
         {
             await consumer.ConsumeAsync(@event, ct);
         }
@@ -29,10 +27,10 @@ public class LocalFinancialEventBus(
 
     public async Task PublishBatchAsync(IEnumerable<OutboxMessage> events, CancellationToken ct = default)
     {
-        var count = events.Count();
-        _logger.LogInformation("Publishing Batch of {Count} Financial Events", count);
+        List<OutboxMessage> eventList = events.ToList();
+        logger.LogInformation("Publishing Batch of {Count} Financial Events", eventList.Count);
 
-        foreach (var @event in events)
+        foreach (OutboxMessage @event in eventList)
         {
             await PublishAsync(@event, ct);
         }

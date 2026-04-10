@@ -1,51 +1,55 @@
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Decision.Models;
-using Cobryx.Application.ML;
+using Asp.Versioning;
+
+using Cobryx.Api.Outcomes;
+using Cobryx.Application.ML.Commands.ExecuteReplay;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Api.Controllers;
 
+/// <summary>
+/// Provides audit replay capabilities for ML decision snapshots.
+/// Used for determinism verification and drift detection.
+/// </summary>
 [ApiController]
-[Route("api/ml/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/ml/replay")]
 [Authorize(Roles = "Admin,Audit")]
-public class ReplayController(ReplayEngine replayEngine, ICobryxDbContext db, ILogger<ReplayController> logger)
-    : ControllerBase
+[Tags("ML & Risk")]
+public class ReplayController(ISender sender) : CobryxBaseController(sender)
 {
+    /// <summary>
+    /// Executes a replay of a historical ML decision snapshot to verify determinism.
+    /// </summary>
+    /// <param name="snapshotId">The unique identifier of the snapshot to replay.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// This endpoint is used for audit and compliance purposes to verify that
+    /// ML decisions can be reproduced deterministically.
+    ///
+    /// Possible Outcomes:
+    /// - ML.REPLAY.COMPLETED: Replay executed successfully with deterministic results.
+    /// - ML.REPLAY.DRIFT_DETECTED: Replay completed but output differs from original.
+    /// </remarks>
+    /// <response code="200">Replay result with determinism status.</response>
+    /// <response code="404">Snapshot not found.</response>
     [HttpPost("{snapshotId:guid}")]
-    public async Task<IActionResult> Replay(Guid snapshotId)
+    [ProducesResponseType(typeof(ApiSuccessResponse<ReplayResultDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> Replay(Guid snapshotId, CancellationToken ct)
     {
-        logger.LogInformation("Audit Replay requested for Snapshot {SnapshotId} by {User}", snapshotId,
-            User.Identity?.Name);
+        Result<ReplayResultDto> result = await Sender.Send(new ExecuteReplayCommand(snapshotId), ct);
 
-        var snapshot = await db.ReplaySnapshots
-            .FirstOrDefaultAsync(x => x.Id == snapshotId);
+        Outcome outcome = result.IsSuccess && !result.Value!.IsDeterministic
+            ? MlOutcomes.Replay.DriftDetected
+            : MlOutcomes.Replay.Completed;
 
-        if (snapshot == null)
-        {
-            logger.LogWarning("Replay failed: Snapshot {SnapshotId} not found", snapshotId);
-            return NotFound();
-        }
-
-        try
-        {
-            var adapter = new ReplaySnapshotAdapter(snapshot);
-            var result = await replayEngine.ReplayAsync(adapter);
-
-            if (!result.IsDeterministic)
-            {
-                logger.LogCritical("DETERMINISM DRIFT DETECTED: Snapshot {SnapshotId} failed verification.",
-                    snapshotId);
-            }
-
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Replay execution failed for Snapshot {SnapshotId}", snapshotId);
-            return StatusCode(500, "Internal error during replay execution");
-        }
+        return HandleResult(result, outcome);
     }
 }

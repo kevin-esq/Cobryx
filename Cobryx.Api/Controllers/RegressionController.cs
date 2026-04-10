@@ -1,188 +1,129 @@
-using System.Text.Json;
+using Asp.Versioning;
 
-using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.Decision;
+using Cobryx.Api.Outcomes;
 using Cobryx.Application.Decision.Models;
-using Cobryx.Application.ML;
-using Cobryx.Application.ML.Models;
+using Cobryx.Application.ML.Commands.RunRegression;
+using Cobryx.Application.ML.Queries.DebugReplay;
+using Cobryx.Application.ML.Queries.GetRegressionReport;
+using Cobryx.Application.ML.Queries.GetRegressionReports;
 using Cobryx.Domain.Decision;
+using Cobryx.Domain.Shared;
+
+using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Api.Controllers;
 
+/// <summary>
+/// Provides ML model regression testing and drift analysis capabilities.
+/// Used for validating model determinism across versions.
+/// </summary>
 [ApiController]
-[Route("api/ml/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/ml/regression")]
 [Authorize(Roles = "Admin,Audit")]
-public class RegressionController(
-    SnapshotRegressionRunner runner,
-    ReplayEngine replayEngine,
-    ICobryxDbContext db,
-    ILogger<RegressionController> logger) : ControllerBase
+[Tags("ML & Risk")]
+public class RegressionController(ISender sender) : CobryxBaseController(sender)
 {
+    /// <summary>
+    /// Executes a full regression suite against production snapshots.
+    /// </summary>
+    /// <param name="request">Regression configuration including tolerance profile and sample rate.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// This is a long-running operation that validates ML model determinism.
+    /// Results are persisted for audit purposes.
+    ///
+    /// Possible Outcomes:
+    /// - ML.REGRESSION.COMPLETED: Regression suite completed successfully.
+    /// </remarks>
+    /// <response code="200">Regression suite results with drift statistics.</response>
     [HttpPost("run")]
-    public async Task<IActionResult> Run([FromBody] RunRegressionRequest request)
+    [ProducesResponseType(typeof(ApiSuccessResponse<RegressionSuiteResultDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    public async Task<IActionResult> Run([FromBody] RunRegressionRequest request, CancellationToken ct)
     {
-        logger.LogInformation("Regression run requested by {User}. SampleRate: {SampleRate}%",
-            User.Identity?.Name, request.SampleRate);
+        var command = new RunRegressionCommand(
+            request.Profile,
+            request.BaselineVersion,
+            request.SampleRate,
+            request.EarlyStopThreshold);
 
-        try
-        {
-            var profile = request.Profile ?? new DriftToleranceProfile();
-            var suiteResult = await runner.RunRegressionAsync(
-                profile,
-                request.BaselineVersion,
-                request.SampleRate,
-                request.EarlyStopThreshold,
-                HttpContext.RequestAborted);
-
-            var dbReport = new RegressionReport(
-                suiteResult.TotalProcessed,
-                suiteResult.PassedCount,
-                suiteResult.FailedCount,
-                suiteResult.NonComparableCount,
-                suiteResult.MeanLimitDrift,
-                suiteResult.P95LimitDrift,
-                suiteResult.MaxLimitDrift,
-                EngineMetadata.EngineVersion,
-                request.BaselineVersion,
-                suiteResult.ParentEngineVersion,
-                suiteResult.SampleRate,
-                suiteResult.SampleSize,
-                suiteResult.DatasetHash,
-                JsonSerializer.Serialize(suiteResult.TopFailures),
-                JsonSerializer.Serialize(suiteResult.SeverityDistribution)
-            );
-
-            db.RegressionReports.Add(dbReport);
-            await db.SaveChangesAsync(HttpContext.RequestAborted);
-
-            return Ok(new
-            {
-                suiteResult.Id,
-                suiteResult.TotalProcessed,
-                suiteResult.DriftRate,
-                suiteResult.ComparableRatio,
-                suiteResult.PassedCount,
-                suiteResult.FailedCount,
-                suiteResult.NonComparableCount,
-                suiteResult.SeverityDistribution
-            });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Regression run failed");
-            return StatusCode(500, "Internal error during regression run");
-        }
+        Result<RegressionSuiteResultDto> result = await Sender.Send(command, ct);
+        return HandleResult(result, MlOutcomes.Regression.Completed);
     }
 
+    /// <summary>
+    /// Returns the most recent regression reports.
+    /// </summary>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - ML.REGRESSION.REPORTS_LISTED: Reports retrieved successfully.
+    /// </remarks>
+    /// <response code="200">List of recent regression reports.</response>
     [HttpGet("reports")]
-    public async Task<IActionResult> GetReports()
+    [ProducesResponseType(typeof(ApiSuccessResponse<List<RegressionReport>>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    public async Task<IActionResult> GetReports(CancellationToken ct)
     {
-        var reports = await db.RegressionReports
-            .OrderByDescending(r => r.RunAt)
-            .Take(20)
-            .ToListAsync(HttpContext.RequestAborted);
-
-        return Ok(reports);
+        Result<List<RegressionReport>> result = await Sender.Send(new GetRegressionReportsQuery(), ct);
+        return HandleResult(result, MlOutcomes.Regression.ReportsListed);
     }
 
+    /// <summary>
+    /// Retrieves a specific regression report by ID.
+    /// </summary>
+    /// <param name="id">The report identifier.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - ML.REGRESSION.REPORT_RETRIEVED: Report found and returned.
+    /// </remarks>
+    /// <response code="200">The regression report details.</response>
+    /// <response code="404">Report not found.</response>
     [HttpGet("reports/{id:guid}")]
-    public async Task<IActionResult> GetReport(Guid id)
+    [ProducesResponseType(typeof(ApiSuccessResponse<RegressionReport>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetReport(Guid id, CancellationToken ct)
     {
-        var report = await db.RegressionReports
-            .FirstOrDefaultAsync(r => r.Id == id, HttpContext.RequestAborted);
-
-        if (report == null)
-            return NotFound();
-
-        return Ok(report);
+        Result<RegressionReport> result = await Sender.Send(new GetRegressionReportQuery(id), ct);
+        return HandleResult(result, MlOutcomes.Regression.ReportRetrieved);
     }
 
-    [HttpGet("replay/{id}")]
-    public async Task<IActionResult> DebugReplay(Guid id, [FromQuery] decimal limitThreshold = 10,
-        [FromQuery] decimal rateThreshold = 0.01m)
+    /// <summary>
+    /// Debug replay of a specific production snapshot with custom thresholds.
+    /// </summary>
+    /// <param name="id">The snapshot identifier.</param>
+    /// <param name="limitThreshold">Credit limit drift threshold.</param>
+    /// <param name="rateThreshold">Interest rate drift threshold.</param>
+    /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
+    /// <remarks>
+    /// Possible Outcomes:
+    /// - ML.REPLAY.COMPLETED: Debug replay completed.
+    /// </remarks>
+    /// <response code="200">Detailed replay result with drift attribution.</response>
+    /// <response code="404">Snapshot not found.</response>
+    [HttpGet("replay/{id:guid}")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<DebugReplayResultDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 403)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> DebugReplay(
+        Guid id,
+        [FromQuery] decimal limitThreshold = 10,
+        [FromQuery] decimal rateThreshold = 0.01m,
+        CancellationToken ct = default)
     {
-        var snapshot = await db.ProductionSnapshots
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id, HttpContext.RequestAborted);
-
-        if (snapshot == null)
-            return NotFound();
-
-        var input = new ProductionSnapshotAdapter(snapshot);
-        var replayResult = await replayEngine.ReplayAsync(input);
-
-        var profile = new DriftToleranceProfile
-        {
-            CreditLimitAbsoluteThreshold = limitThreshold,
-            InterestRateRelativeThreshold = rateThreshold
-        };
-
-        var result = MapToDetailedResult(snapshot.Id, replayResult, profile);
-
-        return Ok(new
-        {
-            SnapshotId = id,
-            Drift = result,
-            Replay = replayResult
-        });
-    }
-
-    private static RegressionResult MapToDetailedResult(Guid id, ReplayResult replay, DriftToleranceProfile profile)
-    {
-        var result = new RegressionResult
-        {
-            SnapshotId = id,
-            LimitDrift = replay.DeltaCreditLimit,
-            RateDrift = replay.DeltaInterestRate,
-            TraceDriftDetected = replay.TraceDriftDetected
-        };
-
-        result.OutputSeverity = ClassifyOutputSeverity(result, profile);
-        result.TraceSeverity = replay.TraceDriftDetected ? DriftSeverity.Significant : DriftSeverity.None;
-
-        if (replay.Diff != null && replay.Diff.Mismatches.Count != 0)
-        {
-            result.Attribution = PerformDriftAttribution(replay.Diff);
-            if (result.Attribution.MaxImpactDelta > profile.CreditLimitAbsoluteThreshold * 2)
-            {
-                result.TraceSeverity = DriftSeverity.Critical;
-            }
-        }
-
-        return result;
-    }
-
-    private static DriftSeverity ClassifyOutputSeverity(RegressionResult result, DriftToleranceProfile profile)
-    {
-        var absLimit = Math.Abs(result.LimitDrift);
-        var absRate = Math.Abs(result.RateDrift);
-
-        return absLimit > profile.CreditLimitAbsoluteThreshold * 5 ||
-               absRate > profile.InterestRateRelativeThreshold * 5
-            ? DriftSeverity.Critical
-            : absLimit > profile.CreditLimitAbsoluteThreshold || absRate > profile.InterestRateRelativeThreshold
-                ? DriftSeverity.Significant
-                : absLimit > 0 || absRate > 0
-                    ? DriftSeverity.Minor
-                    : DriftSeverity.None;
-    }
-
-    private static DriftAttribution PerformDriftAttribution(TraceDiff diff)
-    {
-        var attr = new DriftAttribution();
-        if (diff.Mismatches.Count == 0) return attr;
-
-        attr.FirstDriftStep = diff.Mismatches.First().StepName;
-        var maxMismatch = diff.Mismatches.OrderByDescending(m => Math.Abs(m.ReplayedOutput - m.OriginalOutput)).First();
-        attr.MaxImpactStep = maxMismatch.StepName;
-        attr.MaxImpactDelta = Math.Abs(maxMismatch.ReplayedOutput - maxMismatch.OriginalOutput);
-        attr.TotalImpact = diff.Mismatches.Sum(m => Math.Abs(m.ReplayedOutput - m.OriginalOutput));
-
-        return attr;
+        Result<DebugReplayResultDto> result = await Sender.Send(
+            new DebugReplayQuery(id, limitThreshold, rateThreshold), ct);
+        return HandleResult(result, MlOutcomes.Replay.Completed);
     }
 }
 

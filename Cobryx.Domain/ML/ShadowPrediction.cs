@@ -2,14 +2,29 @@ namespace Cobryx.Domain.ML;
 
 public class ShadowPrediction
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid CustomerId { get; set; }
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid CustomerId { get; private set; }
+    public decimal ProductionPd { get; private set; }
+    public decimal ShadowPd { get; private set; }
+    public string ProductionModelVersion { get; private set; } = string.Empty;
+    public string ShadowModelVersion { get; private set; } = string.Empty;
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
-    public decimal ProductionPd { get; set; }
-    public decimal ShadowPd { get; set; }
+    private ShadowPrediction() { }
 
-    public string ProductionModelVersion { get; set; } = string.Empty;
-    public string ShadowModelVersion { get; set; } = string.Empty;
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public ShadowPrediction(
+        Guid customerId,
+        decimal productionPd,
+        decimal shadowPd,
+        string productionModelVersion,
+        string shadowModelVersion,
+        DateTime? now = null)
+    {
+        CustomerId = customerId;
+        ProductionPd = productionPd;
+        ShadowPd = shadowPd;
+        ProductionModelVersion = productionModelVersion;
+        ShadowModelVersion = shadowModelVersion;
+        CreatedAt = now ?? DateTime.UtcNow;
+    }
 }

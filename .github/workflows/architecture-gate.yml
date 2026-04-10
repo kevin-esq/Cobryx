@@ -1,0 +1,157 @@
+name: Architecture Gate
+
+permissions:
+    contents: read
+    pull-requests: write
+
+on:
+    pull_request:
+        branches: [main, develop]
+    push:
+        branches: [main]
+
+jobs:
+    architecture-check:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2 # Need previous commit for baseline check
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+
+            - name: Restore dependencies
+              run: dotnet restore
+
+            - name: Build
+              run: dotnet build --no-restore
+
+            - name: Run Architecture Tests
+              run: dotnet test --filter "FullyQualifiedName~Architecture" --no-build -v n
+
+            - name: Check Architecture Gate
+              run: |
+                  chmod +x ./scripts/architecture-gate.sh
+                  ./scripts/architecture-gate.sh
+
+            - name: Upload Metrics Artifact
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: architecture-metrics
+                  path: /tmp/architecture-metrics.json
+                  if-no-files-found: ignore
+
+            - name: Comment PR with Metrics
+              if: github.event_name == 'pull_request'
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require('fs');
+
+                      let metricsContent = 'Metrics file not found';
+                      try {
+                        const metrics = JSON.parse(fs.readFileSync('/tmp/architecture-metrics.json', 'utf8'));
+                        const app = metrics.application;
+                        const velocity = metrics.velocity || {};
+                        const hotspots = metrics.hotspots || {};
+                        const topAction = metrics.suggestedActions?.[0];
+                        const confidence = metrics.confidence || '';
+
+                        // Load history for delta calculation
+                        let prevScore = metrics.architectureScore;
+                        let prevCoverage = app.tenantPolicyCoverage;
+                        try {
+                          const history = JSON.parse(fs.readFileSync('architecture-history.json', 'utf8')).history || [];
+                          if (history.length >= 1) {
+                            const prev = history[history.length - 1].metrics;
+                            prevScore = prev.architectureScore || prevScore;
+                            prevCoverage = prev.tenantPolicyCoverage || prevCoverage;
+                          }
+                        } catch {}
+
+                        // Calculate deltas
+                        const deltaScore = metrics.architectureScore - prevScore;
+                        const deltaCoverage = app.tenantPolicyCoverage - prevCoverage;
+                        const deltaScoreStr = deltaScore > 0 ? `(**+${deltaScore}** ✅)` : deltaScore < 0 ? `(**${deltaScore}** ❌)` : '';
+                        const deltaCoverageStr = deltaCoverage > 0 ? `(**+${deltaCoverage}%** ✅)` : deltaCoverage < 0 ? `(**${deltaCoverage}%** ❌)` : '';
+
+                        // Load module ownership
+                        let ownership = {};
+                        try {
+                          const baseline = JSON.parse(fs.readFileSync('architecture-baseline.json', 'utf8'));
+                          ownership = baseline.moduleOwnership || {};
+                        } catch {}
+
+                        // Get top hotspot with owner
+                        const topHotspot = Object.entries(hotspots).sort((a,b) => b[1] - a[1])[0];
+                        const hotspotOwner = topHotspot ? ownership[topHotspot[0]] : null;
+
+                        // Confidence emoji
+                        const confEmoji = confidence.includes('HIGH') ? '🟢' : confidence.includes('MEDIUM') ? '🟡' : '🔴';
+
+                        const pipe = String.fromCharCode(124);
+                        const table1 = pipe + ' Metric ' + pipe + ' Current ' + pipe + ' Delta ' + pipe + '\n' + pipe + '--------' + pipe + '---------' + pipe + '-------' + pipe + '\n';
+                        const row1 = pipe + ` 🏆 **Score** ` + pipe + ` **${metrics.architectureScore}/100** ` + pipe + ` ${deltaScoreStr} ` + pipe + `\n`;
+                        const row2 = pipe + ` 📈 **Coverage** ` + pipe + ` ${app.tenantPolicyCoverage}% ` + pipe + ` ${deltaCoverageStr} ` + pipe + `\n`;
+                        const row3 = pipe + ` ⚡ **Velocity** ` + pipe + ` ${velocity.current?.toFixed(2) || '?'}%/wk ` + pipe + ` Need: ${velocity.required?.toFixed(2) || '?'}%/wk ` + pipe + `\n`;
+
+                        const table2 = pipe + ' Metric ' + pipe + ' Value ' + pipe + '\n' + pipe + '--------' + pipe + '-------' + pipe + '\n';
+                        const details1 = pipe + ` Handlers ` + pipe + ` ${app.totalHandlers} ` + pipe + `\n`;
+                        const details2 = pipe + ` Requests ` + pipe + ` ${app.totalRequests} ` + pipe + `\n`;
+                        const details3 = pipe + ` Naming Violations ` + pipe + ` ${app.namingViolations} ` + pipe + `\n`;
+                        const details4 = pipe + ` Tenant Policy Gaps ` + pipe + ` ${app.tenantPolicyGaps} ` + pipe + `\n`;
+
+                        const hotspotLine = `**${topHotspot ? topHotspot[0] : 'None'}** (${topHotspot ? topHotspot[1] : 0} gaps) ${hotspotOwner ? '→ @' + hotspotOwner : ''}`;
+                        const fixFirst = topAction ? `### 🚀 Fix This First\n\`${topAction.Name}\` (${topAction.Module || 'Unknown'}) → **+${(topAction.Impact || 0.8).toFixed(1)}% coverage**\n` : '';
+
+                        metricsContent = '## 🏗️ Architecture Health Report\n\n' +
+                          table1 + row1 + row2 + row3 + '\n' +
+                          `### ${confEmoji} ${confidence.split(' - ')[1] || confidence}\n\n` +
+                          '### 🔥 Top Hotspot\n' + hotspotLine + '\n\n' +
+                          fixFirst + '\n' +
+                          '<details>\n<summary>📊 Full Metrics</summary>\n\n' +
+                          table2 + details1 + details2 + details3 + details4 +
+                          '\n</details>\n';
+                      } catch (e) {
+                        metricsContent = '⚠️ Could not read metrics file: ' + e.message;
+                      }
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: metricsContent
+                      });
+
+    # Update history on main branch pushes
+    update-history:
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        needs: architecture-check
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Download Metrics
+              uses: actions/download-artifact@v4
+              with:
+                  name: architecture-metrics
+                  path: /tmp
+
+            - name: Update History
+              run: |
+                  chmod +x ./scripts/update-architecture-history.sh
+                  ./scripts/update-architecture-history.sh
+
+            - name: Commit History Update
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  git add architecture-history.json
+                  git diff --staged --quiet || git commit -m "chore: update architecture history [skip ci]"
+                  git push

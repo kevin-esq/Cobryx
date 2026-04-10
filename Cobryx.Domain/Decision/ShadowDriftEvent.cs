@@ -17,6 +17,7 @@ namespace Cobryx.Domain.Decision
         public string? AttributionJson { get; private set; }
         public DateTime OccurredAt { get; private set; } = DateTime.UtcNow;
 
+        // ReSharper disable once UnusedMember.Local — Required by EF Core
         private ShadowDriftEvent() { }
 
         public ShadowDriftEvent(

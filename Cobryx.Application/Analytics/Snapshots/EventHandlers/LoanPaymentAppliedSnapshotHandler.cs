@@ -2,35 +2,36 @@ using Cobryx.Application.Common.Events;
 using Cobryx.Domain.Analytics;
 using Cobryx.Domain.Events.Lending;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Lending;
 
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cobryx.Application.Analytics.Snapshots.EventHandlers;
-
-public class LoanPaymentAppliedSnapshotHandler : INotificationHandler<DomainEventNotification<LoanPaymentAppliedEvent>>
+namespace Cobryx.Application.Analytics.Snapshots.EventHandlers
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public LoanPaymentAppliedSnapshotHandler(IUnitOfWork unitOfWork)
+    public class LoanPaymentAppliedSnapshotHandler(
+        IUnitOfWork unitOfWork,
+        ILoanSnapshotFactory snapshotFactory) : INotificationHandler<DomainEventNotification<LoanPaymentAppliedEvent>>
     {
-        _unitOfWork = unitOfWork;
-    }
+        public async Task Handle(DomainEventNotification<LoanPaymentAppliedEvent> notification,
+            CancellationToken cancellationToken)
+        {
+            LoanPaymentAppliedEvent evt = notification.DomainEvent;
+            var dbContext = (DbContext)unitOfWork;
 
-    public async Task Handle(DomainEventNotification<LoanPaymentAppliedEvent> notification, CancellationToken ct)
-    {
-        var evt = notification.DomainEvent;
-        var dbContext = (DbContext)_unitOfWork;
+            Loan? loan = await dbContext.Set<Loan>()
+                .FirstOrDefaultAsync(x => x.Id == evt.LoanId, cancellationToken);
+            if (loan == null)
+            {
+                return;
+            }
 
-        var loan = await dbContext.Set<Cobryx.Domain.Lending.Loan>().FirstOrDefaultAsync(x => x.Id == evt.LoanId, ct);
-        if (loan == null)
-            return;
+            var sequenceId = evt.LedgerSequenceId > 0 ? evt.LedgerSequenceId : evt.OccurredOn.Ticks;
 
-        var sequenceId = evt.LedgerSequenceId > 0 ? evt.LedgerSequenceId : evt.OccurredOn.Ticks;
-
-        var snapshot = LoanSnapshotFactory.Create(loan, SnapshotType.Payment, sequenceId);
-        dbContext.Set<LoanBalanceSnapshot>().Add(snapshot);
-        await dbContext.SaveChangesAsync(ct);
+            LoanBalanceSnapshot snapshot = snapshotFactory.Create(loan, SnapshotType.Payment, sequenceId);
+            _ = dbContext.Set<LoanBalanceSnapshot>().Add(snapshot);
+            _ = await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.ML.Interfaces;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace Cobryx.Application.ML.Jobs;
 
 public class PpoTrainingJob(
     ICobryxDbContext db,
-    MonteCarloPpoClient ppo)
+    IMonteCarloPpoClient ppo)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 

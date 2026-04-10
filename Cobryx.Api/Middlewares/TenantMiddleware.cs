@@ -5,17 +5,11 @@ using Serilog.Context;
 
 namespace Cobryx.Api.Middlewares;
 
-public class TenantMiddleware
+public class TenantMiddleware(RequestDelegate next, ILogger<TenantMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<TenantMiddleware> _logger;
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<TenantMiddleware> _logger = logger;
     private const string TenantHeader = "X-Tenant-Id";
-
-    public TenantMiddleware(RequestDelegate next, ILogger<TenantMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
 
     public async Task InvokeAsync(HttpContext context)
     {

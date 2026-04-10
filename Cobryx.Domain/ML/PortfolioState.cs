@@ -1,5 +1,8 @@
 namespace Cobryx.Domain.ML;
 
+/// <summary>
+/// Mutable state for ML simulation. Uses public setters for simulation mutability.
+/// </summary>
 public class PortfolioState
 {
     public decimal TotalCapital { get; set; }

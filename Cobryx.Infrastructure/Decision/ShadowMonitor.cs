@@ -57,8 +57,8 @@ public class ShadowMonitor(
 
     private void LogMetrics(ShadowExecutionResult result)
     {
-        var version  = result.Shadow.ReplayedEngineVersion;
-        var tenant   = result.SnapshotId.ToString();
+        var version = result.Shadow.ReplayedEngineVersion;
+        var tenant = result.SnapshotId.ToString();
         const string decision = "credit_limit";
 
         var tags = new TagList

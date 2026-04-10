@@ -8,13 +8,15 @@ public class PaymentLinkTests
 {
     private static PaymentLink CreateActiveLink()
     {
+        DateTime now = DateTime.UtcNow;
         return new PaymentLink(
             Guid.NewGuid(),
             Guid.NewGuid(),
             new Money(100, "USD"),
             "token",
-            DateTime.UtcNow.AddDays(7),
-            "secret"
+            now.AddDays(7),
+            "secret",
+            now
         );
     }
 
@@ -24,13 +26,13 @@ public class PaymentLinkTests
         var link = CreateActiveLink();
         var now = DateTime.UtcNow;
 
-        link.RecordRecoveryFailure("insufficient_funds");
+        link.RecordRecoveryFailure("insufficient_funds", now);
         Assert.Equal(1, link.RecoveryAttemptCount);
         Assert.NotNull(link.NextRecoveryAttemptAt);
         Assert.True(link.NextRecoveryAttemptAt >= now.AddMinutes(53) && link.NextRecoveryAttemptAt <= now.AddMinutes(67));
         Assert.Equal(PaymentLinkStatus.Active, link.Status);
 
-        link.RecordRecoveryFailure("insufficient_funds");
+        link.RecordRecoveryFailure("insufficient_funds", now);
         Assert.True(link.NextRecoveryAttemptAt >= now.AddHours(7) && link.NextRecoveryAttemptAt <= now.AddHours(9));
     }
 
@@ -40,8 +42,9 @@ public class PaymentLinkTests
         var link1 = CreateActiveLink();
         var link2 = CreateActiveLink();
 
-        link1.RecordRecoveryFailure("insufficient_funds");
-        link2.RecordRecoveryFailure("insufficient_funds");
+        DateTime now = DateTime.UtcNow;
+        link1.RecordRecoveryFailure("insufficient_funds", now);
+        link2.RecordRecoveryFailure("insufficient_funds", now);
 
         Assert.NotEqual(link1.NextRecoveryAttemptAt, link2.NextRecoveryAttemptAt);
     }
@@ -51,12 +54,13 @@ public class PaymentLinkTests
     {
         var link = CreateActiveLink();
 
+        DateTime now = DateTime.UtcNow;
         for (var i = 0; i < 5; i++)
         {
-            link.RecordRecoveryFailure("soft_fail");
+            link.RecordRecoveryFailure("soft_fail", now);
         }
 
-        link.RecordRecoveryFailure("final_fail");
+        link.RecordRecoveryFailure("final_fail", now);
 
         Assert.Equal(6, link.RecoveryAttemptCount);
         Assert.Equal(PaymentLinkStatus.ManualReview, link.Status);
@@ -68,7 +72,8 @@ public class PaymentLinkTests
     {
         var link = CreateActiveLink();
 
-        link.RecordRecoveryFailure("soft_fail");
+        DateTime now = DateTime.UtcNow;
+        link.RecordRecoveryFailure("soft_fail", now);
 
         Assert.Equal(1, link.RecoveryAttemptCount);
         Assert.Equal(PaymentLinkStatus.Active, link.Status);

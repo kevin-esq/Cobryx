@@ -1,11 +1,11 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 
-using Cobryx.Domain.Exceptions.System;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Infrastructure.Configuration;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cobryx.Infrastructure.Services.FileStorage;
 
@@ -15,20 +15,18 @@ public class R2StorageProvider : IDocumentStorage
     private readonly string _bucketName;
     private readonly ILogger<R2StorageProvider> _logger;
 
-    public R2StorageProvider(IConfiguration configuration, ILogger<R2StorageProvider> logger)
+    public R2StorageProvider(IOptions<S3StorageOptions> options, ILogger<R2StorageProvider> logger)
     {
-        var accessKey = configuration["Storage:S3:AccessKey"] ?? throw new SystemConfigurationException();
-        var secretKey = configuration["Storage:S3:SecretKey"] ?? throw new SystemConfigurationException();
-        var serviceUrl = configuration["Storage:S3:ServiceUrl"] ?? throw new SystemConfigurationException();
-        _bucketName = configuration["Storage:S3:BucketName"] ?? throw new SystemConfigurationException();
+        var s3Options = options.Value;
 
         var config = new AmazonS3Config
         {
-            ServiceURL = serviceUrl,
+            ServiceURL = s3Options.ServiceUrl,
             ForcePathStyle = true
         };
 
-        _s3Client = new AmazonS3Client(accessKey, secretKey, config);
+        _s3Client = new AmazonS3Client(s3Options.AccessKey, s3Options.SecretKey, config);
+        _bucketName = s3Options.BucketName;
         _logger = logger;
     }
 
