@@ -13,6 +13,9 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasIndex(i => i.CustomerId);
         builder.HasIndex(i => new { i.TenantId, i.InvoiceNumber }).IsUnique();
 
+        // Optimistic concurrency for payment race condition protection
+        builder.Property(i => i.Version).IsConcurrencyToken();
+
         builder.Property(i => i.InvoiceNumber).IsRequired().HasMaxLength(50);
         builder.Property(i => i.Notes).HasMaxLength(1000);
 

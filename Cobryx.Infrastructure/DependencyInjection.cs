@@ -1,10 +1,13 @@
 using System.Text;
 
 using Cobryx.Application.Accounting.Services;
+using Cobryx.Application.Collections.Assignment;
+using Cobryx.Application.Collections.Optimizer;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
-using Cobryx.Application.ML;
+using Cobryx.Application.Common.Observability;
 using Cobryx.Application.Decision.Interfaces;
+using Cobryx.Application.Decision.Models;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -16,6 +19,7 @@ using Cobryx.Infrastructure.Configuration;
 using Cobryx.Infrastructure.Decision;
 using Cobryx.Infrastructure.Messaging;
 using Cobryx.Infrastructure.Middleware;
+using Cobryx.Infrastructure.ML;
 using Cobryx.Infrastructure.Modules;
 using Cobryx.Infrastructure.MultiTenancy;
 using Cobryx.Infrastructure.Observability;
@@ -27,7 +31,9 @@ using Cobryx.Infrastructure.Security;
 using Cobryx.Infrastructure.Security.Authorization;
 using Cobryx.Infrastructure.Services;
 using Cobryx.Infrastructure.Services.Accounting;
+using Cobryx.Infrastructure.Services.Collections;
 using Cobryx.Infrastructure.Services.FileStorage;
+using Cobryx.Infrastructure.Services.Growth;
 using Cobryx.Infrastructure.Services.Notifications;
 using Cobryx.Infrastructure.Services.Security;
 
@@ -39,12 +45,18 @@ using Hangfire.PostgreSql;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+
+using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure
 {
@@ -52,6 +64,26 @@ namespace Cobryx.Infrastructure
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services,
             IConfiguration configuration)
+        {
+            RegisterOptions(services, configuration);
+            RegisterCoreServices(services);
+            RegisterCaching(services);
+            RegisterInterceptors(services);
+            RegisterPipelineBehaviors(services);
+            RegisterDatabase(services, configuration);
+            RegisterRepositories(services);
+            RegisterApplicationServices(services);
+            RegisterBackgroundJobs(services, configuration);
+            RegisterAuthentication(services, configuration);
+            RegisterCookiePolicy(services);
+
+            // ML Infrastructure (feature stores, clients, routing)
+            services.AddMlInfrastructure();
+
+            return services;
+        }
+
+        private static void RegisterOptions(IServiceCollection services, IConfiguration configuration)
         {
             _ = services.AddOptions<AppOptions>()
                 .Bind(configuration.GetSection("App"))
@@ -67,18 +99,22 @@ namespace Cobryx.Infrastructure
                 .Bind(configuration.GetSection(JwtOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
             _ = services.AddOptions<Fido2Options>()
                 .Bind(configuration.GetSection(Fido2Options.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
             _ = services.AddOptions<CaptchaOptions>()
                 .Bind(configuration.GetSection(CaptchaOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
             _ = services.AddOptions<ClamAvOptions>()
                 .Bind(configuration.GetSection(ClamAvOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
             _ = services.AddOptions<CachingOptions>()
                 .Bind(configuration.GetSection(CachingOptions.SectionName))
                 .ValidateDataAnnotations()
@@ -89,19 +125,36 @@ namespace Cobryx.Infrastructure
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            _ = services.AddOptions<Application.Decision.Models.ShadowConfig>()
-                .Bind(configuration.GetSection(Application.Decision.Models.ShadowConfig.SectionName))
+            _ = services.AddOptions<StripeOptions>()
+                .Bind(configuration.GetSection(StripeOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            _ = services.AddOptions<ShadowConfig>()
+                .Bind(configuration.GetSection(ShadowConfig.SectionName))
                 .ValidateDataAnnotations();
 
-            _ = services.AddSingleton<IClock, SystemClock>();
+            _ = services.AddOptions<S3StorageOptions>()
+                .Bind(configuration.GetSection(S3StorageOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
+            _ = services.AddOptions<GoogleOAuthOptions>()
+                .Bind(configuration.GetSection(GoogleOAuthOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+        }
+
+        private static void RegisterCoreServices(IServiceCollection services)
+        {
+            _ = services.AddSingleton<IClock, SystemClock>();
+            _ = services.AddSingleton<IFeatureFlags, FeatureFlagsService>();
             _ = services.AddHttpContextAccessor();
             _ = services.AddScoped<ITenantProvider, TenantProvider>();
             _ = services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
-            _ = services.AddHostedService<ProcessOutboxJob>();
+            _ = services.AddHostedService<Messaging.ProcessOutboxJob>();
             _ = services.AddHostedService<BackgroundJobs.Decision.SnapshotBackgroundWorker>();
             _ = services.AddScoped<BackgroundJobs.Decision.RegressionSuiteJob>();
-
             _ = services.AddTransient<IEmailService, SmtpEmailService>();
             _ = services.AddTransient<IExternalAuthService, ExternalAuthService>();
             _ = services.AddScoped<IHttpContextService, HttpContextService>();
@@ -109,77 +162,74 @@ namespace Cobryx.Infrastructure
             _ = services.AddScoped<IAuditLogQueryService, AuditLogQueryService>();
             _ = services.AddScoped<IAlertingService, ProductionAlertingService>();
             _ = services.AddScoped<IShadowMonitor, ShadowMonitor>();
+            _ = services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+            _ = services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
+        }
 
-            var cachingConfig = configuration.GetSection(CachingOptions.SectionName)
-                                    .Get<CachingOptions>()
-                                ?? throw new InvalidOperationException("Caching configuration is missing.");
-
+        private static void RegisterCaching(IServiceCollection services)
+        {
             _ = services.AddDistributedMemoryCache();
 
-            _ = services.AddSingleton<IDistributedCache>(sp =>
+            _ = services.AddSingleton<IDistributedCache>(static sp =>
             {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
-                    cfg.GetValue<bool>("Caching:UseInMemory"))
+                if (IsInMemoryMode(sp))
                 {
                     return sp.GetRequiredService<MemoryDistributedCache>();
                 }
 
-                CachingOptions cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                if (string.IsNullOrEmpty(cachingOptions.Redis.ConnectionString))
+                CachingOptions options = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+                return string.IsNullOrEmpty(options.Redis.ConnectionString)
+                    ? sp.GetRequiredService<MemoryDistributedCache>()
+                    : new RedisCache(Options.Create(new RedisCacheOptions
+                    {
+                        Configuration = options.Redis.ConnectionString,
+                        InstanceName = "Cobryx_"
+                    }));
+            });
+
+            _ = services.AddSingleton<IConnectionMultiplexer>(static sp =>
+            {
+                if (IsInMemoryMode(sp))
                 {
-                    return sp.GetRequiredService<MemoryDistributedCache>();
+                    return ConnectionMultiplexer.Connect("localhost:6379,abortConnect=false");
                 }
 
-                var redisOptions = Options.Create(new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCacheOptions
-                {
-                    Configuration = cachingOptions.Redis.ConnectionString,
-                    InstanceName = "Cobryx_"
-                });
-                return new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(redisOptions);
+                CachingOptions options = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+                return ConnectionMultiplexer.Connect(options.Redis.ConnectionString);
             });
 
-            _ = services.AddSingleton(sp =>
+            _ = services.AddScoped<ICacheService>(static sp =>
             {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                if (cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
-                    cfg.GetValue<bool>("Caching:UseInMemory"))
-                {
-                    return new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>().Object;
-                }
-
-                var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                return StackExchange.Redis.ConnectionMultiplexer.Connect(cachingOptions.Redis.ConnectionString);
+                CachingOptions options = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
+                return new RedisCacheService(
+                    sp.GetRequiredService<IDistributedCache>(),
+                    sp.GetRequiredService<IConnectionMultiplexer>(),
+                    options.DefaultTTL);
             });
+        }
 
-            _ = services.AddSingleton<ICacheService>(sp =>
-            {
-                var cfg = sp.GetRequiredService<IConfiguration>();
-                var cachingOptions = sp.GetRequiredService<IOptions<CachingOptions>>().Value;
-                return cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing" ||
-                       cfg.GetValue<bool>("Caching:UseInMemory")
-                    ? new RedisCacheService(
-                        sp.GetRequiredService<IDistributedCache>(),
-                        sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
-                        cachingOptions.DefaultTTL)
-                    : new RedisCacheService(
-                        sp.GetRequiredService<IDistributedCache>(),
-                        sp.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>(),
-                        cachingConfig.DefaultTTL);
-            });
-
-            _ = services.AddScoped<IShadowReplayEngine, ShadowReplayEngine>();
+        private static void RegisterInterceptors(IServiceCollection services)
+        {
             _ = services.AddScoped<AuditInterceptor>();
             _ = services.AddScoped<AuditFieldsInterceptor>();
             _ = services.AddScoped<OutboxInterceptor>();
             _ = services.AddScoped<DbMetricsInterceptor>();
+            _ = services.AddScoped<EntityUpdateInterceptor>();
+        }
 
+        private static void RegisterPipelineBehaviors(IServiceCollection services)
+        {
             _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
             _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.TenantValidation<,>));
             _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
             _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.UnitOfWork<,>));
+        }
 
+        private static void RegisterDatabase(IServiceCollection services, IConfiguration configuration)
+        {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
+
             var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
             {
                 KeepAlive = 30,
@@ -195,25 +245,30 @@ namespace Cobryx.Infrastructure
             _ = services.AddDbContext<CobryxDbContext>((sp, options) =>
             {
                 _ = options.AddInterceptors(
+                    sp.GetRequiredService<EntityUpdateInterceptor>(),
                     sp.GetRequiredService<OutboxInterceptor>(),
                     sp.GetRequiredService<AuditInterceptor>(),
                     sp.GetRequiredService<AuditFieldsInterceptor>(),
-                    sp.GetRequiredService<DbMetricsInterceptor>());
+                    sp.GetRequiredService<DbMetricsInterceptor>(),
+                    sp.GetRequiredService<EntityUpdateInterceptor>());
 
-                _ = options.UseNpgsql(npgsqlBuilder.ToString(), npgsqlOptions =>
+                _ = options.UseNpgsql(npgsqlBuilder.ToString(), npgsql =>
                 {
-                    _ = npgsqlOptions.EnableRetryOnFailure(
+                    _ = npgsql.EnableRetryOnFailure(
                         maxRetryCount: 5,
                         maxRetryDelay: TimeSpan.FromSeconds(10),
                         errorCodesToAdd: null);
 
-                    _ = npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    _ = npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 });
             });
 
             _ = services.AddScoped<ICobryxDbContext>(sp => sp.GetRequiredService<CobryxDbContext>());
             _ = services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CobryxDbContext>());
+        }
 
+        private static void RegisterRepositories(IServiceCollection services)
+        {
             _ = services.AddScoped<ICustomerRepository, CustomerRepository>();
             _ = services.AddScoped<IProductRepository, ProductRepository>();
             _ = services.AddScoped<ICreditRepository, CreditRepository>();
@@ -226,15 +281,14 @@ namespace Cobryx.Infrastructure
             _ = services.AddScoped<ITenantSubscriptionRepository, TenantSubscriptionRepository>();
             _ = services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
             _ = services.AddScoped<IWebhookEventRepository, WebhookEventRepository>();
+            _ = services.AddScoped<INotificationRepository, NotificationRepository>();
+        }
 
-            _ = services.AddOptions<StripeOptions>()
-                .Bind(configuration.GetSection(StripeOptions.SectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
+        private static void RegisterApplicationServices(IServiceCollection services)
+        {
             _ = services.AddLendingInfrastructure();
-
             _ = services.AddHttpClient<ISlackService, SlackService>();
+            _ = services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
 
             _ = services.AddScoped<Domain.Services.PaymentService>();
             _ = services.AddScoped<Domain.Services.UsageService>();
@@ -246,24 +300,38 @@ namespace Cobryx.Infrastructure
             _ = services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
             _ = services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
             _ = services.AddScoped<IInvoiceNumberService, InvoiceNumberService>();
+            _ = services.AddScoped<IIdempotencyStore, Idempotency.IdempotencyStore>();
+            _ = services.AddScoped<IProcessedWebhookEventRepository, Persistence.Repositories.ProcessedWebhookEventRepository>();
             _ = services.AddScoped<IMfaService, MfaService>();
             _ = services.AddScoped<IFido2Service, Fido2Service>();
             _ = services.AddScoped<ISecurityAuditService, SecurityAuditService>();
             _ = services.AddScoped<IAuthAttemptService, AuthAttemptService>();
             _ = services.AddScoped<IRandomProvider, SystemRandomProvider>();
-            _ = services.AddScoped<ModelRouter>();
+            // ModelRouter is now registered via MlInfrastructureModule
+            _ = services.AddScoped<IShadowReplayEngine, ShadowReplayEngine>();
 
             _ = services.AddScoped<UsageMeteringService>();
-            _ = services.AddScoped<IUsageMeteringService>(sp =>
-                new CachedUsageMeteringService(
-                    sp.GetRequiredService<UsageMeteringService>(),
-                    sp.GetRequiredService<ICacheService>(),
-                    sp.GetRequiredService<Application.Common.Observability.CobryxMetrics>()));
+            _ = services.AddScoped<IUsageMeteringService>(static sp => new CachedUsageMeteringService(
+                sp.GetRequiredService<UsageMeteringService>(),
+                sp.GetRequiredService<ICacheService>(),
+                sp.GetRequiredService<CobryxMetrics>()));
+
             _ = services.AddScoped<ISubscriptionEnforcementService, SubscriptionEnforcementService>();
             _ = services.AddScoped<IPermissionService, PermissionService>();
-            _ = services
-                .AddScoped<IGrowthIntelligenceService, Services.Growth.GrowthIntelligenceService>();
+            _ = services.AddScoped<IGrowthIntelligenceService, GrowthIntelligenceService>();
             _ = services.AddScoped<IDatabaseDiagnosticService, DatabaseDiagnosticService>();
+            _ = services.AddScoped<IAssignmentEngine, AssignmentEngine>();
+            _ = services.AddScoped<ICollectionOptimizer, CollectionOptimizer>();
+
+            // ML & Decision Services
+            _ = services.AddScoped<IDriftAnalyzer, Application.Decision.DriftAnalyzer>();
+            _ = services.AddScoped<ICollectionsPriorityStore, RedisCollectionsPriorityStore>();
+        }
+
+        private static void RegisterBackgroundJobs(IServiceCollection services, IConfiguration configuration)
+        {
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+
             _ = services.AddScoped<ConversionDropOffJob>();
             _ = services.AddScoped<ExpirePaymentLinksJob>();
             _ = services.AddScoped<TenantConnectSyncJob>();
@@ -271,23 +339,12 @@ namespace Cobryx.Infrastructure
             _ = services.AddScoped<ReconciliationEngineJob>();
             _ = services.AddScoped<CheckSystemHealthJob>();
             _ = services.AddScoped<LedgerOutboxWorker>();
-            _ = services
-                .AddScoped<Application.Collections.Assignment.IAssignmentEngine,
-                    Services.Collections.AssignmentEngine>();
-            _ = services
-                .AddScoped<Application.Collections.Optimizer.ICollectionOptimizer,
-                    Services.Collections.CollectionOptimizer>();
             _ = services.AddScoped<DriftDetectionWorker>();
             _ = services.AddScoped<LedgerIntegrityJob>();
             _ = services.AddScoped<LoanAccrualWorker>();
             _ = services.AddScoped<FinancialOutboxWorker>();
             _ = services.AddScoped<RiskAggregationJob>();
-            _ = services.AddScoped<ReplayEngine>();
-
-            _ = services.AddScoped<IAuthorizationHandler, PermissionRequirementHandler>();
-            _ = services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-
-            _ = services.AddHttpClient<ICaptchaService, TurnstileCaptchaService>();
+            _ = services.AddScoped<Application.ML.ReplayEngine>();
 
             _ = services.AddHangfire(config =>
             {
@@ -303,24 +360,22 @@ namespace Cobryx.Infrastructure
                 }
                 else
                 {
-                    _ = config.UsePostgreSqlStorage(options =>
-                    {
-                        _ = options.UseNpgsqlConnection(connectionString);
-                    }, new PostgreSqlStorageOptions
-                    {
-                        JobExpirationCheckInterval = TimeSpan.FromHours(1),
-                        PrepareSchemaIfNecessary = true
-                    });
+                    _ = config.UsePostgreSqlStorage(
+                        options => options.UseNpgsqlConnection(connectionString),
+                        new PostgreSqlStorageOptions
+                        {
+                            JobExpirationCheckInterval = TimeSpan.FromHours(1),
+                            PrepareSchemaIfNecessary = true
+                        });
                 }
             });
 
-            _ = services.AddHangfireServer(options =>
-            {
-                options.WorkerCount = 5;
-            });
-
+            _ = services.AddHangfireServer(options => options.WorkerCount = 5);
             _ = services.AddHostedService<HangfireMetricsExporter>();
+        }
 
+        private static void RegisterAuthentication(IServiceCollection services, IConfiguration configuration)
+        {
             _ = services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -328,9 +383,9 @@ namespace Cobryx.Infrastructure
                 })
                 .AddJwtBearer(options =>
                 {
-                    var jwtOptions = configuration.GetSection(JwtOptions.SectionName)
-                                         .Get<JwtOptions>()
-                                     ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
+                    JwtOptions jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+                                            ?? throw new InvalidOperationException(
+                                                "JwtSettings configuration is missing.");
 
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -358,16 +413,24 @@ namespace Cobryx.Infrastructure
                         }
                     };
                 });
+        }
 
-            _ = services.Configure<Microsoft.AspNetCore.Builder.CookiePolicyOptions>(options =>
+        private static void RegisterCookiePolicy(IServiceCollection services)
+        {
+            _ = services.Configure<CookiePolicyOptions>(static options =>
             {
-                options.CheckConsentNeeded = _ => false;
-                options.MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Strict;
-                options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
-                options.Secure = Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+                options.CheckConsentNeeded = static _ => false;
+                options.MinimumSameSitePolicy = SameSiteMode.Strict;
+                options.HttpOnly = HttpOnlyPolicy.Always;
+                options.Secure = CookieSecurePolicy.Always;
             });
+        }
 
-            return services;
+        private static bool IsInMemoryMode(IServiceProvider sp)
+        {
+            IConfiguration cfg = sp.GetRequiredService<IConfiguration>();
+            return cfg.GetValue<string>("ASPNETCORE_ENVIRONMENT") == "Testing"
+                   || cfg.GetValue<bool>("Caching:UseInMemory");
         }
     }
 }
