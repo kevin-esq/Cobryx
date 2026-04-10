@@ -11,7 +11,7 @@ echo "╚═══════════════════════�
 
 # Run architecture tests and capture output
 echo "Running architecture tests..."
-dotnet test --filter "FullyQualifiedName~Architecture" --no-build -v q 2>&1 || {
+dotnet test Cobryx.Architecture.Tests/Cobryx.Architecture.Tests.csproj --configuration Release --no-build -v q 2>&1 || {
     echo "❌ Architecture tests failed!"
     exit 1
 }

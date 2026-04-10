@@ -30,9 +30,6 @@ jobs:
             - name: Build
               run: dotnet build --configuration Release --no-restore
 
-            - name: Run Architecture Tests
-              run: dotnet test Cobryx.Architecture.Tests/Cobryx.Architecture.Tests.csproj --configuration Release --no-build -v n
-
             - name: Check Architecture Gate
               run: |
                   chmod +x ./scripts/architecture-gate.sh
