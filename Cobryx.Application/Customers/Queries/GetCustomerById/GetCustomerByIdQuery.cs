@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Customers.Common;
 using Cobryx.Domain.Exceptions.Customers;
@@ -13,26 +14,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Customers.Queries.GetCustomerById;
 
-public record GetCustomerByIdQuery(Guid Id) : IRequest<Result<CustomerDto>>;
+[TenantScoped]
+public record GetCustomerByIdQuery(Guid Id) : IRequest<Result<CustomerDto>>, IRequiresTenant;
 
-public class GetCustomerByIdHandler : IRequestHandler<GetCustomerByIdQuery, Result<CustomerDto>>
+public class GetCustomerByIdHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
+    : IRequestHandler<GetCustomerByIdQuery, Result<CustomerDto>>
 {
-    private readonly ICustomerRepository _customerRepository;
-    private readonly ITenantProvider _tenantProvider;
-
-    public GetCustomerByIdHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider)
-    {
-        _customerRepository = customerRepository;
-        _tenantProvider = tenantProvider;
-    }
-
     public async Task<Result<CustomerDto>> Handle(GetCustomerByIdQuery request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
             throw new TenantContextMissingException();
 
-        var customer = await _customerRepository.Query()
+        Customer? customer = await customerRepository.Query()
             .AsNoTracking()
             .Include(c => c.LendingInstruments)
             .FirstOrDefaultAsync(c => c.Id == request.Id && c.TenantId == tenantId.Value, cancellationToken);

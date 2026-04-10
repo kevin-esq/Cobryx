@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Models;
 using Cobryx.Application.Customers.Common;
@@ -12,23 +13,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Customers.Queries.GetCustomers;
 
+[TenantScoped]
 public record GetCustomersQuery(
     string? SearchTerm = null,
     int Page = 1,
-    int PageSize = 10) : IRequest<Result<PaginatedList<CustomerDto>>>;
+    int PageSize = 10) : IRequest<Result<PaginatedList<CustomerDto>>>, IRequiresTenant;
 
 public class GetCustomersHandler(ICustomerRepository customerRepository, ITenantProvider tenantProvider) : IRequestHandler<GetCustomersQuery, Result<PaginatedList<CustomerDto>>>
 {
-    private readonly ICustomerRepository _customerRepository = customerRepository;
-    private readonly ITenantProvider _tenantProvider = tenantProvider;
-
     public async Task<Result<PaginatedList<CustomerDto>>> Handle(GetCustomersQuery request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
             return Result.Failure<PaginatedList<CustomerDto>>(DomainErrorCode.Tenant.ContextMissing);
 
-        var query = _customerRepository.Query()
+        IQueryable<Customer> query = customerRepository.Query()
             .AsNoTracking()
             .Where(c => c.TenantId == tenantId.Value);
 
@@ -43,7 +42,7 @@ public class GetCustomersHandler(ICustomerRepository customerRepository, ITenant
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        List<CustomerDto> items = await query
             .OrderByDescending(c => c.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
