@@ -5,7 +5,7 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cobryx.Application.Admin.Queries.GetStripeReconciliation;
+namespace Cobryx.Application.Operations.Queries.GetStripeReconciliation;
 
 public record GetStripeReconciliationQuery(Guid? TenantId = null) : IRequest<Result<StripeReconciliationDto>>;
 

@@ -80,12 +80,16 @@ if [ "$CURRENT_TENANT" -gt "$BASELINE_TENANT" ]; then
 fi
 
 # Check if baseline was updated without justification
-if git diff --name-only HEAD~1 2>/dev/null | grep -q "architecture-baseline.json"; then
-    # Check last 10 commits for the tag to handle merge commits in CI
-    if ! git log -n 10 --pretty=%B | grep -q "\[ARCH_BASELINE\]"; then
-        echo "❌ FAIL: Baseline updated without [ARCH_BASELINE] tag in recent commit messages"
-        echo "   If intentionally updating baseline, include [ARCH_BASELINE] in your commit message"
+if git diff --name-only origin/main...HEAD 2>/dev/null | grep -q "architecture-baseline.json"; then
+    echo "⚠️  Architecture baseline update detected."
+    
+    # Check current branch history vs origin/main for the tag
+    if ! git log origin/main..HEAD --pretty=%B | grep -q "\[ARCH_BASELINE\]"; then
+        echo "❌ FAIL: Baseline updated without [ARCH_BASELINE] tag in the PR commit history."
+        echo "   If intentionally updating baseline, include [ARCH_BASELINE] in at least one commit message."
         FAILED=1
+    else
+        echo "✅ [ARCH_BASELINE] tag found in PR history."
     fi
 fi
 

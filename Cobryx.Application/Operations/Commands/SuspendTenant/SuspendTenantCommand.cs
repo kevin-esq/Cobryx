@@ -7,7 +7,7 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cobryx.Application.Admin.Commands.SuspendTenant;
+namespace Cobryx.Application.Operations.Commands.SuspendTenant;
 
 public record SuspendTenantCommand(Guid TenantId, string Reason) : IRequest<Result>;
 

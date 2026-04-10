@@ -3,7 +3,7 @@ using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Admin.Commands.SendTestAlert;
+namespace Cobryx.Application.Operations.Commands.SendTestAlert;
 
 public record SendTestAlertCommand(string? AdminUser) : IRequest<Result>;
 

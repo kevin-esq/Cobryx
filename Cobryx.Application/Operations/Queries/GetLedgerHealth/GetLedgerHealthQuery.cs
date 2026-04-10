@@ -6,7 +6,7 @@ using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Admin.Queries.GetLedgerHealth
+namespace Cobryx.Application.Operations.Queries.GetLedgerHealth
 {
     public record GetLedgerHealthQuery : IRequest<Result<LedgerHealthDto>>;
 

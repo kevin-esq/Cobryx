@@ -6,7 +6,7 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cobryx.Application.Admin.Queries.GetFinancialMetrics;
+namespace Cobryx.Application.Operations.Queries.GetFinancialMetrics;
 
 public record GetFinancialMetricsQuery(Guid? TenantId = null) : IRequest<Result<FinancialMetricsDto>>;
 

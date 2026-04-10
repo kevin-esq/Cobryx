@@ -1,5 +1,5 @@
-using Cobryx.Application.Admin.Queries.GetFinancialMetrics;
-using Cobryx.Application.Admin.Queries.GetLedgerHealth;
+using Cobryx.Application.Operations.Queries.GetFinancialMetrics;
+using Cobryx.Application.Operations.Queries.GetLedgerHealth;
 using Cobryx.Application.Common.Interfaces;
 
 using Concordia;

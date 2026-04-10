@@ -1,13 +1,13 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
-using Cobryx.Application.Admin.Commands.ManualChargeOff;
-using Cobryx.Application.Admin.Commands.ManualReversal;
-using Cobryx.Application.Admin.Commands.SendTestAlert;
-using Cobryx.Application.Admin.Commands.SuspendTenant;
-using Cobryx.Application.Admin.Queries.GetFinancialMetrics;
-using Cobryx.Application.Admin.Queries.GetLedgerHealth;
-using Cobryx.Application.Admin.Queries.GetStripeReconciliation;
+using Cobryx.Application.Operations.Commands.ManualChargeOff;
+using Cobryx.Application.Operations.Commands.ManualReversal;
+using Cobryx.Application.Operations.Commands.SendTestAlert;
+using Cobryx.Application.Operations.Commands.SuspendTenant;
+using Cobryx.Application.Operations.Queries.GetFinancialMetrics;
+using Cobryx.Application.Operations.Queries.GetLedgerHealth;
+using Cobryx.Application.Operations.Queries.GetStripeReconciliation;
 using Cobryx.Domain.Shared;
 
 using Concordia;

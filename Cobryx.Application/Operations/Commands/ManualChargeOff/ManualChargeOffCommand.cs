@@ -5,7 +5,7 @@ using Cobryx.Domain.Shared;
 
 using Concordia;
 
-namespace Cobryx.Application.Admin.Commands.ManualChargeOff;
+namespace Cobryx.Application.Operations.Commands.ManualChargeOff;
 
 public record ManualChargeOffCommand(Guid LoanId, string Reason) : IRequest<Result>;
 

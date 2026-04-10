@@ -8,7 +8,7 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace Cobryx.Application.Admin.Commands.ManualReversal;
+namespace Cobryx.Application.Operations.Commands.ManualReversal;
 
 public record ManualReversalCommand(Guid TransactionId, decimal Amount, string Reason) : IRequest<Result>;
 
