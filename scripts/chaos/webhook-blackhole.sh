@@ -36,11 +36,8 @@ echo "Step 3: Verifying payment NOT in local DB..."
 # curl -s "$BASE_URL/api/v1/payments?stripeIntentId=$PAYMENT_INTENT_ID" | jq
 
 echo "Step 4: Waiting for reconciliation job (5 minutes)..."
-echo "        Or trigger manually: POST /api/v1/admin/reconciliation/run"
-echo ""
-
-# In real test:
-# sleep 300  # Wait for reconciliation job
+echo "        Or trigger manually: GET /api/v1/operations/reconciliation/stripe"
+# curl -X GET "$BASE_URL/api/v1/operations/reconciliation/stripe" job
 # OR
 # curl -X POST "$BASE_URL/api/v1/admin/reconciliation/run"
 

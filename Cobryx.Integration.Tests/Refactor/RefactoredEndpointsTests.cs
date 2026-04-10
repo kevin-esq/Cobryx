@@ -156,14 +156,14 @@ public class RefactoredEndpointsTests : IClassFixture<CobryxWebApplicationFactor
     #region Admin Endpoints
 
     [Fact]
-    public async Task AdminEndpoints_WithoutPlatformAdmin_Returns403()
+    public async Task OperationsEndpoints_WithoutPlatformAdmin_Returns403()
     {
         // Arrange - Regular admin, not platform admin
         var token = GenerateTestToken(roles: ["Admin"]);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
-        var response = await _client.GetAsync("/api/v1/admin/health/ledger");
+        var response = await _client.GetAsync("/api/v1/operations/health/ledger");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
