@@ -1,12 +1,12 @@
 {
     "version": "2.1.0",
-    "lastUpdated": "2026-04-07",
+    "lastUpdated": "2026-04-10",
     "updatedBy": "architecture-tests",
     "baselines": {
-        "namingViolations": 50,
-        "tenantPolicyGaps": 120,
-        "controllersWithoutMediatR": 25,
-        "minimumArchitectureScore": 20
+        "namingViolations": 4,
+        "tenantPolicyGaps": 100,
+        "controllersWithoutMediatR": 0,
+        "minimumArchitectureScore": 55
     },
     "targets": {
         "tenantPolicyCoverage": 30,
