@@ -5,43 +5,38 @@ using Cobryx.Domain.Interfaces;
 
 using Concordia;
 
-using Microsoft.EntityFrameworkCore;
-
-namespace Cobryx.Application.Notifications.EventHandlers;
-
-public class ProjectNotificationOnUserRegisteredHandler : INotificationHandler<DomainEventNotification<UserRegisteredEvent>>
+namespace Cobryx.Application.Notifications.EventHandlers
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public ProjectNotificationOnUserRegisteredHandler(IUnitOfWork unitOfWork)
+    public class ProjectNotificationOnUserRegisteredHandler(
+        INotificationRepository notificationRepository,
+        IUnitOfWork unitOfWork) : INotificationHandler<DomainEventNotification<UserRegisteredEvent>>
     {
-        _unitOfWork = unitOfWork;
-    }
+        public async Task Handle(DomainEventNotification<UserRegisteredEvent> notification,
+            CancellationToken cancellationToken)
+        {
+            UserRegisteredEvent domainEvent = notification.DomainEvent;
 
-    public async Task Handle(DomainEventNotification<UserRegisteredEvent> notification, CancellationToken cancellationToken)
-    {
-        var domainEvent = notification.DomainEvent;
-        var dbContext = (DbContext)_unitOfWork;
+            var exists = await notificationRepository.ExistsAsync(
+                domainEvent.TenantId,
+                domainEvent.UserId.ToString(),
+                NotificationType.Information,
+                cancellationToken);
 
-        var exists = await dbContext.Set<Notification>()
-            .AnyAsync(n => n.TenantId == domainEvent.TenantId &&
-                         n.RelatedEntityId == domainEvent.UserId.ToString() &&
-                         n.Type == NotificationType.Information, cancellationToken);
+            if (exists)
+            {
+                return;
+            }
 
-        if (exists)
-            return;
+            Notification userNotification = new(
+                domainEvent.TenantId,
+                "New User Registered",
+                $"A new user with email {domainEvent.Email} has joined your organization.",
+                userId: domainEvent.UserId,
+                relatedEntityId: domainEvent.UserId.ToString(),
+                relatedEntityType: "User");
 
-        var userNotification = new Notification(
-            domainEvent.TenantId,
-            "New User Registered",
-            $"A new user with email {domainEvent.Email} has joined your organization.",
-            NotificationType.Information,
-            userId: domainEvent.UserId,
-            relatedEntityId: domainEvent.UserId.ToString(),
-            relatedEntityType: "User"
-        );
-
-        dbContext.Set<Notification>().Add(userNotification);
-        await dbContext.SaveChangesAsync(cancellationToken);
+            await notificationRepository.AddAsync(userNotification, cancellationToken);
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
     }
 }

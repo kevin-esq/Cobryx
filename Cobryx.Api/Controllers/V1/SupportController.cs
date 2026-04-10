@@ -17,12 +17,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/support/tickets")]
-[Tags("Support & Operations")]
-public class SupportController : CobryxBaseController
+[Tags("Operations")]
+public class SupportController(ISender sender) : CobryxBaseController(sender)
 {
-    public SupportController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Submits a new technical or operational support ticket.

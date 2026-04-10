@@ -8,41 +8,28 @@ using StackExchange.Redis;
 
 namespace Cobryx.Infrastructure.BackgroundJobs.Collections;
 
-public class CollectionsOptimizerJob
+public partial class CollectionsOptimizerJob(
+    ICollectionOptimizer optimizer,
+    ICobryxDbContext dbContext,
+    IConnectionMultiplexer redis,
+    ILogger<CollectionsOptimizerJob> logger)
 {
-    private readonly ICollectionOptimizer _optimizer;
-    private readonly ICobryxDbContext _dbContext;
-    private readonly IConnectionMultiplexer _redis;
-    private readonly ILogger<CollectionsOptimizerJob> _logger;
-
-    public CollectionsOptimizerJob(
-        ICollectionOptimizer optimizer,
-        ICobryxDbContext dbContext,
-        IConnectionMultiplexer redis,
-        ILogger<CollectionsOptimizerJob> logger)
-    {
-        _optimizer = optimizer;
-        _dbContext = dbContext;
-        _redis = redis;
-        _logger = logger;
-    }
-
     public async Task RunHourlyOptimizationAsync()
     {
-        _logger.LogInformation("Starting ML Optimizer Job...");
-        var activeTenants = await _dbContext.CollectionOutcomes
+        LogJobStarted(logger);
+        var activeTenants = await dbContext.CollectionOutcomes
             .Select(o => o.TenantId)
             .Distinct()
             .ToListAsync();
 
-        var db = _redis.GetDatabase();
+        var db = redis.GetDatabase();
         var lockKey = "portfolio:collections:optimizer:lock";
-        var token = System.Guid.NewGuid().ToString();
+        var token = Guid.NewGuid().ToString();
 
-        var acquired = await db.LockTakeAsync(lockKey, token, System.TimeSpan.FromMinutes(5));
+        var acquired = await db.LockTakeAsync(lockKey, token, TimeSpan.FromMinutes(5));
         if (!acquired)
         {
-            _logger.LogInformation("Optimizer is already running on another instance, skipping.");
+            LogOptimizerAlreadyRunning(logger);
             return;
         }
 
@@ -52,18 +39,18 @@ public class CollectionsOptimizerJob
             {
                 try
                 {
-                    var weights = await _optimizer.CalculateWeightsAsync(tenantId);
+                    var weights = await optimizer.CalculateWeightsAsync(tenantId);
                     var key = $"portfolio:collections:weights:{tenantId}";
                     var json = System.Text.Json.JsonSerializer.Serialize(weights);
 
                     var tran = db.CreateTransaction();
                     _ = tran.KeyDeleteAsync(key);
-                    _ = tran.StringSetAsync(key, json, System.TimeSpan.FromDays(1));
+                    _ = tran.StringSetAsync(key, json, TimeSpan.FromDays(1));
                     await tran.ExecuteAsync();
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Optimization failed for tenant {tenantId}");
+                    LogOptimizationFailed(logger, ex, tenantId);
                 }
             }
         }
@@ -71,6 +58,18 @@ public class CollectionsOptimizerJob
         {
             await db.LockReleaseAsync(lockKey, token);
         }
-        _logger.LogInformation("ML Optimizer Job completed.");
+        LogJobCompleted(logger);
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Starting ML Optimizer Job...")]
+    static partial void LogJobStarted(ILogger logger);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "Optimizer is already running on another instance, skipping.")]
+    static partial void LogOptimizerAlreadyRunning(ILogger logger);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "ML Optimizer Job completed.")]
+    static partial void LogJobCompleted(ILogger logger);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Error, Message = "Optimization failed for tenant {TenantId}.")]
+    static partial void LogOptimizationFailed(ILogger logger, Exception ex, Guid tenantId);
 }

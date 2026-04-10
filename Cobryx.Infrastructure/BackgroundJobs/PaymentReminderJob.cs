@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Cobryx.Infrastructure.BackgroundJobs;
 
 /// <summary>
-/// The heartbeat of the Collections Engine. 
+/// The heartbeat of the Collections Engine.
 /// Automatically dispatches reminders based on strategic buckets and stop conditions.
 /// </summary>
 public class PaymentReminderJob
@@ -107,7 +107,7 @@ public class PaymentReminderJob
 
             var subject = $"Payment Reminder: Action Required for {link.Customer.FirstName}";
             var body = $@"Hello {link.Customer.FirstName},
-            
+
 This is a friendly reminder regarding your outstanding payment of {link.AmountSnapshot.Amount} {link.AmountSnapshot.Currency}.
 
 You can securely complete your payment here: {paymentUrl}
@@ -119,7 +119,7 @@ The Cobryx Team";
 
             await _emailService.SendEmailAsync(link.Customer.Email, subject, body, ct);
 
-            link.RecordReminderSent();
+            link.RecordReminderSent(_clock.UtcNow);
             _logger.LogInformation("Collections Reminder sent for Link {LinkId}. Sequence: {Count}", link.Id, link.ReminderCount);
         }
         catch (Exception ex)

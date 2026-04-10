@@ -4,6 +4,7 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Dashboard;
 using Cobryx.Application.Dashboard.Common;
 using Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -12,21 +13,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cobryx.Api.Controllers.V1;
 
+/// <summary>
+/// Provides aggregated operational metrics and onboarding status for the tenant dashboard.
+/// </summary>
 [Authorize(Policy = "CanManageTenant")]
+[ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/dashboard")]
-public class DashboardController : CobryxBaseController
+[Tags("Operations")]
+public class DashboardController(ISender sender, ICacheService cacheService, ITenantProvider tenantProvider)
+    : CobryxBaseController(sender)
 {
-    private readonly ICacheService _cacheService;
-    private readonly ITenantProvider _tenantProvider;
-
-    public DashboardController(ISender sender, ICacheService cacheService, ITenantProvider tenantProvider)
-        : base(sender)
-    {
-        _cacheService = cacheService;
-        _tenantProvider = tenantProvider;
-    }
-
     /// <summary>
     /// Retrieves a high-level operational summary for the tenant dashboard.
     /// Results are cached for 5 minutes to ensure high performance.
@@ -45,20 +42,20 @@ public class DashboardController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> GetSummary()
     {
-        var tenantId = _tenantProvider.GetTenantId();
+        Guid? tenantId = tenantProvider.GetTenantId();
         var cacheKey = $"dash:{tenantId}:summary";
 
-        var cachedSummary = await _cacheService.GetAsync<DashboardSummaryDto>(cacheKey);
+        DashboardSummaryDto? cachedSummary = await cacheService.GetAsync<DashboardSummaryDto>(cacheKey);
         if (cachedSummary != null)
         {
             return Success(cachedSummary);
         }
 
-        var result = await Sender.Send(new GetDashboardSummaryQuery());
+        Result<DashboardSummaryDto> result = await Sender.Send(new GetDashboardSummaryQuery());
 
         if (result.IsSuccess)
         {
-            await _cacheService.SetAsync(cacheKey, result.Value!, TimeSpan.FromMinutes(5));
+            await cacheService.SetAsync(cacheKey, result.Value!, TimeSpan.FromMinutes(5));
         }
 
         return HandleResult(result);
@@ -72,7 +69,7 @@ public class DashboardController : CobryxBaseController
     [ProducesResponseType(typeof(ApiSuccessResponse<OnboardingStatusDto>), 200)]
     public async Task<IActionResult> GetOnboardingStatus()
     {
-        var result = await Sender.Send(new GetOnboardingStatusQuery());
+        Result<OnboardingStatusDto> result = await Sender.Send(new GetOnboardingStatusQuery());
         return HandleResult(result);
     }
 }
