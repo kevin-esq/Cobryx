@@ -46,6 +46,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         string rawToken,
         DateTime expiresAt,
         string serverSecret,
+        DateTime now,
         Guid? loanId = null,
         string? externalReference = null,
         bool singleUse = true,
@@ -63,7 +64,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         Status = PaymentLinkStatus.Active;
         AttemptCount = 0;
         Salt = Guid.NewGuid().ToString("N");
-        RecoveryDeadline = DateTime.UtcNow.AddDays(14);
+        RecoveryDeadline = now.AddDays(14);
 
         SetToken(rawToken, serverSecret);
     }
@@ -105,12 +106,12 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         return isValid;
     }
 
-    public void MarkAsProcessing(string stripePaymentIntentId)
+    public void MarkAsProcessing(string stripePaymentIntentId, DateTime now)
     {
         if (Status != PaymentLinkStatus.Active)
             throw new DomainException(DomainErrorCode.PaymentLink.InvalidStatus);
 
-        if (DateTime.UtcNow > ExpiresAt)
+        if (now > ExpiresAt)
         {
             Status = PaymentLinkStatus.Expired;
             throw new DomainException(DomainErrorCode.PaymentLink.Expired);
@@ -118,7 +119,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
 
         Status = PaymentLinkStatus.Processing;
         StripePaymentIntentId = stripePaymentIntentId;
-        UpdateTimestamp();
+        UpdateTimestamp(now);
     }
 
     public void MarkAsPaid(Money amount)
@@ -156,19 +157,19 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         }
     }
 
-    public void RecordRecoveryFailure(string reason)
+    public void RecordRecoveryFailure(string reason, DateTime now)
     {
         RecoveryAttemptCount++;
-        LastRecoveryAttemptAt = DateTime.UtcNow;
+        LastRecoveryAttemptAt = now;
         RecoveryFailureReason = reason;
 
         var baseNextAttempt = RecoveryAttemptCount switch
         {
-            1 => DateTime.UtcNow.AddHours(1),
-            2 => DateTime.UtcNow.AddHours(8),
-            3 => DateTime.UtcNow.AddHours(24),
-            4 => DateTime.UtcNow.AddDays(3),
-            5 => DateTime.UtcNow.AddDays(7),
+            1 => now.AddHours(1),
+            2 => now.AddHours(8),
+            3 => now.AddHours(24),
+            4 => now.AddDays(3),
+            5 => now.AddDays(7),
             _ => (DateTime?)null
         };
 
@@ -178,7 +179,7 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
             var random = new Random(seed + RecoveryAttemptCount);
             var jitterFactor = (random.NextDouble() * 0.2) - 0.1;
 
-            var interval = baseNextAttempt.Value - DateTime.UtcNow;
+            var interval = baseNextAttempt.Value - now;
             NextRecoveryAttemptAt = baseNextAttempt.Value.AddTicks((long)(interval.Ticks * jitterFactor));
         }
         else
@@ -186,13 +187,13 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
             NextRecoveryAttemptAt = null;
         }
 
-        if (RecoveryAttemptCount > MaxRecoveryAttempts || (RecoveryDeadline.HasValue && DateTime.UtcNow > RecoveryDeadline))
+        if (RecoveryAttemptCount > MaxRecoveryAttempts || (RecoveryDeadline.HasValue && now > RecoveryDeadline))
         {
             Status = PaymentLinkStatus.ManualReview;
             NextRecoveryAttemptAt = null;
         }
 
-        UpdateTimestamp();
+        UpdateTimestamp(now);
     }
 
     public bool TryAcquireRecoveryLock()
@@ -211,18 +212,18 @@ public class PaymentLink : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void RecordRecoveryAttempt()
+    public void RecordRecoveryAttempt(DateTime now)
     {
         RecoveryAttemptCount++;
-        LastRecoveryAttemptAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        LastRecoveryAttemptAt = now;
+        UpdateTimestamp(now);
     }
 
-    public void RecordReminderSent()
+    public void RecordReminderSent(DateTime now)
     {
-        LastReminderSentAt = DateTime.UtcNow;
+        LastReminderSentAt = now;
         ReminderCount++;
-        UpdateTimestamp();
+        UpdateTimestamp(now);
     }
 
     private string ComputeHmac(string rawToken, string serverSecret)

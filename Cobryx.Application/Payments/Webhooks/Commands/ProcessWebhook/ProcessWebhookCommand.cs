@@ -7,48 +7,45 @@ using Concordia;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Payments.Webhooks.Commands.ProcessWebhook;
-
-public record ProcessWebhookCommand(
-    string Provider,
-    string ExternalEventId,
-    string RawPayload) : IRequest<Result>;
-
-public class ProcessWebhookHandler : IRequestHandler<ProcessWebhookCommand, Result>
+namespace Cobryx.Application.Payments.Webhooks.Commands.ProcessWebhook
 {
-    private readonly IWebhookEventRepository _webhookEventRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<ProcessWebhookHandler> _logger;
+    public record ProcessWebhookCommand(
+        string Provider,
+        string ExternalEventId,
+        string RawPayload) : IRequest<Result<Guid>>;
 
-    public ProcessWebhookHandler(
+    public partial class ProcessWebhookHandler(
         IWebhookEventRepository webhookEventRepository,
         IUnitOfWork unitOfWork,
-        ILogger<ProcessWebhookHandler> logger)
+        ILogger<ProcessWebhookHandler> logger) : IRequestHandler<ProcessWebhookCommand, Result<Guid>>
     {
-        _webhookEventRepository = webhookEventRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<Result> Handle(ProcessWebhookCommand request, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Ingesting webhook from {Provider} with ExternalEventId {ExternalEventId}",
-            request.Provider, request.ExternalEventId);
-
-        var existing = await _webhookEventRepository.ExistsAsync(request.Provider, request.ExternalEventId, cancellationToken);
-
-        if (existing)
+        public async Task<Result<Guid>> Handle(ProcessWebhookCommand request, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Webhook already ingested (Deduped). Provider: {Provider}, ExternalEventId: {ExternalEventId}",
-                request.Provider, request.ExternalEventId);
-            return Result.Success();
+            LogIngesting(logger, request.Provider, request.ExternalEventId);
+
+            var existing =
+                await webhookEventRepository.ExistsAsync(request.Provider, request.ExternalEventId, cancellationToken);
+
+            if (existing)
+            {
+                LogDeduped(logger, request.Provider, request.ExternalEventId);
+                return Result.Success(Guid.Empty);
+            }
+
+            WebhookEvent webhookEvent = new(request.Provider, request.ExternalEventId, request.RawPayload);
+
+            await webhookEventRepository.AddAsync(webhookEvent, cancellationToken);
+            _ = await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Success(webhookEvent.Id);
         }
 
-        var webhookEvent = new WebhookEvent(request.Provider, request.ExternalEventId, request.RawPayload);
+        [LoggerMessage(Level = LogLevel.Information,
+            Message = "Ingesting webhook from {Provider} with ExternalEventId {ExternalEventId}")]
+        private static partial void LogIngesting(ILogger logger, string provider, string externalEventId);
 
-        await _webhookEventRepository.AddAsync(webhookEvent, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
+        [LoggerMessage(Level = LogLevel.Information,
+            Message = "Webhook already ingested (Deduped). Provider: {Provider}, ExternalEventId: {ExternalEventId}")]
+        private static partial void LogDeduped(ILogger logger, string provider, string externalEventId);
     }
 }

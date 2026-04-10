@@ -1,6 +1,7 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
 using Cobryx.Application.Invoicing.Commands.CreatePaymentMethod;
 using Cobryx.Application.Invoicing.Commands.DeletePaymentMethod;
 using Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
@@ -18,9 +19,9 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/financial/payment-methods")]
-[Tags("Financial Core")]
-public class PaymentMethodsController(ISender sender) : CobryxBaseController(sender)
+[Route("api/v{version:apiVersion}/payment-methods")]
+[Tags("Payments")]
+public class PaymentMethodsController(ISender sender, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
     /// <summary>
     /// Lists all active payment methods for the current tenant.
@@ -72,8 +73,28 @@ public class PaymentMethodsController(ISender sender) : CobryxBaseController(sen
             request.Description);
 
         var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/payment-methods/{result.Value}", result,
+        return HandleCreatedResult(linkGenerator.GetPaymentMethodUrl(result.Value), result,
             InvoicingOutcomes.PaymentMethods.Created);
+    }
+
+    /// <summary>
+    /// Retrieves details for a specific payment method.
+    /// </summary>
+    [HttpGet("{id}", Name = "GetPaymentMethod")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<PaymentMethodContract>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetPaymentMethod(Guid id)
+    {
+        var result = await Sender.Send(new GetPaymentMethodsQuery());
+        if (!result.IsSuccess || result.Value == null)
+            return HandleResult(result);
+
+        var method = result.Value.FirstOrDefault(m => m.Id == id);
+        if (method == null)
+            return NotFound();
+
+        return Success(new PaymentMethodContract(method.Id, method.Name, method.Code, method.Description),
+            InvoicingOutcomes.PaymentMethods.SearchCompleted);
     }
 
     /// <summary>

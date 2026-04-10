@@ -1,5 +1,8 @@
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
+using Cobryx.Application.Subscriptions.Common;
+using Cobryx.Domain.Identity;
+using Cobryx.Domain.Payments;
 using Cobryx.Domain.Payments.Enums;
 using Cobryx.Domain.Shared;
 
@@ -11,26 +14,21 @@ using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Payments.Commands.InitializePaymentLink;
 
+// * PUBLIC ENDPOINT - Not tenant-scoped
+// This command is used by external payers via payment link token.
+// Tenant context is derived from the PaymentLink entity, not from request context.
+// DO NOT add [TenantScoped] or IRequiresTenant.
 public record InitializePaymentLinkCommand(string Token) : IRequest<Result<string>>;
 
-public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLinkCommand, Result<string>>
+public class InitializePaymentLinkHandler(
+    ICobryxDbContext context,
+    IStripeService stripeService,
+    IOptions<StripeOptions> stripeOptions,
+    IClock clock,
+    ILogger<InitializePaymentLinkHandler> logger)
+    : IRequestHandler<InitializePaymentLinkCommand, Result<string>>
 {
-    private readonly ICobryxDbContext _context;
-    private readonly IStripeService _stripeService;
-    private readonly StripeOptions _stripeOptions;
-    private readonly ILogger<InitializePaymentLinkHandler> _logger;
-
-    public InitializePaymentLinkHandler(
-        ICobryxDbContext context,
-        IStripeService stripeService,
-        IOptions<StripeOptions> stripeOptions,
-        ILogger<InitializePaymentLinkHandler> logger)
-    {
-        _context = context;
-        _stripeService = stripeService;
-        _stripeOptions = stripeOptions.Value;
-        _logger = logger;
-    }
+    private readonly StripeOptions _stripeOptions = stripeOptions.Value;
 
     public async Task<Result<string>> Handle(InitializePaymentLinkCommand request, CancellationToken ct)
     {
@@ -44,7 +42,7 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         var salt = parts[0];
         var rawToken = parts[1];
 
-        var link = await _context.PaymentLinks
+        PaymentLink? link = await context.PaymentLinks
             .FirstOrDefaultAsync(l => l.Salt == salt, ct);
 
         if (link == null)
@@ -52,11 +50,11 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
 
         if (!link.ValidateToken(rawToken, _stripeOptions.PaymentLinkSecret))
         {
-            await _context.SaveChangesAsync(ct);
+            await context.SaveChangesAsync(ct);
             return Result.Failure<string>(DomainErrorCode.PaymentLink.InvalidStatus);
         }
 
-        var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
+        Tenant? tenant = await context.Tenants.FirstOrDefaultAsync(t => t.Id == link.TenantId, ct);
         if (tenant == null)
             return Result.Failure<string>(DomainErrorCode.Common.GeneralError);
 
@@ -69,19 +67,22 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
         {
             try
             {
-                var status = await _stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
-                if (status is "requires_payment_method" or "requires_confirmation" or "requires_action" or "processing")
+                var status = await stripeService.GetPaymentIntentStatusAsync(link.StripePaymentIntentId, ct);
+                if (status is StripeConstants.PaymentIntentStatuses.RequiresPaymentMethod
+                    or StripeConstants.PaymentIntentStatuses.RequiresConfirmation
+                    or StripeConstants.PaymentIntentStatuses.RequiresAction
+                    or StripeConstants.PaymentIntentStatuses.Processing)
                 {
-                    var secret = await _stripeService.GetPaymentIntentClientSecretAsync(link.StripePaymentIntentId, ct);
+                    var secret = await stripeService.GetPaymentIntentClientSecretAsync(link.StripePaymentIntentId, ct);
                     return Result.Success(secret);
                 }
 
-                _logger.LogWarning("Existing Intent {IntentId} has status {Status}. Generating fresh intent.",
+                logger.LogWarning("Existing Intent {IntentId} has status {Status}. Generating fresh intent.",
                     link.StripePaymentIntentId, status);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to verify existing intent {IntentId}. Falling back to new intent.",
+                logger.LogError(ex, "Failed to verify existing intent {IntentId}. Falling back to new intent.",
                     link.StripePaymentIntentId);
             }
         }
@@ -101,16 +102,16 @@ public class InitializePaymentLinkHandler : IRequestHandler<InitializePaymentLin
             appFee = Math.Round(link.AmountSnapshot.Amount * 0.015m, 2);
         }
 
-        var (intentId, clientSecret) = await _stripeService.CreatePaymentIntentAsync(
+        var (intentId, clientSecret) = await stripeService.CreatePaymentIntentAsync(
             link.AmountSnapshot,
             metadata,
             tenant.IsConnectActive ? tenant.StripeAccountId : null,
             appFee,
             ct);
 
-        link.MarkAsProcessing(intentId);
+        link.MarkAsProcessing(intentId, clock.UtcNow);
 
-        await _context.SaveChangesAsync(ct);
+        await context.SaveChangesAsync(ct);
 
         return Result.Success(clientSecret);
     }

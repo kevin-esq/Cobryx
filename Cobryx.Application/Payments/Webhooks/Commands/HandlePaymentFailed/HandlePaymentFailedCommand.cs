@@ -7,6 +7,8 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 
+using static Cobryx.Domain.Shared.CobryxDefaults;
+
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
 
 public record HandlePaymentFailedCommand(JsonElement StripeObject, string EventType) : IRequest<Result>;
@@ -43,21 +45,21 @@ public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCom
         }
 
         decimal amount = 0;
-        string currency = "USD";
+        string currency = Currency;
         string? failureCode = null;
         string description = "Payment attempt failed.";
 
         if (request.EventType.Contains("invoice"))
         {
             amount = request.StripeObject.GetProperty("amount_due").GetInt64() / 100m;
-            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? "USD";
+            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? Currency;
             failureCode = "invoice_payment_failed";
             description = $"Invoice {request.StripeObject.GetProperty("number").GetString()} payment failed.";
         }
         else
         {
             amount = request.StripeObject.GetProperty("amount").GetInt64() / 100m;
-            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? "USD";
+            currency = request.StripeObject.GetProperty("currency").GetString()?.ToUpper() ?? Currency;
 
             if (request.StripeObject.TryGetProperty("last_payment_error", out var errorProp))
             {

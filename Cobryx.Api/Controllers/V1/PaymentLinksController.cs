@@ -16,12 +16,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/payment-links")]
 [Authorize]
-[Tags("Payments & Collection")]
-public class PaymentLinksController : CobryxBaseController
+[Tags("Payments")]
+public class PaymentLinksController(ISender sender) : CobryxBaseController(sender)
 {
-    public PaymentLinksController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Generates a new secure payment link for a customer or specific loan.

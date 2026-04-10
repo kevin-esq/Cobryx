@@ -8,74 +8,78 @@ using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace Cobryx.Application.Payments.Queries.GetPaymentLinkByToken;
-
-public record PaymentLinkDto(
-    Guid Id,
-    string CustomerName,
-    Cobryx.Domain.ValueObjects.Money Amount,
-    string Status,
-    DateTime ExpiresAt,
-    string? LoanNumber = null,
-    string? StripeClientSecret = null);
-
-public record GetPaymentLinkByTokenQuery(string Token) : IRequest<Result<PaymentLinkDto>>;
-
-public class GetPaymentLinkByTokenHandler : IRequestHandler<GetPaymentLinkByTokenQuery, Result<PaymentLinkDto>>
+namespace Cobryx.Application.Payments.Queries.GetPaymentLinkByToken
 {
-    private readonly ICobryxDbContext _context;
-    private readonly StripeOptions _stripeOptions;
+    public record PaymentLinkDto(
+        Guid Id,
+        string CustomerName,
+        Domain.ValueObjects.Money Amount,
+        string Status,
+        DateTime ExpiresAt,
+        string? LoanNumber = null,
+        string? StripeClientSecret = null);
 
-    public GetPaymentLinkByTokenHandler(ICobryxDbContext context, IOptions<StripeOptions> stripeOptions)
+    public record GetPaymentLinkByTokenQuery(string Token) : IRequest<Result<PaymentLinkDto>>;
+
+    public class GetPaymentLinkByTokenHandler(ICobryxDbContext context, IClock clock, IOptions<StripeOptions> stripeOptions) : IRequestHandler<GetPaymentLinkByTokenQuery, Result<PaymentLinkDto>>
     {
-        _context = context;
-        _stripeOptions = stripeOptions.Value;
-    }
+        private readonly ICobryxDbContext _context = context;
+        private readonly IClock _clock = clock;
+        private readonly StripeOptions _stripeOptions = stripeOptions.Value;
 
-    public async Task<Result<PaymentLinkDto>> Handle(GetPaymentLinkByTokenQuery request, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(request.Token))
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.Auth.TokenMissing);
-
-        var parts = request.Token.Split('.', 2);
-        if (parts.Length != 2)
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
-
-        var salt = parts[0];
-        var rawToken = parts[1];
-
-        var link = await _context.PaymentLinks
-            .Include(l => l.Customer)
-            .FirstOrDefaultAsync(l => l.Salt == salt, ct);
-
-        if (link == null)
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
-
-        if (!link.ValidateToken(rawToken, _stripeOptions.PaymentLinkSecret))
+        public async Task<Result<PaymentLinkDto>> Handle(GetPaymentLinkByTokenQuery request, CancellationToken cancellationToken)
         {
-            await _context.SaveChangesAsync(ct);
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.InvalidStatus);
+            if (string.IsNullOrWhiteSpace(request.Token))
+            {
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.Auth.TokenMissing);
+            }
+
+            var parts = request.Token.Split('.', 2);
+            if (parts.Length != 2)
+            {
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
+            }
+
+            var salt = parts[0];
+            var rawToken = parts[1];
+
+            var link = await _context.PaymentLinks
+                .Include(l => l.Customer)
+                .FirstOrDefaultAsync(l => l.Salt == salt, cancellationToken);
+
+            if (link == null)
+            {
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.NotFound);
+            }
+
+            if (!link.ValidateToken(rawToken, _stripeOptions.PaymentLinkSecret))
+            {
+                _ = await _context.SaveChangesAsync(cancellationToken);
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.InvalidStatus);
+            }
+
+            if (link.Status == PaymentLinkStatus.Paid)
+            {
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.AlreadyPaid);
+            }
+
+            if (link.ExpiresAt < _clock.UtcNow)
+            {
+                link.Expire();
+                _ = await _context.SaveChangesAsync(cancellationToken);
+                return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.Expired);
+            }
+
+            var dto = new PaymentLinkDto(
+                link.Id,
+                $"{link.Customer.FirstName} {link.Customer.LastName}",
+                link.AmountSnapshot,
+                link.Status.ToString(),
+                link.ExpiresAt,
+                link.LoanId.HasValue ? "Loan Info" : null
+            );
+
+            return Result.Success(dto);
         }
-
-        if (link.Status == PaymentLinkStatus.Paid)
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.AlreadyPaid);
-
-        if (link.ExpiresAt < DateTime.UtcNow)
-        {
-            link.Expire();
-            await _context.SaveChangesAsync(ct);
-            return Result.Failure<PaymentLinkDto>(DomainErrorCode.PaymentLink.Expired);
-        }
-
-        var dto = new PaymentLinkDto(
-            link.Id,
-            $"{link.Customer.FirstName} {link.Customer.LastName}",
-            link.AmountSnapshot,
-            link.Status.ToString(),
-            link.ExpiresAt,
-            link.LoanId.HasValue ? "Loan Info" : null
-        );
-
-        return Result.Success(dto);
     }
 }

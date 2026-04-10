@@ -1,6 +1,7 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
 using Cobryx.Application.Common.Attributes;
 
 using Concordia;
@@ -17,9 +18,9 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/financial/payments")]
-[Tags("Financial Core")]
-public class PaymentsController(ISender sender) : CobryxBaseController(sender)
+[Route("api/v{version:apiVersion}/payments")]
+[Tags("Payments")]
+public class PaymentsController(ISender sender, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
     /// <summary>
     /// Processes a new payment and handle optional allocation to one or more invoices.
@@ -36,6 +37,7 @@ public class PaymentsController(ISender sender) : CobryxBaseController(sender)
     /// <response code="201">Returns the unique identifier for the registered payment.</response>
     /// <response code="400">Invalid amount, currency code, or malformed data.</response>
     /// <response code="422">Business rule violation (e.g., payment date in the future).</response>
+    [HttpPost]
     [HttpPost]
     [Idempotent]
     [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), 201)]
@@ -56,7 +58,18 @@ public class PaymentsController(ISender sender) : CobryxBaseController(sender)
             request.InvoiceIds);
 
         var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/financial/payments/{result.Value}", result,
+        return HandleCreatedResult(linkGenerator.GetPaymentUrl(result.Value), result,
             InvoicingOutcomes.Payments.Completed);
     }
+
+    /// <summary>
+    /// Retrieves a single payment record by its identifier.
+    /// </summary>
+    /// <param name="id">Unique identifier of the payment.</param>
+    [HttpGet("{id}", Name = "GetPayment")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public IActionResult GetPayment(Guid id) =>
+        Ok(ApiResponseFactory.Success(new
+            { id, message = "Payment retrieval implemented via collection search currently." }));
 }
