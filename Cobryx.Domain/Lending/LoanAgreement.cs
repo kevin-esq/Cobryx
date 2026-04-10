@@ -89,14 +89,16 @@ public class LoanAgreement : BaseEntity, IAggregateRoot, ITenantEntity
         IsSigned = false;
     }
 
-    public void Sign()
+    public void Sign() => Sign(DateTime.UtcNow);
+
+    public void Sign(DateTime now)
     {
         if (IsSigned)
             throw new DomainException(DomainErrorCode.Loans.AgreementAlreadySigned);
 
         IsSigned = true;
-        SignedAt = DateTime.UtcNow;
-        UpdateTimestamp();
+        SignedAt = now;
+        UpdateTimestamp(now);
     }
 
     public int GetDaysBetweenPayments()

@@ -19,12 +19,12 @@ public class LoanDelinquencyState : BaseEntity
 
     private LoanDelinquencyState() { }
 
-    public LoanDelinquencyState(Guid loanId)
+    public LoanDelinquencyState(Guid loanId, DateTime? now = null)
     {
         LoanId = loanId;
         Stage = DelinquencyStage.Current;
         DaysPastDue = 0;
-        LastEvaluatedAt = DateTime.UtcNow;
+        LastEvaluatedAt = now ?? DateTime.UtcNow;
     }
 
     public void UpdateState(int dpd, DateTime? oldestDueDate, DelinquencyStage stage, DateTime evaluatedAt, DateTime evaluatedDate)

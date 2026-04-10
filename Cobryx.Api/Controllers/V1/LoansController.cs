@@ -1,8 +1,17 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Api.Services;
 using Cobryx.Application.Common.Attributes;
+using Cobryx.Application.Lending.Commands.ApplyLateFees;
+using Cobryx.Application.Lending.Commands.CloseLoan;
+using Cobryx.Application.Lending.Commands.CreateLoan;
+using Cobryx.Application.Lending.Commands.RegisterPayment;
+using Cobryx.Application.Lending.Dtos;
+using Cobryx.Application.Lending.Queries.GetLoan;
+using Cobryx.Application.Lending.Queries.GetLoanSchedule;
 using Cobryx.Domain.Lending.Enums;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -18,18 +27,15 @@ namespace Cobryx.Api.Controllers.V1;
 [Authorize]
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/lending/loans")]
-[Tags("Financial Core")]
-public class LoansController : CobryxBaseController
+[Route("api/v{version:apiVersion}/loans")]
+[Tags("Lending")]
+public class LoansController(ISender sender, IApiLinkGenerator linkGenerator) : CobryxBaseController(sender)
 {
-    public LoansController(ISender sender) : base(sender)
-    {
-    }
-
     /// <summary>
     /// Creates a new loan agreement, generates a tentative amortization schedule, and activates the credit line.
     /// </summary>
     /// <param name="request">The loan configuration including principal amount (Decimal, 2-digit precision) and terms.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Financial Precision:
     /// - 'Amount' should be provided in the native currency unit (ISO-4217).
@@ -54,9 +60,9 @@ public class LoansController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> Create(
-        [FromBody] CreateLoanRequest request)
+        [FromBody] CreateLoanRequest request, CancellationToken ct)
     {
-        var command = new Application.Lending.Commands.CreateLoan.CreateLoanCommand(
+        var command = new CreateLoanCommand(
             request.CustomerId,
             request.Amount,
             Enum.Parse<PaymentFrequency>(request.PaymentFrequency, true),
@@ -68,14 +74,33 @@ public class LoansController : CobryxBaseController
             request.FirstDueDate,
             request.ReferenceId);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/lending/loans/{result.Value}/schedule", result, LendingApiOutcomes.LoanCreated);
+        Result<Guid> result = await Sender.Send(command, ct);
+        return HandleCreatedResult(linkGenerator.GetLoanUrl(result.Value), result,
+            LendingApiOutcomes.LoanCreated);
+    }
+
+    /// <summary>
+    /// Retrieves basic configuration and current financial status for a specific loan agreement.
+    /// </summary>
+    /// <param name="id">Unique identifier of the loan.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="200">The basic loan resource data.</response>
+    /// <response code="404">Resource not found.</response>
+    [HttpGet("{id}", Name = "GetLoan")]
+    [Authorize(Policy = "CanViewCredits")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<LoanDto>), 200)]
+    [ProducesResponseType(typeof(ApiErrorResponse), 404)]
+    public async Task<IActionResult> GetLoan(Guid id, CancellationToken ct)
+    {
+        Result<LoanDto> result = await Sender.Send(new GetLoanQuery(id), ct);
+        return HandleResult(result);
     }
 
     /// <summary>
     /// Retrieves the full amortization schedule, including principal targets and projected interest.
     /// </summary>
     /// <param name="id">Unique identifier of the loan.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// This endpoint provides the current financial snapshot of the agreement.
     ///
@@ -85,15 +110,16 @@ public class LoansController : CobryxBaseController
     /// </remarks>
     /// <response code="200">The current amortization schedule.</response>
     /// <response code="404">Resource not found.</response>
-    [HttpGet("{id}/schedule")]
+    [HttpGet("{id}/schedule", Name = "GetLoanSchedule")]
     [Authorize(Policy = "CanViewCredits")]
     [ProducesResponseType(typeof(ApiSuccessResponse<AmortizationScheduleContract>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
-    public async Task<IActionResult> GetSchedule(Guid id)
+    public async Task<IActionResult> GetSchedule(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new Application.Lending.Queries.GetLoanSchedule.GetLoanScheduleQuery(id));
+        Result<LoanScheduleDto> result =
+            await Sender.Send(new GetLoanScheduleQuery(id), ct);
 
         if (!result.IsSuccess || result.Value == null)
         {
@@ -107,20 +133,22 @@ public class LoansController : CobryxBaseController
             result.Value.TotalPrincipal,
             result.Value.TotalInterest,
             result.Value.TotalPaid,
-            result.Value.Installments.Select(i => new AmortizationInstallmentContract(
-                i.Id,
-                i.InstallmentNumber,
-                i.DueDate,
-                i.PrincipalAmount,
-                i.InterestAmount,
-                i.TotalAmount,
-                i.PrincipalPaid,
-                i.InterestPaid,
-                i.LateFeesPaid,
-                i.TotalPaid,
-                i.RemainingAmount,
-                i.Status.ToString(),
-                i.PaidAt)).ToList());
+            [
+                .. result.Value.Installments.Select(i => new AmortizationInstallmentContract(
+                    i.Id,
+                    i.InstallmentNumber,
+                    i.DueDate,
+                    i.PrincipalAmount,
+                    i.InterestAmount,
+                    i.TotalAmount,
+                    i.PrincipalPaid,
+                    i.InterestPaid,
+                    i.LateFeesPaid,
+                    i.TotalPaid,
+                    i.RemainingAmount,
+                    i.Status.ToString(),
+                    i.PaidAt))
+            ]);
 
         return Success(mapped, LendingApiOutcomes.LoanScheduleRetrieved);
     }
@@ -130,6 +158,7 @@ public class LoansController : CobryxBaseController
     /// </summary>
     /// <param name="id">Unique identifier of the target loan.</param>
     /// <param name="request">Payment details (Amount in native currency unit [ISO-4217], Payment Date, and References).</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// Amounts are applied according to the loan's 'PaymentApplicationPolicy' (typically Principal -> Interest -> Fees).
     ///
@@ -153,9 +182,9 @@ public class LoansController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
     public async Task<IActionResult> RegisterPayment(
         Guid id,
-        [FromBody] LoanPaymentRequest request)
+        [FromBody] LoanPaymentRequest request, CancellationToken ct)
     {
-        var command = new Application.Lending.Commands.RegisterPayment.RegisterPaymentCommand(
+        var command = new RegisterPaymentCommand(
             id,
             request.Amount,
             request.PaymentMethodId,
@@ -163,14 +192,18 @@ public class LoansController : CobryxBaseController
             request.Reference,
             request.Notes);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/lending/loans/{id}/payments/{result.Value}", result, LendingApiOutcomes.PaymentRegistered);
+        Result<PaymentResultDto> result = await Sender.Send(command, ct);
+        return HandleCreatedResult(
+            result.IsSuccess ? linkGenerator.GetPaymentUrl(result.Value!.PaymentId) : null,
+            result,
+            LendingApiOutcomes.PaymentRegistered);
     }
 
     /// <summary>
     /// Formally closes a loan agreement and prevents further mutations.
     /// </summary>
     /// <param name="id">Unique identifier of the loan.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// This PATCH endpoint represents a well-defined state transition (command), not a partial update of arbitrary fields.
     ///
@@ -190,9 +223,9 @@ public class LoansController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     [ProducesResponseType(typeof(ApiErrorResponse), 422)]
-    public async Task<IActionResult> Close(Guid id)
+    public async Task<IActionResult> Close(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new Application.Lending.Commands.CloseLoan.CloseLoanCommand(id));
+        Result result = await Sender.Send(new CloseLoanCommand(id), ct);
         return HandleResult(result, LendingApiOutcomes.LoanClosed);
     }
 
@@ -200,6 +233,7 @@ public class LoansController : CobryxBaseController
     /// ADMIN ONLY: Trigger late fee assessment across the lending portfolio.
     /// </summary>
     /// <param name="loanId">Optional identifier to process a single loan. If omitted, all overdue loans are processed.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// ⚠️ This endpoint performs a batch operation that mutates financial state across multiple loans.
     /// Intended for administrative/system use only — not for external integrators.
@@ -212,15 +246,15 @@ public class LoansController : CobryxBaseController
     /// </remarks>
     /// <response code="200">Batch processing finished.</response>
     /// <response code="403">Forbidden (Admin only).</response>
-    [HttpPost("late-fees")]
+    [HttpPost("/api/v{version:apiVersion}/system/commands/apply-late-fees")]
     [Authorize(Policy = "CanManageTenant")]
-    [Tags("System & Administration")]
+    [Tags("Lending")]
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
-    public async Task<IActionResult> ApplyLateFees([FromQuery] Guid? loanId)
+    public async Task<IActionResult> ApplyLateFees([FromQuery] Guid? loanId, CancellationToken ct)
     {
-        var result = await Sender.Send(new Application.Lending.Commands.ApplyLateFees.ApplyLateFeesCommand(loanId));
+        Result<LateFeeResultDto> result = await Sender.Send(new ApplyLateFeesCommand(loanId), ct);
         return HandleResult(result, LendingApiOutcomes.LateFeesApplied);
     }
 }
