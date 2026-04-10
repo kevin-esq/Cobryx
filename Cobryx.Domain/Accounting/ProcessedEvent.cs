@@ -21,10 +21,10 @@ public class ProcessedEvent : BaseEntity
 
     private ProcessedEvent() { }
 
-    public ProcessedEvent(Guid eventId, string consumerName)
+    public ProcessedEvent(Guid eventId, string consumerName, DateTime? now = null)
     {
         EventId = eventId;
         ConsumerName = consumerName;
-        ProcessedAt = DateTime.UtcNow;
+        ProcessedAt = now ?? DateTime.UtcNow;
     }
 }

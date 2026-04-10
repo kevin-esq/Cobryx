@@ -1,5 +1,6 @@
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
+using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Accounting.Enums;
 using Cobryx.Domain.Lending;
@@ -12,11 +13,12 @@ using Newtonsoft.Json.Converters;
 
 namespace Cobryx.Application.Accounting.Services
 {
-    public class ReconciliationEngine(
+    public partial class ReconciliationEngine(
         ICobryxDbContext dbContext,
         IStripeService stripeService,
         FinancialPostingEngine postingEngine,
         CobryxMetrics metrics,
+        IClock clock,
         ILogger<ReconciliationEngine> logger)
     {
         private static readonly TimeSpan _timingTolerance = TimeSpan.FromMinutes(15);
@@ -29,12 +31,12 @@ namespace Cobryx.Application.Accounting.Services
             CancellationToken ct = default)
         {
             var runId = Guid.NewGuid();
-            logger.LogInformation("Starting reconciliation run {RunId} for tenant {TenantId}", runId, tenantId);
+            LogReconciliationStarted(logger, runId, tenantId);
 
             var (available, pending) = await stripeService.GetBalanceAsync(stripeAccountId, ct);
             var ledgerBalance = await GetLedgerBalanceAsync(tenantId, ct);
 
-            var drifts = new List<DriftDetail>();
+            List<DriftDetail> drifts = [];
             ReconciliationStatus status = ReconciliationStatus.Synced;
 
             IntentReconciliationResult result =
@@ -43,6 +45,7 @@ namespace Cobryx.Application.Accounting.Services
             var totalDriftsManaged = result.DriftsManaged;
             var totalRepaired = result.Repaired;
             status = result.Status;
+
             List<DriftDetail> settlementDrifts =
                 await ReconcileSettlementAsync(tenantId, from, to, stripeAccountId, ct);
             foreach (DriftDetail sd in settlementDrifts)
@@ -62,7 +65,7 @@ namespace Cobryx.Application.Accounting.Services
             (status, ReconciliationSeverity severity) =
                 ResolveStatusAndSeverity(drifts, totalDriftsManaged, totalRepaired, status);
 
-            var audit = new ReconciliationAudit(
+            ReconciliationAudit audit = new(
                 tenantId, runId, from, to,
                 ledgerBalance, available, pending,
                 status, severity,
@@ -74,7 +77,7 @@ namespace Cobryx.Application.Accounting.Services
             _ = dbContext.ReconciliationAudits.Add(audit);
             _ = await dbContext.SaveChangesAsync(ct);
 
-            logger.LogInformation("Reconciliation run {RunId} completed with status {Status}", runId, audit.Status);
+            LogReconciliationCompleted(logger, runId, audit.Status);
             return audit;
         }
 
@@ -107,7 +110,7 @@ namespace Cobryx.Application.Accounting.Services
                     break;
                 }
 
-                foreach (StripePaymentIntentDto intent in intents.Where(i => i.Status == "succeeded"))
+                foreach (StripePaymentIntentDto intent in intents.Where(static i => i.Status == StripeConstants.PaymentIntentStatuses.Succeeded))
                 {
                     DriftDetail? drift = await AnalyzeIntentAsync(intent, tenantId, ct);
                     if (drift == null)
@@ -134,7 +137,7 @@ namespace Cobryx.Application.Accounting.Services
                                     Type = DriftType.None,
                                     Message = drift.Message + " [AUTO-REPAIRED]"
                                 };
-                                logger.LogInformation("Drift {Id} auto-repaired after confirmation.", intent.Id);
+                                LogDriftAutoRepaired(logger, intent.Id);
                             }
                         }
 
@@ -192,17 +195,26 @@ namespace Cobryx.Application.Accounting.Services
             if (drifts.Any(static d => d.Severity == ReconciliationSeverity.Critical))
             {
                 severity = ReconciliationSeverity.Critical;
-                if (status != ReconciliationStatus.ConfirmedDrift) status = ReconciliationStatus.HardDrift;
+                if (status != ReconciliationStatus.ConfirmedDrift)
+                {
+                    status = ReconciliationStatus.HardDrift;
+                }
             }
             else if (drifts.Any(static d => d.Severity == ReconciliationSeverity.Error))
             {
                 severity = ReconciliationSeverity.Error;
-                if (status != ReconciliationStatus.ConfirmedDrift) status = ReconciliationStatus.HardDrift;
+                if (status != ReconciliationStatus.ConfirmedDrift)
+                {
+                    status = ReconciliationStatus.HardDrift;
+                }
             }
             else if (drifts.Any(static d => d.Severity == ReconciliationSeverity.Warning))
             {
                 severity = ReconciliationSeverity.Warning;
-                if (status != ReconciliationStatus.ConfirmedDrift) status = ReconciliationStatus.SoftDrift;
+                if (status != ReconciliationStatus.ConfirmedDrift)
+                {
+                    status = ReconciliationStatus.SoftDrift;
+                }
             }
 
             return (status, severity);
@@ -212,14 +224,14 @@ namespace Cobryx.Application.Accounting.Services
         {
             LedgerAccount? cashAccount = await dbContext.LedgerAccounts
                 .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == "1010", ct);
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.Code == "1010", ct);
 
             return cashAccount == null
                 ? 0
                 : await dbContext.LedgerEntries
                     .AsNoTracking()
                     .Where(e => e.AccountId == cashAccount.Id)
-                    .SumAsync(e => e.Debit - e.Credit, ct);
+                    .SumAsync(static e => e.Debit - e.Credit, ct);
         }
 
         private async Task<DriftDetail?> AnalyzeIntentAsync(StripePaymentIntentDto intent, Guid tenantId,
@@ -234,17 +246,33 @@ namespace Cobryx.Application.Accounting.Services
                     t => t.TenantId == tenantId && (t.ReferenceId == referencePay || t.ReferenceId == referenceRec),
                     ct);
 
-            if (ledgerExists)
+            // BIDIRECTIONAL CHECK: Stripe → DB
+            if (!ledgerExists)
             {
-                return null;
+                TimeSpan age = clock.UtcNow - intent.Created;
+                return age < _timingTolerance
+                    ? new DriftDetail(intent.Id, DriftType.TimingLag, ReconciliationSeverity.Info,
+                        $"Payment succeeded {Math.Round(age.TotalMinutes, 1)}m ago; webhook may be in transit.")
+                    : new DriftDetail(intent.Id, DriftType.MissingPayment, ReconciliationSeverity.Error,
+                        $"Payment ({intent.Amount / 100m} {intent.Currency.ToUpper(System.Globalization.CultureInfo.CurrentCulture)}) succeeded in Stripe but is missing from Ledger after 15m.");
             }
 
-            TimeSpan age = DateTime.UtcNow - intent.Created;
-            return age < _timingTolerance
-                ? new DriftDetail(intent.Id, DriftType.TimingLag, ReconciliationSeverity.Info,
-                    $"Payment succeeded {Math.Round(age.TotalMinutes, 1)}m ago; webhook may be in transit.")
-                : new DriftDetail(intent.Id, DriftType.MissingPayment, ReconciliationSeverity.Error,
-                    $"Payment ({intent.Amount / 100m} {intent.Currency.ToUpper(System.Globalization.CultureInfo.CurrentCulture)}) succeeded in Stripe but is missing from Ledger after 15m.");
+            // BIDIRECTIONAL CHECK: DB → Stripe (verify amounts match)
+            // Query entries separately for amount verification
+            var ledgerAmount = await dbContext.LedgerEntries
+                .AsNoTracking()
+                .Where(e => dbContext.LedgerTransactions
+                    .Any(t => t.Id == e.TransactionId &&
+                              t.TenantId == tenantId &&
+                              (t.ReferenceId == referencePay || t.ReferenceId == referenceRec)))
+                .SumAsync(static e => e.Debit - e.Credit, ct);
+
+            var stripeAmount = intent.Amount / 100m;
+
+            return Math.Abs(Math.Abs(ledgerAmount) - stripeAmount) > 0.01m && ledgerAmount != 0
+                ? new DriftDetail(intent.Id, DriftType.AmountMismatch, ReconciliationSeverity.Critical,
+                    $"CRITICAL: Amount mismatch! Ledger={Math.Abs(ledgerAmount):C}, Stripe={stripeAmount:C}")
+                : null;
         }
 
         private async Task<List<DriftDetail>> ReconcileSettlementAsync(
@@ -254,7 +282,7 @@ namespace Cobryx.Application.Accounting.Services
             string? stripeAccountId,
             CancellationToken ct)
         {
-            var settlementDrifts = new List<DriftDetail>();
+            List<DriftDetail> settlementDrifts = [];
             string? lastCursor = null;
             var hasMore = true;
 
@@ -301,12 +329,12 @@ namespace Cobryx.Application.Accounting.Services
 
             LedgerTransaction? ledgerTx = await dbContext.LedgerTransactions
                 .AsNoTracking()
-                .Include(t => t.Entries)
+                .Include(static t => t.Entries)
                 .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.ReferenceId == referenceId, ct);
 
             if (ledgerTx == null)
             {
-                TimeSpan age = DateTime.UtcNow - tx.Created;
+                TimeSpan age = clock.UtcNow - tx.Created;
                 return age < _timingTolerance
                     ? new DriftDetail(tx.Id, DriftType.TimingLag, ReconciliationSeverity.Info,
                         $"Settlement {tx.Type} recently created; webhook may be in transit.")
@@ -314,7 +342,7 @@ namespace Cobryx.Application.Accounting.Services
                         $"Settlement {tx.Type} ({tx.Amount / 100m} {tx.Currency.ToUpper(System.Globalization.CultureInfo.CurrentCulture)}) missing from Ledger.");
             }
 
-            var ledgerAmount = ledgerTx.Entries.Sum(e => e.Debit - e.Credit);
+            var ledgerAmount = ledgerTx.Entries.Sum(static e => e.Debit - e.Credit);
             var stripeNet = tx.Net / 100m;
 
             return Math.Abs(Math.Abs(stripeNet) - Math.Abs(ledgerAmount)) > 0.01m
@@ -323,38 +351,81 @@ namespace Cobryx.Application.Accounting.Services
                 : null;
         }
 
+        /// <summary>
+        /// ATOMIC auto-repair: Payment + Ledger entries in single transaction.
+        /// If any part fails, entire operation rolls back - no partial state.
+        /// </summary>
         private async Task<bool> AutoRepairDriftAsync(StripePaymentIntentDto intent, Guid tenantId,
             CancellationToken ct)
         {
+            if (!intent.Metadata.TryGetValue("LoanId", out var loanIdStr) ||
+                !Guid.TryParse(loanIdStr, out Guid loanId))
+            {
+                return false;
+            }
+
+            Loan? loan = await dbContext.Loans
+                .FirstOrDefaultAsync(l => l.Id == loanId && l.TenantId == tenantId, ct);
+
+            if (loan == null)
+            {
+                return false;
+            }
+
+            // ATOMIC REPAIR: Use explicit transaction for all-or-nothing semantics
+            // Note: InMemoryDatabase doesn't support transactions, so we handle that gracefully
+            var supportsTransactions = !dbContext.Database.ProviderName?.Contains("InMemory") ?? true;
+
+            Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
             try
             {
-                if (!intent.Metadata.TryGetValue("LoanId", out var loanIdStr) ||
-                    !Guid.TryParse(loanIdStr, out var loanId))
+                if (supportsTransactions)
                 {
-                    return false;
+                    transaction = await dbContext.Database.BeginTransactionAsync(ct);
                 }
 
-                Loan? loan = await dbContext.Loans
-                    .FirstOrDefaultAsync(l => l.Id == loanId && l.TenantId == tenantId, ct);
-
-                if (loan == null)
-                {
-                    return false;
-                }
-
-                logger.LogInformation("Auto-repair: re-posting missing payment {IntentId} for loan {LoanId}", intent.Id,
-                    loanId);
+                LogAutoRepairPosting(logger, intent.Id, loanId);
 
                 var amount = intent.Amount / 100m;
+
+                // 1. Create payment record (if applicable)
+                // 2. Post to ledger
+                // Both happen within same transaction
                 _ = await postingEngine.PostLoanPaymentAsync(loan, amount, $"STRIPE-{intent.Id}", null, ct);
+
+                // Save all changes
                 _ = await dbContext.SaveChangesAsync(ct);
 
+                // Commit transaction - atomic success
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync(ct);
+                }
+
+                LogAutoRepairSuccess(logger, intent.Id, loanId);
                 return true;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Auto-repair failed for intent {IntentId}", intent.Id);
+                // Rollback on any failure - no partial state
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(ct);
+                }
+
+                LogAutoRepairFailed(logger, ex, intent.Id);
+                metrics.AutoRepairAtomicFailureTotal.Add(1,
+                    new KeyValuePair<string, object?>("tenant_id", tenantId.ToString()),
+                    new KeyValuePair<string, object?>("intent_id", intent.Id));
+
                 return false;
+            }
+            finally
+            {
+                if (transaction != null)
+                {
+                    await transaction.DisposeAsync();
+                }
             }
         }
 
@@ -366,6 +437,7 @@ namespace Cobryx.Application.Accounting.Services
                 .AnyAsync(a => a.DriftDetailsJson!.Contains(externalId), ct);
         }
 
+        // ReSharper disable once NotAccessedPositionalProperty.Local — Used for record identity, JSON serialization, and equality
         private record DriftDetail(
             string ExternalId,
             DriftType Type,

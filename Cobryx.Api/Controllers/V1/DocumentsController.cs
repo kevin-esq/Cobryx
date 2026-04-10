@@ -1,10 +1,12 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Documents.Commands.DeleteDocument;
 using Cobryx.Application.Documents.Commands.UploadDocument;
 using Cobryx.Application.Documents.Queries.GetDocumentDownload;
 using Cobryx.Application.Documents.Queries.GetDocumentStatus;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -21,11 +23,12 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/documents")]
-[Tags("Documents")]
-public class DocumentsController : CobryxBaseController
+[Tags("Platform")]
+public class DocumentsController(
+    ISender sender,
+    ITenantProvider tenantProvider,
+    ICurrentUserProvider currentUserProvider) : CobryxBaseController(sender)
 {
-    public DocumentsController(ISender sender) : base(sender) { }
-
     /// <summary>
     /// Upload a document. Returns 202 with document ID and PendingScan status.
     /// The file will be scanned asynchronously in the background.
@@ -45,13 +48,14 @@ public class DocumentsController : CobryxBaseController
         IFormFile file,
         CancellationToken ct)
     {
-        if (file == null || file.Length == 0)
-            return BadRequest(ApiResponseFactory.Error(errorCode: "VALIDATION.FILE.REQUIRED", numericCode: 4000, traceId: HttpContext.TraceIdentifier));
+        if (file.Length == 0)
+            return BadRequest(ApiResponseFactory.Error(errorCode: "VALIDATION.FILE.REQUIRED", numericCode: 4000,
+                traceId: HttpContext.TraceIdentifier));
 
-        using var stream = file.OpenReadStream();
+        await using Stream stream = file.OpenReadStream();
 
-        var userId = Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
-        var tenantId = Guid.Parse(User.FindFirst("tenant_id")?.Value ?? Guid.Empty.ToString());
+        Guid userId = currentUserProvider.GetUserId() ?? Guid.Empty;
+        Guid tenantId = tenantProvider.GetTenantId() ?? Guid.Empty;
 
         var command = new UploadDocumentCommand(
             tenantId,
@@ -62,7 +66,7 @@ public class DocumentsController : CobryxBaseController
             file.ContentType,
             userId);
 
-        var result = await Sender.Send(command, ct);
+        Result<UploadDocumentResult> result = await Sender.Send(command, ct);
         return HandleResult(result, DocumentOutcomes.UploadAccepted, 202);
     }
 
@@ -71,12 +75,12 @@ public class DocumentsController : CobryxBaseController
     /// </summary>
     /// <param name="id">Document ID.</param>
     /// <param name="ct">Cancellation token.</param>
-    [HttpGet("{id}/status")]
+    [HttpGet("{id}/status", Name = "GetDocument")]
     [ProducesResponseType(typeof(ApiSuccessResponse<DocumentStatusDto>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> GetStatus(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new GetDocumentStatusQuery(id), ct);
+        Result<DocumentStatusDto> result = await Sender.Send(new GetDocumentStatusQuery(id), ct);
         return HandleResult(result, DocumentOutcomes.StatusRetrieved);
     }
 
@@ -91,7 +95,7 @@ public class DocumentsController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new GetDocumentDownloadQuery(id), ct);
+        Result<DocumentDownloadDto> result = await Sender.Send(new GetDocumentDownloadQuery(id), ct);
         return HandleResult(result, DocumentOutcomes.DownloadReady);
     }
 
@@ -105,8 +109,7 @@ public class DocumentsController : CobryxBaseController
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new DeleteDocumentCommand(id), ct);
+        Result result = await Sender.Send(new DeleteDocumentCommand(id), ct);
         return HandleDeleteResult(result);
     }
 }
-

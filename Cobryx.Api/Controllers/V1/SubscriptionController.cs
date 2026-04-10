@@ -1,6 +1,6 @@
 using Asp.Versioning;
 
-using Cobryx.Api.Infrastructure;
+using Cobryx.Api.Filters;
 using Cobryx.Application.Subscriptions.Commands.CreateCheckoutSession;
 using Cobryx.Application.Subscriptions.Commands.CreatePortalSession;
 using Cobryx.Application.Subscriptions.Commands.SyncSubscription;
@@ -20,12 +20,9 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/subscription")]
-[Tags("Subscription")]
-public class SubscriptionController : CobryxBaseController
+[Tags("Platform")]
+public class SubscriptionController(ISender sender) : CobryxBaseController(sender)
 {
-    public SubscriptionController(ISender sender) : base(sender)
-    {
-    }
 
     /// <summary>
     /// Retrieves all available subscription plans.
@@ -145,7 +142,7 @@ public class SubscriptionController : CobryxBaseController
     /// - BILLING.SUBSCRIPTION.SYNC_SUCCESS: Local state updated from Stripe.
     /// </remarks>
     /// <param name="ct">Injected by ASP.NET to handle request cancellation.</param>
-    [HttpPost("sync")]
+    [HttpPost("/api/v{version:apiVersion}/system/commands/sync-subscription")]
     [Authorize(Policy = "CanManageTenant")]
     [ProducesResponseType(typeof(ApiSuccessResponse), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]

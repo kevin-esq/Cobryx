@@ -28,5 +28,7 @@ public enum DriftType
     BalanceMismatch = 5,
     FeeMismatch = 6,
     PayoutMismatch = 7,
-    LedgerCorruption = 8
+    LedgerCorruption = 8,
+    PhantomPayment = 9,      // DB has payment, Stripe doesn't (refund/chargeback)
+    InvariantViolation = 10  // Ledger invariants broken (debits != credits)
 }

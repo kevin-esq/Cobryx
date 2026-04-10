@@ -3,7 +3,7 @@ using Cobryx.Domain.Shared;
 namespace Cobryx.Domain.Accounting;
 
 /// <summary>
-/// A Journal Entry in the system. 
+/// A Journal Entry in the system.
 /// Groups multiple LedgerEntries into an atomic, balanced unit of work.
 /// </summary>
 public class LedgerTransaction : BaseEntity, ITenantEntity
@@ -11,7 +11,7 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
     public Guid TenantId { get; private set; }
     public string Description { get; private set; } = string.Empty;
     public string? ReferenceId { get; private set; }
-    public string Currency { get; private set; } = "USD";
+    public string Currency { get; private set; } = CobryxDefaults.Currency;
     public DateTime EffectiveDate { get; private set; }
     public bool IsPosted { get; private set; }
     public bool IsReversal { get; private set; }
@@ -23,15 +23,20 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
 
     private LedgerTransaction() { }
 
-    public LedgerTransaction(Guid tenantId, string description, string? referenceId = null, Guid? loanId = null, string currency = "USD")
+    public LedgerTransaction(
+        Guid tenantId,
+        string description,
+        string? referenceId = null,
+        Guid? loanId = null,
+        string? currency = null,
+        DateTime? now = null)
     {
         TenantId = tenantId;
         Description = description;
         ReferenceId = referenceId;
         LoanId = loanId;
-        Currency = currency;
-        EffectiveDate = DateTime.UtcNow;
-        IsPosted = false;
+        Currency = currency ?? CobryxDefaults.Currency;
+        EffectiveDate = now ?? DateTime.UtcNow;
     }
 
     public void AddEntry(Guid accountId, decimal debit, decimal credit)
@@ -57,10 +62,7 @@ public class LedgerTransaction : BaseEntity, ITenantEntity
         UpdateTimestamp();
     }
 
-    public static LedgerTransaction CreateReversal(LedgerTransaction original, string reason)
-    {
-        return CreatePartialReversal(original, original.Entries.Sum(e => e.Debit), reason);
-    }
+    public static LedgerTransaction CreateReversal(LedgerTransaction original, string reason) => CreatePartialReversal(original, original.Entries.Sum(e => e.Debit), reason);
 
     public static LedgerTransaction CreatePartialReversal(LedgerTransaction original, decimal refundAmount, string reason)
     {

@@ -5,3 +5,8 @@ public record CachedBalance(
     long LastJournalSequenceId,
     DateTime CachedAt
 );
+
+public record LedgerEntryTransactionBalance(
+    Guid TransactionId,
+    decimal Balance
+);

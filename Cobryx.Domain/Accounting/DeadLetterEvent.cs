@@ -18,13 +18,13 @@ public class DeadLetterEvent : BaseEntity, ITenantEntity
 
     private DeadLetterEvent() { }
 
-    public DeadLetterEvent(OutboxMessage @event, string error)
+    public DeadLetterEvent(OutboxMessage @event, string error, DateTime? now = null)
     {
         TenantId = @event.TenantId;
         EventId = @event.Id;
         Type = @event.Type;
         Payload = @event.Payload;
         ErrorMessage = error;
-        FailedAt = DateTime.UtcNow;
+        FailedAt = now ?? DateTime.UtcNow;
     }
 }

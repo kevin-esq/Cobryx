@@ -25,7 +25,7 @@ public class LedgerAccount : BaseEntity
         string name,
         LedgerAccountType type,
         LedgerAccountRole role = LedgerAccountRole.None,
-        string currency = "MXN",
+        string? currency = null,
         bool isSystem = false)
     {
         TenantId = tenantId;
@@ -33,7 +33,7 @@ public class LedgerAccount : BaseEntity
         Name = name;
         Type = type;
         Role = role;
-        Currency = currency.ToUpperInvariant();
+        Currency = (currency ?? CobryxDefaults.Currency).ToUpperInvariant();
         IsSystem = isSystem;
     }
 
