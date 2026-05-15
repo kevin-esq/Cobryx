@@ -169,6 +169,7 @@ namespace Cobryx.Infrastructure
         private static void RegisterCaching(IServiceCollection services)
         {
             _ = services.AddDistributedMemoryCache();
+            _ = services.AddMemoryCache();
 
             _ = services.AddSingleton<IDistributedCache>(static sp =>
             {
@@ -301,6 +302,10 @@ namespace Cobryx.Infrastructure
             _ = services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
             _ = services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
             _ = services.AddSingleton<ILedgerHealthCache, LedgerHealthCache>();
+            _ = services.AddSingleton<ILedgerHasher, LedgerHasher>();
+            _ = services.AddSingleton<ILedgerSigner, HmacLedgerSigner>();
+            _ = services.AddSingleton<ILedgerAnchorStore, ChainedFileAnchorStore>();
+            _ = services.AddScoped<ILedgerAnchorService, LedgerAnchorService>();
             _ = services.AddScoped<IInvoiceNumberService, InvoiceNumberService>();
             _ = services.AddScoped<IIdempotencyStore, Idempotency.IdempotencyStore>();
             _ = services.AddScoped<IProcessedWebhookEventRepository, Persistence.Repositories.ProcessedWebhookEventRepository>();

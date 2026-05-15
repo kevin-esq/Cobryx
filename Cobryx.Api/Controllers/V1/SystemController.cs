@@ -43,7 +43,7 @@ public class SystemController(
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), 200)]
     public IActionResult GetHealth()
     {
-        Guid? tenantId = tenantProvider.GetTenantId();
+        Guid tenantId = tenantProvider.GetTenantId() ?? Guid.Empty;
         LedgerHealthStatus health = healthCache.Get(tenantId);
 
         var status = new
@@ -72,7 +72,12 @@ public class SystemController(
     public async Task<IActionResult> VerifyLedger([FromQuery] bool forceFullReplay = false)
     {
         Guid? tenantId = tenantProvider.GetTenantId();
-        IntegrityReport report = await integrityService.VerifyJournalIntegrityAsync(tenantId, forceFullReplay);
+        if (!tenantId.HasValue || tenantId.Value == Guid.Empty)
+        {
+            return BadRequest("Tenant context is required for ledger verification.");
+        }
+
+        IntegrityReport report = await integrityService.VerifyJournalIntegrityAsync(tenantId.Value, forceFullReplay);
 
         Outcome outcome = report.IsHealthy
             ? SystemOutcomes.Ledger.IntegrityCheckCompleted
