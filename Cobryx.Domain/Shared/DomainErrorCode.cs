@@ -161,6 +161,8 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode TaxConfigurationNotFound = new("DOMAIN.TAX_CONFIGURATION.NOT_FOUND");
         public static readonly DomainErrorCode PaymentMethodAlreadyExists = new("DOMAIN.PAYMENT_METHOD.ALREADY_EXISTS");
         public static readonly DomainErrorCode ConcurrencyConflict = new("DOMAIN.INVOICING.CONCURRENCY_CONFLICT");
+        public static readonly DomainErrorCode PaymentNotFailedCannotRetry = new("DOMAIN.PAYMENT.NOT_FAILED_CANNOT_RETRY");
+        public static readonly DomainErrorCode ConcurrentFinancialOperation = new("DOMAIN.PAYMENT.CONCURRENT_FINANCIAL_OPERATION");
     }
 
     public static class Credits
@@ -251,6 +253,9 @@ public sealed record DomainErrorCode
     {
         public static readonly DomainErrorCode TransactionNotFound = new("ACCOUNTING.TRANSACTION_NOT_FOUND");
         public static readonly DomainErrorCode CannotReverseReversal = new("ACCOUNTING.CANNOT_REVERSE_REVERSAL");
+        public static readonly DomainErrorCode FinancialSafeModeActive = new("FINANCIAL.SAFE_MODE.ACTIVE");
+        public static readonly DomainErrorCode LedgerChainBroken = new("ACCOUNTING.LEDGER_CHAIN_BROKEN");
+        public static readonly DomainErrorCode LedgerHashMismatch = new("ACCOUNTING.LEDGER_HASH_MISMATCH");
     }
 
     public static class System

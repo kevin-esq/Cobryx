@@ -84,7 +84,7 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void ReverseAllocation(Payments.PaymentAllocation allocation)
+    public void ReverseAllocation(Payments.PaymentAllocation allocation, Money amount)
     {
         if (allocation.InvoiceId != Id)
             throw new DomainException(DomainErrorCode.Invoicing.InvoiceAllocationMismatch);
@@ -92,10 +92,10 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
         if (allocation.IsReversed)
             return;
 
-        if (allocation.Amount.Currency != Total.Currency)
+        if (amount.Currency != Total.Currency)
             throw new DomainException(DomainErrorCode.Invoicing.InvoiceCurrencyMismatch);
 
-        decimal newPaid = TotalPaid.Amount - allocation.Amount.Amount;
+        decimal newPaid = TotalPaid.Amount - amount.Amount;
         TotalPaid = new Money(Math.Max(0, newPaid), Total.Currency);
 
         if (TotalPaid.Amount <= 0)
@@ -107,9 +107,14 @@ public class Invoice : BaseEntity, IAggregateRoot, ITenantEntity
             Status = InvoiceStatus.Partial;
         }
 
-        allocation.MarkAsReversed();
+        // Note: For now, we only mark as reversed if the FULL amount is reversed.
+        // In a true partial reversal, we might want to split the allocation entity.
+        if (amount.Amount >= allocation.Amount.Amount)
+        {
+            allocation.MarkAsReversed();
+        }
 
-        AddDomainEvent(new InvoiceStateReversedEvent(Id, TenantId, Status, TotalPaid, DateTime.UtcNow));
+        AddDomainEvent(new InvoiceStateReversedEvent(Id, TenantId, Status, amount, DateTime.UtcNow));
         UpdateTimestamp();
     }
 

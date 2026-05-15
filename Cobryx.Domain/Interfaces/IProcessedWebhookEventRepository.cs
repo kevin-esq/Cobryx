@@ -34,4 +34,9 @@ public interface IProcessedWebhookEventRepository
         Guid? relatedEntityId = null,
         string? relatedEntityType = null,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Removes a processed record. Used for SRE forced replays to bypass idempotency checks.
+    /// </summary>
+    public Task RemoveAsync(string provider, string eventId, CancellationToken ct = default);
 }

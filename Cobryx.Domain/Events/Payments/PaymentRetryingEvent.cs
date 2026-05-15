@@ -1,12 +1,10 @@
 using Cobryx.Domain.Shared;
-using Cobryx.Domain.ValueObjects;
 
 namespace Cobryx.Domain.Events.Payments;
 
-public record PaymentRefundedEvent(
+public record PaymentRetryingEvent(
     Guid PaymentId,
     Guid TenantId,
-    Money Amount,
-    string? Reason,
+    int AttemptNumber,
     DateTime OccurredOn
 ) : IDomainEvent;

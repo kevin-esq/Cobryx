@@ -25,6 +25,11 @@ public class IdempotencyRecord : BaseEntity, ITenantEntity
     public DateTime ExpiresAt { get; private set; }
     public string? ExternalGatewayId { get; private set; }
     public IdempotencyStatus Status { get; private set; }
+    public string? ResourceType { get; private set; }
+    public Guid? ResourceId { get; private set; }
+    public string? Environment { get; private set; }
+    public Guid? CorrelationId { get; private set; }
+    public Guid? CausationId { get; private set; }
     public DateTime? ProcessingStartedAt { get; private set; }
 
     private IdempotencyRecord() { }
@@ -44,12 +49,26 @@ public class IdempotencyRecord : BaseEntity, ITenantEntity
         ProcessingStartedAt = now;
     }
 
-    public void MarkAsCompleted(int statusCode, string? responseBody, string? contentType, string? locationHeader = null)
+    public void MarkAsCompleted(
+        int statusCode,
+        string? responseBody,
+        string? contentType,
+        string? locationHeader = null,
+        string? resourceType = null,
+        Guid? resourceId = null,
+        string? environment = null,
+        Guid? correlationId = null,
+        Guid? causationId = null)
     {
         StatusCode = statusCode;
         ResponseBody = responseBody;
         ContentType = contentType;
         LocationHeader = locationHeader;
+        ResourceType = resourceType;
+        ResourceId = resourceId;
+        Environment = environment;
+        CorrelationId = correlationId;
+        CausationId = causationId;
         Status = IdempotencyStatus.Completed;
         ProcessingStartedAt = null;
         UpdateTimestamp();
