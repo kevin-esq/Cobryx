@@ -1,49 +1,45 @@
 using Cobryx.Application.Common.Events;
+using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Events.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.Payments;
 
 using Concordia;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Application.Invoicing.EventHandlers;
-
-public class PaymentChargebackedHandler : INotificationHandler<DomainEventNotification<PaymentChargebackedEvent>>
+namespace Cobryx.Application.Invoicing.EventHandlers
 {
-    private readonly IPaymentRepository _paymentRepository;
-    private readonly IInvoiceRepository _invoiceRepository;
-    private readonly ILogger<PaymentChargebackedHandler> _logger;
-
-    public PaymentChargebackedHandler(
+    public class PaymentChargebackedHandler(
         IPaymentRepository paymentRepository,
         IInvoiceRepository invoiceRepository,
         ILogger<PaymentChargebackedHandler> logger)
+        : INotificationHandler<DomainEventNotification<PaymentChargebackedEvent>>
     {
-        _paymentRepository = paymentRepository;
-        _invoiceRepository = invoiceRepository;
-        _logger = logger;
-    }
-
-    public async Task Handle(DomainEventNotification<PaymentChargebackedEvent> notification, CancellationToken cancellationToken)
-    {
-        var domainEvent = notification.DomainEvent;
-        _logger.LogWarning("Processing PaymentChargebackedEvent for Payment {PaymentId}. Reversing all allocations.",
-            domainEvent.PaymentId);
-
-        var payment = await _paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);
-        if (payment == null)
+        public async Task Handle(DomainEventNotification<PaymentChargebackedEvent> notification,
+            CancellationToken cancellationToken)
         {
-            _logger.LogError("Payment {PaymentId} not found during chargeback processing.", domainEvent.PaymentId);
-            return;
-        }
+            var domainEvent = notification.DomainEvent;
+            logger.LogWarning("Processing PaymentChargebackedEvent for Payment {PaymentId}. Reversing all allocations.",
+                domainEvent.PaymentId);
 
-        foreach (var allocation in payment.Allocations)
-        {
-            var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
-            if (invoice != null)
+            Payment? payment = await paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);
+            if (payment == null)
             {
-                invoice.ReverseAllocation(allocation);
-                await _invoiceRepository.UpdateAsync(invoice, cancellationToken);
+                logger.LogError("Payment {PaymentId} not found during chargeback processing.", domainEvent.PaymentId);
+                return;
+            }
+
+            foreach (PaymentAllocation allocation in payment.Allocations)
+            {
+                Invoice? invoice = await invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
+                if (invoice == null)
+                {
+                    continue;
+                }
+
+                invoice.ReverseAllocation(allocation, allocation.Amount);
+                await invoiceRepository.UpdateAsync(invoice, cancellationToken);
             }
         }
     }

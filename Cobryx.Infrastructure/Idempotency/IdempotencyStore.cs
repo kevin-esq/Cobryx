@@ -193,6 +193,11 @@ public partial class IdempotencyStore(
         string? responseBody,
         string? contentType,
         string? locationHeader = null,
+        string? resourceType = null,
+        Guid? resourceId = null,
+        string? environment = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
         CancellationToken ct = default)
     {
         var record = await context.IdempotencyRecords
@@ -201,17 +206,44 @@ public partial class IdempotencyStore(
         if (record == null)
             return;
 
-        record.MarkAsCompleted(statusCode, responseBody, contentType, locationHeader);
+        record.MarkAsCompleted(
+            statusCode,
+            responseBody,
+            contentType,
+            locationHeader,
+            resourceType,
+            resourceId,
+            environment,
+            correlationId,
+            causationId);
+
         await context.SaveChangesAsync(ct);
 
         var cacheKey = BuildCacheKey(tenantId, idempotencyKey);
-        var ttl = record.ExpiresAt - DateTime.UtcNow;
+        var ttl = record.ExpiresAt - clock.UtcNow;
         if (ttl > TimeSpan.Zero)
         {
             await cache.SetAsync(cacheKey, record, ttl, ct);
         }
 
         LogIdempotencyCompleted(logger, idempotencyKey, statusCode);
+    }
+
+    public async Task<IdempotencyRecord?> GetIdempotencyRecordAsync(
+        Guid tenantId,
+        string idempotencyKey,
+        CancellationToken ct = default)
+    {
+        var cacheKey = BuildCacheKey(tenantId, idempotencyKey);
+
+        // Try cache first
+        var cached = await cache.GetAsync<IdempotencyRecord>(cacheKey, ct);
+        if (cached != null)
+            return cached;
+
+        // Fallback to DB
+        return await context.IdempotencyRecords
+            .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.IdempotencyKey == idempotencyKey, ct);
     }
 
     public async Task FailAsync(
@@ -277,6 +309,11 @@ public partial class IdempotencyStore(
         string? responseBody,
         string? contentType,
         string? locationHeader = null,
+        string? resourceType = null,
+        Guid? resourceId = null,
+        string? environment = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
         CancellationToken ct = default)
     {
         // NOTE: This method does NOT call SaveChangesAsync
@@ -290,7 +327,16 @@ public partial class IdempotencyStore(
             return;
         }
 
-        record.MarkAsCompleted(statusCode, responseBody, contentType, locationHeader);
+        record.MarkAsCompleted(
+            statusCode,
+            responseBody,
+            contentType,
+            locationHeader,
+            resourceType,
+            resourceId,
+            environment,
+            correlationId,
+            causationId);
 
         // Mark context as completed (filter will skip external CompleteAsync)
         var ctx = _currentContext.Value;

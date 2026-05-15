@@ -32,7 +32,11 @@ public class DbInitializer
                 new Permission(Permission.Constants.TenantManage, "Allow managing business settings"),
                 new Permission(Permission.Constants.UsersManage, "Allow managing tenant users"),
                 new Permission(Permission.Constants.DashboardView, "Allow viewing dashboard"),
-                new Permission(Permission.Constants.SubscriptionView, "Allow viewing subscription")
+                new Permission(Permission.Constants.SubscriptionView, "Allow viewing subscription"),
+                new Permission("webhooks.logs.read", "Allow viewing webhook logs for SRE purposes"),
+                new Permission("webhooks.replay", "Allow replaying standard webhook events"),
+                new Permission("webhooks.replay.forced", "Allow forced replay of webhook events (bypassing idempotency)"),
+                new Permission("system.idempotency.read", "Allow inspecting idempotency records")
             };
 
             var roles = new[]

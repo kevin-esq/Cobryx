@@ -2,27 +2,24 @@ using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
-using Cobryx.Domain.ValueObjects;
 
 using Concordia;
 
-namespace Cobryx.Application.Payments.Commands.RefundPayment;
+namespace Cobryx.Application.Payments.Commands.RetryPayment;
 
 [TenantScoped]
-public record RefundPaymentCommand(
+public record RetryPaymentCommand(
     Guid PaymentId,
-    decimal Amount,
-    string Currency,
-    string? Reason = null) : IRequest<Result>, IRequiresTenant, IFinancialCommand;
+    int AttemptNumber) : IRequest<Result>, IRequiresTenant, IFinancialCommand;
 
-public class RefundPaymentHandler(
+public class RetryPaymentHandler(
     IPaymentRepository paymentRepository,
     ITenantProvider tenantProvider,
     IIdempotencyStore idempotencyStore,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<RefundPaymentCommand, Result>
+    : IRequestHandler<RetryPaymentCommand, Result>
 {
-    public async Task<Result> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(RetryPaymentCommand request, CancellationToken cancellationToken)
     {
         var tenantId = tenantProvider.GetTenantId();
         if (!tenantId.HasValue)
@@ -35,31 +32,33 @@ public class RefundPaymentHandler(
         if (payment.TenantId != tenantId.Value)
             return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
-        var refundAmount = request.Amount == 0
-            ? payment.RefundableAmount
-            : new Money(request.Amount, request.Currency);
-
         try
         {
-            payment.Refund(refundAmount, request.Reason);
+            // Set for Retry processing
+            payment.Retry(request.AttemptNumber);
 
             // Hardening: Capturing Resource Metadata for Introspection
+            // This is critical for SRE to know which attempt they are looking at in the logs.
             var idemContext = idempotencyStore.GetCurrentContext();
             if (idemContext != null)
             {
                 await idempotencyStore.CompleteWithinTransactionAsync(
                     tenantId.Value,
                     idemContext.IdempotencyKey,
-                    200,
+                    202, // Accepted
                     null,
                     "application/json",
                     resourceType: "payment",
                     resourceId: payment.Id,
-                    environment: "production", // TODO: Get from config
-                    correlationId: Guid.Empty); // TODO: Get from HttpContext/Tracing
+                    environment: "production",
+                    correlationId: Guid.Empty);
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Note: In a real system, this would trigger the actual Gateway Retry loop.
+            // For now, it updates the state deterministically.
+
             return Result.Success();
         }
         catch (DomainException ex)

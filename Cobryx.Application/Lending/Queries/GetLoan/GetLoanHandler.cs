@@ -1,4 +1,5 @@
 using Cobryx.Domain.Shared;
+
 using Concordia;
 
 namespace Cobryx.Application.Lending.Queries.GetLoan;

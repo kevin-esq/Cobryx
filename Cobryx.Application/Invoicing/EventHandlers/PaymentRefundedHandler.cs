@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Events;
 using Cobryx.Domain.Events.Payments;
 using Cobryx.Domain.Interfaces;
+using Cobryx.Domain.ValueObjects;
 
 using Concordia;
 
@@ -32,22 +33,44 @@ public class PaymentRefundedHandler : INotificationHandler<DomainEventNotificati
 
         var payment = await _paymentRepository.GetByIdAsync(domainEvent.PaymentId, cancellationToken);
         if (payment == null)
+        {
+            _logger.LogError("Payment {PaymentId} not found during refund processing.", domainEvent.PaymentId);
             return;
-        if (payment.IsFullyRefunded)
-        {
-            foreach (var allocation in payment.Allocations)
-            {
-                var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
-                if (invoice != null)
-                {
-                    invoice.ReverseAllocation(allocation);
-                    await _invoiceRepository.UpdateAsync(invoice, cancellationToken);
-                }
-            }
         }
-        else
+
+        // FIFO Reversal logic: Reverse the oldest allocations first.
+        var activeAllocations = payment.Allocations
+            .Where(a => !a.IsReversed)
+            .OrderBy(a => a.CreatedAt)
+            .ToList();
+
+        decimal remainingToRefund = domainEvent.Amount.Amount;
+
+        foreach (var allocation in activeAllocations)
         {
-            _logger.LogWarning("Partial refund detected for Payment {PaymentId}. Manual intervention or refined allocation reversal strategy required.", domainEvent.PaymentId);
+            if (remainingToRefund <= 0)
+                break;
+
+            var amountToReverseInThisAllocation = Math.Min(remainingToRefund, allocation.Amount.Amount);
+            var reverseAmount = new Money(amountToReverseInThisAllocation, domainEvent.Amount.Currency);
+
+            var invoice = await _invoiceRepository.GetByIdAsync(allocation.InvoiceId, cancellationToken);
+            if (invoice != null)
+            {
+                _logger.LogInformation("Reversing {Amount} from Invoice {InvoiceId} related to Payment {PaymentId}",
+                    reverseAmount, invoice.Id, payment.Id);
+
+                invoice.ReverseAllocation(allocation, reverseAmount);
+                await _invoiceRepository.UpdateAsync(invoice, cancellationToken);
+            }
+
+            remainingToRefund -= amountToReverseInThisAllocation;
+        }
+
+        if (remainingToRefund > 0)
+        {
+            _logger.LogWarning("Refund amount {RefundAmount} exceeds total active allocations for Payment {PaymentId}. Remaining: {Remaining}",
+                domainEvent.Amount.Amount, domainEvent.PaymentId, remainingToRefund);
         }
     }
 }
