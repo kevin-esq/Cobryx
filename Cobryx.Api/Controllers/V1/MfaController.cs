@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cobryx.Api.Controllers.V1;
 
 /// <summary>
-/// Controller for multi-factor authentication (TOTP, FIDO2).
+/// Controller for multifactor authentication (TOTP, FIDO2).
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]

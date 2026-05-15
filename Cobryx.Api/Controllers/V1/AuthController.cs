@@ -153,7 +153,7 @@ public class AuthController(ISender sender, ICookieService cookieService) : Cobr
     /// Resends the email verification link.
     /// </summary>
     /// <remarks>
-    /// Generates a new verification link and sends it to the user's email. Rate limited to prevant abuse.
+    /// Generates a new verification link and sends it to the user's email. Rate limited to prevent abuse.
     ///
     /// Possible Outcomes:
     /// - AUTH.VERIFICATION_EMAIL_SENT: New verification link sent using ReturnUrl or AppUrl fallback.

@@ -16,7 +16,7 @@ namespace Cobryx.Api.Controllers.V1;
 /// <remarks>
 /// Health endpoints are intentionally kept on <see cref="ControllerBase"/> (not CobryxBaseController)
 /// because they return provider-specific response shapes, not domain Result types.
-/// MediatR is not used here because health checks are stateless, read-only infrastructure queries
+/// Mediator is not used here because health checks are stateless, read-only infrastructure queries
 /// with no domain logic.
 /// </remarks>
 [AllowAnonymous]

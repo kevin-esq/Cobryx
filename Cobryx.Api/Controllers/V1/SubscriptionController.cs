@@ -7,6 +7,7 @@ using Cobryx.Application.Subscriptions.Commands.SyncSubscription;
 using Cobryx.Application.Subscriptions.Common;
 using Cobryx.Application.Subscriptions.Queries.GetSubscriptionPlans;
 using Cobryx.Application.Subscriptions.Queries.GetSubscriptionStatus;
+using Cobryx.Application.Subscriptions.Queries.GetSubscriptionIntelligence;
 using Cobryx.Domain.Shared;
 
 using Concordia;
@@ -39,7 +40,7 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> GetPlans(CancellationToken ct)
     {
-        var result = await Sender.Send(new GetSubscriptionPlansQuery(), ct);
+        Result<List<PlanDto>> result = await Sender.Send(new GetSubscriptionPlansQuery(), ct);
         return HandleResult(result, SubscriptionOutcomes.Plans);
     }
 
@@ -57,7 +58,7 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> GetStatus(CancellationToken ct)
     {
-        var result = await Sender.Send(new GetSubscriptionStatusQuery(), ct);
+        Result<SubscriptionStatusDto> result = await Sender.Send(new GetSubscriptionStatusQuery(), ct);
         return HandleResult(result, SubscriptionOutcomes.Status);
     }
 
@@ -75,7 +76,7 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> GetIntelligence(CancellationToken ct)
     {
-        var result = await Sender.Send(new Cobryx.Application.Subscriptions.Queries.GetSubscriptionIntelligence.GetSubscriptionIntelligenceQuery(), ct);
+        Result<SubscriptionIntelligenceDto> result = await Sender.Send(new GetSubscriptionIntelligenceQuery(), ct);
         return HandleResult(result, SubscriptionOutcomes.Intelligence);
     }
 
@@ -96,9 +97,9 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     public async Task<IActionResult> CreateCheckout([FromBody] CreateCheckoutSessionRequest request, CancellationToken ct)
     {
         var command = new CreateCheckoutSessionCommand(request.PlanId, request.SuccessUrl, request.CancelUrl);
-        var result = await Sender.Send(command, ct);
+        Result<string> result = await Sender.Send(command, ct);
 
-        var mappedResult = result.IsSuccess
+        Result<CheckoutUrlResponse> mappedResult = result.IsSuccess
             ? Result.Success(new CheckoutUrlResponse(result.Value!))
             : Result.Failure<CheckoutUrlResponse>(result.Error!);
 
@@ -121,9 +122,9 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> CreatePortal([FromBody] CreatePortalSessionRequest request, CancellationToken ct)
     {
-        var result = await Sender.Send(new CreatePortalSessionCommand(request.ReturnUrl), ct);
+        Result<string> result = await Sender.Send(new CreatePortalSessionCommand(request.ReturnUrl), ct);
 
-        var mappedResult = result.IsSuccess
+        Result<CheckoutUrlResponse> mappedResult = result.IsSuccess
             ? Result.Success(new CheckoutUrlResponse(result.Value!))
             : Result.Failure<CheckoutUrlResponse>(result.Error!);
 
@@ -148,7 +149,7 @@ public class SubscriptionController(ISender sender) : CobryxBaseController(sende
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> Sync(CancellationToken ct)
     {
-        var result = await Sender.Send(new SyncSubscriptionCommand(), ct);
+        Result result = await Sender.Send(new SyncSubscriptionCommand(), ct);
         return HandleResult(result, SubscriptionOutcomes.SyncAuthoritative);
     }
 }

@@ -1,6 +1,8 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Application.Auth.Commands.Sessions;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -31,11 +33,11 @@ public class SessionsController(ISender sender) : CobryxBaseController(sender)
     /// </remarks>
     /// <response code="200">A collection of active session details.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<List<SessionContract>>), 200)]
+    [ProducesResponseType(typeof(ApiSuccessResponse<List<SessionContract>>), 200)]
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> GetSessions()
     {
-        var result = await Sender.Send(new Application.Auth.Commands.Sessions.GetSessionsQuery());
+        Result<List<SessionResponse>> result = await Sender.Send(new GetSessionsQuery());
 
         if (!result.IsSuccess)
         {
@@ -70,7 +72,7 @@ public class SessionsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(204)]
     public async Task<IActionResult> RevokeSession(Guid id)
     {
-        var result = await Sender.Send(new Application.Auth.Commands.Sessions.RevokeSessionCommand(id));
+        Result<bool> result = await Sender.Send(new RevokeSessionCommand(id));
         return HandleDeleteResult(result, AuthOutcomes.SessionRevoked);
     }
 }

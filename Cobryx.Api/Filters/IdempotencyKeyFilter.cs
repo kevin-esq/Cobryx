@@ -145,6 +145,12 @@ public partial class IdempotencyKeyFilter(
                 // Skip if already completed within handler's transaction (EXACTLY-ONCE)
                 if (!completedInTransaction)
                 {
+                    var correlationIdHeader = context.HttpContext.Request.Headers["X-Correlation-ID"].ToString();
+                    var causationIdHeader = context.HttpContext.Request.Headers["X-Causation-ID"].ToString();
+
+                    Guid.TryParse(correlationIdHeader, out var correlationId);
+                    Guid.TryParse(causationIdHeader, out var causationId);
+
                     await idempotencyStore.CompleteAsync(
                         tenantId,
                         key,
@@ -152,7 +158,9 @@ public partial class IdempotencyKeyFilter(
                         response.Content,
                         response.ContentType,
                         locationHeader,
-                        context.HttpContext.RequestAborted);
+                        correlationId: correlationId == Guid.Empty ? null : correlationId,
+                        causationId: causationId == Guid.Empty ? null : causationId,
+                        ct: context.HttpContext.RequestAborted);
                 }
 
                 LogIdempotencyStored(logger, key, tenantId.ToString());

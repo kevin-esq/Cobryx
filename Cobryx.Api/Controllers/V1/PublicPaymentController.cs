@@ -27,8 +27,8 @@ public class PublicPaymentController(ISender sender) : CobryxBaseController(send
     [HttpGet("{token}")]
     public async Task<IActionResult> GetDetails(string token)
     {
-        var result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
-        return HandleResult((Result<PaymentLinkDto>)result, Outcome.FromExternal("PORTAL.PAYMENT.READ"));
+        Result<PaymentLinkDto> result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
+        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.READ"));
     }
 
     /// <summary>
@@ -37,8 +37,8 @@ public class PublicPaymentController(ISender sender) : CobryxBaseController(send
     [HttpPost("{token}/initialize")]
     public async Task<IActionResult> Initialize(string token)
     {
-        var result = await Sender.Send(new InitializePaymentLinkCommand(token));
-        return HandleResult((Result<string>)result, Outcome.FromExternal("PORTAL.PAYMENT.INITIALIZE"));
+        Result<string> result = await Sender.Send(new InitializePaymentLinkCommand(token));
+        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.INITIALIZE"));
     }
 
     /// <summary>
@@ -47,8 +47,8 @@ public class PublicPaymentController(ISender sender) : CobryxBaseController(send
     [HttpGet("{token}/status")]
     public async Task<IActionResult> GetStatus(string token)
     {
-        var result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
+        Result<PaymentLinkDto> result = await Sender.Send(new GetPaymentLinkByTokenQuery(token));
 
-        return HandleResult((Result<PaymentLinkDto>)result, Outcome.FromExternal("PORTAL.PAYMENT.STATUS"));
+        return HandleResult(result, Outcome.FromExternal("PORTAL.PAYMENT.STATUS"));
     }
 }
