@@ -98,7 +98,7 @@ public class LedgerAnchoringTests : IDisposable
         var integrityService = new LedgerIntegrityService(db, healthCache, _hasher, _mockClock.Object, anchorStore, new Mock<Microsoft.Extensions.Logging.ILogger<LedgerIntegrityService>>().Object);
 
         // 2. Create high-risk transaction that gets anchored
-        await postingEngine.PostLoanPaymentAsync(new Domain.Lending.Loan(tenantId, Guid.NewGuid(), Guid.NewGuid(), "LN-1", new(1000m, "USD")), 15000, "REF-ANCHOR");
+        await postingEngine.PostLoanPaymentAsync(new Domain.Lending.Loan(tenantId, Guid.NewGuid(), Guid.NewGuid(), "LN-1", new(20000m, "USD")), 15000, "REF-ANCHOR");
         
         var anchor = anchorStore.GetLatest(tenantId);
         Assert.NotNull(anchor);
@@ -109,14 +109,14 @@ public class LedgerAnchoringTests : IDisposable
         var injector = new LedgerFaultInjector(db);
         await injector.TamperTransactionAmountAsync(tx.Id, 1m); // Change to 1
         
-        // Reload tx to get updated state before re-sealing
+        // Reload tx to get updated state before reconciling hash with tampered rows (cannot re-Seal a sealed transaction).
         tx = await db.LedgerTransactions.Include(t => t.Entries).FirstAsync(t => t.Id == tx.Id);
-        
-        // Re-seal with the tampered amount so HASH_MISMATCH won't detect it internally
+
         var newHash = _hasher.ComputeHash(tx, tx.PreviousHash!);
-        // Using reflection because Seal is likely protected/internal or only for new ones
-        var sealMethod = tx.GetType().GetMethod("Seal", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        sealMethod?.Invoke(tx, [tx.PreviousHash, tx.Sequence, newHash]);
+        var hashProp = typeof(LedgerTransaction).GetProperty(
+            nameof(LedgerTransaction.Hash),
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        hashProp?.SetValue(tx, newHash);
         await db.SaveChangesAsync();
 
         // 4. VERIFY: Internal scan alone would be green (without anchors) if we didn't have external proof

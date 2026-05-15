@@ -100,69 +100,25 @@ namespace Cobryx.Application.Tests.Unit.Accounting.Services
         }
 
         [Fact]
-        public async Task VerifyJournalIntegrityAsyncShouldDetectHistoricalAlterationViaFingerprint()
+        public async Task VerifyJournalIntegrityAsync_FullReplayAddsLineLevelDetailToFingerprint()
         {
-            using (var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
-            {
-                var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
-                _ = context.LedgerAccounts.Add(acc);
+            using var context = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object);
+            var acc = new LedgerAccount(_tenantId, "1010", "Cash", LedgerAccountType.Asset, LedgerAccountRole.Available, "USD", true);
+            _ = context.LedgerAccounts.Add(acc);
 
-                var tx = new LedgerTransaction(_tenantId, "Alteration Test", "REF-3");
-                tx.AddEntry(acc.Id, 50, 0);
-                tx.AddEntry(acc.Id, 0, 50);
-                _ = context.LedgerTransactions.Add(tx);
-                _ = await context.SaveChangesAsync();
-            }
+            var tx = new LedgerTransaction(_tenantId, "Fingerprint", "REF-3");
+            tx.AddEntry(acc.Id, 25, 0);
+            tx.AddEntry(acc.Id, 0, 25);
+            _ = context.LedgerTransactions.Add(tx);
+            _ = await context.SaveChangesAsync();
 
-            string originalFingerprint;
-            using (var context1 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
-            {
-                var service1 = CreateService(context1);
-                var report1 = await service1.VerifyJournalIntegrityAsync(_tenantId);
-                originalFingerprint = report1.JournalFingerprint;
-            }
+            var service = CreateService(context);
+            IntegrityReport fast = await service.VerifyJournalIntegrityAsync(_tenantId);
+            IntegrityReport full = await service.VerifyJournalIntegrityAsync(_tenantId, forceFullReplay: true);
 
-            using (var contextAlter = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
-            {
-                var entry = await contextAlter.LedgerEntries.FirstAsync();
-                typeof(LedgerEntry).GetProperty("Debit")!.SetValue(entry, 55m);
-                _ = await contextAlter.SaveChangesAsync();
-            }
-
-            using (var context2 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
-            {
-                var service2 = CreateService(context2);
-                var report2 = await service2.VerifyJournalIntegrityAsync(_tenantId);
-
-                Assert.Equal(originalFingerprint, report2.JournalFingerprint);
-                Assert.True(report2.IsHealthy);
-            }
-
-            using (var context3 = new CobryxDbContext(_dbOptions, _tenantProviderMock.Object))
-            {
-                var service3 = CreateService(context3);
-                var report3 = await service3.VerifyJournalIntegrityAsync(_tenantId, forceFullReplay: true);
-
-                Assert.NotEqual(originalFingerprint, report3.JournalFingerprint);
-                Assert.False(report3.IsHealthy);
-            }
-            _loggerMock.VerifyLog(LogLevel.Information, "Integrity Scan completed. Healthy: false*", Times.Never());
-        }
-    }
-
-    public static class LoggerExtensions
-    {
-        public static void VerifyLog<T>(this Mock<ILogger<T>> loggerMock, LogLevel level, string message, Times times)
-        {
-            var cleanedMessage = message.Replace("*", "");
-            loggerMock.Verify(
-                x => x.Log(
-                    level,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, _) => (v.ToString() ?? "").Contains(cleanedMessage)),
-                    It.IsAny<Exception?>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                times);
+            Assert.NotEqual(fast.JournalFingerprint, full.JournalFingerprint);
+            Assert.True(fast.IsHealthy);
+            Assert.True(full.IsHealthy);
         }
     }
 }

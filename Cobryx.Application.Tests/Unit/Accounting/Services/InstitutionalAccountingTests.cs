@@ -164,6 +164,8 @@ namespace Cobryx.Application.Tests.Unit.Accounting.Services
             }
         }
 
-        public void Dispose() => throw new NotImplementedException();
+        public void Dispose()
+        {
+        }
     }
 }

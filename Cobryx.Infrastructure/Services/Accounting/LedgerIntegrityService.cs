@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Accounting;
 using Cobryx.Domain.Accounting.Enums;
@@ -25,6 +29,87 @@ namespace Cobryx.Infrastructure.Services.Accounting
         private readonly ILedgerAnchorStore _anchorStore = anchorStore;
         private const decimal Tolerance = 0.0001m;
 
+        private bool UseClientSideDecimalAggregate =>
+            dbContext.Database.ProviderName is string p &&
+            (p.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ||
+             p.Contains("InMemory", StringComparison.OrdinalIgnoreCase));
+
+        private async Task<decimal> SumDebitMinusCreditAsync(IQueryable<LedgerEntry> entries, CancellationToken ct)
+        {
+            if (UseClientSideDecimalAggregate)
+            {
+                List<decimal> deltas = await entries.Select(static e => e.Debit - e.Credit).ToListAsync(ct);
+                decimal total = 0;
+                foreach (var d in deltas)
+                {
+                    total += d;
+                }
+
+                return total;
+            }
+
+            return await entries.SumAsync(static e => e.Debit - e.Credit, ct);
+        }
+
+        /// <remarks>
+        /// SQLite cannot translate SUM over decimal aggregates; grouping by transaction is aggregated in-memory.
+        /// </remarks>
+        private async Task<List<(Guid TransactionId, decimal Balance)>> GetImbalancedJournalTransactionsAsync(Guid tenantId,
+            CancellationToken ct)
+        {
+            var rows = await dbContext.LedgerEntries.AsNoTracking()
+                .Where(e => e.TenantId == tenantId)
+                .Select(e => new { e.TransactionId, Delta = e.Debit - e.Credit })
+                .ToListAsync(ct);
+
+            return rows.GroupBy(static r => r.TransactionId)
+                .Select(g => (g.Key, Balance: g.Sum(static r => r.Delta)))
+                .Where(t => Math.Abs(t.Balance) > Tolerance)
+                .Select(static t => (t.Key, t.Balance))
+                .ToList();
+        }
+
+        private async Task<string> ComputeJournalFingerprintAsync(Guid tenantId, bool forceFullReplay,
+            CancellationToken ct)
+        {
+            IQueryable<LedgerEntry> scoped =
+                dbContext.LedgerEntries.AsNoTracking().Where(e => e.TenantId == tenantId);
+
+            var count = await scoped.CountAsync(ct);
+            decimal sum = await SumDebitMinusCreditAsync(scoped, ct);
+            long maxJournalSeq =
+                await scoped.Select(static e => (long)e.JournalSequenceId).DefaultIfEmpty().MaxAsync(ct);
+
+            var summary =
+                $"{tenantId:N}|{count}|{sum.ToString(CultureInfo.InvariantCulture)}|{maxJournalSeq}";
+
+            if (!forceFullReplay)
+            {
+                return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(summary)));
+            }
+
+            var lineRows = await scoped
+                .OrderBy(static e => e.JournalSequenceId).ThenBy(static e => e.Id)
+                .Select(e => new { e.TransactionId, e.AccountId, e.Debit, e.Credit, e.JournalSequenceId })
+                .ToListAsync(ct);
+
+            var sb = new StringBuilder(capacity: 256 + lineRows.Count * 96)
+                .Append(summary)
+                .Append("|FULL|");
+
+            foreach (var r in lineRows)
+            {
+                _ = sb.Append(r.TransactionId.ToString("N")).Append('|')
+                    .Append(r.AccountId.ToString("N")).Append('|')
+                    .Append(r.Debit.ToString(CultureInfo.InvariantCulture)).Append('|')
+                    .Append(r.Credit.ToString(CultureInfo.InvariantCulture)).Append('|')
+                    .Append(r.JournalSequenceId.ToString(NumberFormatInfo.InvariantInfo))
+                    .Append(';');
+            }
+
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString())));
+        }
+
         public async Task<IntegrityReport> VerifyJournalIntegrityAsync(Guid tenantId, bool forceFullReplay = false,
             CancellationToken ct = default)
         {
@@ -33,39 +118,30 @@ namespace Cobryx.Infrastructure.Services.Accounting
             logger.LogInformation("Starting Integrity Scan [{CorrelationId}] at {UtcNow:O} for Tenant {TenantId}", 
                 correlationId, clock.UtcNow, tenantId);
 
-            var entriesScanned = 0;
+            var entriesScanned = await dbContext.LedgerEntries.CountAsync(e => e.TenantId == tenantId, ct);
             var violations = new List<IntegrityViolation>();
-            const string fingerprint = "INITIAL_STATE";
 
             // 1. Check Global Invariant (Σ Debits == Σ Credits) - Highest Priority
-            var isGlobalBalanced = await VerifyGlobalSumInvariantAsync(ct);
-            if (!isGlobalBalanced)
+            decimal netGlobal =
+                await SumDebitMinusCreditAsync(dbContext.LedgerEntries.AsNoTracking(), ct);
+            if (Math.Abs(netGlobal) >= Tolerance)
             {
-                var total = await dbContext.LedgerEntries.SumAsync(e => e.Debit - e.Credit, ct);
-                LogGlobalInvariantFailure(logger, total);
-                
+                LogGlobalInvariantFailure(logger, netGlobal);
                 violations.Add(new IntegrityViolation(
                     "IMBALANCE", 
                     "GLOBAL", 
-                    total, 
+                    netGlobal, 
                     "AUDIT_LEDGER", 
                     correlationId));
             }
 
             // 2. Check for imbalanced transactions (individual journal entries that don't sum to zero)
-            var imbalancedTransactions = await dbContext.LedgerEntries
-                .Where(e => e.TenantId == tenantId)
-                .GroupBy(e => e.TransactionId)
-                .Select(g => new { TransactionId = g.Key, Balance = g.Sum(e => e.Debit - e.Credit) })
-                .Where(x => Math.Abs(x.Balance) > Tolerance)
-                .ToListAsync(ct);
-
-            foreach (var tx in imbalancedTransactions)
+            foreach ((Guid transactionId, decimal balance) in await GetImbalancedJournalTransactionsAsync(tenantId, ct))
             {
                 violations.Add(new IntegrityViolation(
                     "IMBALANCE", 
-                    tx.TransactionId.ToString(), 
-                    tx.Balance, 
+                    transactionId.ToString(), 
+                    balance, 
                     "REVERSE_TRANSACTION", 
                     correlationId));
             }
@@ -93,7 +169,7 @@ namespace Cobryx.Infrastructure.Services.Accounting
             // ELITE SAFETY: Automated Trip Logic
             if (!isHealthy)
             {
-                var reason = violations.First().Type;
+                var reason = violations[0].Type;
                 if (healthCache.TryActivateSafeMode(tenantId, reason, TimeSpan.FromHours(24)))
                 {
                     logger.LogCritical("AUTOMATED LOCKDOWN: Drift detected for Tenant {TenantId}. Safe Mode activated. CorrelationId: {CorrelationId}", 
@@ -101,12 +177,14 @@ namespace Cobryx.Infrastructure.Services.Accounting
                 }
             }
 
+            var journalFingerprint = await ComputeJournalFingerprintAsync(tenantId, forceFullReplay, ct);
+
             return new IntegrityReport(
                 IsHealthy: isHealthy,
                 Severity: severity,
                 TotalEntriesScanned: entriesScanned,
                 Violations: violations,
-                JournalFingerprint: fingerprint,
+                JournalFingerprint: journalFingerprint,
                 CircuitBreakerTripped: !isHealthy,
                 CorrelationId: correlationId,
                 CheckedAt: clock.UtcNow);
@@ -143,8 +221,8 @@ namespace Cobryx.Infrastructure.Services.Accounting
         public async Task<bool> VerifyGlobalSumInvariantAsync(CancellationToken ct = default)
         {
             LogStartingGlobalSumVerification(logger);
-            var total = await dbContext.LedgerEntries
-                .SumAsync(e => e.Debit - e.Credit, ct);
+            decimal total =
+                await SumDebitMinusCreditAsync(dbContext.LedgerEntries.AsNoTracking(), ct);
 
             return Math.Abs(total) < Tolerance;
         }
@@ -154,19 +232,21 @@ namespace Cobryx.Infrastructure.Services.Accounting
             const string initialHash = "0000000000000000000000000000000000000000000000000000000000000000";
             var violations = new List<IntegrityViolation>();
 
-            // Fetch all transactions in sequence order
+            // Only sealed transactions participate in the cryptographically linked chain.
+            // Ungrouped migrations/tests may still have rows without Hash/Sequence — skip them here.
             var transactions = await dbContext.LedgerTransactions
-                .Where(t => t.TenantId == tenantId)
+                .AsNoTracking()
+                .Where(t => t.TenantId == tenantId && t.Hash != null)
                 .Include(t => t.Entries)
                 .OrderBy(t => t.Sequence)
                 .ToListAsync(ct);
 
             var runningHash = initialHash;
-            var expectedSeq = 1L;
+            long expectedSeq = transactions.Count > 0 ? transactions[0].Sequence : 1L;
 
             foreach (var tx in transactions)
             {
-                var currentHash = tx.Hash ?? initialHash;
+                var currentHash = tx.Hash!; // filtered non-null
                 var currentPrevHash = tx.PreviousHash ?? initialHash;
 
                 // ... (existing checks)
@@ -184,13 +264,13 @@ namespace Cobryx.Infrastructure.Services.Accounting
 
                 // 3. Check Data Integrity (Hash Match)
                 var computedHash = ledgerHasher.ComputeHash(tx, currentPrevHash);
-                if (tx.Hash != computedHash)
+                if (!string.Equals(tx.Hash, computedHash, StringComparison.Ordinal))
                 {
                     violations.Add(new IntegrityViolation("HASH_MISMATCH", tx.Id.ToString(), 0, "AUDIT_RECOVERY", "CHAIN"));
                 }
 
                 // Update for next iteration (carry forward the computed hash to propagate lineage failures)
-                runningHash = computedHash;
+                runningHash = computedHash ?? currentHash;
                 expectedSeq = tx.Sequence + 1;
             }
 
@@ -198,28 +278,26 @@ namespace Cobryx.Infrastructure.Services.Accounting
             var latestAnchor = _anchorStore.GetLatest(tenantId, ct);
             if (latestAnchor != null)
             {
-                // Find the transaction in the DB that matches the anchor's sequence
-                var anchoredTx = transactions.FirstOrDefault(t => t.Sequence == latestAnchor.Sequence);
+                LedgerTransaction? anchoredTx = transactions.FirstOrDefault(t => t.Sequence == latestAnchor.Sequence);
                 if (anchoredTx != null)
                 {
-                    if (anchoredTx.Hash != latestAnchor.Hash)
+                    if (!string.Equals(anchoredTx.Hash, latestAnchor.Hash, StringComparison.Ordinal))
                     {
                         violations.Add(new IntegrityViolation(
-                            "ANCHOR_MISMATCH", 
-                            anchoredTx.Id.ToString(), 
-                            latestAnchor.Sequence, 
-                            "EXTERNAL_FORENSIC_REPLAY", 
+                            "ANCHOR_MISMATCH",
+                            anchoredTx.Id.ToString(),
+                            latestAnchor.Sequence,
+                            "EXTERNAL_FORENSIC_REPLAY",
                             "ANCHOR"));
                     }
                 }
-                else if (transactions.Any() && transactions.Max(t => t.Sequence) < latestAnchor.Sequence)
+                else
                 {
-                    // Scenario: Database was ROLLED BACK (historical substitution via snapshot restore or manual deletion)
                     violations.Add(new IntegrityViolation(
-                        "LEDGER_ROLLBACK", 
-                        "DATABASE", 
-                        latestAnchor.Sequence, 
-                        "RESTORE_FROM_ANCHOR", 
+                        "LEDGER_ROLLBACK",
+                        "DATABASE",
+                        latestAnchor.Sequence,
+                        "RESTORE_FROM_ANCHOR",
                         "ANCHOR"));
                 }
             }
@@ -236,9 +314,10 @@ namespace Cobryx.Infrastructure.Services.Accounting
                 return false;
             }
 
-            var actual = await dbContext.LedgerEntries
-                .Where(e => e.AccountId == snapshot.AccountId && e.JournalSequenceId <= snapshot.JournalSequenceId)
-                .SumAsync(e => e.Debit - e.Credit, ct);
+            IQueryable<LedgerEntry> scope = dbContext.LedgerEntries.AsNoTracking()
+                .Where(e => e.AccountId == snapshot.AccountId && e.JournalSequenceId <= snapshot.JournalSequenceId);
+
+            decimal actual = await SumDebitMinusCreditAsync(scope, ct);
 
             return Math.Abs(actual - snapshot.Balance) < Tolerance;
         }

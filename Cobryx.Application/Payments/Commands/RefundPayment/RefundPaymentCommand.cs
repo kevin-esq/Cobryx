@@ -55,8 +55,8 @@ public class RefundPaymentHandler(
                     "application/json",
                     resourceType: "payment",
                     resourceId: payment.Id,
-                    environment: "production", // TODO: Get from config
-                    correlationId: Guid.Empty); // TODO: Get from HttpContext/Tracing
+                    environment: null,
+                    correlationId: null);
             }
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
