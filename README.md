@@ -12,7 +12,7 @@ Infrastructure → Financial Core → Domain Services → Analytics → Collecti
 
 ---
 
-## ⚙ Core Concepts
+## Core Concepts
 
 ### 1. Financial Core
 - Double-entry ledger
