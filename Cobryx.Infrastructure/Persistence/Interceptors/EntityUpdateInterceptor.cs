@@ -34,7 +34,10 @@ public class EntityUpdateInterceptor(IClock clock) : SaveChangesInterceptor
                 entry.Property(e => e.CreatedAt).CurrentValue = now;
 
             if (entry.State is EntityState.Added or EntityState.Modified || entry.HasChangedOwnedAuditedEntities())
+            {
                 entry.Entity.UpdateTimestamp(now);
+                entry.Entity.IncrementVersion();
+            }
         }
     }
 }

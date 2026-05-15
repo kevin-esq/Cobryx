@@ -20,6 +20,7 @@ public static class AccountingInfrastructureModule
         services.AddScoped<IFinancialEventConsumer, EventShadowReplayEngine>();
         services.AddScoped<ILedgerPublisher, LogLedgerPublisher>();
         services.AddScoped<IShadowReplayEngine, ShadowReplayEngine>();
+        services.AddScoped<ILedgerIntegrityService, LedgerIntegrityService>();
 
         return services;
     }

@@ -18,7 +18,6 @@ using Cobryx.Infrastructure.Caching;
 using Cobryx.Infrastructure.Configuration;
 using Cobryx.Infrastructure.Decision;
 using Cobryx.Infrastructure.Messaging;
-using Cobryx.Infrastructure.Middleware;
 using Cobryx.Infrastructure.ML;
 using Cobryx.Infrastructure.Modules;
 using Cobryx.Infrastructure.MultiTenancy;
@@ -36,6 +35,7 @@ using Cobryx.Infrastructure.Services.FileStorage;
 using Cobryx.Infrastructure.Services.Growth;
 using Cobryx.Infrastructure.Services.Notifications;
 using Cobryx.Infrastructure.Services.Security;
+using Cobryx.Infrastructure.PipelineBehaviors;
 
 using Concordia;
 
@@ -219,11 +219,12 @@ namespace Cobryx.Infrastructure
 
         private static void RegisterPipelineBehaviors(IServiceCollection services)
         {
-            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Logging<,>));
-            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Validation<,>));
-            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.TenantValidation<,>));
-            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.Audit<,>));
-            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PipelineBehaviors.UnitOfWork<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Middleware.PipelineBehaviors.Logging<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ConcurrencyBehavior<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Middleware.PipelineBehaviors.Validation<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Middleware.PipelineBehaviors.TenantValidation<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Middleware.PipelineBehaviors.Audit<,>));
+            _ = services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Middleware.PipelineBehaviors.UnitOfWork<,>));
         }
 
         private static void RegisterDatabase(IServiceCollection services, IConfiguration configuration)
@@ -299,6 +300,7 @@ namespace Cobryx.Infrastructure
 
             _ = services.AddScoped<IPasswordHasher, Identity.PasswordHasher>();
             _ = services.AddScoped<IJwtTokenGenerator, Identity.JwtTokenGenerator>();
+            _ = services.AddSingleton<ILedgerHealthCache, LedgerHealthCache>();
             _ = services.AddScoped<IInvoiceNumberService, InvoiceNumberService>();
             _ = services.AddScoped<IIdempotencyStore, Idempotency.IdempotencyStore>();
             _ = services.AddScoped<IProcessedWebhookEventRepository, Persistence.Repositories.ProcessedWebhookEventRepository>();

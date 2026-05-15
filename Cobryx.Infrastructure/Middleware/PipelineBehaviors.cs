@@ -9,169 +9,159 @@ using FluentValidation;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cobryx.Infrastructure.Middleware;
-
-public static class PipelineBehaviors
+namespace Cobryx.Infrastructure.Middleware
 {
-    public class Logging<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    public static class PipelineBehaviors
     {
-        private readonly ILogger<Logging<TRequest, TResponse>> _logger;
-        private readonly ITenantProvider _tenantProvider;
-
-        public Logging(ILogger<Logging<TRequest, TResponse>> logger, ITenantProvider tenantProvider)
+        public class Logging<TRequest, TResponse>(
+            ILogger<Logging<TRequest, TResponse>> logger,
+            ITenantProvider tenantProvider) : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
         {
-            _logger = logger;
-            _tenantProvider = tenantProvider;
-        }
-
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            var requestName = typeof(TRequest).Name;
-            var tenantId = _tenantProvider.GetTenantId();
-
-            _logger.LogInformation("Cobryx Request: {Name} {@TenantId} {@Request}", requestName, tenantId, request);
-
-            var stopwatch = Stopwatch.StartNew();
-            var response = await next(cancellationToken);
-            stopwatch.Stop();
-
-            _logger.LogInformation("Cobryx Response: {Name} Processed in {ElapsedMilliseconds}ms", requestName, stopwatch.ElapsedMilliseconds);
-
-            return response;
-        }
-    }
-
-    public class Validation<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
-    {
-        private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-        public Validation(IEnumerable<IValidator<TRequest>> validators)
-        {
-            _validators = validators;
-        }
-
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            if (_validators.Any())
+            public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
+                CancellationToken cancellationToken)
             {
-                var context = new ValidationContext<TRequest>(request);
-                var validationResults = await Task.WhenAll(_validators.Select(v => v.ValidateAsync(context, cancellationToken)));
-                var failures = validationResults.SelectMany(r => r.Errors).Where(f => f != null).ToList();
+                var requestName = typeof(TRequest).Name;
+                var tenantId = tenantProvider.GetTenantId();
 
-                if (failures.Count != 0)
-                    throw new ValidationException(failures);
+                logger.LogInformation("Cobryx Request: {Name} {@TenantId} {@Request}", requestName, tenantId, request);
+
+                var stopwatch = Stopwatch.StartNew();
+                var response = await next(cancellationToken);
+                stopwatch.Stop();
+
+                logger.LogInformation("Cobryx Response: {Name} Processed in {ElapsedMilliseconds}ms", requestName,
+                    stopwatch.ElapsedMilliseconds);
+
+                return response;
             }
-
-            return await next(cancellationToken);
-        }
-    }
-
-    public class Audit<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
-    {
-        public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            return next(cancellationToken);
-        }
-    }
-
-    public class UnitOfWork<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
-    {
-        private readonly Cobryx.Domain.Interfaces.IUnitOfWork _unitOfWork;
-
-        public UnitOfWork(Cobryx.Domain.Interfaces.IUnitOfWork unitOfWork)
-        {
-            _unitOfWork = unitOfWork;
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public class Validation<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators)
+            : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
         {
-            var response = await next(cancellationToken);
+            private readonly IEnumerable<IValidator<TRequest>> _validators = validators;
 
-            if (ShouldSave(response))
+            public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
+                CancellationToken cancellationToken)
             {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-            }
-
-            return response;
-        }
-
-        private static bool ShouldSave(TResponse response)
-        {
-            if (response is null)
-                return false;
-
-            if (response is Result result)
-            {
-                return result.IsSuccess;
-            }
-
-            var type = response.GetType();
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Result<>))
-            {
-                var isSuccessProp = type.GetProperty("IsSuccess");
-                if (isSuccessProp != null && isSuccessProp.GetValue(response) is bool isSuccess)
+                if (_validators.Any())
                 {
-                    return isSuccess;
+                    var context = new ValidationContext<TRequest>(request);
+                    var validationResults =
+                        await Task.WhenAll(_validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+                    var failures = validationResults.SelectMany(r => r.Errors).Where(f => f != null).ToList();
+
+                    if (failures.Count != 0)
+                    {
+                        throw new ValidationException(failures);
+                    }
                 }
+
+                return await next(cancellationToken);
             }
-
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Pipeline behavior that validates tenant context is present for requests that require it.
-    /// Requests can opt-in by implementing <see cref="IRequiresTenant"/>.
-    /// </summary>
-    public class TenantValidation<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
-    {
-        private readonly ITenantProvider _tenantProvider;
-        private readonly ILogger<TenantValidation<TRequest, TResponse>> _logger;
-
-        public TenantValidation(ITenantProvider tenantProvider, ILogger<TenantValidation<TRequest, TResponse>> logger)
-        {
-            _tenantProvider = tenantProvider;
-            _logger = logger;
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public class Audit<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
         {
-            if (request is IRequiresTenant)
+            public Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
+                CancellationToken cancellationToken) => next(cancellationToken);
+        }
+
+        public class UnitOfWork<TRequest, TResponse>(Domain.Interfaces.IUnitOfWork unitOfWork)
+            : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
+        {
+            private readonly Domain.Interfaces.IUnitOfWork _unitOfWork = unitOfWork;
+
+            public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
+                CancellationToken cancellationToken)
             {
-                var tenantId = _tenantProvider.GetTenantId();
-                if (tenantId == null || tenantId == Guid.Empty)
+                var response = await next(cancellationToken);
+
+                if (ShouldSave(response))
                 {
-                    _logger.LogWarning("Tenant context missing for request {RequestType}", typeof(TRequest).Name);
-                    return CreateFailureResult();
+                    _ = await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
+
+                return response;
             }
 
-            return await next(cancellationToken);
+            private static bool ShouldSave(TResponse response)
+            {
+                if (response is null)
+                {
+                    return false;
+                }
+
+                if (response is Result result)
+                {
+                    return result.IsSuccess;
+                }
+
+                var type = response.GetType();
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Result<>))
+                {
+                    var isSuccessProp = type.GetProperty("IsSuccess");
+                    if (isSuccessProp != null && isSuccessProp.GetValue(response) is bool isSuccess)
+                    {
+                        return isSuccess;
+                    }
+                }
+
+                return true;
+            }
         }
 
-        private static TResponse CreateFailureResult()
+        /// <summary>
+        /// Pipeline behavior that validates tenant context is present for requests that require it.
+        /// Requests can opt-in by implementing <see cref="IRequiresTenant"/>.
+        /// </summary>
+        public class TenantValidation<TRequest, TResponse>(
+            ITenantProvider tenantProvider,
+            ILogger<TenantValidation<TRequest, TResponse>> logger) : IPipelineBehavior<TRequest, TResponse>
+            where TRequest : IRequest<TResponse>
         {
-            var responseType = typeof(TResponse);
+            private readonly ITenantProvider _tenantProvider = tenantProvider;
+            private readonly ILogger<TenantValidation<TRequest, TResponse>> _logger = logger;
 
-            if (responseType == typeof(Result))
+            public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next,
+                CancellationToken cancellationToken)
             {
-                return (TResponse)(object)Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+                if (request is IRequiresTenant)
+                {
+                    var tenantId = _tenantProvider.GetTenantId();
+                    if (tenantId == null || tenantId == Guid.Empty)
+                    {
+                        _logger.LogWarning("Tenant context missing for request {RequestType}", typeof(TRequest).Name);
+                        return CreateFailureResult();
+                    }
+                }
+
+                return await next(cancellationToken);
             }
 
-            if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(Result<>))
+            private static TResponse CreateFailureResult()
             {
-                var innerType = responseType.GetGenericArguments()[0];
-                var failureMethod = typeof(Result).GetMethod("Failure", 1, [typeof(DomainErrorCode)])!
-                    .MakeGenericMethod(innerType);
-                return (TResponse)failureMethod.Invoke(null, [DomainErrorCode.Tenant.ContextMissing])!;
-            }
+                var responseType = typeof(TResponse);
 
-            throw new InvalidOperationException($"Cannot create failure result for type {responseType}");
+                if (responseType == typeof(Result))
+                {
+                    return (TResponse)(object)Result.Failure(DomainErrorCode.Tenant.ContextMissing);
+                }
+
+                if (responseType.IsGenericType && responseType.GetGenericTypeDefinition() == typeof(Result<>))
+                {
+                    var innerType = responseType.GetGenericArguments()[0];
+                    var failureMethod = typeof(Result).GetMethod("Failure", 1, [typeof(DomainErrorCode)])!
+                        .MakeGenericMethod(innerType);
+                    return (TResponse)failureMethod.Invoke(null, [DomainErrorCode.Tenant.ContextMissing])!;
+                }
+
+                throw new InvalidOperationException($"Cannot create failure result for type {responseType}");
+            }
         }
     }
 }

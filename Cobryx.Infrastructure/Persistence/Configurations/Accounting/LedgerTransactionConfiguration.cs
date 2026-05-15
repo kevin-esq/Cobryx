@@ -32,6 +32,17 @@ public class LedgerTransactionConfiguration : IEntityTypeConfiguration<LedgerTra
             .HasForeignKey(x => x.TransactionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Property(x => x.Hash)
+            .HasColumnType("char(64)")
+            .HasMaxLength(64);
+
+        builder.Property(x => x.PreviousHash)
+            .HasColumnType("char(64)")
+            .HasMaxLength(64);
+
+        builder.Property(x => x.Sequence)
+            .IsRequired();
+
         builder.HasIndex(x => new { x.TenantId, x.Id });
         builder.HasIndex(x => new { x.TenantId, x.ReferenceId })
             .IsUnique()
@@ -39,5 +50,14 @@ public class LedgerTransactionConfiguration : IEntityTypeConfiguration<LedgerTra
         builder.HasIndex(x => new { x.TenantId, x.LoanId });
         builder.HasIndex(x => new { x.TenantId, x.IsReversal });
         builder.HasIndex(x => x.CreatedAt);
+
+        // ELITE CHAIN CONSTRAINTS
+        builder.HasIndex(x => new { x.TenantId, x.Sequence })
+            .IsUnique()
+            .HasDatabaseName("IX_LedgerTransactions_TenantId_Sequence");
+
+        builder.HasIndex(x => new { x.TenantId, x.Hash })
+            .IsUnique()
+            .HasDatabaseName("IX_LedgerTransactions_TenantId_Hash");
     }
 }
