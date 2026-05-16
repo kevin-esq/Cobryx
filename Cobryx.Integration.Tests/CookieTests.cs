@@ -85,7 +85,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         var loginResponse = await _client.PostIdempotentAsync("/api/v1/auth/login", loginCmd);
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var refreshResponse = await _client.PostIdempotentAsync("/api/v1/auth/refresh-token", new { });
+        var refreshResponse = await _client.PostIdempotentAsync("/api/v1/auth/token/refresh", new { });
 
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -139,7 +139,7 @@ public class CookieTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncLif
         Assert.NotNull(token);
 
         var verifyCmd = new VerifyEmailCommand(token);
-        var verifyResponse = await _client.PostIdempotentAsync("/api/v1/auth/verify-email", verifyCmd);
+        var verifyResponse = await _client.PostIdempotentAsync("/api/v1/auth/email/verify", verifyCmd);
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         return email;

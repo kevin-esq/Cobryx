@@ -164,7 +164,7 @@ namespace Cobryx.Integration.Tests
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var productPayload = new CreateProductRequest("Test Product", "Test Description", 100.00m, "MXN");
-            var response = await client.PostIdempotentAsync("/api/v1/financial/products", productPayload);
+            var response = await client.PostIdempotentAsync("/api/v1/products", productPayload);
 
             _ = response.StatusCode.Should().Be(HttpStatusCode.Created,
                 $"because the token should be valid and payload is correct. Body: {await response.Content.ReadAsStringAsync()}");

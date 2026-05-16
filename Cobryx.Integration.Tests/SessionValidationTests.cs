@@ -63,7 +63,7 @@ public class SessionValidationTests : IClassFixture<CobryxWebApplicationFactory>
         signupResp.EnsureSuccessStatusCode();
 
         var token = _emailService.GetLastToken(email);
-        var verifyResp = await _client.PostAsJsonAsync("/api/v1/auth/verify-email", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
+        var verifyResp = await _client.PostAsJsonAsync("/api/v1/auth/email/verify", new Cobryx.Application.Auth.Commands.Core.VerifyEmailCommand(token!));
         verifyResp.EnsureSuccessStatusCode();
 
         var loginResp = await _client.PostAsJsonAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));

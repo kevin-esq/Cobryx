@@ -1,6 +1,7 @@
 using Cobryx.Application.Common.Exceptions;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Accounting.Models;
+using Cobryx.Infrastructure.Persistence;
 
 using Concordia;
 
@@ -18,6 +19,7 @@ namespace Cobryx.Infrastructure.PipelineBehaviors
     public class ConcurrencyBehavior<TRequest, TResponse>(
         ILedgerHealthCache healthCache,
         ITenantProvider tenantProvider,
+        CobryxDbContext dbContext,
         ILogger<ConcurrencyBehavior<TRequest, TResponse>> logger)
         : IPipelineBehavior<TRequest, TResponse>
         where TRequest : IRequest<TResponse>
@@ -77,6 +79,10 @@ namespace Cobryx.Infrastructure.PipelineBehaviors
                     logger.LogWarning(ex,
                         "CONCURRENCY RETRY: Non-financial operation {RequestName} failed (Attempt {RetryCount}/{MaxCount}). Retrying with exponential backoff...",
                         requestName, retryCount, MaxRetries);
+
+                    // Stale optimistic concurrency tokens (Version) stay in the change tracker; a blind retry
+                    // would keep incrementing in-memory Version while the DB row never matched.
+                    dbContext.ChangeTracker.Clear();
 
                     // Exponential backoff: 100ms, 200ms, 400ms
                     await Task.Delay(100 * (int)Math.Pow(2, retryCount - 1), cancellationToken);

@@ -256,7 +256,8 @@ namespace Cobryx.Application.Accounting.Services
 
             // ELITE: SERIALIZABLE Isolation to prevent chain race conditions
             IDbContextTransaction? dbTransaction = null;
-            if (context.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
+            if (context.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory" &&
+                context.Database.CurrentTransaction == null)
             {
                 dbTransaction = await context.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
             }

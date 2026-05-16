@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -29,7 +30,10 @@ public partial class IdempotencyKeyFilter(
     {
         var hasAttribute = context.ActionDescriptor.EndpointMetadata.Any(static em => em is IdempotentAttribute);
 
-        if (!hasAttribute && !HttpMethods.IsPost(context.HttpContext.Request.Method))
+        // Only actions explicitly marked [Idempotent] use the idempotency store. Clients often send
+        // X-Idempotency-Key on other POSTs (e.g. login); running acquire/complete for those would
+        // persist under Guid.Empty tenant for anonymous calls and can surface as 500s.
+        if (!hasAttribute)
         {
             await next();
             return;
@@ -184,20 +188,24 @@ public partial class IdempotencyKeyFilter(
     /// </summary>
     private static string ComputeRequestHash(ActionExecutingContext context)
     {
-        // For requests without body, hash the action arguments
+        // For requests without body, hash the action arguments (excluding framework-injected values).
         if (context.ActionArguments.Count > 0)
         {
-            // Serialize with sorted keys for consistent hashing
             var options = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = false
             };
 
-            // Sort and serialize action arguments for deterministic hash
             var sortedArgs = context.ActionArguments
+                .Where(static kvp => IncludeInRequestHash(kvp.Key, kvp.Value))
                 .OrderBy(static kvp => kvp.Key, StringComparer.Ordinal)
                 .ToDictionary(static kvp => kvp.Key, static kvp => kvp.Value);
+
+            if (sortedArgs.Count == 0)
+            {
+                return ComputeSha256Hash(string.Empty);
+            }
 
             string json = JsonSerializer.Serialize(sortedArgs, options);
             return ComputeSha256Hash(json);
@@ -205,6 +213,34 @@ public partial class IdempotencyKeyFilter(
 
         // Fallback: hash empty string for requests without arguments
         return ComputeSha256Hash(string.Empty);
+    }
+
+    /// <summary>
+    /// MVC injects <see cref="CancellationToken"/>, <see cref="HttpContext"/>, etc. into action arguments;
+    /// they are not JSON-serializable and must never be part of the idempotency payload hash.
+    /// </summary>
+    private static bool IncludeInRequestHash(string key, object? value)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return false;
+        }
+
+        if (key.Equals("cancellationToken", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("ct", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return value switch
+        {
+            null => false,
+            CancellationToken => false,
+            HttpContext => false,
+            ClaimsPrincipal => false,
+            Stream => false,
+            _ => true
+        };
     }
 
     private static string ComputeSha256Hash(string input)

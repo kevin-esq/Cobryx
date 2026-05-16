@@ -48,8 +48,10 @@ public class KnownDomainEventsBinder : ISerializationBinder
         if (KnownTypes.TryGetValue(typeName, out type))
             return type;
 
-        // Validate assembly is allowed
-        if (!string.IsNullOrEmpty(assemblyName) && !AllowedAssemblies.Any(a => assemblyName.StartsWith(a, StringComparison.OrdinalIgnoreCase)))
+        // Validate assembly is allowed (domain payloads) or trusted BCL for generic collections etc.
+        if (!string.IsNullOrEmpty(assemblyName) &&
+            !AllowedAssemblies.Any(a => assemblyName.StartsWith(a, StringComparison.OrdinalIgnoreCase)) &&
+            !assemblyName.StartsWith("System.Private.CoreLib", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Deserialization of type '{typeName}' from assembly '{assemblyName}' is not allowed.");
         }
@@ -70,6 +72,40 @@ public class KnownDomainEventsBinder : ISerializationBinder
             catch
             {
                 // Assembly not loaded, continue
+            }
+        }
+
+        // Nested CLR types inside domain event payloads (e.g. Money on PaymentCompletedEvent) are not
+        // IDomainEvent implementations but must still resolve when Newtonsoft follows $type metadata.
+        if (!string.IsNullOrEmpty(assemblyName) &&
+            AllowedAssemblies.Any(a => assemblyName.StartsWith(a, StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                var asm = Assembly.Load(assemblyName.Split(',')[0].Trim());
+                var nestedType = asm.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (nestedType != null && nestedType.Assembly.GetName().Name is { } nestedAssembly &&
+                    AllowedAssemblies.Contains(nestedAssembly))
+                {
+                    KnownTypes[fullKey] = nestedType;
+                    return nestedType;
+                }
+            }
+            catch
+            {
+                // fall through to error below
+            }
+        }
+
+        // System.Private.CoreLib: closed generic lists and other BCL types referenced in JSON $type metadata.
+        if (!string.IsNullOrEmpty(assemblyName) &&
+            assemblyName.StartsWith("System.Private.CoreLib", StringComparison.OrdinalIgnoreCase))
+        {
+            var t = Type.GetType($"{typeName}, {assemblyName}", throwOnError: false, ignoreCase: false);
+            if (t != null)
+            {
+                KnownTypes[fullKey] = t;
+                return t;
             }
         }
 
