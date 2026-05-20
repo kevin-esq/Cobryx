@@ -19,7 +19,7 @@ public class SreHardeningTests
 
     private CobryxDbContext CreateDbContext(string dbName)
     {
-        var options = new DbContextOptionsBuilder<CobryxDbContext>()
+        DbContextOptions<CobryxDbContext> options = new DbContextOptionsBuilder<CobryxDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
         return new CobryxDbContext(options, _mockTenantProvider.Object);
@@ -36,7 +36,7 @@ public class SreHardeningTests
         var mockBalanceService = new Mock<ILedgerBalanceService>();
         var loggerDrift = new Mock<ILogger<DriftDetectionWorker>>();
 
-        using (var context = CreateDbContext(dbName))
+        await using (CobryxDbContext context = CreateDbContext(dbName))
         {
             var tenant = new Tenant("Test", "test.com");
             typeof(BaseEntity).GetProperty("Id")!.SetValue(tenant, tenantId);

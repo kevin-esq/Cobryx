@@ -28,6 +28,19 @@ public interface IIdempotencyStore
         string? responseBody,
         string? contentType,
         string? locationHeader = null,
+        string? resourceType = null,
+        Guid? resourceId = null,
+        string? environment = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Retrieve an idempotency record for introspection.
+    /// </summary>
+    public Task<IdempotencyRecord?> GetIdempotencyRecordAsync(
+        Guid tenantId,
+        string idempotencyKey,
         CancellationToken ct = default);
 
     /// <summary>
@@ -67,6 +80,11 @@ public interface IIdempotencyStore
         string? responseBody,
         string? contentType,
         string? locationHeader = null,
+        string? resourceType = null,
+        Guid? resourceId = null,
+        string? environment = null,
+        Guid? correlationId = null,
+        Guid? causationId = null,
         CancellationToken ct = default);
 
     /// <summary>

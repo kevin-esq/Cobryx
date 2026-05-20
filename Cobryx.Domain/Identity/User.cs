@@ -164,7 +164,13 @@ public class User : BaseEntity, IAggregateRoot, ITenantEntity
     {
         if (!string.IsNullOrEmpty(deviceFingerprint))
         {
-            var existingSession = _sessions.FirstOrDefault(s => s.DeviceFingerprint == deviceFingerprint && !s.IsRevoked);
+            // Only reuse sessions that were persisted (CreatedAt is set on first SaveChanges). Otherwise a
+            // not-yet-saved session can match the same fingerprint and UpdateActivity() leaves EF tracking it
+            // as Modified with no DB row, breaking the next SaveChanges (SQLite / concurrency retries).
+            var existingSession = _sessions.FirstOrDefault(s =>
+                s.DeviceFingerprint == deviceFingerprint &&
+                !s.IsRevoked &&
+                s.CreatedAt.Year > 1900);
             if (existingSession != null)
             {
                 existingSession.UpdateActivity();

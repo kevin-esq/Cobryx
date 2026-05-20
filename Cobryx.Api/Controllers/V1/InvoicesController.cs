@@ -72,7 +72,7 @@ public class InvoicesController(ISender sender, IApiLinkGenerator linkGenerator)
         if (!result.IsSuccess || result.Value == null)
             return HandleResult(result);
 
-        var invoice = result.Value.FirstOrDefault(i => i.Id == id);
+        InvoiceDto? invoice = result.Value.FirstOrDefault(i => i.Id == id);
         if (invoice == null)
             return NotFound();
 

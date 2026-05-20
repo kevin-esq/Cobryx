@@ -5,6 +5,7 @@ using Cobryx.Api.Services;
 using Cobryx.Application.Invoicing.Commands.CreatePaymentMethod;
 using Cobryx.Application.Invoicing.Commands.DeletePaymentMethod;
 using Cobryx.Application.Invoicing.Queries.GetPaymentMethods;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -36,7 +37,7 @@ public class PaymentMethodsController(ISender sender, IApiLinkGenerator linkGene
     [ProducesResponseType(typeof(ApiErrorResponse), 401)]
     public async Task<IActionResult> GetPaymentMethods()
     {
-        var result = await Sender.Send(new GetPaymentMethodsQuery());
+        Result<IReadOnlyList<PaymentMethodDto>> result = await Sender.Send(new GetPaymentMethodsQuery());
 
         if (!result.IsSuccess || result.Value == null)
             return HandleResult(result, InvoicingOutcomes.PaymentMethods.SearchCompleted);
@@ -72,7 +73,7 @@ public class PaymentMethodsController(ISender sender, IApiLinkGenerator linkGene
             request.Code,
             request.Description);
 
-        var result = await Sender.Send(command);
+        Result<Guid> result = await Sender.Send(command);
         return HandleCreatedResult(linkGenerator.GetPaymentMethodUrl(result.Value), result,
             InvoicingOutcomes.PaymentMethods.Created);
     }
@@ -85,11 +86,11 @@ public class PaymentMethodsController(ISender sender, IApiLinkGenerator linkGene
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> GetPaymentMethod(Guid id)
     {
-        var result = await Sender.Send(new GetPaymentMethodsQuery());
+        Result<IReadOnlyList<PaymentMethodDto>> result = await Sender.Send(new GetPaymentMethodsQuery());
         if (!result.IsSuccess || result.Value == null)
             return HandleResult(result);
 
-        var method = result.Value.FirstOrDefault(m => m.Id == id);
+        PaymentMethodDto? method = result.Value.FirstOrDefault(m => m.Id == id);
         if (method == null)
             return NotFound();
 
@@ -114,7 +115,7 @@ public class PaymentMethodsController(ISender sender, IApiLinkGenerator linkGene
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> DeletePaymentMethod(Guid id)
     {
-        var result = await Sender.Send(new DeletePaymentMethodCommand(id));
+        Result result = await Sender.Send(new DeletePaymentMethodCommand(id));
         return HandleDeleteResult(result, InvoicingOutcomes.PaymentMethods.Deleted);
     }
 }

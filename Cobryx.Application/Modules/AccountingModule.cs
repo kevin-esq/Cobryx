@@ -1,5 +1,4 @@
 using Cobryx.Application.Accounting.Services;
-using Cobryx.Application.Common.Interfaces;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,7 +10,6 @@ public static class AccountingModule
     {
         services.AddScoped<FinancialPostingEngine>();
         services.AddScoped<ReconciliationEngine>();
-        services.AddScoped<ILedgerIntegrityService, LedgerIntegrityService>();
         services.AddScoped<IBankReconciliationEngine, BankReconciliationEngine>();
 
         return services;

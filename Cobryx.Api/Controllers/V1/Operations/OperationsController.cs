@@ -43,7 +43,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetLedgerHealth(CancellationToken ct)
     {
-        var result = await Sender.Send(new GetLedgerHealthQuery(), ct);
+        Result<LedgerHealthDto> result = await Sender.Send(new GetLedgerHealthQuery(), ct);
         return HandleResult(result, AdminOutcomes.Health.LedgerHealthRetrieved);
     }
 
@@ -62,7 +62,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetMetrics([FromQuery] Guid? tenantId, CancellationToken ct)
     {
-        var result = await Sender.Send(new GetFinancialMetricsQuery(tenantId), ct);
+        Result<FinancialMetricsDto> result = await Sender.Send(new GetFinancialMetricsQuery(tenantId), ct);
         return HandleResult(result, AdminOutcomes.Metrics.Retrieved);
     }
 
@@ -81,7 +81,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetStripeReconciliation([FromQuery] Guid? tenantId, CancellationToken ct)
     {
-        var result = await Sender.Send(new GetStripeReconciliationQuery(tenantId), ct);
+        Result<StripeReconciliationDto> result = await Sender.Send(new GetStripeReconciliationQuery(tenantId), ct);
         return HandleResult(result, AdminOutcomes.Reconciliation.StripeRetrieved);
     }
 
@@ -103,7 +103,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> SuspendTenant(Guid id, [FromBody] AdminReasonRequest request, CancellationToken ct)
     {
-        var result = await Sender.Send(new SuspendTenantCommand(id, request.Reason), ct);
+        Result result = await Sender.Send(new SuspendTenantCommand(id, request.Reason), ct);
         return HandleResult(result, AdminOutcomes.Tenant.Suspended);
     }
 
@@ -125,7 +125,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> ManualReversal(Guid id, [FromBody] ManualReversalRequest request, CancellationToken ct)
     {
-        var result = await Sender.Send(new ManualReversalCommand(id, request.Amount, request.Reason), ct);
+        Result result = await Sender.Send(new ManualReversalCommand(id, request.Amount, request.Reason), ct);
         return HandleResult(result, AdminOutcomes.Transaction.Reversed);
     }
 
@@ -147,7 +147,7 @@ public class OperationsController(ISender sender) : CobryxBaseController(sender)
     [ProducesResponseType(typeof(ApiErrorResponse), 404)]
     public async Task<IActionResult> ManualChargeOff(Guid id, [FromBody] AdminReasonRequest request, CancellationToken ct)
     {
-        var result = await Sender.Send(new ManualChargeOffCommand(id, request.Reason), ct);
+        Result result = await Sender.Send(new ManualChargeOffCommand(id, request.Reason), ct);
         return HandleResult(result, AdminOutcomes.Loan.ChargedOff);
     }
 

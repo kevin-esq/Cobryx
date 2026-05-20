@@ -1,3 +1,5 @@
+using Cobryx.Domain.Accounting.Enums;
+
 namespace Cobryx.Application.Common.Interfaces;
 
 public interface ILedgerIntegrityService
@@ -29,11 +31,19 @@ public interface ILedgerIntegrityService
     public Task<bool> VerifyAccountSnapshotAsync(Guid snapshotId, CancellationToken ct = default);
 }
 
+public record IntegrityViolation(
+    string Type, // IMBALANCE, SEQUENCE_GAP, CROSS_TENANT, PARTIAL_COMMIT, DUPLICATE
+    string TargetId,
+    decimal Delta,
+    string RecommendedAction,
+    string? CorrelationId);
+
 public record IntegrityReport(
     bool IsHealthy,
+    AccountingDriftSeverity Severity,
     int TotalEntriesScanned,
-    int ImbalancedTransactionsCount,
-    int OrphanEntriesCount,
+    List<IntegrityViolation> Violations,
     string JournalFingerprint,
-    List<string> CorruptionDetails,
-    bool CircuitBreakerTripped);
+    bool CircuitBreakerTripped,
+    string CorrelationId,
+    DateTime CheckedAt);

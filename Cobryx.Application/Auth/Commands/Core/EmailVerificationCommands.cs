@@ -106,13 +106,11 @@ namespace Cobryx.Application.Auth.Commands.Core
                 throw new TooManyRequestsException();
             }
 
-            var activeTokens = user.SecurityTokens
-                .Where(static t => t.Type == SecurityTokenType.EmailVerification && t.IsActive)
-                .ToList();
-
-            foreach (var oldToken in activeTokens)
+            foreach (var existing in user.SecurityTokens
+                         .Where(static t => t.Type == SecurityTokenType.EmailVerification && t.IsActive)
+                         .ToList())
             {
-                oldToken.Revoke();
+                existing.Revoke();
             }
 
             var tokenValue = Guid.NewGuid().ToString("N");

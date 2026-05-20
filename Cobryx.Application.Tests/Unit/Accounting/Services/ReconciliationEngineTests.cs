@@ -34,7 +34,7 @@ public class ReconciliationEngineTests
 
         _dbContext = new CobryxDbContext(options, tenantProviderMock.Object);
 
-        var postingEngine = new FinancialPostingEngine(_dbContext, postingLoggerMock.Object);
+        var postingEngine = new FinancialPostingEngine(_dbContext, new Mock<ILedgerHasher>().Object, postingLoggerMock.Object, new Mock<ILedgerAnchorService>().Object);
         var metrics = new CobryxMetrics();
         var clockMock = new Mock<IClock>();
         clockMock.Setup(c => c.UtcNow).Returns(DateTime.UtcNow);

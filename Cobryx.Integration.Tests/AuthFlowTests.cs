@@ -7,7 +7,6 @@ using Cobryx.Application.Auth.Commands.Core;
 using Cobryx.Application.Auth.Commands.Login;
 using Cobryx.Application.Auth.Commands.Register;
 using Cobryx.Domain.Interfaces;
-using Cobryx.Domain.ValueObjects;
 using Cobryx.Infrastructure.Persistence;
 using Cobryx.Integration.Tests.Fakes;
 using Cobryx.Integration.Tests.Helpers;
@@ -81,7 +80,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var token = _emailService.GetLastToken(email);
         token.Should().NotBeNull();
 
-        var verifyResp = await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token));
+        var verifyResp = await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token));
         verifyResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var verifyResult = await verifyResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse>();
         verifyResult!.OutcomeCode.Should().Be(AuthOutcomes.EmailVerified);
@@ -112,7 +111,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var sessionsResp = await _client.GetAsync("/api/v1/sessions");
         sessionsResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var refreshResp = await _client.PostAsync("/api/v1/auth/refresh-token", null);
+        var refreshResp = await _client.PostAsync("/api/v1/auth/token/refresh", null);
         refreshResp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -140,7 +139,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = GetUniqueEmail();
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("InvPass Corp", "Inv", "Pass", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
 
         var loginResp = await _client.PostIdempotentAsync("/api/v1/auth/login", new LoginCommand(email, "WrongPass123!"));
         loginResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -173,7 +172,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = "reuse_" + Guid.NewGuid().ToString("N") + "@example.com";
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Reuse Corp", "Reuse", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
 
         var loginResp = await _client.PostIdempotentAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
@@ -181,17 +180,17 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var loginCookies = loginResp.Headers.GetValues("Set-Cookie").ToList();
         var code1 = loginCookies.First(c => c.Contains("refreshToken=")).Split(';')[0];
 
-        var refreshResp1 = await _client.PostAsync("/api/v1/auth/refresh-token", null);
+        var refreshResp1 = await _client.PostAsync("/api/v1/auth/token/refresh", null);
         refreshResp1.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var attackerClient = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        var reuseRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/refresh-token");
+        var reuseRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/token/refresh");
         reuseRequest.Headers.Add("Cookie", code1);
 
         var reuseResp = await attackerClient.SendAsync(reuseRequest);
         reuseResp.IsSuccessStatusCode.Should().BeFalse();
 
-        var refreshResp2 = await _client.PostAsync("/api/v1/auth/refresh-token", null);
+        var refreshResp2 = await _client.PostAsync("/api/v1/auth/token/refresh", null);
         refreshResp2.IsSuccessStatusCode.Should().BeFalse();
     }
 
@@ -201,7 +200,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = GetUniqueEmail();
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Fail Corp", "Fail", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
 
         var loginResp = await _client.PostIdempotentAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
@@ -218,7 +217,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = GetUniqueEmail();
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Dual Corp", "Dual", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
         var loginResp = await _client.PostIdempotentAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult!.Data!.AccessToken);
@@ -245,7 +244,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = GetUniqueEmail();
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Logout Corp", "Logout", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
         var loginResp = await _client.PostIdempotentAsync("/api/v1/auth/login", new LoginCommand(email, DefaultPassword));
         var loginResult = await loginResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<AuthResponseContract>>();
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginResult!.Data!.AccessToken);
@@ -259,7 +258,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
     [Fact]
     public async Task ResendVerification_NonExistentEmail_Returns200()
     {
-        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/resend-verification", new ResendVerificationCommand("nonexistent@example.com", "MOCK_CAPTCHA_TOKEN"));
+        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/email/resend", new ResendVerificationCommand("nonexistent@example.com", "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await resendResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse>();
         result!.OutcomeCode.Should().Be(AuthOutcomes.VerificationEmailSent);
@@ -271,9 +270,9 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = "verified_" + Guid.NewGuid().ToString("N") + "@example.com";
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Verified Corp", "Resend", "User", email, DefaultPassword));
         var token = _emailService.GetLastToken(email);
-        await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token!));
+        await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token!));
 
-        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
+        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/email/resend", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await resendResp.Content.ReadFromJsonAsync<Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse>();
         result!.OutcomeCode.Should().Be(AuthOutcomes.VerificationEmailSent);
@@ -285,7 +284,7 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         var email = "fast_" + Guid.NewGuid().ToString("N") + "@example.com";
         await _client.PostIdempotentAsync("/api/v1/auth/signup", new SignUpCommand("Fast Corp", "Resend", "User", email, DefaultPassword));
 
-        var resp = await _client.PostIdempotentAsync("/api/v1/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
+        var resp = await _client.PostIdempotentAsync("/api/v1/auth/email/resend", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resp.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
         var json = await resp.Content.ReadAsStringAsync();
@@ -304,21 +303,22 @@ public class AuthFlowTests : IClassFixture<CobryxWebApplicationFactory>, IAsyncL
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<CobryxDbContext>();
-            var user = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Email == (EmailAddress)email);
-            db.Entry(user).Property(u => u.LastVerificationSentAt).CurrentValue = DateTime.UtcNow.AddMinutes(-5);
-            await db.SaveChangesAsync();
+            var emailLower = email.ToLowerInvariant();
+            var past = DateTime.UtcNow.AddMinutes(-5);
+            _ = await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""UPDATE "Users" SET "LastVerificationSentAt" = {past} WHERE LOWER("Email") = {emailLower}""");
         }
 
-        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/resend-verification", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
+        var resendResp = await _client.PostIdempotentAsync("/api/v1/auth/email/resend", new ResendVerificationCommand(email, "MOCK_CAPTCHA_TOKEN"));
         resendResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var token2 = _emailService.GetLastToken(email);
         token2.Should().NotBe(token1);
 
-        var verifyResp = await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token1!));
+        var verifyResp = await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token1!));
         verifyResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
-        var verifyResp2 = await _client.PostIdempotentAsync("/api/v1/auth/verify-email", new VerifyEmailCommand(token2!));
+        var verifyResp2 = await _client.PostIdempotentAsync("/api/v1/auth/email/verify", new VerifyEmailCommand(token2!));
         verifyResp2.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

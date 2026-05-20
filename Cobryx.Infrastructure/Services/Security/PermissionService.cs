@@ -44,16 +44,21 @@ public class PermissionService : IPermissionService
             .SelectMany(u => u.Role.Permissions.Select(p => p.Name))
             .ToListAsync(ct)).ToHashSet();
 
-        await _cacheService.SetAsync(cacheKey, permissions, cancellationToken: ct);
+        await _cacheService.SetAsync(cacheKey, permissions, TimeSpan.FromMinutes(10), cancellationToken: ct);
 
         return permissions;
     }
 
     public async Task InvalidateCacheAsync(Guid userId, CancellationToken ct = default)
     {
-        var user = await _dbContext.Users.FindAsync(new object[] { userId }, ct);
+        var user = await _dbContext.Users
+            .Select(u => new { u.Id, u.TenantId, u.PermissionVersion })
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+
         if (user != null)
         {
+            string cacheKey = $"perm:{user.TenantId}:{userId}:v{user.PermissionVersion}";
+            await _cacheService.RemoveAsync(cacheKey, ct);
         }
     }
 }

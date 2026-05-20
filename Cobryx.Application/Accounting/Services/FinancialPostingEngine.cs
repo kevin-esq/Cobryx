@@ -8,12 +8,18 @@ using Cobryx.Domain.Messaging;
 using Cobryx.Domain.Shared;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Accounting.Services
 {
-    public partial class FinancialPostingEngine(ICobryxDbContext context, ILogger<FinancialPostingEngine> logger)
+    public partial class FinancialPostingEngine(
+        ICobryxDbContext context,
+        ILedgerHasher ledgerHasher,
+        ILogger<FinancialPostingEngine> logger,
+        ILedgerAnchorService anchorService)
     {
+        private readonly ILedgerAnchorService _anchorService = anchorService;
         private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
         public async Task<Guid> PostLoanPaymentAllocationAsync(
@@ -40,7 +46,7 @@ namespace Cobryx.Application.Accounting.Services
             AddIfPositive(tx, accounts.InterestAccountId, allocation.InterestApplied);
             AddIfPositive(tx, accounts.FeeAccountId, allocation.FeesApplied);
 
-            await PersistTransactionAsync(tx, ct);
+            await PersistTransactionAsync(tx, allocation, ct);
 
             var payload = JsonSerializer.Serialize(new
             {
@@ -81,7 +87,7 @@ namespace Cobryx.Application.Accounting.Services
             AddIfPositive(tx, accounts.InterestAccountId, split.InterestAmount);
             AddIfPositive(tx, accounts.FeeAccountId, split.FeeAmount);
 
-            await PersistTransactionAsync(tx, ct);
+            await PersistTransactionAsync(tx, loan, ct);
 
             if (platformFee is > 0)
             {
@@ -96,7 +102,7 @@ namespace Cobryx.Application.Accounting.Services
                 platformTx.AddEntry(platformAccounts.CashAccountId, platformFee.Value, 0);
                 platformTx.AddEntry(platformAccounts.FeeAccountId, 0, platformFee.Value);
 
-                await PersistTransactionAsync(platformTx, ct);
+                await PersistTransactionAsync(platformTx, loan, ct);
 
                 var platformPayload = JsonSerializer.Serialize(new { PlatformFee = platformFee }, _jsonOptions);
 
@@ -149,7 +155,8 @@ namespace Cobryx.Application.Accounting.Services
             }
 
             var reversal = LedgerTransaction.CreatePartialReversal(original, amount, $"REVERSAL: {reason}");
-            _ = context.LedgerTransactions.Add(reversal);
+
+            await PersistTransactionAsync(reversal, new { originalTransactionId, amount, reason }, ct);
 
             if (TryHandlePlatformReversal(original, originalTotal, amount, reason, ct) is { } platformTask)
             {
@@ -198,7 +205,7 @@ namespace Cobryx.Application.Accounting.Services
             AddIfPositive(tx, accounts.InterestAccountId, loan.CurrentInterestBalance);
             AddIfPositive(tx, accounts.FeeAccountId, loan.CurrentLateFeeBalance);
 
-            await PersistTransactionAsync(tx, ct);
+            await PersistTransactionAsync(tx, loan, ct);
 
             var payload = JsonSerializer.Serialize(new { TotalOutstanding = total, Reason = reason }, _jsonOptions);
 
@@ -229,7 +236,7 @@ namespace Cobryx.Application.Accounting.Services
             tx.AddEntry(accounts.CashAccountId, amount, 0);
             tx.AddEntry(accounts.RecoveryIncomeId, 0, amount);
 
-            await PersistTransactionAsync(tx, ct);
+            await PersistTransactionAsync(tx, new { amount, reference }, ct);
 
             var payload = JsonSerializer.Serialize(new { Amount = amount, Reference = reference }, _jsonOptions);
 
@@ -243,11 +250,63 @@ namespace Cobryx.Application.Accounting.Services
             return tx.Id;
         }
 
-        private async Task PersistTransactionAsync(LedgerTransaction transaction, CancellationToken ct)
+        private async Task PersistTransactionAsync(LedgerTransaction transaction, object? request, CancellationToken ct)
         {
-            transaction.Post();
-            _ = context.LedgerTransactions.Add(transaction);
-            _ = await context.SaveChangesAsync(ct);
+            const string genesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+            // ELITE: SERIALIZABLE Isolation to prevent chain race conditions
+            IDbContextTransaction? dbTransaction = null;
+            if (context.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory" &&
+                context.Database.CurrentTransaction == null)
+            {
+                dbTransaction = await context.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+            }
+
+            try
+            {
+                // 1. Fetch the absolute head of the chain for this tenant
+                LedgerTransaction? lastTx = await context.LedgerTransactions
+                    .Where(t => t.TenantId == transaction.TenantId)
+                    .OrderByDescending(t => t.Sequence)
+                    .FirstOrDefaultAsync(ct);
+
+                var prevHash = lastTx?.Hash ?? genesisHash;
+                var nextSeq = (lastTx?.Sequence ?? 0) + 1;
+
+                // 2. Cryptographic Sealing
+                var hash = ledgerHasher.ComputeHash(transaction, prevHash);
+                transaction.Seal(prevHash, nextSeq, hash);
+
+                _ = context.LedgerTransactions.Add(transaction);
+                _ = await context.SaveChangesAsync(ct);
+
+                if (dbTransaction != null)
+                {
+                    await dbTransaction.CommitAsync(ct);
+                }
+
+                // 3. Adaptive External Anchoring
+                // Evaluate amount (net debit total) for quantitative risk
+                var totalAmount = transaction.Entries.Where(e => e.Debit > 0).Sum(e => e.Debit);
+
+                await _anchorService.TriggerAnchoringIfRequiredAsync(
+                    transaction.TenantId,
+                    transaction.Hash!,
+                    transaction.Sequence,
+                    totalAmount,
+                    request ?? new object(),
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                if (dbTransaction != null)
+                {
+                    await dbTransaction.RollbackAsync(ct);
+                }
+                logger.LogError(ex, "FAILED TO SEAL LEDGER CHAIN: Tenant {TenantId}, Tx {TxId}",
+                    transaction.TenantId, transaction.Id);
+                throw;
+            }
         }
 
         private static LedgerTransaction CreateTransaction(

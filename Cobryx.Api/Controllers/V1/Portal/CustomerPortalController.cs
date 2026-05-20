@@ -28,11 +28,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     [ProducesResponseType(typeof(ApiErrorResponse), 403)]
     public async Task<IActionResult> GetSummary(CancellationToken ct)
     {
-        var (customerId, tenantId) = GetCustomerContext();
+        (Guid customerId, Guid tenantId) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new GetCustomerPortalSummaryQuery(customerId, tenantId), ct);
+        Result<CustomerPortalSummaryDto> result = await Sender.Send(new GetCustomerPortalSummaryQuery(customerId, tenantId), ct);
         return HandleResult(result);
     }
 
@@ -44,11 +44,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     [ProducesResponseType(typeof(ApiSuccessResponse<CustomerStatementDto>), 200)]
     public async Task<IActionResult> GetStatement(CancellationToken ct)
     {
-        var (customerId, tenantId) = GetCustomerContext();
+        (Guid customerId, Guid tenantId) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new GetCustomerStatementQuery(customerId, tenantId), ct);
+        Result<CustomerStatementDto> result = await Sender.Send(new GetCustomerStatementQuery(customerId, tenantId), ct);
         return HandleResult(result);
     }
 
@@ -59,11 +59,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     [ProducesResponseType(typeof(ApiSuccessResponse<List<CustomerPaymentMethodDto>>), 200)]
     public async Task<IActionResult> GetPaymentMethods(CancellationToken ct)
     {
-        var (customerId, _) = GetCustomerContext();
+        (Guid customerId, _) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new GetCustomerPaymentMethodsQuery(customerId), ct);
+        Result<List<CustomerPaymentMethodDto>> result = await Sender.Send(new GetCustomerPaymentMethodsQuery(customerId), ct);
         return HandleResult(result);
     }
 
@@ -78,11 +78,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     public async Task<IActionResult> AttachPaymentMethod([FromBody] AttachPaymentMethodRequest request,
         CancellationToken ct)
     {
-        var (customerId, _) = GetCustomerContext();
+        (Guid customerId, _) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new AttachPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
+        Result result = await Sender.Send(new AttachPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
         return HandleResult(result);
     }
 
@@ -97,11 +97,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     public async Task<IActionResult> SetDefaultPaymentMethod([FromBody] SetDefaultPaymentMethodRequest request,
         CancellationToken ct)
     {
-        var (customerId, _) = GetCustomerContext();
+        (Guid customerId, _) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new SetDefaultPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
+        Result result = await Sender.Send(new SetDefaultPaymentMethodCommand(customerId, request.PaymentMethodId), ct);
         return HandleResult(result);
     }
 
@@ -115,11 +115,11 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
     [ProducesResponseType(typeof(ApiSuccessResponse<Result>), 200)]
     public async Task<IActionResult> UpdateAutoPay([FromBody] UpdateAutoPayRequest request, CancellationToken ct)
     {
-        var (customerId, _) = GetCustomerContext();
+        (Guid customerId, _) = GetCustomerContext();
         if (customerId == Guid.Empty)
             return Forbid();
 
-        var result = await Sender.Send(new ToggleAutoPayCommand(customerId, request.Enabled), ct);
+        Result result = await Sender.Send(new ToggleAutoPayCommand(customerId, request.Enabled), ct);
         return HandleResult(result);
     }
 
@@ -128,8 +128,8 @@ public class CustomerPortalController(ISender sender) : CobryxBaseController(sen
         var customerIdClaim = User.FindFirst("customer_id")?.Value;
         var tenantIdClaim = User.FindFirst(CobryxClaimTypes.TenantId)?.Value;
 
-        if (string.IsNullOrEmpty(customerIdClaim) || !Guid.TryParse(customerIdClaim, out var customerId) ||
-            string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        if (string.IsNullOrEmpty(customerIdClaim) || !Guid.TryParse(customerIdClaim, out Guid customerId) ||
+            string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out Guid tenantId))
         {
             return (Guid.Empty, Guid.Empty);
         }

@@ -2,6 +2,7 @@ using Asp.Versioning;
 
 using Cobryx.Application.Dashboard.Common;
 using Cobryx.Application.Dashboard.Queries.GetGuidedSetup;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -24,7 +25,7 @@ public class GuidedSetupController(ISender sender) : CobryxBaseController(sender
     [ProducesResponseType(typeof(ApiSuccessResponse<NextBestActionDto>), 200)]
     public async Task<IActionResult> GetNextAction()
     {
-        var result = await Sender.Send(new GetGuidedSetupQuery());
+        Result<NextBestActionDto> result = await Sender.Send(new GetGuidedSetupQuery());
         return HandleResult(result);
     }
 }

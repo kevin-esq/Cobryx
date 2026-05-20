@@ -132,20 +132,22 @@ public class ApiErrorResponse : ApiResponse
 /// </summary>
 public static class ApiResponseFactory
 {
-    public static ApiSuccessResponse<T> Success<T>(T data, Outcome? outcomeCode = null)
+    public static ApiSuccessResponse<T> Success<T>(T data, Outcome? outcomeCode = null, string? traceId = null)
     {
         return new ApiSuccessResponse<T>
         {
             Data = data,
+            TraceId = traceId,
             OutcomeCode = outcomeCode?.Value
         };
     }
 
-    public static ApiSuccessResponse Success(Outcome? outcomeCode = null)
+    public static ApiSuccessResponse Success(Outcome? outcomeCode = null, string? traceId = null)
     {
         return new ApiSuccessResponse
         {
             Data = null,
+            TraceId = traceId,
             OutcomeCode = outcomeCode?.Value
         };
     }

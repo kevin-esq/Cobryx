@@ -71,11 +71,22 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
     public void Fail(string reason)
     {
-        if (Status != PaymentStatus.Processing)
+        if (Status != PaymentStatus.Processing && Status != PaymentStatus.Retrying)
             throw new DomainException(DomainErrorCode.Invoicing.PaymentNotProcessing);
 
         Status = PaymentStatus.Failed;
         AddDomainEvent(new PaymentFailedEvent(Id, TenantId, CustomerId, reason, DateTime.UtcNow));
+        UpdateTimestamp();
+    }
+
+    public void Retry(int attemptNumber)
+    {
+        if (Status != PaymentStatus.Failed)
+            throw new DomainException(DomainErrorCode.Invoicing.PaymentNotFailedCannotRetry);
+
+        // Security Guard: Prevent retrying if the payment was somehow settled or is in another transient state
+        Status = PaymentStatus.Retrying;
+        AddDomainEvent(new PaymentRetryingEvent(Id, TenantId, attemptNumber, DateTime.UtcNow));
         UpdateTimestamp();
     }
 
@@ -95,8 +106,11 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
         UpdateTimestamp();
     }
 
-    public void Refund(Money amount)
+    public void Refund(Money amount, string? reason = null)
     {
+        if (Status == PaymentStatus.Retrying)
+            throw new DomainException(DomainErrorCode.Invoicing.ConcurrentFinancialOperation);
+
         if (Status != PaymentStatus.Completed)
             throw new DomainException(DomainErrorCode.Invoicing.PaymentNotCompletedCannotRefund);
 
@@ -105,7 +119,12 @@ public class Payment : BaseEntity, IAggregateRoot, ITenantEntity
 
         RefundedAmount = new Money(RefundedAmount.Amount + amount.Amount, Amount.Currency);
 
-        AddDomainEvent(new PaymentRefundedEvent(Id, TenantId, amount, DateTime.UtcNow));
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            Notes = string.IsNullOrEmpty(Notes) ? $"Refund Reason: {reason}" : $"{Notes} | Refund Reason: {reason}";
+        }
+
+        AddDomainEvent(new PaymentRefundedEvent(Id, TenantId, amount, reason, DateTime.UtcNow));
         UpdateTimestamp();
     }
 

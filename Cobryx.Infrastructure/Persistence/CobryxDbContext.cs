@@ -38,6 +38,8 @@ namespace Cobryx.Infrastructure.Persistence
             try
             {
                 await HandleSqliteJournalSequencesAsync(cancellationToken);
+                await NormalizeOrphanLoginSessionsAsync(cancellationToken);
+                await NormalizeOrphanUserSecurityTokensAsync(cancellationToken);
                 var result = await base.SaveChangesAsync(cancellationToken);
                 return result;
             }
@@ -84,6 +86,50 @@ namespace Cobryx.Infrastructure.Persistence
                 if (isSqlite)
                 {
                     _ = _sqliteLock.Release();
+                }
+            }
+        }
+
+        /// <summary>
+        /// EF occasionally tracks new <see cref="LoginSession"/> rows as <see cref="EntityState.Modified"/>
+        /// (e.g. graph fix-up with refresh tokens), which generates UPDATEs against non-existent rows.
+        /// Force INSERT semantics when the store has no row for the session id.
+        /// </summary>
+        private async Task NormalizeOrphanLoginSessionsAsync(CancellationToken cancellationToken)
+        {
+            foreach (var entry in ChangeTracker.Entries<LoginSession>())
+            {
+                if (entry.State != EntityState.Modified)
+                {
+                    continue;
+                }
+
+                var databaseValues = await entry.GetDatabaseValuesAsync(cancellationToken);
+                if (databaseValues == null)
+                {
+                    entry.State = EntityState.Added;
+                }
+            }
+        }
+
+        /// <summary>
+        /// EF occasionally tracks new <see cref="UserSecurityToken"/> rows as <see cref="EntityState.Modified"/>
+        /// (graph fix-up with the parent user), which generates UPDATEs against non-existent rows.
+        /// Force INSERT semantics when the store has no row for the token id.
+        /// </summary>
+        private async Task NormalizeOrphanUserSecurityTokensAsync(CancellationToken cancellationToken)
+        {
+            foreach (var entry in ChangeTracker.Entries<UserSecurityToken>())
+            {
+                if (entry.State != EntityState.Modified)
+                {
+                    continue;
+                }
+
+                var databaseValues = await entry.GetDatabaseValuesAsync(cancellationToken);
+                if (databaseValues == null)
+                {
+                    entry.State = EntityState.Added;
                 }
             }
         }

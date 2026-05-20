@@ -36,13 +36,25 @@ public class IdempotencyRecordConfiguration : IEntityTypeConfiguration<Idempoten
         builder.Property(x => x.ExternalGatewayId)
             .HasMaxLength(256);
 
-        builder.Property(x => x.Status)
+        builder.Property(x => x.StatusCode)
             .IsRequired();
 
         builder.Property(x => x.ExpiresAt)
             .IsRequired();
 
         builder.Property(x => x.ProcessingStartedAt);
+
+        builder.Property(x => x.ResourceType)
+            .HasMaxLength(128);
+
+        builder.Property(x => x.ResourceId);
+
+        builder.Property(x => x.Environment)
+            .HasMaxLength(32);
+
+        builder.Property(x => x.CorrelationId);
+
+        builder.Property(x => x.CausationId);
 
         // Unique constraint for idempotency enforcement
         builder.HasIndex(x => new { x.TenantId, x.IdempotencyKey })

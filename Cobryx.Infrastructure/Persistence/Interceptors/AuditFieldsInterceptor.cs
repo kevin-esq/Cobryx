@@ -1,3 +1,4 @@
+using Cobryx.Domain.Identity;
 using Cobryx.Domain.Shared;
 
 using Microsoft.EntityFrameworkCore;
@@ -26,15 +27,15 @@ public class AuditFieldsInterceptor : SaveChangesInterceptor
 
         foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
         {
-            if (entry.State == EntityState.Modified && entry.Entity.Version == 0)
+            // EF sometimes tracks new LoginSession rows as Modified (graph fix-up), which would emit UPDATEs
+            // against non-existent rows. Only coerce those — never User or other roots at Version 0.
+            if (entry.State == EntityState.Modified && entry.Entity.Version == 0 && entry.Entity is LoginSession)
             {
                 entry.State = EntityState.Added;
             }
 
-            if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
-            {
-                entry.Entity.IncrementVersion();
-            }
+            // Do not bump Version here: EntityUpdateInterceptor already increments on Modified, and
+            // bumping on Added breaks optimistic concurrency (e.g. LoginSession INSERT → UPDATE mismatch on SQLite).
         }
     }
 }

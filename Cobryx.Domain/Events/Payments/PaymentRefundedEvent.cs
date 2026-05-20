@@ -7,5 +7,6 @@ public record PaymentRefundedEvent(
     Guid PaymentId,
     Guid TenantId,
     Money Amount,
+    string? Reason,
     DateTime OccurredOn
 ) : IDomainEvent;

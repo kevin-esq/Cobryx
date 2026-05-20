@@ -53,6 +53,8 @@ public static class InvoicingOutcomes
         private const string Prefix = "BILLING.PAYMENT";
         public static readonly Outcome Initiated = new($"{Prefix}.INTENT_CREATED", OutcomeCategory.Success, "Payment intent created.");
         public static readonly Outcome Completed = new($"{Prefix}.PROCESS_SUCCESS", OutcomeCategory.Success, "Payment completed successfully.");
+        public static readonly Outcome Refunded = new($"{Prefix}.REFUND_SUCCESS", OutcomeCategory.Success, "Payment refunded successfully.");
+        public static readonly Outcome Retrying = new($"{Prefix}.RETRY_INITIATED", OutcomeCategory.Success, "Payment retry initiated.");
         public static readonly Outcome Failed = new($"{Prefix}.PROCESS_FAILED", OutcomeCategory.BusinessError, "Payment failed.");
     }
 

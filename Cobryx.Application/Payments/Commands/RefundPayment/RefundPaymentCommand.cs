@@ -12,11 +12,13 @@ namespace Cobryx.Application.Payments.Commands.RefundPayment;
 public record RefundPaymentCommand(
     Guid PaymentId,
     decimal Amount,
-    string Currency) : IRequest<Result>, IRequiresTenant;
+    string Currency,
+    string? Reason = null) : IRequest<Result>, IRequiresTenant, IFinancialCommand;
 
 public class RefundPaymentHandler(
     IPaymentRepository paymentRepository,
     ITenantProvider tenantProvider,
+    IIdempotencyStore idempotencyStore,
     IUnitOfWork unitOfWork)
     : IRequestHandler<RefundPaymentCommand, Result>
 {
@@ -33,11 +35,30 @@ public class RefundPaymentHandler(
         if (payment.TenantId != tenantId.Value)
             return Result.Failure(DomainErrorCode.Tenant.ContextMissing);
 
-        var refundAmount = new Money(request.Amount, request.Currency);
+        var refundAmount = request.Amount == 0
+            ? payment.RefundableAmount
+            : new Money(request.Amount, request.Currency);
 
         try
         {
-            payment.Refund(refundAmount);
+            payment.Refund(refundAmount, request.Reason);
+
+            // Hardening: Capturing Resource Metadata for Introspection
+            var idemContext = idempotencyStore.GetCurrentContext();
+            if (idemContext != null)
+            {
+                await idempotencyStore.CompleteWithinTransactionAsync(
+                    tenantId.Value,
+                    idemContext.IdempotencyKey,
+                    200,
+                    null,
+                    "application/json",
+                    resourceType: "payment",
+                    resourceId: payment.Id,
+                    environment: null,
+                    correlationId: null);
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

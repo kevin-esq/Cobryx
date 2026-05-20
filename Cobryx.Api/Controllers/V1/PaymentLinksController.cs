@@ -26,7 +26,7 @@ public class PaymentLinksController(ISender sender) : CobryxBaseController(sende
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePaymentLinkCommand command)
     {
-        var result = await Sender.Send(command);
+        Result<string> result = await Sender.Send(command);
 
         return HandleResult(result, Outcome.FromExternal("PAYMENT_LINK.CREATE"));
     }

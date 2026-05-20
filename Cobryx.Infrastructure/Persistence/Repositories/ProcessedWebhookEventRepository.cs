@@ -76,4 +76,16 @@ public partial class ProcessedWebhookEventRepository(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Webhook event already processed (idempotency hit): {Provider}/{EventId}")]
     private static partial void LogEventAlreadyProcessed(ILogger logger, string provider, string eventId);
+
+    public async Task RemoveAsync(string provider, string eventId, CancellationToken ct = default)
+    {
+        await context.ProcessedWebhookEvents
+            .Where(e => e.Provider == provider && e.EventId == eventId)
+            .ExecuteDeleteAsync(ct);
+
+        LogEventRemoved(logger, provider, eventId);
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Webhook event idempotency record removed (Forced Replay): {Provider}/{EventId}")]
+    private static partial void LogEventRemoved(ILogger logger, string provider, string eventId);
 }

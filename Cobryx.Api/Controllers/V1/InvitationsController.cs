@@ -4,6 +4,7 @@ using Cobryx.Application.Tenants.Commands.InviteUser;
 using Cobryx.Application.Tenants.Commands.RevokeInvitation;
 using Cobryx.Application.Tenants.Common;
 using Cobryx.Application.Tenants.Queries.GetPendingInvitations;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
@@ -32,7 +33,7 @@ public class InvitationsController(ISender sender) : CobryxBaseController(sender
     [ProducesResponseType(typeof(ApiErrorResponse), 402)]
     public async Task<IActionResult> Invite([FromBody] InviteUserRequest request, CancellationToken ct)
     {
-        var result = await Sender.Send(new InviteUserCommand(request.Email, request.RoleName), ct);
+        Result<Guid> result = await Sender.Send(new InviteUserCommand(request.Email, request.RoleName), ct);
         return HandleResult(result, InvitationOutcomes.InviteSuccess);
     }
 
@@ -45,7 +46,7 @@ public class InvitationsController(ISender sender) : CobryxBaseController(sender
     [ProducesResponseType(typeof(ApiSuccessResponse<List<InvitationDto>>), 200)]
     public async Task<IActionResult> GetPending(CancellationToken ct)
     {
-        var result = await Sender.Send(new GetPendingInvitationsQuery(), ct);
+        Result<List<InvitationDto>> result = await Sender.Send(new GetPendingInvitationsQuery(), ct);
         return HandleResult(result, InvitationOutcomes.FetchSuccess);
     }
 
@@ -60,7 +61,7 @@ public class InvitationsController(ISender sender) : CobryxBaseController(sender
     [ProducesResponseType(typeof(ApiErrorResponse), 400)]
     public async Task<IActionResult> Revoke(Guid id, CancellationToken ct)
     {
-        var result = await Sender.Send(new RevokeInvitationCommand(id), ct);
+        Result result = await Sender.Send(new RevokeInvitationCommand(id), ct);
         return HandleResult(result, InvitationOutcomes.RevokeSuccess);
     }
 }

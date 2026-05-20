@@ -31,10 +31,18 @@ public class EntityUpdateInterceptor(IClock clock) : SaveChangesInterceptor
         foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())
         {
             if (entry.State == EntityState.Added)
+            {
                 entry.Property(e => e.CreatedAt).CurrentValue = now;
-
-            if (entry.State is EntityState.Added or EntityState.Modified || entry.HasChangedOwnedAuditedEntities())
                 entry.Entity.UpdateTimestamp(now);
+            }
+
+            // Only bump optimistic concurrency token on real updates. Doing this on Added breaks SQLite
+            // (and retries): the row is new and the in-memory Version no longer matches what the provider tracks.
+            if (entry.State == EntityState.Modified || entry.HasChangedOwnedAuditedEntities())
+            {
+                entry.Entity.UpdateTimestamp(now);
+                entry.Entity.IncrementVersion();
+            }
         }
     }
 }

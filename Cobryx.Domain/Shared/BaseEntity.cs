@@ -2,7 +2,7 @@ namespace Cobryx.Domain.Shared
 {
     public abstract class BaseEntity
     {
-        public Guid Id { get; protected set; }
+        public Guid Id { get; protected set; } = Guid.NewGuid();
         public DateTime CreatedAt { get; internal set; }
         public Guid? CreatedBy { get; private set; }
         public DateTime? UpdatedAt { get; internal set; }
@@ -16,11 +16,6 @@ namespace Cobryx.Domain.Shared
 
         private readonly List<IDomainEvent> _domainEvents = [];
         public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-
-        protected BaseEntity()
-        {
-            Id = Guid.NewGuid();
-        }
 
         public void SetCreatedBy(Guid userId)
         {

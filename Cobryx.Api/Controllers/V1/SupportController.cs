@@ -1,17 +1,20 @@
 using Asp.Versioning;
 
 using Cobryx.Api.Outcomes;
+using Cobryx.Domain.Shared;
 
 using Concordia;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using CreateTicketCommand = Cobryx.Application.Support.Commands.Create.CreateSupportTicketCommand;
+
 namespace Cobryx.Api.Controllers.V1;
 
 /// <summary>
-/// Controller for managing customer support operations, technical assistance tickets, and operational feedback.
-/// Orchestrates the communication between end-users and the tenant support infrastructure.
+/// Manages customer support operations, technical assistance tickets, and operational feedback.
+/// Orchestrates communication between end-users and the tenant support infrastructure.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -20,6 +23,7 @@ namespace Cobryx.Api.Controllers.V1;
 [Tags("Operations")]
 public class SupportController(ISender sender) : CobryxBaseController(sender)
 {
+    private const string TicketsBasePath = "/api/v1/support/tickets";
 
     /// <summary>
     /// Submits a new technical or operational support ticket.
@@ -34,19 +38,21 @@ public class SupportController(ISender sender) : CobryxBaseController(sender)
     /// </remarks>
     /// <response code="201">Returns the unique identifier for the submitted support ticket.</response>
     /// <response code="400">Malformed request or invalid priority levels.</response>
+    /// <response code="401">Unauthorized.</response>
     [HttpPost]
-    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiSuccessResponse<Guid>), 201)]
-    [ProducesResponseType(typeof(Cobryx.Api.Contracts.V1.Common.ApiErrorResponse), 400)]
-    [ProducesResponseType(typeof(ApiErrorResponse), 401)]
+    [ProducesResponseType(typeof(ApiSuccessResponse<Guid>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] CreateSupportTicketRequest request)
     {
-        var command = new Application.Support.Commands.Create.CreateSupportTicketCommand(
+        var command = new CreateTicketCommand(
             request.Subject,
             request.Description,
             request.Priority,
             request.Category);
 
-        var result = await Sender.Send(command);
-        return HandleCreatedResult($"/api/v1/support/tickets/{result.Value}", result, SupportOutcomes.TicketCreated);
+        Result<Guid> result = await Sender.Send(command);
+
+        return HandleCreatedResult($"{TicketsBasePath}/{result.Value}", result, SupportOutcomes.TicketCreated);
     }
 }

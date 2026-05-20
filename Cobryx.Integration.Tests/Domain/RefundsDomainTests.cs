@@ -67,7 +67,7 @@ public class RefundsDomainTests
 
         var allocation = new PaymentAllocation(paymentId, invoice.Id, amount);
 
-        invoice.ReverseAllocation(allocation);
+        invoice.ReverseAllocation(allocation, allocation.Amount);
 
         invoice.TotalPaid.Amount.Should().Be(0);
         invoice.Status.Should().Be(InvoiceStatus.Issued);
@@ -87,11 +87,11 @@ public class RefundsDomainTests
 
         var allocation = new PaymentAllocation(paymentId, invoice.Id, amount);
 
-        invoice.ReverseAllocation(allocation);
+        invoice.ReverseAllocation(allocation, allocation.Amount);
         var firstReversalPaid = invoice.TotalPaid.Amount;
 
         allocation.MarkAsReversed();
-        invoice.ReverseAllocation(allocation);
+        invoice.ReverseAllocation(allocation, allocation.Amount);
 
         invoice.TotalPaid.Amount.Should().Be(firstReversalPaid);
         invoice.TotalPaid.Amount.Should().Be(0);
