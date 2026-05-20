@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent;
 using Cobryx.Application.Webhooks.Entities;
@@ -18,11 +19,12 @@ namespace Cobryx.Application.Webhooks.Commands.ReplayWebhook
     /// <param name="IsForced">If true, bypasses the processed check by removing the idempotency record.</param>
     /// <param name="Reason">Mandatory reason for the replay (especially for forced replays).</param>
     /// <param name="IsDryRun">If true, simulates the replay and returns expected side effects without committing.</param>
+    [TenantScoped]
     public record ReplayWebhookCommand(
         Guid WebhookEventId,
         bool IsForced = false,
         string? Reason = null,
-        bool IsDryRun = false) : IRequest<Result>;
+        bool IsDryRun = false) : IRequest<Result>, IRequiresTenant;
 
     public class ReplayWebhookHandler(
         IWebhookEventRepository webhookEventRepository,

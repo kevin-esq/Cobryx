@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Idempotency;
 using Cobryx.Domain.Shared;
@@ -10,7 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Observability.Queries.GetIdempotencyIntrospection
 {
-    public record GetIdempotencyIntrospectionQuery(string Key) : IRequest<Result<IdempotencyIntrospectionDto>>;
+    [TenantScoped]
+    public record GetIdempotencyIntrospectionQuery(string Key) : IRequest<Result<IdempotencyIntrospectionDto>>, IRequiresTenant;
 
     public class GetIdempotencyIntrospectionHandler(
         IIdempotencyStore idempotencyStore,

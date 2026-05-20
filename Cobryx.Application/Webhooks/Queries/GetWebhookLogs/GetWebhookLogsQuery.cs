@@ -1,3 +1,5 @@
+using Cobryx.Application.Common.Attributes;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Webhooks.Entities;
 using Cobryx.Application.Webhooks.Interfaces;
 using Cobryx.Domain.Shared;
@@ -16,10 +18,11 @@ public record WebhookLogDto(
     DateTime? ProcessedAt,
     string? Error);
 
+[TenantScoped]
 public record GetWebhookLogsQuery(
     WebhookStatus? Status = null,
     int Limit = 50,
-    int Offset = 0) : IRequest<Result<IEnumerable<WebhookLogDto>>>;
+    int Offset = 0) : IRequest<Result<IEnumerable<WebhookLogDto>>>, IRequiresTenant;
 
 public class GetWebhookLogsHandler(IWebhookEventRepository repository)
     : IRequestHandler<GetWebhookLogsQuery, Result<IEnumerable<WebhookLogDto>>>
