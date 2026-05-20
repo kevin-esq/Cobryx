@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -10,7 +11,8 @@ namespace Cobryx.Application.Auth.Commands.Mfa;
 
 public record TotpSetupResult(string Secret, string QrCodeUri);
 
-public record GetTotpSetupQuery : IRequest<Result<TotpSetupResult>>;
+[TenantScoped]
+public record GetTotpSetupQuery : IRequest<Result<TotpSetupResult>>, IRequiresTenant;
 
 public class GetTotpSetupHandler : IRequestHandler<GetTotpSetupQuery, Result<TotpSetupResult>>
 {

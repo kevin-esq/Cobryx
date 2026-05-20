@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -10,7 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
-public record InitiateFido2RegistrationCommand : IRequest<Result<CredentialCreateOptions>>;
+[TenantScoped]
+public record InitiateFido2RegistrationCommand : IRequest<Result<CredentialCreateOptions>>, IRequiresTenant;
 
 public class InitiateFido2RegistrationHandler : IRequestHandler<InitiateFido2RegistrationCommand, Result<CredentialCreateOptions>>
 {

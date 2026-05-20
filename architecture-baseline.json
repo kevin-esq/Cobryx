@@ -1,10 +1,10 @@
 {
-    "version": "2.1.0",
-    "lastUpdated": "2026-04-10",
+    "version": "2.2.0",
+    "lastUpdated": "2026-05-20",
     "updatedBy": "architecture-tests",
     "baselines": {
         "namingViolations": 4,
-        "tenantPolicyGaps": 100,
+        "tenantPolicyGaps": 91,
         "controllersWithoutMediatR": 0,
         "minimumArchitectureScore": 55
     },
