@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Tenants.Common;
 using Cobryx.Domain.Identity.Enums;
@@ -9,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Queries.GetPendingInvitations;
 
-public record GetPendingInvitationsQuery : IRequest<Result<List<InvitationDto>>>;
+[TenantScoped]
+public record GetPendingInvitationsQuery : IRequest<Result<List<InvitationDto>>>, IRequiresTenant;
 
 public class GetPendingInvitationsHandler : IRequestHandler<GetPendingInvitationsQuery, Result<List<InvitationDto>>>
 {

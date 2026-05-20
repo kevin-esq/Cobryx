@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
@@ -12,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Commands.SeedDemoData;
 
-public record SeedDemoDataCommand : IRequest<Result>;
+[TenantScoped]
+public record SeedDemoDataCommand : IRequest<Result>, IRequiresTenant;
 
 public class SeedDemoDataHandler : IRequestHandler<SeedDemoDataCommand, Result>
 {

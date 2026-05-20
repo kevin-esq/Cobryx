@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending;
@@ -10,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Commands.PurgeDemoData;
 
-public record PurgeDemoDataCommand : IRequest<Result>;
+[TenantScoped]
+public record PurgeDemoDataCommand : IRequest<Result>, IRequiresTenant;
 
 public class PurgeDemoDataHandler : IRequestHandler<PurgeDemoDataCommand, Result>
 {

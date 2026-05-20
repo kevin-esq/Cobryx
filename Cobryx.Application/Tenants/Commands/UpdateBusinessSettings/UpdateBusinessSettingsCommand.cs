@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Lending.Enums;
@@ -8,6 +9,7 @@ using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.UpdateBusinessSettings;
 
+[TenantScoped]
 public record UpdateBusinessSettingsCommand(
     InterestType InterestType,
     decimal DefaultInterestValue,
@@ -16,7 +18,7 @@ public record UpdateBusinessSettingsCommand(
     bool AllowPartialPayments,
     PaymentPriority PaymentPriority,
     int GraceDays,
-    decimal MinimumPaymentAmount) : IRequest<Result>;
+    decimal MinimumPaymentAmount) : IRequest<Result>, IRequiresTenant;
 
 public class UpdateBusinessSettingsHandler : IRequestHandler<UpdateBusinessSettingsCommand, Result>
 {

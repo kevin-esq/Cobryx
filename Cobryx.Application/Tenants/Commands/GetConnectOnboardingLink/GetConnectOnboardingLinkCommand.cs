@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Shared;
@@ -9,7 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Tenants.Commands.GetConnectOnboardingLink;
 
-public record GetConnectOnboardingLinkCommand(string ReturnUrl, string RefreshUrl) : IRequest<Result<string>>;
+[TenantScoped]
+public record GetConnectOnboardingLinkCommand(string ReturnUrl, string RefreshUrl) : IRequest<Result<string>>, IRequiresTenant;
 
 public class GetConnectOnboardingLinkHandler : IRequestHandler<GetConnectOnboardingLinkCommand, Result<string>>
 {

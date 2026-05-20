@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -6,12 +7,13 @@ using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.UpdateTenantSettings;
 
+[TenantScoped]
 public record UpdateTenantSettingsCommand(
     string? OwnerName,
     string? Phone,
     string? LogoUrl,
     string? PrimaryColor,
-    string? SecondaryColor) : IRequest<Result>;
+    string? SecondaryColor) : IRequest<Result>, IRequiresTenant;
 
 public class UpdateTenantSettingsHandler : IRequestHandler<UpdateTenantSettingsCommand, Result>
 {
