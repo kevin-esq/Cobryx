@@ -92,3 +92,4 @@ node_modules/
 # EF secrets / local configuration
 appsettings.Local.json
 appsettings.Secrets.json
+protection.json
