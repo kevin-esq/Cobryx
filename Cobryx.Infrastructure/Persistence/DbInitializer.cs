@@ -16,7 +16,12 @@ public class DbInitializer
     {
         try
         {
-            var permissions = new[]
+            if (unitOfWork is not CobryxDbContext dbContext)
+            {
+                throw new InvalidOperationException("SeedRolesAsync requires CobryxDbContext-backed unit of work.");
+            }
+
+            var permissionTemplates = new[]
             {
                 new Permission(Permission.Constants.CustomersView, "Allow viewing customers"),
                 new Permission(Permission.Constants.CustomersCreate, "Allow creating customers"),
@@ -38,6 +43,28 @@ public class DbInitializer
                 new Permission("webhooks.replay.forced", "Allow forced replay of webhook events (bypassing idempotency)"),
                 new Permission("system.idempotency.read", "Allow inspecting idempotency records")
             };
+
+            var permissionNames = permissionTemplates.Select(static p => p.Name).ToArray();
+            var existingPermissions = await dbContext.Permissions
+                .Where(p => permissionNames.Contains(p.Name))
+                .ToListAsync();
+
+            var permissionsByName = existingPermissions.ToDictionary(static p => p.Name);
+            foreach (var permission in permissionTemplates)
+            {
+                if (permissionsByName.ContainsKey(permission.Name))
+                {
+                    continue;
+                }
+
+                await dbContext.Permissions.AddAsync(permission);
+                permissionsByName[permission.Name] = permission;
+            }
+
+            if (permissionTemplates.Length != existingPermissions.Count)
+            {
+                await dbContext.SaveChangesAsync();
+            }
 
             var roles = new[]
             {
@@ -61,11 +88,11 @@ public class DbInitializer
                 IEnumerable<Permission> targetPermissions;
                 if (role.Name == Role.Constants.Owner)
                 {
-                    targetPermissions = permissions;
+                    targetPermissions = permissionsByName.Values;
                 }
                 else if (role.Name == Role.Constants.Admin)
                 {
-                    targetPermissions = permissions.Where(x => !x.Name.StartsWith("tenant."));
+                    targetPermissions = permissionsByName.Values.Where(static x => !x.Name.StartsWith("tenant."));
                 }
                 else if (role.Name == Role.Constants.Manager)
                 {
@@ -75,7 +102,7 @@ public class DbInitializer
                         Permission.Constants.InvoicesView, Permission.Constants.InvoicesCreate,
                         Permission.Constants.LoansView, Permission.Constants.DashboardView
                     };
-                    targetPermissions = permissions.Where(x => managerPerms.Contains(x.Name));
+                    targetPermissions = permissionsByName.Values.Where(x => managerPerms.Contains(x.Name));
                 }
                 else if (role.Name == Role.Constants.Accountant)
                 {
@@ -84,7 +111,7 @@ public class DbInitializer
                         Permission.Constants.InvoicesView, Permission.Constants.PaymentsView,
                         Permission.Constants.LoansView, Permission.Constants.DashboardView
                     };
-                    targetPermissions = permissions.Where(x => accountantPerms.Contains(x.Name));
+                    targetPermissions = permissionsByName.Values.Where(x => accountantPerms.Contains(x.Name));
                 }
                 else
                 {
