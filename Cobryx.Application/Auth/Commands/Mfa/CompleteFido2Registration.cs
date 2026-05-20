@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -10,10 +11,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
+[TenantScoped]
 public record CompleteFido2RegistrationCommand(
     string DeviceName,
     AuthenticatorAttestationRawResponse Response,
-    CredentialCreateOptions Options) : IRequest<Result<bool>>;
+    CredentialCreateOptions Options) : IRequest<Result<bool>>, IRequiresTenant;
 
 public class CompleteFido2RegistrationHandler : IRequestHandler<CompleteFido2RegistrationCommand, Result<bool>>
 {

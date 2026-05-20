@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
@@ -9,7 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
-public record EnableMfaCommand(string Secret, string Code) : IRequest<Result<List<string>>>;
+[TenantScoped]
+public record EnableMfaCommand(string Secret, string Code) : IRequest<Result<List<string>>>, IRequiresTenant;
 
 public class EnableMfaHandler(
     IMfaService mfaService,

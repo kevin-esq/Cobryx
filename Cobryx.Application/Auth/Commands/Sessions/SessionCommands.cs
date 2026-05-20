@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Exceptions.Auth;
 using Cobryx.Domain.Exceptions.Users;
@@ -10,7 +11,8 @@ namespace Cobryx.Application.Auth.Commands.Sessions;
 
 public record SessionResponse(Guid Id, string IpAddress, string? DeviceFingerprint, string? DeviceName, DateTime LastActiveAt, bool IsCurrent);
 
-public record GetSessionsQuery : IRequest<Result<List<SessionResponse>>>;
+[TenantScoped]
+public record GetSessionsQuery : IRequest<Result<List<SessionResponse>>>, IRequiresTenant;
 
 public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<SessionResponse>>>
 {
@@ -50,7 +52,8 @@ public class GetSessionsHandler : IRequestHandler<GetSessionsQuery, Result<List<
     }
 }
 
-public record RevokeSessionCommand(Guid SessionId) : IRequest<Result<bool>>;
+[TenantScoped]
+public record RevokeSessionCommand(Guid SessionId) : IRequest<Result<bool>>, IRequiresTenant;
 
 public class RevokeSessionHandler : IRequestHandler<RevokeSessionCommand, Result<bool>>
 {
@@ -80,7 +83,8 @@ public class RevokeSessionHandler : IRequestHandler<RevokeSessionCommand, Result
     }
 }
 
-public record LogoutCommand() : IRequest<Result>;
+[TenantScoped]
+public record LogoutCommand() : IRequest<Result>, IRequiresTenant;
 
 public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
 {
@@ -112,7 +116,8 @@ public class LogoutHandler : IRequestHandler<LogoutCommand, Result>
     }
 }
 
-public record LogoutAllCommand() : IRequest<Result>;
+[TenantScoped]
+public record LogoutAllCommand() : IRequest<Result>, IRequiresTenant;
 
 public class LogoutAllHandler : IRequestHandler<LogoutAllCommand, Result>
 {

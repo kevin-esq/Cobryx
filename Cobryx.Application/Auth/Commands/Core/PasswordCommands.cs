@@ -1,4 +1,5 @@
 using Cobryx.Application.Auth.Common;
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Observability;
@@ -142,7 +143,8 @@ namespace Cobryx.Application.Auth.Commands.Core
     }
 
 
-    public record ChangePasswordCommand(string CurrentPassword, string NewPassword) : IRequest<Result>;
+    [TenantScoped]
+    public record ChangePasswordCommand(string CurrentPassword, string NewPassword) : IRequest<Result>, IRequiresTenant;
 
     public class ChangePasswordValidator : AbstractValidator<ChangePasswordCommand>
     {
