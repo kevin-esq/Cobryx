@@ -93,3 +93,4 @@ node_modules/
 appsettings.Local.json
 appsettings.Secrets.json
 protection.json
+ruleset.json
