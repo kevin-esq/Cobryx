@@ -77,7 +77,8 @@ try
 }
 catch (Exception ex)
 {
-    Log.Error(ex, "Failed to initialize application");
+    Log.Fatal(ex, "Failed to initialize application");
+    throw;
 }
 
 // ============================================
