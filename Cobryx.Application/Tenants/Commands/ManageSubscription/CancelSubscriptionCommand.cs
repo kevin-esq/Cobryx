@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Payments.Enums;
@@ -8,9 +9,10 @@ using Concordia;
 
 namespace Cobryx.Application.Tenants.Commands.ManageSubscription
 {
+    [TenantScoped]
     public record CancelSubscriptionCommand(
         CancellationReason Reason,
-        string? Feedback = null) : IRequest<Result>;
+        string? Feedback = null) : IRequest<Result>, IRequiresTenant;
 
     public class CancelSubscriptionHandler(
         ITenantProvider tenantProvider,

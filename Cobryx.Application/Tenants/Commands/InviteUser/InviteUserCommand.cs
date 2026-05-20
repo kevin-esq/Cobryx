@@ -19,8 +19,9 @@ using Microsoft.Extensions.Options;
 
 namespace Cobryx.Application.Tenants.Commands.InviteUser
 {
+    [TenantScoped]
     [RequiresLimit(PlanLimitType.Users)]
-    public record InviteUserCommand(string Email, string RoleName) : IRequest<Result<Guid>>;
+    public record InviteUserCommand(string Email, string RoleName) : IRequest<Result<Guid>>, IRequiresTenant;
 
     public class InviteUserValidator : AbstractValidator<InviteUserCommand>
     {

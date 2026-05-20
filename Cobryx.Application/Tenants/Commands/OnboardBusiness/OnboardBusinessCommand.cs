@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Application.Common.Validation;
 using Cobryx.Domain.Exceptions.Common;
@@ -13,11 +14,12 @@ using FluentValidation;
 
 namespace Cobryx.Application.Tenants.Commands.OnboardBusiness;
 
+[TenantScoped]
 public record OnboardBusinessCommand(
     string TaxId,
     string Industry,
     string BusinessAddress,
-    string? Phone = null) : IRequest<Result>;
+    string? Phone = null) : IRequest<Result>, IRequiresTenant;
 
 public class OnboardBusinessValidator : AbstractValidator<OnboardBusinessCommand>
 {

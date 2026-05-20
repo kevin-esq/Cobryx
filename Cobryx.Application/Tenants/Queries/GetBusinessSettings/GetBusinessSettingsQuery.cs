@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -50,7 +51,8 @@ public record BusinessSettingsDto(
     public decimal MinimumPaymentAmount { get; init; } = MinimumPaymentAmount;
 }
 
-public record GetBusinessSettingsQuery : IRequest<Result<BusinessSettingsDto>>;
+[TenantScoped]
+public record GetBusinessSettingsQuery : IRequest<Result<BusinessSettingsDto>>, IRequiresTenant;
 
 public class GetBusinessSettingsHandler : IRequestHandler<GetBusinessSettingsQuery, Result<BusinessSettingsDto>>
 {

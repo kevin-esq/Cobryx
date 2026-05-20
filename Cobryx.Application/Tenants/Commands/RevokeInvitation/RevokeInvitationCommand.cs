@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
@@ -9,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cobryx.Application.Tenants.Commands.RevokeInvitation;
 
-public record RevokeInvitationCommand(Guid InvitationId) : IRequest<Result>;
+[TenantScoped]
+public record RevokeInvitationCommand(Guid InvitationId) : IRequest<Result>, IRequiresTenant;
 
 public class RevokeInvitationHandler : IRequestHandler<RevokeInvitationCommand, Result>
 {

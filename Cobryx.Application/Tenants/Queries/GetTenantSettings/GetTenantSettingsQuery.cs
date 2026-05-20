@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
@@ -75,7 +76,8 @@ public record TenantSettingsDto(
     public string OnboardingStatus { get; init; } = OnboardingStatus;
 }
 
-public record GetTenantSettingsQuery : IRequest<Result<TenantSettingsDto>>;
+[TenantScoped]
+public record GetTenantSettingsQuery : IRequest<Result<TenantSettingsDto>>, IRequiresTenant;
 
 public class GetTenantSettingsHandler : IRequestHandler<GetTenantSettingsQuery, Result<TenantSettingsDto>>
 {
