@@ -174,9 +174,17 @@ public static class ServiceCollectionExtensions
             options.AddPolicy("DefaultCors", policy =>
             {
                 var appOptions = configuration.GetSection("App").Get<AppOptions>() ?? new AppOptions();
-                policy.WithOrigins(appOptions.AppUrl)
+
+                var origins = (appOptions.AllowedOrigins ?? Array.Empty<string>())
+                    .Concat(new[] { appOptions.AppUrl })
+                    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                policy.WithOrigins(origins)
                     .AllowAnyMethod()
-                    .AllowAnyHeader();
+                    .AllowAnyHeader()
+                    .AllowCredentials();
             });
         });
 
