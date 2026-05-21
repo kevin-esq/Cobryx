@@ -22,6 +22,8 @@ logs/
 .idea/
 .trunk/
 .rino/
+*.swp
+*.swo
 
 # =====================
 # Rider
@@ -55,6 +57,76 @@ postgres_data/
 # =====================
 publish/
 dist/
+
+# =========================================================
+# Node / Frontend
+# =========================================================
+
+# Dependencies
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+coverage/
+storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Cache
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+
+# OS files
+Thumbs.db
+
+# Expo / React Native
+.expo/
+.expo-shared/
+android/app/build/
+ios/build/
+
+# Vercel
+.vercel/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Misc
+*.pid
+*.seed
 
 # =====================
 # Coverage
