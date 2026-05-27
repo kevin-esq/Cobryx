@@ -410,12 +410,12 @@ namespace Cobryx.Application.Accounting.Services
                 .ToListAsync(ct);
 
             return new TenantAccounts(
-                accounts.First(static a => a.Code == "1010").Id,
-                accounts.First(static a => a.Code == "1210").Id,
-                accounts.First(static a => a.Code == "4010").Id,
-                accounts.First(static a => a.Code == "4020").Id,
-                accounts.First(static a => a.Code == "5010").Id,
-                accounts.First(static a => a.Code == "4030").Id
+                accounts.First(static a => a.Code == StandardChartOfAccounts.Cash).Id,
+                accounts.First(static a => a.Code == StandardChartOfAccounts.PrincipalReceivable).Id,
+                accounts.First(static a => a.Code == StandardChartOfAccounts.InterestIncome).Id,
+                accounts.First(static a => a.Code == StandardChartOfAccounts.FeeRevenue).Id,
+                accounts.First(static a => a.Code == StandardChartOfAccounts.LossExpense).Id,
+                accounts.First(static a => a.Code == StandardChartOfAccounts.RecoveryIncome).Id
             );
         }
 
