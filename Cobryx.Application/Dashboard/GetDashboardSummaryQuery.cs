@@ -8,6 +8,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Dashboard
 {
@@ -81,7 +82,8 @@ namespace Cobryx.Application.Dashboard
         public int Count { get; init; } = Count;
     }
 
-    public record GetDashboardSummaryQuery : IRequest<Result<DashboardSummaryDto>>;
+    [TenantScoped]
+public record GetDashboardSummaryQuery : IRequest<Result<DashboardSummaryDto>>, IRequiresTenant;
 
     public class GetDashboardSummaryQueryHandler(IUnitOfWork unitOfWork, ITenantProvider tenantProvider, IClock clock) : IRequestHandler<GetDashboardSummaryQuery, Result<DashboardSummaryDto>>
     {

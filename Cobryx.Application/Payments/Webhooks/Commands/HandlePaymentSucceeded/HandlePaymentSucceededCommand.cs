@@ -8,6 +8,7 @@ using Cobryx.Domain.ValueObjects;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentSucceeded
 {
@@ -18,7 +19,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentSucceeded
     /// </summary>
     /// <param name="Data">The PaymentIntent JSON data from Stripe.</param>
     /// <param name="WebhookEventId">The Stripe event ID for idempotency tracking.</param>
-    public record HandlePaymentSucceededCommand(JsonElement Data, string WebhookEventId) : IRequest<Result>;
+    [WebhookSystem]
+public record HandlePaymentSucceededCommand(JsonElement Data, string WebhookEventId) : IRequest<Result>;
 
     public partial class HandlePaymentSucceededHandler(
         PaymentLinkReconciliationService reconciliationService,

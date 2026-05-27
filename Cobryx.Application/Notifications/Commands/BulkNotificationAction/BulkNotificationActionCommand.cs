@@ -1,11 +1,14 @@
 using Cobryx.Domain.Interfaces;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Notifications.Commands.BulkNotificationAction
 {
-    public record BulkNotificationActionCommand(List<Guid> NotificationIds, string Operation) : IRequest<Result>;
+    [TenantScoped]
+public record BulkNotificationActionCommand(List<Guid> NotificationIds, string Operation) : IRequest<Result>, IRequiresTenant;
 
     public class BulkNotificationActionHandler(IUnitOfWork unitOfWork)
         : IRequestHandler<BulkNotificationActionCommand, Result>

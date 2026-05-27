@@ -5,10 +5,12 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Users.Queries.GetTenantUsers
 {
-    public record GetTenantUsersQuery(int Page = 1, int PageSize = 20) : IRequest<Result<PagedList<UserListDto>>>;
+    [TenantScoped]
+public record GetTenantUsersQuery(int Page = 1, int PageSize = 20) : IRequest<Result<PagedList<UserListDto>>>, IRequiresTenant;
 
     public class GetTenantUsersHandler(
         IUserRepository userRepository,

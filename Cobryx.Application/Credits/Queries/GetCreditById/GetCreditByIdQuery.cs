@@ -5,10 +5,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Credits.Queries.GetCreditById;
 
-public record GetCreditByIdQuery(Guid Id) : IRequest<Result<CreditDetailDto>>;
+[TenantScoped]
+public record GetCreditByIdQuery(Guid Id) : IRequest<Result<CreditDetailDto>>, IRequiresTenant;
 
 public class GetCreditByIdHandler : IRequestHandler<GetCreditByIdQuery, Result<CreditDetailDto>>
 {

@@ -11,8 +11,6 @@ using Cobryx.Application.Payments.Commands.ProcessPayment;
 using Cobryx.Application.Payments.Commands.RefundPayment;
 using Cobryx.Application.Payments.Commands.Register;
 
-using Concordia;
-
 namespace Cobryx.Application.Tests.Behaviors.Tenant;
 
 /// <summary>
@@ -30,10 +28,66 @@ public class TenantPolicyTests
     /// Uses interface detection instead of naming convention.
     /// </summary>
     private static List<Type> GetAllRequestTypes() => _applicationAssembly.GetTypes()
-        .Where(t => !t.IsInterface && !t.IsAbstract)
-        .Where(t => t.GetInterfaces().Any(i =>
-            i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequest<>)))
+        .Where(TenantRequestPolicy.IsMediatRRequest)
         .ToList();
+
+    /// <summary>
+    /// Every MediatR request must be tenant-scoped OR carry exactly one non-tenant classification attribute.
+    /// </summary>
+    [Fact]
+    public void EveryRequest_MustDeclareExactlyOnePolicy()
+    {
+        var violations = new List<string>();
+
+        foreach (var request in GetAllRequestTypes())
+        {
+            var isTenantScoped = TenantRequestPolicy.HasTenantScopedAttribute(request)
+                || TenantRequestPolicy.ImplementsIRequiresTenant(request);
+            var nonTenantCount = TenantRequestPolicy.NonTenantClassificationCount(request);
+
+            if (isTenantScoped && nonTenantCount > 0)
+            {
+                violations.Add($"{request.Name}: mixes tenant-scoped markers with non-tenant classification");
+                continue;
+            }
+
+            if (TenantRequestPolicy.IsTenantScoped(request))
+            {
+                continue;
+            }
+
+            if (nonTenantCount == 1)
+            {
+                continue;
+            }
+
+            if (nonTenantCount == 0)
+            {
+                violations.Add($"{request.FullName}: unclassified (no [TenantScoped]+IRequiresTenant nor classification attribute)");
+            }
+            else
+            {
+                violations.Add($"{request.Name}: has {nonTenantCount} non-tenant classification attributes (expected exactly 1)");
+            }
+        }
+
+        Assert.True(violations.Count == 0,
+            $"Request policy violations:\n{string.Join("\n", violations.Take(40))}" +
+            (violations.Count > 40 ? $"\n... and {violations.Count - 40} more" : ""));
+    }
+
+    [Fact]
+    public void TenantScoped_MustHaveAttributeAndInterfaceTogether()
+    {
+        var violations = GetAllRequestTypes()
+            .Where(t =>
+                TenantRequestPolicy.HasTenantScopedAttribute(t) != TenantRequestPolicy.ImplementsIRequiresTenant(t))
+            .Select(t => $"{t.Name}: attribute={TenantRequestPolicy.HasTenantScopedAttribute(t)}, IRequiresTenant={TenantRequestPolicy.ImplementsIRequiresTenant(t)}")
+            .ToList();
+
+        Assert.True(violations.Count == 0,
+            $"[TenantScoped] and IRequiresTenant must appear together:\n{string.Join("\n", violations)}");
+    }
 
     /// <summary>
     /// CORE TEST: Any request marked [TenantScoped] MUST implement IRequiresTenant.
@@ -115,14 +169,10 @@ public class TenantPolicyTests
     {
         var requests = GetAllRequestTypes();
 
-        var withPolicy = requests
-            .Where(t => t.IsDefined(typeof(TenantScopedAttribute), false) ||
-                       typeof(IRequiresTenant).IsAssignableFrom(t))
-            .Count();
+        var withPolicy = requests.Count(TenantRequestPolicy.IsPolicyCovered);
 
         var withoutPolicy = requests
-            .Where(t => !t.IsDefined(typeof(TenantScopedAttribute), false) &&
-                       !typeof(IRequiresTenant).IsAssignableFrom(t))
+            .Where(TenantRequestPolicy.IsUnclassifiedGap)
             .Select(t => t.Name)
             .ToList();
 
@@ -208,8 +258,7 @@ public class TenantPolicyTests
         var baselineTenantScopedRequests = LoadTenantScopedBaseline();
 
         var currentTenantScoped = GetAllRequestTypes()
-            .Where(t => t.IsDefined(typeof(TenantScopedAttribute), false) ||
-                       typeof(IRequiresTenant).IsAssignableFrom(t))
+            .Where(TenantRequestPolicy.IsPolicyCovered)
             .Select(t => t.Name)
             .ToHashSet();
 
@@ -265,32 +314,20 @@ public class TenantPolicyTests
     /// Adding tenant policy would break the public payment flow.
     /// </summary>
     [Fact]
-    public void PublicPaymentCommands_MustNotHaveTenantPolicy()
+    public void TokenScopedPaymentCommands_MustUseTokenScopedAttribute()
     {
-        var publicCommands = new[]
+        var tokenCommands = new[]
         {
             typeof(InitializePaymentLinkCommand),
         };
 
-        var violations = new List<string>();
-
-        foreach (var command in publicCommands)
-        {
-            if (typeof(IRequiresTenant).IsAssignableFrom(command))
-            {
-                violations.Add($"{command.Name} implements IRequiresTenant but is PUBLIC");
-            }
-
-            if (command.IsDefined(typeof(TenantScopedAttribute), false))
-            {
-                violations.Add($"{command.Name} has [TenantScoped] but is PUBLIC");
-            }
-        }
+        var violations = tokenCommands
+            .Where(c => !TenantRequestPolicy.HasTokenScoped(c))
+            .Select(c => $"{c.Name} must have [TokenScoped]")
+            .ToList();
 
         Assert.True(violations.Count == 0,
-            $"🚨 PUBLIC ENDPOINT VIOLATION: These commands must NOT have tenant policy:\n" +
-            $"{string.Join("\n", violations)}\n\n" +
-            "These are token-based public endpoints. Adding tenant policy will break them.");
+            $"Token-based payment commands:\n{string.Join("\n", violations)}");
     }
 
     /// <summary>

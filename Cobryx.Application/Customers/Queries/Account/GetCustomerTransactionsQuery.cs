@@ -4,10 +4,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Queries.Account;
 
-public record GetCustomerTransactionsQuery(Guid LoanId) : IRequest<Result<List<CustomerTransactionDto>>>;
+[TenantScoped]
+public record GetCustomerTransactionsQuery(Guid LoanId) : IRequest<Result<List<CustomerTransactionDto>>>, IRequiresTenant;
 
 public record CustomerTransactionDto(
     Guid Id,

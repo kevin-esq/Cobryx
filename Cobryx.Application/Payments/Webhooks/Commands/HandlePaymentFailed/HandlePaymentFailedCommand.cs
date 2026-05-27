@@ -8,9 +8,11 @@ using Concordia;
 using Microsoft.EntityFrameworkCore;
 
 using static Cobryx.Domain.Shared.CobryxDefaults;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandlePaymentFailed;
 
+[WebhookSystem]
 public record HandlePaymentFailedCommand(JsonElement StripeObject, string EventType) : IRequest<Result>;
 
 public class HandlePaymentFailedHandler : IRequestHandler<HandlePaymentFailedCommand, Result>

@@ -1,3 +1,4 @@
+using Cobryx.Application.Common.Attributes;
 using Cobryx.Application.Common.Configuration;
 using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Payments.Enums;
@@ -19,6 +20,7 @@ namespace Cobryx.Application.Payments.Queries.GetPaymentLinkByToken
         string? LoanNumber = null,
         string? StripeClientSecret = null);
 
+    [TokenScoped]
     public record GetPaymentLinkByTokenQuery(string Token) : IRequest<Result<PaymentLinkDto>>;
 
     public class GetPaymentLinkByTokenHandler(ICobryxDbContext context, IClock clock, IOptions<StripeOptions> stripeOptions) : IRequestHandler<GetPaymentLinkByTokenQuery, Result<PaymentLinkDto>>

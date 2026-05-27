@@ -11,6 +11,7 @@ using Concordia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Commands.InitializePaymentLink;
 
@@ -18,6 +19,7 @@ namespace Cobryx.Application.Payments.Commands.InitializePaymentLink;
 // This command is used by external payers via payment link token.
 // Tenant context is derived from the PaymentLink entity, not from request context.
 // DO NOT add [TenantScoped] or IRequiresTenant.
+[TokenScoped]
 public record InitializePaymentLinkCommand(string Token) : IRequest<Result<string>>;
 
 public class InitializePaymentLinkHandler(

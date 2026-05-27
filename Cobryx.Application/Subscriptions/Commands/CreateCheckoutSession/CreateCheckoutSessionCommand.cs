@@ -7,10 +7,12 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Subscriptions.Commands.CreateCheckoutSession;
 
-public record CreateCheckoutSessionCommand(Guid PlanId, string? SuccessUrl = null, string? CancelUrl = null) : IRequest<Result<string>>;
+[TenantScoped]
+public record CreateCheckoutSessionCommand(Guid PlanId, string? SuccessUrl = null, string? CancelUrl = null) : IRequest<Result<string>>, IRequiresTenant;
 
 public class CreateCheckoutSessionHandler : IRequestHandler<CreateCheckoutSessionCommand, Result<string>>
 {

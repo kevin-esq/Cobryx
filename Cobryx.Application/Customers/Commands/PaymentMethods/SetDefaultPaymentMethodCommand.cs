@@ -4,10 +4,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Commands.PaymentMethods;
 
-public record SetDefaultPaymentMethodCommand(Guid CustomerId, string PaymentMethodId) : IRequest<Result>;
+[TenantScoped]
+public record SetDefaultPaymentMethodCommand(Guid CustomerId, string PaymentMethodId) : IRequest<Result>, IRequiresTenant;
 
 public class SetDefaultPaymentMethodHandler : IRequestHandler<SetDefaultPaymentMethodCommand, Result>
 {

@@ -7,9 +7,11 @@ using Concordia;
 using Fido2NetLib;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
+[PublicRequest]
 public record InitiateFido2AssertionCommand(string MfaToken) : IRequest<Result<AssertionOptions>>;
 
 public class InitiateFido2AssertionHandler : IRequestHandler<InitiateFido2AssertionCommand, Result<AssertionOptions>>

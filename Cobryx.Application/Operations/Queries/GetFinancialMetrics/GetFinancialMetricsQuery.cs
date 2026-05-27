@@ -5,9 +5,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Queries.GetFinancialMetrics;
 
+[PlatformScoped]
 public record GetFinancialMetricsQuery(Guid? TenantId = null) : IRequest<Result<FinancialMetricsDto>>;
 
 public record FinancialMetricsDto(

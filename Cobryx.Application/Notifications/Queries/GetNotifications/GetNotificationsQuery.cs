@@ -5,11 +5,12 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Notifications.Queries.GetNotifications
 {
-    public record GetNotificationsQuery(bool UnreadOnly = true, int Limit = 20)
-        : IRequest<Result<List<NotificationDto>>>;
+    [TenantScoped]
+public record GetNotificationsQuery(bool UnreadOnly = true, int Limit = 20) : IRequest<Result<List<NotificationDto>>>, IRequiresTenant;
 
     public class GetNotificationsHandler(
         INotificationRepository notificationRepository,

@@ -8,10 +8,12 @@ using Concordia;
 using Fido2NetLib;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Mfa
 {
-    public record CompleteFido2AssertionCommand(
+    [PublicRequest]
+public record CompleteFido2AssertionCommand(
         string MfaToken,
         AuthenticatorAssertionRawResponse Response,
         AssertionOptions Options) : IRequest<Result<AuthResult>>;

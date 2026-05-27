@@ -15,9 +15,11 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Enroll;
 
+[PublicRequest]
 public record EnrollUserCommand(
     string Token,
     string Email,

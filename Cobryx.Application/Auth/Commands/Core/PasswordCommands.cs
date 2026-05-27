@@ -17,7 +17,8 @@ using Microsoft.Extensions.Options;
 namespace Cobryx.Application.Auth.Commands.Core
 {
 
-    public record ForgotPasswordCommand(string Email, string? ReturnUrl = null) : IRequest<Result>;
+    [PublicRequest]
+public record ForgotPasswordCommand(string Email, string? ReturnUrl = null) : IRequest<Result>;
 
     public class ForgotPasswordValidator : AbstractValidator<ForgotPasswordCommand>
     {
@@ -94,6 +95,7 @@ namespace Cobryx.Application.Auth.Commands.Core
     }
 
 
+    [PublicRequest]
     public record ResetPasswordCommand(string Token, string NewPassword) : IRequest<Result>;
 
     public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>

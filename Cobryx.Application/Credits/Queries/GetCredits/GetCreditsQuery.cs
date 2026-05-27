@@ -7,13 +7,15 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Credits.Queries.GetCredits;
 
+[TenantScoped]
 public record GetCreditsQuery(
     Guid? CustomerId = null,
     int Page = 1,
-    int PageSize = 10) : IRequest<Result<PaginatedList<CreditDto>>>;
+    int PageSize = 10) : IRequest<Result<PaginatedList<CreditDto>>>, IRequiresTenant;
 
 public class GetCreditsHandler : IRequestHandler<GetCreditsQuery, Result<PaginatedList<CreditDto>>>
 {

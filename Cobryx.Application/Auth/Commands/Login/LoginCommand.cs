@@ -10,10 +10,12 @@ using Concordia;
 using FluentValidation;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Login
 {
-    public record LoginCommand(string Email, string Password, string? DeviceName = null, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
+    [PublicRequest]
+public record LoginCommand(string Email, string Password, string? DeviceName = null, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
 
     public class LoginValidator : AbstractValidator<LoginCommand>
     {

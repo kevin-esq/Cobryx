@@ -6,6 +6,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Users.Queries.GetMyProfile
 {
@@ -13,7 +14,8 @@ namespace Cobryx.Application.Users.Queries.GetMyProfile
     /// Retrieves the full profile for the currently authenticated user.
     /// The user identity is resolved via ICurrentUserProvider — no userId parameter needed.
     /// </summary>
-    public record GetMyProfileQuery : IRequest<Result<MyProfileDto>>;
+    [TenantScoped]
+public record GetMyProfileQuery : IRequest<Result<MyProfileDto>>, IRequiresTenant;
 
     public class GetMyProfileHandler(
         IUserRepository userRepository,

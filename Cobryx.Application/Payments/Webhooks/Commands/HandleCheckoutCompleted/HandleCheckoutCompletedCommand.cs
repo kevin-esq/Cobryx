@@ -6,6 +6,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleCheckoutCompleted
 {
@@ -14,7 +15,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleCheckoutCompleted
     /// Extracts tenant, customer, and subscription identifiers from the session metadata
     /// and delegates to <see cref="StripeSubscriptionSyncService"/> for authoritative state sync.
     /// </summary>
-    public record HandleCheckoutCompletedCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
+    [WebhookSystem]
+public record HandleCheckoutCompletedCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
 
     public partial class HandleCheckoutCompletedHandler(
         StripeSubscriptionSyncService syncService,

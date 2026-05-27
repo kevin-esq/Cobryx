@@ -5,10 +5,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Queries.Account;
 
-public record GetCustomerPaymentMethodsQuery(Guid CustomerId) : IRequest<Result<List<CustomerPaymentMethodDto>>>;
+[TenantScoped]
+public record GetCustomerPaymentMethodsQuery(Guid CustomerId) : IRequest<Result<List<CustomerPaymentMethodDto>>>, IRequiresTenant;
 
 public record CustomerPaymentMethodDto(
     string Id,

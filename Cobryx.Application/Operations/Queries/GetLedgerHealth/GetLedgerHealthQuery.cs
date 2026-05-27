@@ -5,10 +5,12 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Queries.GetLedgerHealth
 {
-    public record GetLedgerHealthQuery : IRequest<Result<LedgerHealthDto>>;
+    [PlatformScoped]
+public record GetLedgerHealthQuery : IRequest<Result<LedgerHealthDto>>;
 
     public record LedgerHealthDto(
         string Status,

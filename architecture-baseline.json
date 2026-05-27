@@ -4,7 +4,7 @@
     "updatedBy": "architecture-tests",
     "baselines": {
         "namingViolations": 4,
-        "tenantPolicyGaps": 77,
+        "tenantPolicyGaps": 0,
         "controllersWithoutMediatR": 0,
         "minimumArchitectureScore": 55
     },

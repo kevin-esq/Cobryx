@@ -6,10 +6,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Users.Commands.UpdateUserRole
 {
-    public record UpdateUserRoleCommand(Guid UserId, Guid RoleId) : IRequest<Result>;
+    [TenantScoped]
+public record UpdateUserRoleCommand(Guid UserId, Guid RoleId) : IRequest<Result>, IRequiresTenant;
 
     public partial class UpdateUserRoleHandler(
         IUnitOfWork unitOfWork,

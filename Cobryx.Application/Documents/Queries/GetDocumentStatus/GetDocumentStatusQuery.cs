@@ -1,10 +1,13 @@
 using Cobryx.Domain.Shared;
+using Cobryx.Application.Common.Interfaces;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Documents.Queries.GetDocumentStatus;
 
-public record GetDocumentStatusQuery(Guid DocumentId) : IRequest<Result<DocumentStatusDto>>;
+[TenantScoped]
+public record GetDocumentStatusQuery(Guid DocumentId) : IRequest<Result<DocumentStatusDto>>, IRequiresTenant;
 
 public record DocumentStatusDto(
     Guid Id,

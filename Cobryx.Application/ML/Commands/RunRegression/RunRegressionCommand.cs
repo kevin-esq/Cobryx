@@ -9,9 +9,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.ML.Commands.RunRegression;
 
+[PlatformScoped]
 public record RunRegressionCommand(
     DriftToleranceProfile? Profile,
     string? BaselineVersion,

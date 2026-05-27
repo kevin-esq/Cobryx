@@ -5,14 +5,16 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Tenants.Commands.UpdateTenantConnectCapabilities;
 
+[TenantScoped]
 public record UpdateTenantConnectCapabilitiesCommand(
     string StripeAccountId,
     bool ChargesEnabled,
     bool PayoutsEnabled,
-    bool DetailsSubmitted) : IRequest<Result>;
+    bool DetailsSubmitted) : IRequest<Result>, IRequiresTenant;
 
 public class UpdateTenantConnectCapabilitiesHandler : IRequestHandler<UpdateTenantConnectCapabilitiesCommand, Result>
 {

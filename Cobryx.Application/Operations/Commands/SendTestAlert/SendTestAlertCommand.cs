@@ -2,9 +2,11 @@ using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Commands.SendTestAlert;
 
+[PlatformScoped]
 public record SendTestAlertCommand(string? AdminUser) : IRequest<Result>;
 
 public class SendTestAlertHandler(

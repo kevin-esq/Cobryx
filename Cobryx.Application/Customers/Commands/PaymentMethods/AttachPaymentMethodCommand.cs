@@ -6,10 +6,12 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Commands.PaymentMethods;
 
-public record AttachPaymentMethodCommand(Guid CustomerId, string PaymentMethodId) : IRequest<Result>;
+[TenantScoped]
+public record AttachPaymentMethodCommand(Guid CustomerId, string PaymentMethodId) : IRequest<Result>, IRequiresTenant;
 
 public class AttachPaymentMethodHandler(
     ICobryxDbContext dbContext,

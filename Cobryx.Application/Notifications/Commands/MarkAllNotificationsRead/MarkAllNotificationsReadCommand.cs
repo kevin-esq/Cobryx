@@ -4,10 +4,12 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Notifications.Commands.MarkAllNotificationsRead
 {
-    public record MarkAllNotificationsReadCommand : IRequest<Result>;
+    [TenantScoped]
+public record MarkAllNotificationsReadCommand : IRequest<Result>, IRequiresTenant;
 
     public class MarkAllNotificationsReadHandler(
         INotificationRepository notificationRepository,

@@ -11,11 +11,13 @@ using Concordia;
 using FluentValidation;
 
 using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Core
 {
 
-    public record VerifyEmailCommand(string Token) : IRequest<Result>;
+    [PublicRequest]
+public record VerifyEmailCommand(string Token) : IRequest<Result>;
 
     public class VerifyEmailHandler(IUserRepository userRepository, IUnitOfWork unitOfWork) : IRequestHandler<VerifyEmailCommand, Result>
     {
@@ -55,6 +57,7 @@ namespace Cobryx.Application.Auth.Commands.Core
     }
 
 
+    [PublicRequest]
     public record ResendVerificationCommand(string Email, string? CaptchaToken = null, string? ReturnUrl = null) : IRequest<Result>;
 
     public class ResendVerificationValidator : AbstractValidator<ResendVerificationCommand>

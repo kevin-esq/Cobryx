@@ -20,10 +20,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleWebhookEvent
 {
-    public record HandleWebhookEventCommand(Guid WebhookEventId) : IRequest<Result>;
+    [WebhookSystem]
+public record HandleWebhookEventCommand(Guid WebhookEventId) : IRequest<Result>;
 
     public partial class HandleWebhookEventHandler(
         IWebhookEventRepository webhookEventRepository,

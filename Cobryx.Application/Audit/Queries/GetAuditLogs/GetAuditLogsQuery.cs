@@ -3,17 +3,19 @@ using Cobryx.Application.Common.Models;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Audit.Queries.GetAuditLogs
 {
-    public record GetAuditLogsQuery(
+    [TenantScoped]
+public record GetAuditLogsQuery(
         int Page = 1,
         int PageSize = 20,
         string? EntityName = null,
         string? Action = null,
         Guid? UserId = null,
         DateTime? From = null,
-        DateTime? To = null) : IRequest<Result<PaginatedList<AuditLogEntry>>>;
+        DateTime? To = null) : IRequest<Result<PaginatedList<AuditLogEntry>>>, IRequiresTenant;
 
     public class GetAuditLogsHandler(IAuditLogQueryService auditLogQuery, ITenantProvider tenantProvider) : IRequestHandler<GetAuditLogsQuery, Result<PaginatedList<AuditLogEntry>>>
     {

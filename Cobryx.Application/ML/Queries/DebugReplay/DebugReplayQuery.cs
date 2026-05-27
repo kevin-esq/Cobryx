@@ -8,9 +8,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.ML.Queries.DebugReplay;
 
+[PlatformScoped]
 public record DebugReplayQuery(
     Guid SnapshotId,
     decimal LimitThreshold = 10,

@@ -6,6 +6,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleAccountUpdated
 {
@@ -14,7 +15,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleAccountUpdated
     /// Extracts Connect capability flags and delegates to
     /// <see cref="UpdateTenantConnectCapabilitiesCommand"/> for tenant state sync.
     /// </summary>
-    public record HandleAccountUpdatedCommand(JsonElement Data) : IRequest<Result>;
+    [WebhookSystem]
+public record HandleAccountUpdatedCommand(JsonElement Data) : IRequest<Result>;
 
     public partial class HandleAccountUpdatedHandler(
         ISender sender,

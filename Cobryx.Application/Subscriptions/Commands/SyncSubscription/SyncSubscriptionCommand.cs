@@ -7,10 +7,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Subscriptions.Commands.SyncSubscription
 {
-    public record SyncSubscriptionCommand : IRequest<Result>;
+    [TenantScoped]
+public record SyncSubscriptionCommand : IRequest<Result>, IRequiresTenant;
 
     public class SyncSubscriptionHandler(
         ITenantProvider tenantProvider,
