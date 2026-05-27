@@ -39,6 +39,19 @@ API Return Value: `MODULE.SCENARIO` or `MODULE.ENTITY.SCENARIO`
 
 ---
 
+## Subscription & Plan Limits (Monetization)
+- **DOMAIN.SUBSCRIPTION.LIMIT_REACHED** (HTTP 403, numeric 7001): Tenant exceeded a plan quota (e.g. monthly invoices). Thrown by plan enforcement before the write completes.
+- **DOMAIN.SUBSCRIPTION.NOT_FOUND** (HTTP 404): No subscription record for the tenant.
+- **DOMAIN.SUBSCRIPTION.EXPIRED** (HTTP 403): Subscription past validity; write operations blocked.
+- **DOMAIN.SUBSCRIPTION.BLOCKED** (HTTP 403): Subscription administratively blocked.
+- **DOMAIN.SUBSCRIPTION.PLAN_NOT_FOUND**: Referenced plan id does not exist.
+- **DOMAIN.SUBSCRIPTION.DOWNGRADE_FORBIDDEN**: Usage exceeds target plan limits (internal upgrade command).
+- **DOMAIN.TENANT.CONTEXT_MISSING**: `X-Tenant-Id` / token tenant context not resolved.
+
+See [monetization.md](monetization.md) for endpoint-level mapping.
+
+---
+
 ## Lending
 - **DOMAIN.LOAN.NOT_FOUND**: Loan record missing.
 - **DOMAIN.LOAN.ALREADY_CLOSED**: Operation not permitted on closed loan.

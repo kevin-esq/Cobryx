@@ -75,6 +75,20 @@ Customer details have been updated.
 ## Invoicing Outcomes
 
 ### BILLING.INVOICE.CREATE_SUCCESS
+**Endpoint:** POST /api/v1/invoices
+**HTTP Status:** 201
+
+#### Meaning
+A new invoice was created and persisted. See [monetization.md](monetization.md) for plan-limit behavior.
+
+---
+
+### BILLING.INVOICE.SEARCH_SUCCESS
+**Endpoint:** GET /api/v1/invoices
+**HTTP Status:** 200
+
+---
+
 ### BILLING.INVOICE.PAYMENT_SUCCESS
 ### BILLING.TAX.SEARCH_SUCCESS
 
@@ -89,8 +103,51 @@ Customer details have been updated.
 
 ## Subscription Outcomes
 
+### BILLING.SUBSCRIPTION.PLANS_FETCH_SUCCESS
+**Endpoint:** GET /api/v1/subscription/plans
+**HTTP Status:** 200
+
+#### Meaning
+Available subscription plans retrieved (public, cacheable).
+
+---
+
+### BILLING.SUBSCRIPTION.STATUS_CHECK_SUCCESS
+**Endpoint:** GET /api/v1/subscription/status
+**HTTP Status:** 200
+
+#### Meaning
+Current tenant subscription status and entitlements retrieved.
+
+---
+
 ### BILLING.SUBSCRIPTION.CHECKOUT_CREATE_SUCCESS
+**Endpoint:** POST /api/v1/subscription/checkout
+**HTTP Status:** 200
+
+#### Meaning
+Stripe Checkout URL generated for plan upgrade or purchase.
+
+---
+
 ### BILLING.SUBSCRIPTION.PORTAL_CREATE_SUCCESS
+**Endpoint:** POST /api/v1/subscription/portal
+**HTTP Status:** 200
+
+#### Meaning
+Stripe Customer Portal URL generated for subscription self-service.
+
+---
+
+### BILLING.SUBSCRIPTION.INTELLIGENCE_SUCCESS
+**Endpoint:** GET /api/v1/subscription/intelligence
+**HTTP Status:** 200
+
+---
+
+### BILLING.SUBSCRIPTION.SYNC_SUCCESS
+**Endpoint:** POST /api/v1/system/commands/sync-subscription
+**HTTP Status:** 200
 
 ---
 
