@@ -33,8 +33,13 @@ jobs:
             - name: Architecture Tests
               run: dotnet test Cobryx.Architecture.Tests/Cobryx.Architecture.Tests.csproj --configuration Release --no-build
 
+            # Runs the whole Cobryx.Integration.Tests project. The csproj boundary
+            # already encodes intent ("every test in this project is an integration
+            # test"), so we do not layer a trait filter on top — that previously
+            # caused ~65 of 76 tests to be silently skipped because only one file
+            # carried [Trait("Category", "Integration")].
             - name: Integration Tests
-              run: dotnet test Cobryx.Integration.Tests/Cobryx.Integration.Tests.csproj --configuration Release --no-build --filter "Category=Integration"
+              run: dotnet test Cobryx.Integration.Tests/Cobryx.Integration.Tests.csproj --configuration Release --no-build
 
     determinism-check:
         runs-on: ubuntu-latest
