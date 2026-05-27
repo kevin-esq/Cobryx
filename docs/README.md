@@ -8,6 +8,8 @@ Standards and conventions for building features across the solution.
 | --- | --- |
 | [Engineering Practices](architecture/engineering-practices.md) | Error handling, Result/Outcome/DomainErrorCode patterns, controller conventions, validation responses, layer boundaries |
 | [Coding Standards](architecture/coding-standards.md) | Domain modeling, value objects, configuration, logging, idempotency, naming conventions, compliance audit |
+| [ADR-007 Journal Entry Contract](architecture/adr/ADR-007-journal-entry-contract.md) | F6.1 — `LedgerTransaction` invariants, lifecycle, idempotency |
+| [ADR-008 Chart of Accounts](architecture/adr/ADR-008-standard-chart-of-accounts.md) | F6.1 — per-tenant system account codes (`1010`–`4030`) |
 
 ## API
 

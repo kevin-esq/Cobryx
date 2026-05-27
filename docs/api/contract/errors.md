@@ -39,6 +39,16 @@ API Return Value: `MODULE.SCENARIO` or `MODULE.ENTITY.SCENARIO`
 
 ---
 
+## Accounting (Ledger)
+- **ACCOUNTING.JOURNAL_UNBALANCED**: Journal entry debits and credits do not net to zero.
+- **ACCOUNTING.JOURNAL_IMMUTABLE**: Mutation attempted after post/seal.
+- **ACCOUNTING.REVERSAL_AMOUNT_EXCEEDED**: Reversal amount exceeds reversible balance on original JE.
+- **ACCOUNTING.SYSTEM_ACCOUNT_LOCKED**: System chart account cannot be renamed/re-coded.
+- **ACCOUNTING.LEDGER_CHAIN_BROKEN**: Hash chain continuity failure.
+- **ACCOUNTING.LEDGER_HASH_MISMATCH**: Sealed hash does not match recomputed value.
+
+---
+
 ## Subscription & Plan Limits (Monetization)
 - **DOMAIN.SUBSCRIPTION.LIMIT_REACHED** (HTTP 403, numeric 7001): Tenant exceeded a plan quota (e.g. monthly invoices). Thrown by plan enforcement before the write completes.
 - **DOMAIN.SUBSCRIPTION.NOT_FOUND** (HTTP 404): No subscription record for the tenant.

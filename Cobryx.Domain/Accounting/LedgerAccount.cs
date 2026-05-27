@@ -40,7 +40,7 @@ public class LedgerAccount : BaseEntity
     public void UpdateDetails(string name, string code)
     {
         if (IsSystem)
-            throw new DomainException(DomainErrorCode.Common.GeneralError);
+            throw new DomainException(DomainErrorCode.Accounting.SystemAccountLocked);
 
         Name = name;
         Code = code;

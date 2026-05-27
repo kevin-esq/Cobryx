@@ -180,22 +180,13 @@ public class DbInitializer
             dbContext.Tenants.Add(platformTenant);
         }
 
-        var accounts = new[]
+        foreach (var code in StandardChartOfAccounts.AllSystemCodes)
         {
-            new { Code = "1010", Name = "Platform Cash", Type = LedgerAccountType.Asset, Role = LedgerAccountRole.Available },
-            new { Code = "1210", Name = "Platform Receivables", Type = LedgerAccountType.Asset, Role = LedgerAccountRole.Receivable },
-            new { Code = "4010", Name = "Platform Interest Income", Type = LedgerAccountType.Revenue, Role = LedgerAccountRole.None },
-            new { Code = "4020", Name = "Platform Fee Revenue", Type = LedgerAccountType.Revenue, Role = LedgerAccountRole.Fees },
-            new { Code = "5010", Name = "Platform Loss Expense", Type = LedgerAccountType.Expense, Role = LedgerAccountRole.Loss },
-            new { Code = "4030", Name = "Platform Recovery Income", Type = LedgerAccountType.Revenue, Role = LedgerAccountRole.None }
-        };
-
-        foreach (var accData in accounts)
-        {
-            var exists = await dbContext.LedgerAccounts.AnyAsync(a => a.TenantId == platformId && a.Code == accData.Code);
+            var (accountCode, name, type, role) = StandardChartOfAccounts.Describe(code);
+            var exists = await dbContext.LedgerAccounts.AnyAsync(a => a.TenantId == platformId && a.Code == accountCode);
             if (!exists)
             {
-                var acc = new LedgerAccount(platformId, accData.Code, accData.Name, accData.Type, accData.Role, CobryxDefaults.Currency, true);
+                var acc = new LedgerAccount(platformId, accountCode, $"Platform {name}", type, role, CobryxDefaults.Currency, true);
                 dbContext.LedgerAccounts.Add(acc);
             }
         }

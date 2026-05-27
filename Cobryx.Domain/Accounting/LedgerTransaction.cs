@@ -57,7 +57,7 @@ namespace Cobryx.Domain.Accounting
         {
             if (IsPosted || Hash != null)
             {
-                throw new DomainException(DomainErrorCode.Common.GeneralError);
+                throw new DomainException(DomainErrorCode.Accounting.JournalImmutable);
             }
 
             _entries.Add(new LedgerEntry(TenantId, Id, accountId, debit, credit, Currency, ReferenceId ?? string.Empty));
@@ -70,12 +70,7 @@ namespace Cobryx.Domain.Accounting
                 return;
             }
 
-            var balance = _entries.Sum(static e => e.Debit - e.Credit);
-            if (balance != 0)
-            {
-                throw new DomainException(DomainErrorCode.Common.GeneralError);
-            }
-
+            EnsureBalanced();
             IsPosted = true;
             UpdateTimestamp();
         }
@@ -88,7 +83,7 @@ namespace Cobryx.Domain.Accounting
         {
             if (Hash != null)
             {
-                throw new DomainException(DomainErrorCode.Common.GeneralError);
+                throw new DomainException(DomainErrorCode.Accounting.JournalImmutable);
             }
 
             if (!IsPosted)
@@ -110,7 +105,7 @@ namespace Cobryx.Domain.Accounting
             var totalOriginal = original.Entries.Sum(static e => Math.Abs(e.Debit));
             if (totalOriginal <= 0)
             {
-                throw new DomainException(DomainErrorCode.Common.GeneralError);
+                throw new DomainException(DomainErrorCode.Accounting.ReversalAmountExceeded);
             }
 
             if (refundAmount > ((totalOriginal / 2) + 0.01m) && original.Entries.Count == 2)
@@ -119,7 +114,7 @@ namespace Cobryx.Domain.Accounting
 
             if (refundAmount > totalOriginal + 0.01m)
             {
-                throw new DomainException(DomainErrorCode.Common.GeneralError);
+                throw new DomainException(DomainErrorCode.Accounting.ReversalAmountExceeded);
             }
 
             var ratio = refundAmount / totalOriginal;
@@ -152,6 +147,15 @@ namespace Cobryx.Domain.Accounting
 
             reversal.Post();
             return reversal;
+        }
+
+        private void EnsureBalanced()
+        {
+            var balance = _entries.Sum(static e => e.Debit - e.Credit);
+            if (balance != 0)
+            {
+                throw new DomainException(DomainErrorCode.Accounting.JournalUnbalanced);
+            }
         }
     }
 }

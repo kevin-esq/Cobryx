@@ -256,6 +256,10 @@ public sealed record DomainErrorCode
         public static readonly DomainErrorCode FinancialSafeModeActive = new("FINANCIAL.SAFE_MODE.ACTIVE");
         public static readonly DomainErrorCode LedgerChainBroken = new("ACCOUNTING.LEDGER_CHAIN_BROKEN");
         public static readonly DomainErrorCode LedgerHashMismatch = new("ACCOUNTING.LEDGER_HASH_MISMATCH");
+        public static readonly DomainErrorCode JournalUnbalanced = new("ACCOUNTING.JOURNAL_UNBALANCED");
+        public static readonly DomainErrorCode JournalImmutable = new("ACCOUNTING.JOURNAL_IMMUTABLE");
+        public static readonly DomainErrorCode ReversalAmountExceeded = new("ACCOUNTING.REVERSAL_AMOUNT_EXCEEDED");
+        public static readonly DomainErrorCode SystemAccountLocked = new("ACCOUNTING.SYSTEM_ACCOUNT_LOCKED");
     }
 
     public static class System
