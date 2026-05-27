@@ -5,13 +5,14 @@ using Cobryx.Domain.Payments.Enums;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Subscriptions.Queries.GetSubscriptionIntelligence;
 
-public record GetSubscriptionIntelligenceQuery : IRequest<Result<SubscriptionIntelligenceDto>>;
+[TenantScoped]
+public record GetSubscriptionIntelligenceQuery : IRequest<Result<SubscriptionIntelligenceDto>>, IRequiresTenant;
 
-public class GetSubscriptionIntelligenceHandler : IRequestHandler<GetSubscriptionIntelligenceQuery, Result<SubscriptionIntelligenceDto>>
-{
+public class GetSubscriptionIntelligenceHandler : IRequestHandler<GetSubscriptionIntelligenceQuery, Result<SubscriptionIntelligenceDto>>, IRequiresTenant{
     private readonly ITenantProvider _tenantProvider;
     private readonly IUsageMeteringService _usageMeteringService;
     private readonly ITenantSubscriptionRepository _subscriptionRepository;

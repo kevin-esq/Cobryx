@@ -7,14 +7,16 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using FluentValidation;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Support.Commands.Create;
 
+[TenantScoped]
 public record CreateSupportTicketCommand(
     string Title,
     string Description,
     SupportTicketPriority Priority,
-    SupportTicketCategory Category) : IRequest<Result<Guid>>;
+    SupportTicketCategory Category) : IRequest<Result<Guid>>, IRequiresTenant;
 
 public class CreateSupportTicketValidator : AbstractValidator<CreateSupportTicketCommand>
 {

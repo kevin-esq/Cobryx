@@ -7,9 +7,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Mfa;
 
+[PublicRequest]
 public record VerifyTotpLoginCommand(string MfaToken, string Code) : IRequest<Result<AuthResult>>;
 
 public class VerifyTotpLoginHandler : IRequestHandler<VerifyTotpLoginCommand, Result<AuthResult>>

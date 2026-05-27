@@ -4,9 +4,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Queries.GetStripeReconciliation;
 
+[PlatformScoped]
 public record GetStripeReconciliationQuery(Guid? TenantId = null) : IRequest<Result<StripeReconciliationDto>>;
 
 public record StripeReconciliationDto(

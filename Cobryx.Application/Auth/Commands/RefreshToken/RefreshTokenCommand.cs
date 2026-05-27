@@ -7,9 +7,11 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.RefreshToken;
 
+[PublicRequest]
 public record RefreshTokenCommand() : IRequest<Result<AuthResult>>;
 
 public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, Result<AuthResult>>

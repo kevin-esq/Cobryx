@@ -3,7 +3,6 @@ using System.Text.Json;
 
 using Cobryx.Application.Analytics.Queries.GetPortfolioSummary;
 using Cobryx.Application.Common.Attributes;
-using Cobryx.Application.Common.Interfaces;
 
 namespace Cobryx.Architecture.Tests;
 
@@ -389,11 +388,7 @@ public class ArchitectureTests
         .Count();
 
     private static int CountTenantPolicyGaps() => ApplicationAssembly.GetTypes()
-        .Where(t => !t.IsInterface && !t.IsAbstract)
-        .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(Concordia.IRequest<>)))
-        .Where(t => !t.IsDefined(typeof(TenantScopedAttribute), false))
-        .Where(t => !typeof(IRequiresTenant).IsAssignableFrom(t))
-        .Count();
+        .Count(TenantRequestPolicy.IsUnclassifiedGap);
 
     private record ArchitectureBaseline
     {
@@ -488,6 +483,11 @@ public class ArchitectureTests
         // Global metrics
         var namingViolations = CountNamingViolations();
         var tenantGaps = CountTenantPolicyGaps();
+        var tenantScopedCount = allRequests.Count(TenantRequestPolicy.IsTenantScoped);
+        var publicCount = allRequests.Count(TenantRequestPolicy.HasPublicRequest);
+        var tokenScopedCount = allRequests.Count(TenantRequestPolicy.HasTokenScoped);
+        var webhookSystemCount = allRequests.Count(TenantRequestPolicy.HasWebhookSystem);
+        var platformScopedCount = allRequests.Count(TenantRequestPolicy.HasPlatformScoped);
         var requestsWithPolicy = allRequests.Count - tenantGaps;
         var tenantPolicyCoverage = allRequests.Count > 0 ? requestsWithPolicy * 100 / allRequests.Count : 0;
 
@@ -500,8 +500,7 @@ public class ArchitectureTests
         // Get suggested actions WITH IMPACT × HOTSPOT WEIGHT (what moves the needle most)
         var impactPerRequest = allRequests.Count > 0 ? 100.0 / allRequests.Count : 0;
         var suggestedActions = allRequests
-            .Where(t => !t.IsDefined(typeof(TenantScopedAttribute), false))
-            .Where(t => !typeof(IRequiresTenant).IsAssignableFrom(t))
+            .Where(TenantRequestPolicy.IsUnclassifiedGap)
             .Select(t =>
             {
                 var module = GetModuleName(t.Namespace ?? "Unknown");
@@ -547,7 +546,13 @@ public class ArchitectureTests
                 totalRequests = allRequests.Count,
                 tenantPolicyCoverage,
                 namingViolations,
-                tenantPolicyGaps = tenantGaps
+                tenantPolicyGaps = tenantGaps,
+                unclassifiedTenantPolicyGaps = tenantGaps,
+                tenantScopedRequests = tenantScopedCount,
+                publicRequests = publicCount,
+                tokenScopedRequests = tokenScopedCount,
+                webhookSystemRequests = webhookSystemCount,
+                platformScopedRequests = platformScopedCount
             },
             modules = moduleMetrics,
             hotspots = moduleMetrics
@@ -632,9 +637,7 @@ public class ArchitectureTests
                 g =>
                 {
                     var total = g.Count();
-                    var covered = g.Count(t =>
-                        t.IsDefined(typeof(TenantScopedAttribute), false) ||
-                        typeof(IRequiresTenant).IsAssignableFrom(t));
+                    var covered = g.Count(t => TenantRequestPolicy.IsPolicyCovered(t));
                     var gaps = total - covered;
                     var coverage = total > 0 ? covered * 100 / total : 0;
                     return (total, covered, gaps, coverage);

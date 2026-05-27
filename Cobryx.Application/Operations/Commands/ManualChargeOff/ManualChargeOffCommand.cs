@@ -4,9 +4,11 @@ using Cobryx.Domain.Identity;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Commands.ManualChargeOff;
 
+[PlatformScoped]
 public record ManualChargeOffCommand(Guid LoanId, string Reason) : IRequest<Result>;
 
 public class ManualChargeOffHandler(

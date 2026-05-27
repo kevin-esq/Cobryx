@@ -6,9 +6,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Commands.SuspendTenant;
 
+[PlatformScoped]
 public record SuspendTenantCommand(Guid TenantId, string Reason) : IRequest<Result>;
 
 public class SuspendTenantHandler(ICobryxDbContext dbContext, ICurrentUserProvider currentUserProvider)

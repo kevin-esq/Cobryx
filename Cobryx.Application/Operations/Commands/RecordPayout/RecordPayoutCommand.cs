@@ -7,9 +7,11 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Commands.RecordPayout;
 
+[PlatformScoped]
 public record RecordPayoutCommand(
     Guid TenantId,
     decimal Amount,

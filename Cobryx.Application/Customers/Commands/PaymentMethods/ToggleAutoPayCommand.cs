@@ -4,10 +4,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Commands.PaymentMethods;
 
-public record ToggleAutoPayCommand(Guid CustomerId, bool Enabled) : IRequest<Result>;
+[TenantScoped]
+public record ToggleAutoPayCommand(Guid CustomerId, bool Enabled) : IRequest<Result>, IRequiresTenant;
 
 public class ToggleAutoPayHandler : IRequestHandler<ToggleAutoPayCommand, Result>
 {

@@ -6,10 +6,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Customers.Queries.Account
 {
-    public record GetCustomerStatementQuery(Guid CustomerId, Guid TenantId) : IRequest<Result<CustomerStatementDto>>;
+    [TenantScoped]
+public record GetCustomerStatementQuery(Guid CustomerId, Guid TenantId) : IRequest<Result<CustomerStatementDto>>, IRequiresTenant;
 
     public record CustomerStatementDto(
         Guid CustomerId,

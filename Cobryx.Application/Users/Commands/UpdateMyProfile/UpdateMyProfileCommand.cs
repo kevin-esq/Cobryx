@@ -3,6 +3,7 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Users.Commands.UpdateMyProfile
 {
@@ -10,11 +11,12 @@ namespace Cobryx.Application.Users.Commands.UpdateMyProfile
     /// Updates the authenticated user's profile preferences.
     /// The user identity is resolved via ICurrentUserProvider — no userId parameter needed.
     /// </summary>
-    public record UpdateMyProfileCommand(
+    [TenantScoped]
+public record UpdateMyProfileCommand(
         string? PhoneNumber,
         string? AvatarUrl,
         string PreferredLanguage,
-        string Timezone) : IRequest<Result>;
+        string Timezone) : IRequest<Result>, IRequiresTenant;
 
     public class UpdateMyProfileHandler(
         IUserRepository userRepository,

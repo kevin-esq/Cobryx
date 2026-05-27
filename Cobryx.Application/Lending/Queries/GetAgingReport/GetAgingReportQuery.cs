@@ -5,11 +5,12 @@ using Cobryx.Domain.Lending.Enums;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Lending.Queries.GetAgingReport;
 
-public record GetAgingReportQuery : IRequest<AgingReportResponse>
-{
+[TenantScoped]
+public record GetAgingReportQuery : IRequest<AgingReportResponse>, IRequiresTenant{
     public Guid TenantId { get; init; }
 }
 

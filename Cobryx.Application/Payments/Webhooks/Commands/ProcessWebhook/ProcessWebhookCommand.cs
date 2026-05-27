@@ -6,10 +6,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.ProcessWebhook
 {
-    public record ProcessWebhookCommand(
+    [WebhookSystem]
+public record ProcessWebhookCommand(
         string Provider,
         string ExternalEventId,
         string RawPayload) : IRequest<Result<Guid>>;

@@ -5,10 +5,12 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Portal.Queries.GetCustomerPortalSummary
 {
-    public record GetCustomerPortalSummaryQuery(Guid CustomerId, Guid TenantId) : IRequest<Result<CustomerPortalSummaryDto>>;
+    [TokenScoped]
+public record GetCustomerPortalSummaryQuery(Guid CustomerId, Guid TenantId) : IRequest<Result<CustomerPortalSummaryDto>>;
 
     public record CustomerPortalSummaryDto(
         decimal TotalOutstandingBalance,

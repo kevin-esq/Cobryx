@@ -7,9 +7,11 @@ using Concordia;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.ML.Commands.ExecuteReplay;
 
+[PlatformScoped]
 public record ExecuteReplayCommand(Guid SnapshotId) : IRequest<Result<ReplayResultDto>>;
 
 public record ReplayResultDto(

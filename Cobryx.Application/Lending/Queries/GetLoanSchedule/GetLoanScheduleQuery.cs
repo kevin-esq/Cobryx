@@ -4,13 +4,15 @@ using Cobryx.Domain.Lending;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Lending.Queries.GetLoanSchedule;
 
 /// <summary>
 /// Query to retrieve the full amortization schedule and status of a loan.
 /// </summary>
-public record GetLoanScheduleQuery(Guid LoanId) : IRequest<Result<LoanScheduleDto>>;
+[TenantScoped]
+public record GetLoanScheduleQuery(Guid LoanId) : IRequest<Result<LoanScheduleDto>>, IRequiresTenant;
 
 public class GetLoanScheduleHandler(ILoanRepository loanRepository, ITenantProvider tenantProvider) : IRequestHandler<GetLoanScheduleQuery, Result<LoanScheduleDto>>
 {

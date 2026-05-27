@@ -5,10 +5,12 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Products.Queries.GetProducts;
 
-public record GetProductsQuery(int Page = 1, int PageSize = 10) : IRequest<Result<PaginatedList<ProductDto>>>;
+[TenantScoped]
+public record GetProductsQuery(int Page = 1, int PageSize = 10) : IRequest<Result<PaginatedList<ProductDto>>>, IRequiresTenant;
 
 public class GetProductsHandler : IRequestHandler<GetProductsQuery, Result<PaginatedList<ProductDto>>>
 {

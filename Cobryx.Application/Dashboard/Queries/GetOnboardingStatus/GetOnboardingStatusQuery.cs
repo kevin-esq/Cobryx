@@ -9,13 +9,14 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Dashboard.Queries.GetOnboardingStatus;
 
-public record GetOnboardingStatusQuery : IRequest<Result<OnboardingStatusDto>>;
+[TenantScoped]
+public record GetOnboardingStatusQuery : IRequest<Result<OnboardingStatusDto>>, IRequiresTenant;
 
-public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQuery, Result<OnboardingStatusDto>>
-{
+public class GetOnboardingStatusHandler : IRequestHandler<GetOnboardingStatusQuery, Result<OnboardingStatusDto>>, IRequiresTenant{
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITenantProvider _tenantProvider;
 

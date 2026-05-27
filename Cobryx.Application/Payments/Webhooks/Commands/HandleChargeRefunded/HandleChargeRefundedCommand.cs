@@ -9,6 +9,7 @@ using Cobryx.Domain.ValueObjects;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleChargeRefunded
 {
@@ -19,7 +20,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleChargeRefunded
     ///   2. PaymentLink refund via <see cref="PaymentLinkReconciliationService"/> (ledger reversal)
     /// These are two distinct business flows that must coexist — invoice refunds and PaymentLink refunds.
     /// </summary>
-    public record HandleChargeRefundedCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
+    [WebhookSystem]
+public record HandleChargeRefundedCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
 
     public partial class HandleChargeRefundedHandler(
         IPaymentRepository paymentRepository,

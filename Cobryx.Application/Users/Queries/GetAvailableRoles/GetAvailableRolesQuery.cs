@@ -1,13 +1,16 @@
 using Cobryx.Application.Users.Common;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Users.Queries.GetAvailableRoles
 {
-    public record GetAvailableRolesQuery : IRequest<Result<IEnumerable<RoleDto>>>;
+    [TenantScoped]
+public record GetAvailableRolesQuery : IRequest<Result<IEnumerable<RoleDto>>>, IRequiresTenant;
 
     public class GetAvailableRolesHandler(
         IRoleRepository roleRepository) : IRequestHandler<GetAvailableRolesQuery, Result<IEnumerable<RoleDto>>>

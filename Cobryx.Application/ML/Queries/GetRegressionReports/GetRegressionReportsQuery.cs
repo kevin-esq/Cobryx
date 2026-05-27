@@ -5,9 +5,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.ML.Queries.GetRegressionReports;
 
+[PlatformScoped]
 public record GetRegressionReportsQuery(int Limit = 20) : IRequest<Result<List<RegressionReport>>>;
 
 public class GetRegressionReportsHandler(

@@ -6,6 +6,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleSubscriptionChanged
 {
@@ -14,7 +15,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleSubscriptionChange
     /// Extracts the Stripe subscription ID and delegates to <see cref="StripeSubscriptionSyncService"/>
     /// for authoritative state synchronization.
     /// </summary>
-    public record HandleSubscriptionChangedCommand(
+    [WebhookSystem]
+public record HandleSubscriptionChangedCommand(
         JsonElement Data,
         string StripeEventId,
         bool IsDeleted) : IRequest<Result>;

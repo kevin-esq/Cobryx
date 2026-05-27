@@ -9,13 +9,14 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Dashboard.Queries.GetGuidedSetup;
 
-public record GetGuidedSetupQuery : IRequest<Result<NextBestActionDto>>;
+[TenantScoped]
+public record GetGuidedSetupQuery : IRequest<Result<NextBestActionDto>>, IRequiresTenant;
 
-public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result<NextBestActionDto>>
-{
+public class GetGuidedSetupHandler : IRequestHandler<GetGuidedSetupQuery, Result<NextBestActionDto>>, IRequiresTenant{
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITenantProvider _tenantProvider;
 

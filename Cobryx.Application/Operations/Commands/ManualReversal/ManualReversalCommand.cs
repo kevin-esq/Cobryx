@@ -7,9 +7,11 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.EntityFrameworkCore;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Operations.Commands.ManualReversal;
 
+[PlatformScoped]
 public record ManualReversalCommand(Guid TransactionId, decimal Amount, string Reason) : IRequest<Result>;
 
 public class ManualReversalHandler(

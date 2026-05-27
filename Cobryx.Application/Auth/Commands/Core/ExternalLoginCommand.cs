@@ -4,9 +4,11 @@ using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Core;
 
+[PublicRequest]
 public record ExternalLoginCommand(ExternalProvider Provider, string IdToken, string? CaptchaToken = null) : IRequest<Result<AuthResult>>;
 
 public class ExternalLoginHandler(

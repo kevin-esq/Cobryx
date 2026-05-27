@@ -16,10 +16,12 @@ using FluentValidation;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Auth.Commands.Register
 {
-    public sealed record SignUpCommand(
+    [PublicRequest]
+public sealed record SignUpCommand(
         string BusinessName,
         string FirstName,
         string LastName,

@@ -6,6 +6,7 @@ using Cobryx.Domain.Shared;
 using Concordia;
 
 using Microsoft.Extensions.Logging;
+using Cobryx.Application.Common.Attributes;
 
 namespace Cobryx.Application.Payments.Webhooks.Commands.HandleInvoicePaid
 {
@@ -14,7 +15,8 @@ namespace Cobryx.Application.Payments.Webhooks.Commands.HandleInvoicePaid
     /// Extracts the subscription ID from the invoice data and delegates
     /// to <see cref="StripeSubscriptionSyncService"/> for authoritative state sync.
     /// </summary>
-    public record HandleInvoicePaidCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
+    [WebhookSystem]
+public record HandleInvoicePaidCommand(JsonElement Data, string StripeEventId) : IRequest<Result>;
 
     public partial class HandleInvoicePaidHandler(
         StripeSubscriptionSyncService syncService,
