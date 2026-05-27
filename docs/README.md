@@ -22,6 +22,7 @@ Contract definitions and documentation standards for the public API.
 | [Outcome Codes](api/contract/outcomes.md) | Catalog of all `Outcome` values returned in `outcomeCode` |
 | [Validation Codes](api/contract/validations.md) | Validation error structure, code hierarchy, and frontend handling |
 | [Monetization Contract](api/contract/monetization.md) | Plan limits, subscription status, checkout/portal flows (F4 / k6 stress test) |
+| [Auth Contract](api/contract/auth.md) | Login, refresh, MFA, sessions + Next.js BFF routes (F1) |
 
 ## Operations
 
