@@ -19,6 +19,7 @@ Contract definitions and documentation standards for the public API.
 | [Error Codes](api/contract/errors.md) | Catalog of all `DomainErrorCode` values returned in `errorCode` |
 | [Outcome Codes](api/contract/outcomes.md) | Catalog of all `Outcome` values returned in `outcomeCode` |
 | [Validation Codes](api/contract/validations.md) | Validation error structure, code hierarchy, and frontend handling |
+| [Monetization Contract](api/contract/monetization.md) | Plan limits, subscription status, checkout/portal flows (F4 / k6 stress test) |
 
 ## Operations
 
@@ -33,4 +34,4 @@ Observability, monitoring, and performance testing.
 
 | Document | Description |
 | --- | --- |
-| [monetization-stress.js](load-tests/monetization-stress.js) | k6 stress test for monetization endpoints |
+| [monetization-stress.js](load-tests/monetization-stress.js) | k6 stress test — contract in [monetization.md](api/contract/monetization.md) |
