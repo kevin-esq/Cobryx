@@ -1,5 +1,4 @@
 using Cobryx.Domain.Accounting;
-using Cobryx.Domain.Accounting.Enums;
 using Cobryx.Domain.Identity;
 using Cobryx.Domain.Interfaces;
 using Cobryx.Domain.Payments.Enums;
