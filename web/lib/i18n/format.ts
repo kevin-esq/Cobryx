@@ -14,6 +14,15 @@ export function interpolate(template: string, vars?: InterpolationVars): string 
  * Resolve a nested dictionary key path like "auth.login.title".
  * Returns the matched value if it is a string, otherwise undefined.
  */
+export function formatDateTime(value: string, locale: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+
 export function resolveKey(root: unknown, path: string): string | undefined {
   if (root == null || typeof root !== "object") return undefined;
 

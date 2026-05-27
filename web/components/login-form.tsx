@@ -4,36 +4,119 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { useTranslation } from "@/components/i18n-provider";
-import { setAccessToken } from "@/lib/auth";
+import { MfaFido2Button } from "@/components/mfa-fido2-button";
+import { MfaTotpForm } from "@/components/mfa-totp-form";
+import { login, type LoginResult } from "@/lib/auth/client";
+import { translateApiError } from "@/lib/i18n/error-codes";
 
 type LoginState =
   | { kind: "idle" }
   | { kind: "submitting" }
+  | { kind: "mfa"; mfaToken: string }
   | { kind: "error"; message: string; code: string | null };
 
 export function LoginForm() {
   const router = useRouter();
   const { dictionary } = useTranslation();
   const copy = dictionary.auth.login;
+  const mfaCopy = dictionary.auth.mfa;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<LoginState>({ kind: "idle" });
 
+  const finishAuth = (result: LoginResult) => {
+    if (result.requiresOnboarding) {
+      router.push("/dashboard");
+      return;
+    }
+    router.push("/dashboard");
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setState({ kind: "submitting" });
 
-    // Placeholder: real /v1/auth/login wiring lands in roadmap item F1.
-    // For now we accept any non-empty credentials and store a sentinel token.
     if (!email.trim() || !password) {
       setState({ kind: "error", message: copy.empty, code: null });
       return;
     }
 
-    setAccessToken(`scaffold-${Date.now().toString(36)}`);
-    router.push("/dashboard");
+    try {
+      const result = await login(email.trim(), password);
+      if (result.kind === "mfa") {
+        setState({ kind: "mfa", mfaToken: result.mfaToken });
+        return;
+      }
+      finishAuth(result);
+    } catch (error) {
+      const translated = translateApiError(error, dictionary);
+      setState({
+        kind: "error",
+        message: translated.message,
+        code: translated.code
+      });
+    }
   };
+
+  const onMfaSuccess = (result: LoginResult) => {
+    finishAuth(result);
+  };
+
+  const onMfaError = (error: unknown) => {
+    const translated = translateApiError(error, dictionary);
+    setState({
+      kind: "error",
+      message: translated.message,
+      code: translated.code
+    });
+  };
+
+  if (state.kind === "mfa") {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-ink-900 dark:text-white">
+            {mfaCopy.title}
+          </h2>
+          <p className="text-sm text-ink-500 dark:text-gray-300">
+            {mfaCopy.description}
+          </p>
+        </div>
+
+        <MfaTotpForm
+          mfaToken={state.mfaToken}
+          onSuccess={onMfaSuccess}
+          onError={onMfaError}
+        />
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-divider-200 dark:border-divider-600" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-ink-400 dark:bg-ink-800 dark:text-gray-400">
+              {mfaCopy.orDivider}
+            </span>
+          </div>
+        </div>
+
+        <MfaFido2Button
+          mfaToken={state.mfaToken}
+          onSuccess={onMfaSuccess}
+          onError={onMfaError}
+        />
+
+        <button
+          type="button"
+          onClick={() => setState({ kind: "idle" })}
+          className="w-full text-center text-sm text-ink-500 underline-offset-2 hover:underline dark:text-gray-300"
+        >
+          {mfaCopy.backToLogin}
+        </button>
+      </div>
+    );
+  }
 
   const submitting = state.kind === "submitting";
 

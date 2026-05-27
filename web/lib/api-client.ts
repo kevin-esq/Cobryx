@@ -1,4 +1,3 @@
-import { getAccessToken } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { getClientLocale } from "@/lib/i18n/client";
 
@@ -24,9 +23,14 @@ const buildUrl = (
   path: string,
   query: RequestOptions["query"]
 ): string => {
-  const base = publicEnv.apiUrl.replace(/\/+$/, "");
+  const isBff = path.startsWith("/api/");
+  const base = isBff
+    ? ""
+    : publicEnv.apiUrl.replace(/\/+$/, "");
   const suffix = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${base}${suffix}`);
+  const url = isBff
+    ? new URL(suffix, typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
+    : new URL(`${base}${suffix}`);
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -49,11 +53,6 @@ export async function apiFetch<TResponse>(
     "Accept-Language": getClientLocale(),
     ...headers
   };
-
-  const token = getAccessToken();
-  if (token) {
-    finalHeaders.Authorization = `Bearer ${token}`;
-  }
 
   let requestBody: BodyInit | undefined;
   if (body !== undefined && body !== null) {

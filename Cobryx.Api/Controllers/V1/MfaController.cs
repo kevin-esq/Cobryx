@@ -5,6 +5,7 @@ using Asp.Versioning;
 using Cobryx.Api.Outcomes;
 using Cobryx.Application.Auth.Commands.Mfa;
 using Cobryx.Application.Auth.Common;
+using Cobryx.Application.Common.Interfaces;
 using Cobryx.Domain.Shared;
 
 using Concordia;
@@ -23,8 +24,36 @@ namespace Cobryx.Api.Controllers.V1;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/mfa")]
 [Tags("Platform")]
-public class MfaController(ISender sender) : CobryxBaseController(sender)
+public class MfaController(ISender sender, ICookieService cookieService) : CobryxBaseController(sender)
 {
+    private IActionResult CompleteMfaLogin(Result<AuthResult> result, Outcome successOutcome)
+    {
+        if (!result.IsSuccess || result.Value == null)
+        {
+            return HandleResult(result, successOutcome);
+        }
+
+        if (result.Value.RefreshToken != null && result.Value.RefreshExpires != null)
+        {
+            cookieService.SetRefreshTokenCookie(result.Value.RefreshToken, result.Value.RefreshExpires.Value);
+        }
+
+        var mappedResult = new AuthResponseContract(
+            result.Value.Token,
+            result.Value.FirstName,
+            result.Value.LastName,
+            result.Value.FullName,
+            result.Value.Email,
+            result.Value.Role,
+            result.Value.Expires,
+            result.Value.SessionId,
+            result.Value.RequiresMfa,
+            result.Value.MfaToken,
+            result.Value.RequiresOnboarding);
+
+        return Success(mappedResult, successOutcome);
+    }
+
     /// <summary>
     /// Generates a new TOTP setup secret and QR code URI.
     /// </summary>
@@ -81,7 +110,7 @@ public class MfaController(ISender sender) : CobryxBaseController(sender)
     {
         var command = new VerifyTotpLoginCommand(request.PersistenceToken, request.Code);
         Result<AuthResult> result = await Sender.Send(command);
-        return HandleResult(result, AuthOutcomes.MfaVerified);
+        return CompleteMfaLogin(result, AuthOutcomes.MfaVerified);
     }
 
     /// <summary>
@@ -196,6 +225,6 @@ public class MfaController(ISender sender) : CobryxBaseController(sender)
 
         var command = new CompleteFido2AssertionCommand(request.PersistenceToken, response, optionsData);
         Result<AuthResult> result = await Sender.Send(command);
-        return HandleResult(result, AuthOutcomes.MfaVerified);
+        return CompleteMfaLogin(result, AuthOutcomes.MfaVerified);
     }
 }

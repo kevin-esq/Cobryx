@@ -38,15 +38,41 @@ export const en: DictionaryShape = {
       passwordPlaceholder: "••••••••",
       submit: "Sign in",
       submitting: "Signing in...",
-      empty: "Enter both email and password.",
-      scaffoldNotice:
-        "Initial scaffold. Real authentication lands in roadmap item F1."
+      empty: "Enter both email and password."
+    },
+    mfa: {
+      title: "Two-step verification",
+      description: "Enter the code from your authenticator app or use your security key.",
+      totpLabel: "6-digit code",
+      totpPlaceholder: "000000",
+      totpSubmit: "Verify code",
+      totpSubmitting: "Verifying...",
+      fido2Button: "Use security key",
+      fido2Submitting: "Waiting for key...",
+      orDivider: "or",
+      backToLogin: "Back to sign in"
+    },
+    sessions: {
+      title: "Active sessions",
+      description: "Devices where your account is signed in.",
+      device: "Device",
+      ip: "IP",
+      lastActive: "Last active",
+      current: "Current session",
+      revoke: "Revoke",
+      revoking: "Revoking...",
+      revokeAll: "Sign out everywhere",
+      revokeAllSubmitting: "Signing out...",
+      empty: "No active sessions.",
+      loadError: "We couldn't load sessions.",
+      backToDashboard: "Back to workspace"
     }
   },
   dashboard: {
+    signOut: "Sign out",
+    sessionsLink: "Active sessions",
     workspaceLabel: "Cobryx",
     title: "Workspace",
-    signOut: "Sign out",
     scaffoldHeadline: "Scaffold ready",
     scaffoldDescription:
       "This is the dashboard shell. Real screens land in roadmap items F1–F3.",
