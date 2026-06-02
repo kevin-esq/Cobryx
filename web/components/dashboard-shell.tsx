@@ -1,12 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslation } from "@/components/i18n-provider";
-import { clearAccessToken, getAccessToken } from "@/lib/auth";
+import { logout } from "@/lib/auth/client";
 
 type ModuleKey = "customers" | "credits" | "payments" | "invoicing" | "settings";
 const moduleKeys: readonly ModuleKey[] = [
@@ -22,24 +22,13 @@ export function DashboardShell() {
   const { dictionary } = useTranslation();
   const copy = dictionary.dashboard;
 
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (!getAccessToken()) {
+  const onLogout = async () => {
+    try {
+      await logout();
+    } finally {
       router.replace("/login");
-      return;
     }
-    setReady(true);
-  }, [router]);
-
-  const onLogout = () => {
-    clearAccessToken();
-    router.replace("/login");
   };
-
-  if (!ready) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-ink-900">
@@ -54,11 +43,17 @@ export function DashboardShell() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/sessions"
+              className="text-sm font-medium text-ink-600 underline-offset-2 hover:underline dark:text-gray-300"
+            >
+              {copy.sessionsLink}
+            </Link>
             <LocaleSwitcher />
             <ThemeToggle />
             <button
               type="button"
-              onClick={onLogout}
+              onClick={() => void onLogout()}
               className="rounded-md border border-divider-200 px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:border-divider-300 hover:bg-gray-100 dark:border-divider-600 dark:text-gray-200 dark:hover:border-divider-500 dark:hover:bg-ink-700"
             >
               {copy.signOut}

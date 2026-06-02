@@ -36,15 +36,41 @@ export const es = {
       passwordPlaceholder: "••••••••",
       submit: "Entrar",
       submitting: "Entrando...",
-      empty: "Captura correo y contraseña.",
-      scaffoldNotice:
-        "Versión inicial. La autenticación real se conecta en F1 del roadmap."
+      empty: "Captura correo y contraseña."
+    },
+    mfa: {
+      title: "Verificación en dos pasos",
+      description: "Ingresa el código de tu app de autenticación o usa tu llave de seguridad.",
+      totpLabel: "Código de 6 dígitos",
+      totpPlaceholder: "000000",
+      totpSubmit: "Verificar código",
+      totpSubmitting: "Verificando...",
+      fido2Button: "Usar llave de seguridad",
+      fido2Submitting: "Esperando llave...",
+      orDivider: "o",
+      backToLogin: "Volver al inicio de sesión"
+    },
+    sessions: {
+      title: "Sesiones activas",
+      description: "Dispositivos donde tu cuenta está conectada.",
+      device: "Dispositivo",
+      ip: "IP",
+      lastActive: "Última actividad",
+      current: "Sesión actual",
+      revoke: "Revocar",
+      revoking: "Revocando...",
+      revokeAll: "Cerrar todas las sesiones",
+      revokeAllSubmitting: "Cerrando...",
+      empty: "No hay sesiones activas.",
+      loadError: "No pudimos cargar las sesiones.",
+      backToDashboard: "Volver al workspace"
     }
   },
   dashboard: {
+    signOut: "Cerrar sesión",
+    sessionsLink: "Sesiones activas",
     workspaceLabel: "Cobryx",
     title: "Workspace",
-    signOut: "Cerrar sesión",
     scaffoldHeadline: "Scaffold listo",
     scaffoldDescription:
       "Este es el cascarón del dashboard. Las pantallas reales se conectan en los items F1–F3 del roadmap.",

@@ -29,6 +29,7 @@ export function getApiErrorCode(error: unknown): string | undefined {
   const candidates: unknown[] = [
     isRecord(body) ? body.code : undefined,
     isRecord(body) ? body.errorCode : undefined,
+    isRecord(body) ? body.outcomeCode : undefined,
     isRecord(body) ? body.type : undefined,
     isRecord(body) && isRecord(body.extensions) ? body.extensions.code : undefined,
     isRecord(body) && Array.isArray(body.errors) && isRecord(body.errors[0])

@@ -36,10 +36,6 @@ export default async function LoginPage() {
         </div>
 
         <LoginForm />
-
-        <p className="mt-6 text-center text-xs text-ink-400 dark:text-gray-400">
-          {copy.scaffoldNotice}
-        </p>
       </div>
     </main>
   );

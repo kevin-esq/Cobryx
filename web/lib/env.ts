@@ -15,5 +15,11 @@ export const publicEnv = {
 } as const;
 
 export const serverEnv = {
+  /** Server-only URL for Next route handlers (BFF → Cobryx.Api). */
+  internalApiUrl:
+    process.env.INTERNAL_API_URL ??
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "",
   apiUrl: process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? ""
 } as const;
